@@ -1,0 +1,75 @@
+#ifndef LIST_H
+#define LIST_H
+
+#include <memory.h>
+#include "arena.h"
+
+typedef struct list
+{
+    size_t count;
+    size_t capacity;
+    void *elements;
+} list;
+
+#define LIST_COUNT_OF_SIZE(list0, size) ((list0).count / size)
+#define LIST_CAPACITY_OF_SIZE(list0, size) ((list0).capacity / size)
+
+#define LIST_COUNT(type, list0) LIST_COUNT_OF_SIZE(list0, sizeof(type))
+#define LIST_CAPACITY(type, list0) LIST_CAPACITY_OF_SIZE(list0, sizeof(type))
+
+#define LIST_FOREACH(type, list0, element) for (type *element = (type *)(list0).elements; element < (type *)(list0).elements + (list0).count; element++)
+
+list list_create(arena *a, size_t capacity)
+{
+    list l;
+    l.count = 0;
+    l.capacity = capacity;
+    l.elements = arena_alloc(a, capacity);
+    return l;
+}
+#define LIST_CREATE(type, arena0, capacity) list_create(arena0, capacity * sizeof(type))
+
+void *list_add(list *l, arena *a, void *element, size_t size)
+{
+    size_t new_count = l->count + size;
+    if (new_count > l->capacity)
+    {
+        list new = list_create(a, l->capacity * 2);
+        new.count = l->count;
+
+        memcpy(new.elements, l->elements, l->count);
+        l = &new;
+    }
+
+    void *ptr = memcpy((uint8_t *)l->elements + l->count, element, size);
+    l->count = new_count;
+    return ptr;
+}
+#define LIST_ADD(type, list0, arena0, element) *(type *)list_add(list0, arena0, &element, sizeof(type))
+
+void list_remove(list *l, size_t index, size_t size)
+{
+    assert(index * size < l->count);
+    memmove(
+        (uint8_t *)l->elements + index * size,
+        (uint8_t *)l->elements + (index + 1) * size,
+        ((l->count - index - 1) * size));
+    l->count -= size;
+}
+#define LIST_REMOVE(type, list0, index) list_remove(list0, index, sizeof(type))
+
+void *list_get(list *l, size_t index, size_t size)
+{
+    assert(index * size < l->count);
+    return (uint8_t *)l->elements + index * size;
+}
+#define LIST_GET(type, list0, index) *(type *)list_get(list0, index, sizeof(type))
+
+void *list_set(list *l, size_t index, void *element, size_t size)
+{
+    assert(index * size < l->count);
+    return memcpy((uint8_t *)l->elements + index * size, element, size);
+}
+#define LIST_SET(type, list0, index, element) *(type *)list_set(list0, index, &element, sizeof(type))
+
+#endif
