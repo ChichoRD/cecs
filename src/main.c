@@ -11,6 +11,10 @@ typedef struct vec2int {
     int y;
 } vec2int;
 
+typedef struct tag {
+    char *value;
+} tag;
+
 void main(void) {
     srand(time(NULL));
     world za = world_create();
@@ -19,10 +23,31 @@ void main(void) {
     for (size_t i = 0; i < entity_count; i++) {
         vec2int pos = {rand() % 100, rand() % 100};
         
-        vec2int c = WORLD_ADD_COMPONENT(vec2int, &za, world_add_entity(&za, 0), 0, pos);
-        printf("Entity %zu: %d, %d\n", i, c.x, c.y);
-        printf("Entity count: %zu\n", LIST_COUNT(entity, za.entities.entities));
+        vec2int c = WORLD_SET_OR_ADD_COMPONENT(vec2int, &za, world_add_entity(&za, 0), 0, pos);
+    }
+
+    world_remove_entity(&za, 2);
+
+    tag t = {"Hello, World!"};
+    tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), 1, t);
+
+    for (size_t i = 0; i < entity_count; i++) {
+        entity e = LIST_GET(entity, &za.entities.entities, i);
+        for (size_t j = 0; j < COMPONENT_TYPE_COUNT; j++) {
+            if (za.components.component_sizes[j] != -1
+                && e.mask & (1 << j)) {
+                printf("Entity %zu, Component %zu: ", i, j);
+                if (j == 0) {
+                    vec2int *pos = (vec2int *)list_get(&za.components.components[j], i, za.components.component_sizes[j]);
+                    printf("Position: (%d, %d)\n", pos->x, pos->y);
+                } else if (j == 1) {
+                    tag *t = (tag *)list_get(&za.components.components[j], i, za.components.component_sizes[j]);
+                    printf("Tag: %s\n", t->value);
+                }
+            }
+        }
     }
 
     world_free(&za);
+    printf("Freed world\n");
 }

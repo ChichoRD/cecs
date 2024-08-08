@@ -47,6 +47,26 @@ void *list_add(list *l, arena *a, void *element, size_t size)
 }
 #define LIST_ADD(type, list0, arena0, element) *(type *)list_add(list0, arena0, &element, sizeof(type))
 
+void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t size)
+{
+    size_t new_count = l->count + count * size;
+    if (new_count > l->capacity)
+    {
+        while (new_count > l->capacity)
+            l->capacity *= 2;
+        list new = list_create(a, l->capacity);
+        new.count = l->count;
+
+        memcpy(new.elements, l->elements, l->count);
+        l = &new;
+    }
+
+    void *ptr = memcpy((uint8_t *)l->elements + l->count, elements, count * size);
+    l->count = new_count;
+    return ptr;
+}
+#define LIST_ADD_RANGE(type, list0, arena0, elements, count) list_add_range(list0, arena0, elements, count, sizeof(type))
+
 void list_remove(list *l, size_t index, size_t size)
 {
     assert(index * size < l->count);

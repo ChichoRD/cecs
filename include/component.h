@@ -5,11 +5,11 @@
 
 typedef uint32_t component_id;
 
-#define STR_VALUE(arg) #arg
-#define TYPE_ID(type) STR_VALUE(type)
+// #define STR_VALUE(arg) #arg
+// #define TYPE_ID(type) STR_VALUE(type)
 
-void foo(){
-    char t[] = TYPE_ID(int);
-}
+// void foo(){
+//     char t[] = TYPE_ID(int);
+// }
 
 #endif
