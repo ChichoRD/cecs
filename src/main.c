@@ -31,22 +31,18 @@ void main(void) {
     tag t = {"Hello, World!"};
     tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), t);
 
-    for (size_t i = 0; i < entity_count; i++) {
-        entity e = LIST_GET(entity, &za.entities.entities, i);
-        for (size_t j = 0; j < COMPONENT_TYPE_COUNT; j++) {
-            if (za.components.component_sizes[j] != -1
-                && e.mask & (1 << j)) {
-                printf("Entity %zu, Component %zu: ", i, j);
-                if (j == 0) {
-                    vec2int *pos = (vec2int *)list_get(&za.components.components[j], i, za.components.component_sizes[j]);
-                    printf("Position: (%d, %d)\n", pos->x, pos->y);
-                } else if (j == 1) {
-                    tag *t = (tag *)list_get(&za.components.components[j], i, za.components.component_sizes[j]);
-                    printf("Tag: %s\n", t->value);
-                }
-            }
-        }
+    WORLD_FOREACH_ACTIVE_COMPONENT(vec2int, za, i, entity0, component) {
+        printf("Entity %d: %d, %d\n", i.entity0->id, i.component->x, i.component->y);
     }
+
+    printf("\n");
+
+    WORLD_FOREACH_ACTIVE_COMPONENT(vec2int, za, i, entity0, component) {
+        i.component->x += 1;
+        i.component->y *= 2;
+        printf("Entity %d: %d, %d\n", i.entity0->id, i.component->x, i.component->y);
+    }
+    
 
     world_free(&za);
     printf("Freed world\n");
