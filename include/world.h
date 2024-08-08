@@ -127,6 +127,8 @@ typedef struct world {
 world world_create(void) {
     world w;
     w.entities_arena = arena_create();
+    block b = block_create(4);
+    arena_prepend(&w.entities_arena, &b);
     w.entities = world_entities_create(&w.entities_arena);
 
     w.components_arena = arena_create();
@@ -157,7 +159,7 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
         return world_components_add_component(&w->components, &w->components_arena, LIST_COUNT(entity, w->entities.entities), component_id, component, size);
     }
 }
-#define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component_id0, component) *(type *)world_set_or_add_component((world0), (entity_id0), (component_id0), &(component), sizeof(type))
+#define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component) *(type *)world_set_or_add_component((world0), (entity_id0), COMPONENT_ID(type), &(component), sizeof(type))
 
 entity_id world_remove_entity(world *w, entity_id entity_id) {
     return world_entities_remove_entity(&w->entities, &w->entities_arena, entity_id)->e->id;

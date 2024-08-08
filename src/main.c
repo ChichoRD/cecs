@@ -6,12 +6,12 @@
 #include "../include/world.h"
 #include "../include/entity.h"
 
-typedef struct vec2int {
+COMPONENT_DEFINE(vec2int) {
     int x;
     int y;
 } vec2int;
 
-typedef struct tag {
+COMPONENT_DEFINE(tag) {
     char *value;
 } tag;
 
@@ -23,13 +23,13 @@ void main(void) {
     for (size_t i = 0; i < entity_count; i++) {
         vec2int pos = {rand() % 100, rand() % 100};
         
-        vec2int c = WORLD_SET_OR_ADD_COMPONENT(vec2int, &za, world_add_entity(&za, 0), 0, pos);
+        vec2int c = WORLD_SET_OR_ADD_COMPONENT(vec2int, &za, world_add_entity(&za, 0), pos);
     }
 
     world_remove_entity(&za, 2);
 
     tag t = {"Hello, World!"};
-    tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), 1, t);
+    tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), t);
 
     for (size_t i = 0; i < entity_count; i++) {
         entity e = LIST_GET(entity, &za.entities.entities, i);

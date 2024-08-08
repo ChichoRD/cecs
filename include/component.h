@@ -2,14 +2,12 @@
 #define COMPONENT_H
 
 #include <stdint.h>
+#include "type_id.h"
 
 typedef uint32_t component_id;
+static component_id component_id_count = 0;
 
-// #define STR_VALUE(arg) #arg
-// #define TYPE_ID(type) STR_VALUE(type)
-
-// void foo(){
-//     char t[] = TYPE_ID(int);
-// }
+#define COMPONENT_DEFINE(type) TYPE_ID_DEFINE_COUNTER(type##_component, component_id_count)
+#define COMPONENT_ID(type) (component_id)TYPE_ID(type##_component)
 
 #endif

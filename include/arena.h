@@ -73,7 +73,7 @@ arena arena_create(void) {
     return a;
 }
 
-void _arena_prepend(arena *a, block *b) {
+static void arena_prepend(arena *a, block *b) {
     linked_block *new = (linked_block *)malloc(sizeof(linked_block));
     *new = linked_block_create(b, a->first_block);
 
@@ -94,7 +94,7 @@ void *arena_alloc(arena *a, size_t size) {
     int capacity = size > DEFAULT_BLOCK_CAPACITY ? size : DEFAULT_BLOCK_CAPACITY;
     block *b = (block *)malloc(sizeof(block));
     *b = block_create(capacity);
-    _arena_prepend(a, b);
+    arena_prepend(a, b);
 
     return block_alloc(a->first_block->b, size);
 }
