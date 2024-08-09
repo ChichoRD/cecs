@@ -7,6 +7,7 @@
 #include "../include/component.h"
 #include "../include/arena.h"
 #include "../include/list.h"
+//#include "../include/query.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -180,6 +181,8 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
     return world_entities_remove_entity(&w->entities, &w->entities_arena, entity_id)->e->id;
 }
 
+#define WORLD_GET_COMPONENT(type, world0, entity_id0) *(type *)world_components_get_component(&(world0).components, COMPONENT_ID(type), (entity_id0), sizeof(type))
+
 void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
     assert(entity_id < WORLD_ENTITIES_COUNT(w->entities));
     entity *e = &LIST_GET(entity, &w->entities.entities, entity_id);
@@ -189,40 +192,16 @@ void *world_remove_component(world *w, entity_id entity_id, component_id compone
 }
 #define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) *(type *)world_remove_component((world0), (entity_id0), COMPONENT_ID(type), sizeof(type))
 
-#define WORLD_FOREACH_COMPONENT(type, world0, pack, entity_ptr, component_ptr) \
+#define WORLD_FOREACH_ENTITY(world0, entity0) \
     for ( \
-            struct type##_pack { entity_id id; type *component_ptr; entity *entity_ptr; } pack = \
-                { \
-                    .id = 0, \
-                    .component_ptr = WORLD_COMPONENTS_GET(type, &(world0).components, 0), \
-                    .entity_ptr = &WORLD_ENTITIES_GET((world0).entities, 0) \
-                }; \
-            pack.id < WORLD_ENTITIES_COUNT((world0).entities); \
-            pack = (struct type##_pack){ \
-                .id = pack.id + 1, \
-                .component_ptr = WORLD_COMPONENTS_GET(type, &(world0).components, MIN(pack.id + 1, WORLD_ENTITIES_COUNT((world0).entities) - 1)), \
-                .entity_ptr = &WORLD_ENTITIES_GET((world0).entities, MIN(pack.id + 1, WORLD_ENTITIES_COUNT((world0).entities) - 1)) \
-            } \
-        ) \
+            entity *entity0 = &WORLD_ENTITIES_GET((world0).entities, 0); \
+            (++entity0->id) < WORLD_ENTITIES_COUNT((world0).entities); \
+            entity0 = &WORLD_ENTITIES_GET((world0).entities, entity0->id) \
+        )
 
-#define WORLD_FOREACH_ACTIVE_COMPONENT(type, world0, pack, entity_ptr, component_ptr) \
-    WORLD_FOREACH_COMPONENT(type, world0, pack, entity_ptr, component_ptr) \
-        if (ENTITY_HAS_COMPONENT(*((pack).entity_ptr), type)) \
+#define WORLD_FOREACH_ENTITY_WITH(world0, entity0, ...) \
+    WORLD_FOREACH_ENTITY(world0, entity0) \
+        if (ENTITY_HAS_COMPONENTS_ALL(*(entity0), __VA_ARGS__))
 
-// #define WORLD_FOREACH_COMPONENTS(world0, pack, entity_ptr, component_ptr, ...) \
-//     for ( \
-//             struct types_pack { entity_id id; component_id component_ids[]; entity *entity_ptr; } pack = \
-//                 { \
-//                     .id = 0, \
-//                     .component_ids = { COMPONENT_IDS(__VA_ARGS__) }, \
-//                     .entity_ptr = &WORLD_ENTITIES_GET((world0).entities, 0) \
-//                 }; \
-//             pack.id < WORLD_ENTITIES_COUNT((world0).entities); \
-//             pack = (struct types_pack){ \
-//                 .id = pack.id + 1, \
-//                 .component_ptr = WORLD_COMPONENTS_GET(type, &(world0).components, MIN(pack.id + 1, WORLD_ENTITIES_COUNT((world0).entities) - 1)), \
-//                 .entity_ptr = &WORLD_ENTITIES_GET((world0).entities, MIN(pack.id + 1, WORLD_ENTITIES_COUNT((world0).entities) - 1)) \
-//             } \
-//         ) \
 
 #endif

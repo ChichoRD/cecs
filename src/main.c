@@ -5,6 +5,7 @@
 #include "../include/list.h"
 #include "../include/world.h"
 #include "../include/entity.h"
+#include "../include/query.h"
 
 COMPONENT_DEFINE(vec2int) {
     int x;
@@ -31,19 +32,7 @@ void main(void) {
     tag t = {"Hello, World!"};
     tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), t);
 
-    WORLD_FOREACH_ACTIVE_COMPONENT(vec2int, za, i, entity0, component) {
-        printf("Entity %d: %d, %d\n", i.entity0->id, i.component->x, i.component->y);
-    }
-
     printf("\n");
-
-    WORLD_FOREACH_ACTIVE_COMPONENT(vec2int, za, i, entity0, component) {
-        i.component->x += 1;
-        i.component->y *= 2;
-        printf("Entity %d: %d, %d\n", i.entity0->id, i.component->x, i.component->y);
-    }
-    
-
     world_free(&za);
     printf("Freed world\n");
 }
