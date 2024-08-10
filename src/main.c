@@ -29,8 +29,19 @@ void main(void) {
 
     world_remove_entity(&za, 2);
 
-    tag t = {"Hello, World!"};
-    tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), t);
+    // tag t = {"Hello, World!"};
+    // tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), t);
+
+    query q = QUERY_CREATE(vec2int);
+    struct QUERY_RESULT(vec2int) *result = QUERY_RUN(q, za, za.entities_arena, vec2int);
+
+    printf("Query result:\n");
+    printf("Count: %zu\n", result->vec2int_view.count);
+    for (size_t i = 0; i < result->vec2int_view.count; i++) {
+        vec2int *v = result->vec2int_view.elements[i];
+        printf("x: %d, y: %d\n", v->x, v->y);
+    }
+
 
     printf("\n");
     world_free(&za);

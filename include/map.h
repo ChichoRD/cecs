@@ -40,6 +40,18 @@
 #define MAP_LIST0(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST1)(f, peek, __VA_ARGS__)
 #define MAP_LIST1(f, x, peek, ...) f(x) MAP_LIST_NEXT(peek, MAP_LIST0)(f, peek, __VA_ARGS__)
 
+/**
+ * Applies the function macro `f` to each of the remaining parameters.
+ */
+#define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+
+/**
+ * Applies the function macro `f` to each of the remaining parameters and
+ * inserts commas between the results.
+ */
+#define MAP_LIST(f, ...) EVAL(MAP_LIST1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
+
+
 #define EMPTY()
 
 #define TUPLE_AT_1(a,b,...) b
@@ -52,17 +64,5 @@
 #define CAT_END(x,a,...) x
 
 #define CAT(...) EVAL4(CAT_(,__VA_ARGS__,()))
-
-
-/**
- * Applies the function macro `f` to each of the remaining parameters.
- */
-#define MAP(f, ...) EVAL(MAP1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
-
-/**
- * Applies the function macro `f` to each of the remaining parameters and
- * inserts commas between the results.
- */
-#define MAP_LIST(f, ...) EVAL(MAP_LIST1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
 
 #endif

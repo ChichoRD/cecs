@@ -7,7 +7,6 @@
 #include "../include/component.h"
 #include "../include/arena.h"
 #include "../include/list.h"
-//#include "../include/query.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -113,7 +112,7 @@ void *world_components_set_component(world_components *wc, component_id componen
     return list_set(&wc->components[component_id], entity_id, component, size);
 }
 
-void *world_components_get_component(world_components *wc, component_id component_id, entity_id entity_id, size_t size) {
+void *world_components_get_component(const world_components *wc, component_id component_id, entity_id entity_id, size_t size) {
     assert(component_id < COMPONENT_TYPE_COUNT);
     assert(entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size));
     assert(wc->component_sizes[component_id] == (ssize_t)size);
@@ -191,17 +190,5 @@ void *world_remove_component(world *w, entity_id entity_id, component_id compone
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
 #define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) *(type *)world_remove_component((world0), (entity_id0), COMPONENT_ID(type), sizeof(type))
-
-#define WORLD_FOREACH_ENTITY(world0, entity0) \
-    for ( \
-            entity *entity0 = &WORLD_ENTITIES_GET((world0).entities, 0); \
-            (++entity0->id) < WORLD_ENTITIES_COUNT((world0).entities); \
-            entity0 = &WORLD_ENTITIES_GET((world0).entities, entity0->id) \
-        )
-
-#define WORLD_FOREACH_ENTITY_WITH(world0, entity0, ...) \
-    WORLD_FOREACH_ENTITY(world0, entity0) \
-        if (ENTITY_HAS_COMPONENTS_ALL(*(entity0), __VA_ARGS__))
-
 
 #endif

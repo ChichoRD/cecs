@@ -64,7 +64,7 @@ typedef struct arena {
     linked_block *last_block;
 } arena;
 
-#define ARENA_FOREACH(a, lb) for (linked_block *(lb) = (a).first_block; (lb) != NULL; (lb) = lb->next)
+#define ARENA_FOREACH(arena0, linked_block0) for (linked_block *(linked_block0) = (arena0).first_block; (linked_block0) != NULL; (linked_block0) = linked_block0->next)
 
 arena arena_create(void) {
     arena a;
