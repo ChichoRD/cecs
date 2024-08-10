@@ -78,7 +78,7 @@ void list_remove(list *l, size_t index, size_t size)
 }
 #define LIST_REMOVE(type, list0, index) list_remove(list0, index, sizeof(type))
 
-void *list_get(list *l, size_t index, size_t size)
+void *list_get(const list *l, size_t index, size_t size)
 {
     assert(index * size < l->count);
     return (uint8_t *)l->elements + index * size;
