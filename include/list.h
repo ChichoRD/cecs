@@ -78,6 +78,18 @@ void list_remove(list *l, size_t index, size_t size)
 }
 #define LIST_REMOVE(type, list0, index) list_remove(list0, index, sizeof(type))
 
+void list_remove_range(list *l, size_t index, size_t count, size_t size)
+{
+    assert(index * size < l->count);
+    assert((index + count) * size < l->count);
+    memmove(
+        (uint8_t *)l->elements + index * size,
+        (uint8_t *)l->elements + (index + count) * size,
+        ((l->count - index - count) * size));
+    l->count -= count * size;
+}
+#define LIST_REMOVE_RANGE(type, list0, index, count) list_remove_range(list0, index, count, sizeof(type))
+
 void *list_get(const list *l, size_t index, size_t size)
 {
     assert(index * size < l->count);
@@ -91,5 +103,53 @@ void *list_set(list *l, size_t index, void *element, size_t size)
     return memcpy((uint8_t *)l->elements + index * size, element, size);
 }
 #define LIST_SET(type, list0, index, element) *(type *)list_set(list0, index, &element, sizeof(type))
+
+void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
+{
+    assert(index * size < l->count);
+    size_t new_count = l->count + size;
+    if (new_count > l->capacity)
+    {
+        list new = list_create(a, l->capacity * 2);
+        new.count = l->count;
+
+        memcpy(new.elements, l->elements, l->count);
+        l = &new;
+    }
+
+    memmove(
+        (uint8_t *)l->elements + (index + 1) * size,
+        (uint8_t *)l->elements + index * size,
+        (l->count - index) * size);
+    void *ptr = memcpy((uint8_t *)l->elements + index * size, element, size);
+    l->count = new_count;
+    return ptr;
+}
+#define LIST_INSERT(type, list0, arena0, index, element) *(type *)list_insert(list0, arena0, index, &element, sizeof(type))
+
+void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t count, size_t size)
+{
+    assert(index * size < l->count);
+    size_t new_count = l->count + count * size;
+    if (new_count > l->capacity)
+    {
+        while (new_count > l->capacity)
+            l->capacity *= 2;
+        list new = list_create(a, l->capacity);
+        new.count = l->count;
+
+        memcpy(new.elements, l->elements, l->count);
+        l = &new;
+    }
+
+    memmove(
+        (uint8_t *)l->elements + (index + count) * size,
+        (uint8_t *)l->elements + index * size,
+        (l->count - index) * size);
+    void *ptr = memcpy((uint8_t *)l->elements + index * size, elements, count * size);
+    l->count = new_count;
+    return ptr;
+}
+#define LIST_INSERT_RANGE(type, list0, arena0, index, elements, count) list_insert_range(list0, arena0, index, elements, count, sizeof(type))
 
 #endif

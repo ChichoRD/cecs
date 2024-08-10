@@ -6,6 +6,7 @@
 #include "../include/world.h"
 #include "../include/entity.h"
 #include "../include/query.h"
+#include "../include/resource.h"
 
 COMPONENT_DEFINE(vec2int) {
     int x;
@@ -17,33 +18,7 @@ COMPONENT_DEFINE(tag) {
 } tag;
 
 void main(void) {
-    srand(time(NULL));
     world za = world_create();
-
-    size_t entity_count = 10;
-    for (size_t i = 0; i < entity_count; i++) {
-        vec2int pos = {rand() % 100, rand() % 100};
-        
-        vec2int c = WORLD_SET_OR_ADD_COMPONENT(vec2int, &za, world_add_entity(&za, 0), pos);
-    }
-
-    world_remove_entity(&za, 2);
-
-    // tag t = {"Hello, World!"};
-    // tag c = WORLD_SET_OR_ADD_COMPONENT(tag, &za, world_add_entity(&za, 0), t);
-
-    query q = QUERY_CREATE(vec2int);
-    struct QUERY_RESULT(vec2int) *result = QUERY_RUN(q, za, za.entities_arena, vec2int);
-
-    printf("Query result:\n");
-    printf("Count: %zu\n", result->vec2int_view.count);
-    for (size_t i = 0; i < result->vec2int_view.count; i++) {
-        vec2int *v = result->vec2int_view.elements[i];
-        printf("x: %d, y: %d\n", v->x, v->y);
-    }
-
-
-    printf("\n");
     world_free(&za);
     printf("Freed world\n");
 }

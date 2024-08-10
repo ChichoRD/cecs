@@ -3,10 +3,11 @@
 
 #include <assert.h>
 #include <memory.h>
-#include "../include/entity.h"
-#include "../include/component.h"
-#include "../include/arena.h"
-#include "../include/list.h"
+#include "entity.h"
+#include "component.h"
+#include "arena.h"
+#include "list.h"
+#include "resource.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -131,29 +132,89 @@ void world_components_grow_all(world_components *wc, arena *components_arena, si
 }
 
 
+#define DEFAULT_RESOURCE_CAPACITY 128
+
+typedef ssize_t resource_offset;
+typedef struct world_resources {
+    list resources;
+    list resource_offsets;
+} world_resources;
+
+world_resources world_resources_create(arena *resources_arena) {
+    world_resources wr;
+    wr.resources = list_create(resources_arena, (8 * DEFAULT_RESOURCE_CAPACITY));
+    wr.resource_offsets = list_create(resources_arena, sizeof(resource_offset) * DEFAULT_RESOURCE_CAPACITY);
+    return wr;
+}
+
+size_t world_resources_count(const world_resources *wr) {
+    return LIST_COUNT_OF_SIZE(wr->resource_offsets, sizeof(resource_offset));
+}
+
+void *world_resources_add_resource(world_resources *wr, arena *resources_arena, resource_id id, void *resource, size_t size) {
+    resource_offset offset = wr->resources.count;
+    if (offset >= 0) {
+        assert(id == world_resources_count(wr));
+        LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, offset);
+        return list_add_range(&wr->resources, resources_arena, resource, size, sizeof(uint8_t));
+    } else {
+        assert(id < world_resources_count(wr));
+        resource_offset removed_offset = -offset - 1;
+        LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
+        return list_insert_range(&wr->resources, resources_arena, removed_offset, resource, size, sizeof(uint8_t));
+    }
+}
+#define WORLD_RESOURCES_ADD_RESOURCE(type, world_resources0, resources_arena0, resource) (type *)world_resources_add_resource(&(world_resources0), &(resources_arena0), RESOURCE_ID(type), &(resource), sizeof(type))
+
+void *world_resources_get_resource(const world_resources *wr, resource_id id, size_t size) {
+    assert(id < world_resources_count(wr));
+    resource_offset offset = LIST_GET(resource_offset, &wr->resource_offsets, id);
+    assert(offset >= 0);
+
+    void *resource = (uint8_t *)wr->resources.elements + offset;
+    assert((uint8_t *)resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count);
+    return resource;
+}
+#define WORLD_RESOURCES_GET_RESOURCE(type, world_resources0) (type *)world_resources_get_resource(&(world_resources0), RESOURCE_ID(type), sizeof(type))
+
+void *world_resources_remove_resource(world_resources *wr, resource_id id, size_t size) {
+    void *resource = world_resources_get_resource(wr, id, size);
+
+    resource_offset removed_offset = (uint8_t *)&wr->resources.elements - (uint8_t *)resource - 1;
+    LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
+    list_remove_range(&wr->resources, -removed_offset, size, sizeof(uint8_t));
+    return resource;
+}
+#define WORLD_RESOURCES_REMOVE_RESOURCE(type, world_resources0) (type *)world_resources_remove_resource(&(world_resources0), RESOURCE_ID(type), sizeof(type))
+
 typedef struct world {
     arena entities_arena;
     world_entities entities;
 
     arena components_arena;
     world_components components;
+
+    arena resources_arena;
+    world_resources resources;
 } world;
 
 world world_create(void) {
     world w;
     w.entities_arena = arena_create();
-    block b = block_create(4);
-    arena_prepend(&w.entities_arena, &b);
     w.entities = world_entities_create(&w.entities_arena);
 
     w.components_arena = arena_create();
     w.components = world_components_create(&w.components_arena);
+
+    w.resources_arena = arena_create();
+    w.resources = world_resources_create(&w.resources_arena);
     return w;
 }
 
 void world_free(world *w) {
     arena_free(&w->entities_arena);
     arena_free(&w->components_arena);
+    arena_free(&w->resources_arena);
 }
 
 size_t world_entity_count(const world *w) {
@@ -196,12 +257,26 @@ void *world_remove_component(world *w, entity_id entity_id, component_id compone
     e->mask &= ~mask;
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
-#define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) *(type *)world_remove_component((world0), (entity_id0), COMPONENT_ID(type), sizeof(type))
+#define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) (type *)world_remove_component((world0), (entity_id0), COMPONENT_ID(type), sizeof(type))
 
 void *world_get_component(const world *w, component_id component_id, entity_id entity_id, size_t size) {
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
 #define WORLD_GET_COMPONENT(type, world0, entity_id0) *(type *)world_get_component(&(world0), COMPONENT_ID(type), (entity_id0), sizeof(type))
 
+void *world_add_resource(world *w, resource_id id, void *resource, size_t size) {
+    return world_resources_add_resource(&w->resources, &w->resources_arena, id, resource, size);
+}
+#define WORLD_ADD_RESOURCE(type, world0, resource0) (type *)world_add_resource(&(world0), RESOURCE_ID(type), &(resource0), sizeof(type))
+
+void *world_get_resource(const world *w, resource_id id, size_t size) {
+    return world_resources_get_resource(&w->resources, id, size);
+}
+#define WORLD_GET_RESOURCE(type, world0) ((type *)world_get_resource(&(world0), RESOURCE_ID(type), sizeof(type)))
+
+void *world_remove_resource(world *w, resource_id id, size_t size) {
+    return world_resources_remove_resource(&w->resources, id, size);
+}
+#define WORLD_REMOVE_RESOURCE(type, world0) (*(type *)world_remove_resource(&(world0), RESOURCE_ID(type), sizeof(type)))
 
 #endif
