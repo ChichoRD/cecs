@@ -156,15 +156,28 @@ void world_free(world *w) {
     arena_free(&w->components_arena);
 }
 
+size_t world_entity_count(const world *w) {
+    return WORLD_ENTITIES_COUNT(w->entities);
+}
+
 entity_id world_add_entity(world *w, component_mask mask) {
     entity_id id = world_entities_add_enitity(&w->entities, &w->entities_arena, mask)->id;
     world_components_grow_all(&w->components, &w->components_arena, WORLD_ENTITIES_COUNT(w->entities));
     return id;
 }
 
+entity *world_get_entity(const world *w, entity_id entity_id) {
+    assert(entity_id < world_entity_count(w));
+    return &WORLD_ENTITIES_GET(w->entities, entity_id);
+}
+
+entity_id world_remove_entity(world *w, entity_id entity_id) {
+    return world_entities_remove_entity(&w->entities, &w->entities_arena, entity_id)->e->id;
+}
+
 void *world_set_or_add_component(world *w, entity_id entity_id, component_id component_id, void *component, size_t size) {  
-    assert(entity_id < WORLD_ENTITIES_COUNT(w->entities));
-    entity *e = &WORLD_ENTITIES_GET(w->entities, entity_id);
+    assert(entity_id < world_entity_count(w));
+    entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
     e->mask |= mask;
     
@@ -176,19 +189,19 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
 }
 #define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component) *(type *)world_set_or_add_component((world0), (entity_id0), COMPONENT_ID(type), &(component), sizeof(type))
 
-entity_id world_remove_entity(world *w, entity_id entity_id) {
-    return world_entities_remove_entity(&w->entities, &w->entities_arena, entity_id)->e->id;
-}
-
-#define WORLD_GET_COMPONENT(type, world0, entity_id0) *(type *)world_components_get_component(&(world0).components, COMPONENT_ID(type), (entity_id0), sizeof(type))
-
 void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
-    assert(entity_id < WORLD_ENTITIES_COUNT(w->entities));
-    entity *e = &LIST_GET(entity, &w->entities.entities, entity_id);
+    assert(entity_id < world_entity_count(w));
+    entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
     e->mask &= ~mask;
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
 #define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) *(type *)world_remove_component((world0), (entity_id0), COMPONENT_ID(type), sizeof(type))
+
+void *world_get_component(const world *w, component_id component_id, entity_id entity_id, size_t size) {
+    return world_components_get_component(&w->components, component_id, entity_id, size);
+}
+#define WORLD_GET_COMPONENT(type, world0, entity_id0) *(type *)world_get_component(&(world0), COMPONENT_ID(type), (entity_id0), sizeof(type))
+
 
 #endif

@@ -42,12 +42,13 @@ query query_create(component_mask mask, component_id *component_ids, size_t comp
 
 void *query_run(query q, const world *w, arena *query_arena) {
     list *results = arena_alloc(query_arena, sizeof(list) * q.component_count);
+    size_t enitity_count = world_entity_count(w);
     for (size_t i = 0; i < q.component_count; i++) {
-        results[i] = list_create(query_arena, sizeof(intptr_t) * WORLD_ENTITIES_COUNT(w->entities));
+        results[i] = list_create(query_arena, sizeof(intptr_t) * enitity_count);
     }
 
-    for (size_t i = 0; i < WORLD_ENTITIES_COUNT(w->entities); i++) {
-        entity e = WORLD_ENTITIES_GET(w->entities, i);
+    for (size_t i = 0; i < enitity_count; i++) {
+        entity e = *world_get_entity(w, i);
         if ((e.mask & q.mask) == q.mask) {
             for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
