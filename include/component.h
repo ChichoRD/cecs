@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "map.h"
 #include "type_id.h"
+#include "entity.h"
 
 typedef uint32_t component_id;
 static component_id component_id_count = 0;
@@ -21,6 +22,7 @@ static component_id component_id_count = 0;
 
 #define _COMPONENT_MASK_OR(type) COMPONENT_MASK(type) |
 #define COMPONENTS_MASK(...) (MAP(_COMPONENT_MASK_OR, __VA_ARGS__) 0)
+
 
 
 #define COMPONENT_TYPE_COUNT (8 * sizeof(component_mask))
