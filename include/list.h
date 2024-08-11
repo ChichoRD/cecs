@@ -36,18 +36,18 @@ void *list_add(list *l, arena *a, void *element, size_t size)
     {
         while (new_count > l->capacity)
             l->capacity *= 2;
-        list new = list_create(a, l->capacity);
-        new.count = l->count;
 
-        memcpy(new.elements, l->elements, l->count);
-        l = &new;
+        void *previous_elements = l->elements;
+        l->elements = arena_alloc(a, l->capacity);
+
+        memcpy(l->elements, previous_elements, l->count);
     }
 
     void *ptr = memcpy((uint8_t *)l->elements + l->count, element, size);
     l->count = new_count;
     return ptr;
 }
-#define LIST_ADD(type, list0, arena0, element) *(type *)list_add(list0, arena0, &(element), sizeof(type))
+#define LIST_ADD(type, list0, arena0, element) (*(type *)list_add(list0, arena0, &(element), sizeof(type)))
 
 void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t size)
 {
@@ -56,11 +56,11 @@ void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t siz
     {
         while (new_count > l->capacity)
             l->capacity *= 2;
-        list new = list_create(a, l->capacity);
-        new.count = l->count;
 
-        memcpy(new.elements, l->elements, l->count);
-        l = &new;
+        void *previous_elements = l->elements;
+        l->elements = arena_alloc(a, l->capacity);
+
+        memcpy(l->elements, previous_elements, l->count);
     }
 
     void *ptr = memcpy((uint8_t *)l->elements + l->count, elements, count * size);
@@ -114,11 +114,11 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
     {
         while (new_count > l->capacity)
             l->capacity *= 2;
-        list new = list_create(a, l->capacity);
-        new.count = l->count;
 
-        memcpy(new.elements, l->elements, l->count);
-        l = &new;
+        void *previous_elements = l->elements;
+        l->elements = arena_alloc(a, l->capacity);
+
+        memcpy(l->elements, previous_elements, l->count);
     }
 
     memmove(
@@ -139,11 +139,11 @@ void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t 
     {
         while (new_count > l->capacity)
             l->capacity *= 2;
-        list new = list_create(a, l->capacity);
-        new.count = l->count;
 
-        memcpy(new.elements, l->elements, l->count);
-        l = &new;
+        void *previous_elements = l->elements;
+        l->elements = arena_alloc(a, l->capacity);
+
+        memcpy(l->elements, previous_elements, l->count);
     }
 
     memmove(
