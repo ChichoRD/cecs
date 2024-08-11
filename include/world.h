@@ -180,9 +180,9 @@ void *world_resources_get_resource(const world_resources *wr, resource_id id, si
 void *world_resources_remove_resource(world_resources *wr, resource_id id, size_t size) {
     void *resource = world_resources_get_resource(wr, id, size);
 
-    resource_offset removed_offset = (uint8_t *)&wr->resources.elements - (uint8_t *)resource - 1;
+    resource_offset removed_offset = (uint8_t *)wr->resources.elements - (uint8_t *)resource - 1;
     LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
-    list_remove_range(&wr->resources, -removed_offset, size, sizeof(uint8_t));
+    list_remove_range(&wr->resources, -removed_offset - 1, size, sizeof(uint8_t));
     return resource;
 }
 #define WORLD_RESOURCES_REMOVE_RESOURCE(type, world_resources0) (type *)world_resources_remove_resource(&(world_resources0), RESOURCE_ID(type), sizeof(type))
@@ -221,8 +221,8 @@ size_t world_entity_count(const world *w) {
     return WORLD_ENTITIES_COUNT(w->entities);
 }
 
-entity_id world_add_entity(world *w, component_mask mask) {
-    entity_id id = world_entities_add_enitity(&w->entities, &w->entities_arena, mask)->id;
+entity_id world_add_entity(world *w) {
+    entity_id id = world_entities_add_enitity(&w->entities, &w->entities_arena, 0)->id;
     world_components_grow_all(&w->components, &w->components_arena, WORLD_ENTITIES_COUNT(w->entities));
     return id;
 }
@@ -248,7 +248,7 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
         return world_components_add_component(&w->components, &w->components_arena, WORLD_ENTITIES_COUNT(w->entities), component_id, component, size);
     }
 }
-#define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component) *(type *)world_set_or_add_component((world0), (entity_id0), COMPONENT_ID(type), &(component), sizeof(type))
+#define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component) ((type *)world_set_or_add_component(&(world0), (entity_id0), COMPONENT_ID(type), &(component), sizeof(type)))
 
 void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
     assert(entity_id < world_entity_count(w));
@@ -257,17 +257,17 @@ void *world_remove_component(world *w, entity_id entity_id, component_id compone
     e->mask &= ~mask;
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
-#define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) (type *)world_remove_component((world0), (entity_id0), COMPONENT_ID(type), sizeof(type))
+#define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) (*(type *)world_remove_component(&(world0), (entity_id0), COMPONENT_ID(type), sizeof(type)))
 
 void *world_get_component(const world *w, component_id component_id, entity_id entity_id, size_t size) {
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
-#define WORLD_GET_COMPONENT(type, world0, entity_id0) *(type *)world_get_component(&(world0), COMPONENT_ID(type), (entity_id0), sizeof(type))
+#define WORLD_GET_COMPONENT(type, world0, entity_id0) ((type *)world_get_component(&(world0), COMPONENT_ID(type), (entity_id0), sizeof(type)))
 
 void *world_add_resource(world *w, resource_id id, void *resource, size_t size) {
     return world_resources_add_resource(&w->resources, &w->resources_arena, id, resource, size);
 }
-#define WORLD_ADD_RESOURCE(type, world0, resource0) (type *)world_add_resource(&(world0), RESOURCE_ID(type), &(resource0), sizeof(type))
+#define WORLD_ADD_RESOURCE(type, world0, resource0) ((type *)world_add_resource(&(world0), RESOURCE_ID(type), &(resource0), sizeof(type)))
 
 void *world_get_resource(const world *w, resource_id id, size_t size) {
     return world_resources_get_resource(&w->resources, id, size);

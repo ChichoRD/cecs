@@ -9,17 +9,17 @@
 #include "view.h"
 
 typedef struct query {
-    component_mask mask;
-    component_id *component_ids;
-    size_t component_count;
+    const component_mask mask;
+    const component_id *component_ids;
+    const size_t component_count;
 } query;
 
-query query_create(component_mask mask, component_id *component_ids, size_t component_count) {
-    query q;
-    q.mask = mask;
-    q.component_ids = component_ids;
-    q.component_count = component_count;
-    return q;
+query query_create(const component_mask mask, const component_id *component_ids, const size_t component_count) {
+    return (query) {
+        .mask = mask,
+        .component_ids = component_ids,
+        .component_count = component_count
+    };
 }
 #define QUERY_CREATE(...) \
     query_create( \
@@ -31,7 +31,7 @@ query query_create(component_mask mask, component_id *component_ids, size_t comp
 #define _PREPEND_UNDERSOCRE(x) _##x
 #define QUERY_RESULT(...) CAT(query_result, MAP_LIST(_PREPEND_UNDERSOCRE, __VA_ARGS__))
 
-#define _QUERY_RESULT_FIELD(type) VIEW_STRUCT(type, *) VIEW(type);
+#define _QUERY_RESULT_FIELD(type) VIEW_STRUCT_INDIRECT(type, *) VIEW(type);
 #define QUERY_RESULT_STRUCT(...) \
     struct QUERY_RESULT(__VA_ARGS__) { \
         MAP(_QUERY_RESULT_FIELD, __VA_ARGS__) \
@@ -40,7 +40,7 @@ query query_create(component_mask mask, component_id *component_ids, size_t comp
 #define QUERY_RESULT_IMPLEMENT(...) \
     MAP(VIEW_IMPLEMENT, __VA_ARGS__)
 
-void *query_run(query q, const world *w, arena *query_arena) {
+void *query_run(const query q, const world *w, arena *query_arena) {
     list *results = arena_alloc(query_arena, sizeof(list) * q.component_count);
     size_t enitity_count = world_entity_count(w);
     for (size_t i = 0; i < q.component_count; i++) {
@@ -63,7 +63,7 @@ void *query_run(query q, const world *w, arena *query_arena) {
         }
     }
 
-    VIEW_STRUCT(void, *) *views = arena_alloc(query_arena, sizeof(struct VIEW(void)) * q.component_count);  
+    VIEW_STRUCT_INDIRECT(void, *) *views = arena_alloc(query_arena, sizeof(struct VIEW(void)) * q.component_count);  
     for (size_t i = 0; i < q.component_count; i++) {
         views[i].count = LIST_COUNT_OF_SIZE(results[i], sizeof(intptr_t));
         views[i].elements = results[i].elements;

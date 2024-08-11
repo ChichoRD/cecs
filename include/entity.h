@@ -12,7 +12,7 @@ typedef uint32_t entity_id;
 typedef struct entity
 {
     bool active;
-    entity_id id;
+    const entity_id id;
     component_mask mask;
 } entity;
 
@@ -20,13 +20,13 @@ typedef struct entity
 #define ENTITY_HAS_COMPONENTS_ALL(entity0, ...) (((entity0).mask & (COMPONENTS_MASK(__VA_ARGS__))) == COMPONENTS_MASK(__VA_ARGS__))
 #define ENTITY_HAS_COMPONENTS_ANY(entity0, ...) (((entity0).mask & (COMPONENTS_MASK(__VA_ARGS__))) != 0)
 
-entity entity_create(bool active, uint32_t id, component_mask mask)
+entity entity_create(bool active, const entity_id id, component_mask mask)
 {
-    entity e;
-    e.active = active;
-    e.id = id;
-    e.mask = mask;
-    return e;
+    return (entity){
+        .active = active,
+        .id = id,
+        .mask = mask,
+    };
 }
 
 #endif

@@ -34,7 +34,9 @@ void *list_add(list *l, arena *a, void *element, size_t size)
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
     {
-        list new = list_create(a, l->capacity * 2);
+        while (new_count > l->capacity)
+            l->capacity *= 2;
+        list new = list_create(a, l->capacity);
         new.count = l->count;
 
         memcpy(new.elements, l->elements, l->count);
@@ -81,7 +83,7 @@ void list_remove(list *l, size_t index, size_t size)
 void list_remove_range(list *l, size_t index, size_t count, size_t size)
 {
     assert(index * size < l->count);
-    assert((index + count) * size < l->count);
+    assert((index + count) * size <= l->count);
     memmove(
         (uint8_t *)l->elements + index * size,
         (uint8_t *)l->elements + (index + count) * size,
@@ -110,7 +112,9 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
     {
-        list new = list_create(a, l->capacity * 2);
+        while (new_count > l->capacity)
+            l->capacity *= 2;
+        list new = list_create(a, l->capacity);
         new.count = l->count;
 
         memcpy(new.elements, l->elements, l->count);

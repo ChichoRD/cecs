@@ -5,11 +5,12 @@
 
 #define VIEW(type) type##_view
 
-#define VIEW_STRUCT(type, indirection) \
+#define VIEW_STRUCT_INDIRECT(type, indirection) \
     struct VIEW(type) { \
         size_t count; \
         type indirection*elements; \
     }
+#define VIEW_STRUCT(type) VIEW_STRUCT_INDIRECT(type, )
 
 #define VIEW_IMPLEMENT(type) \
     struct VIEW(type) type##_view_create(type *elements, size_t count) { \
