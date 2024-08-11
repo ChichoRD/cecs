@@ -29,6 +29,10 @@ RESOURCE_DEFINE(input_buffer) {
     char *buffer[16];
 } input_buffer;
 
+RESOURCE_DEFINE(emerald) {
+    int count;
+} emerald;
+
 void main(void) {
     world w = world_create();
     {
@@ -43,8 +47,12 @@ void main(void) {
     {
         world_time *wt = WORLD_ADD_RESOURCE(world_time, w, ((world_time){.time = 0.0}));
         input_buffer *ib = WORLD_ADD_RESOURCE(input_buffer, w, ((input_buffer){.buffer = {"Up", "Down"}}));
-        //WORLD_REMOVE_RESOURCE(world_time, w);
-        WORLD_REMOVE_RESOURCE(input_buffer, w);
+        emerald *e = WORLD_ADD_RESOURCE(emerald, w, ((emerald){.count = 10}));
+
+        world_time new_wt = WORLD_REMOVE_RESOURCE(world_time, w);
+        input_buffer new_ib = WORLD_REMOVE_RESOURCE(input_buffer, w);
+
+        WORLD_ADD_RESOURCE(input_buffer, w, new_ib);
     }
 
     arena a = arena_create();
@@ -60,10 +68,12 @@ void main(void) {
         world_time *wt = WORLD_GET_RESOURCE(world_time, w);
         printf("Time: %f\n", wt->time);
 
-        // input_buffer *ib = WORLD_GET_RESOURCE(input_buffer, w);
-        // for (size_t j = 0; j < 16; j++) {
-        //     printf("Input: %s\n", ib->buffer[j]);
-        // }
+        input_buffer *ib = WORLD_GET_RESOURCE(input_buffer, w);
+        for (size_t j = 0; j < 16; j++) {
+            printf("Input: %s\n", ib->buffer[j]);
+        }
+        emerald *e = WORLD_GET_RESOURCE(emerald, w);
+        printf("Emeralds: %d\n", e->count);
     }
     arena_free(&a);
     world_free(&w);

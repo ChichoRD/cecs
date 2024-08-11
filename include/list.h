@@ -47,7 +47,7 @@ void *list_add(list *l, arena *a, void *element, size_t size)
     l->count = new_count;
     return ptr;
 }
-#define LIST_ADD(type, list0, arena0, element) *(type *)list_add(list0, arena0, &element, sizeof(type))
+#define LIST_ADD(type, list0, arena0, element) *(type *)list_add(list0, arena0, &(element), sizeof(type))
 
 void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t size)
 {
@@ -97,18 +97,18 @@ void *list_get(const list *l, size_t index, size_t size)
     assert((index * size < l->count) && "Attempted to get element with index out of bounds");
     return (uint8_t *)l->elements + index * size;
 }
-#define LIST_GET(type, list0, index) *(type *)list_get(list0, index, sizeof(type))
+#define LIST_GET(type, list0, index) ((type *)list_get(list0, index, sizeof(type)))
 
 void *list_set(list *l, size_t index, void *element, size_t size)
 {
     assert((index * size < l->count) && "Attempted to set element with index out of bounds");
     return memcpy((uint8_t *)l->elements + index * size, element, size);
 }
-#define LIST_SET(type, list0, index, element) *(type *)list_set(list0, index, &element, sizeof(type))
+#define LIST_SET(type, list0, index, element) *(type *)list_set(list0, index, &(element), sizeof(type))
 
 void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
 {
-    assert((index * size < l->count) && "Attempted to insert element with index out of bounds");
+    assert((index * size <= l->count) && "Attempted to insert element with index out of bounds");
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
     {
@@ -129,11 +129,11 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
     l->count = new_count;
     return ptr;
 }
-#define LIST_INSERT(type, list0, arena0, index, element) *(type *)list_insert(list0, arena0, index, &element, sizeof(type))
+#define LIST_INSERT(type, list0, arena0, index, element) *(type *)list_insert(list0, arena0, index, &(element), sizeof(type))
 
 void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t count, size_t size)
 {
-    assert((index * size < l->count) && "Attempted to insert elements with starting index out of bounds");
+    assert((index * size <= l->count) && "Attempted to insert elements with starting index out of bounds");
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
     {

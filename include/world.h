@@ -9,10 +9,6 @@
 #include "list.h"
 #include "resource.h"
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-
 #define DEFAULT_ENTITY_CAPACITY 512
 
 typedef struct linked_entity {
@@ -58,7 +54,7 @@ entity *world_entities_add_enitity(world_entities *we, arena *entities_arena, co
 
 linked_entity *world_entities_remove_entity(world_entities *we, arena *entity_arena, entity_id entity_id) {
     assert((entity_id < WORLD_ENTITIES_COUNT(*we)) && "Entity ID out of bounds");
-    entity *e = &WORLD_ENTITIES_GET(*we, entity_id);
+    entity *e = WORLD_ENTITIES_GET(*we, entity_id);
     e->active = false;
     e->mask = 0;
 
@@ -156,7 +152,9 @@ size_t world_resources_count(const world_resources *wr) {
 }
 
 void *world_resources_add_resource(world_resources *wr, arena *resources_arena, resource_id id, void *resource, size_t size) {
-    resource_offset offset = wr->resources.count;
+    resource_offset offset = (id < world_resources_count(wr))
+        ? *LIST_GET(resource_offset, &wr->resource_offsets, id)
+        : wr->resources.count;
     if (offset >= 0) {
         assert((id == world_resources_count(wr)) && "Resource ID out of bounds");
         LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, offset);
@@ -167,14 +165,14 @@ void *world_resources_add_resource(world_resources *wr, arena *resources_arena, 
         }
         resource_offset removed_offset = -offset - 1;
         LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
-        return list_insert_range(&wr->resources, resources_arena, removed_offset, resource, size, sizeof(uint8_t));
+        return (uint8_t *)wr->resources.elements + removed_offset;
     }
 }
 #define WORLD_RESOURCES_ADD_RESOURCE(type, world_resources0, resources_arena0, resource) (type *)world_resources_add_resource(&(world_resources0), &(resources_arena0), RESOURCE_ID(type), &(resource), sizeof(type))
 
 void *world_resources_get_resource(const world_resources *wr, resource_id id, size_t size) {
     assert((id < world_resources_count(wr)) && "Resource ID out of bounds");
-    resource_offset offset = LIST_GET(resource_offset, &wr->resource_offsets, id);
+    resource_offset offset = *LIST_GET(resource_offset, &wr->resource_offsets, id);
     assert((offset >= 0) && "Resource has been removed");
 
     void *resource = (uint8_t *)wr->resources.elements + offset;
@@ -188,7 +186,6 @@ void *world_resources_remove_resource(world_resources *wr, resource_id id, size_
 
     resource_offset removed_offset = (uint8_t *)wr->resources.elements - (uint8_t *)resource - 1;
     LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
-    list_remove_range(&wr->resources, -removed_offset - 1, size, sizeof(uint8_t));
     return resource;
 }
 #define WORLD_RESOURCES_REMOVE_RESOURCE(type, world_resources0) (type *)world_resources_remove_resource(&(world_resources0), RESOURCE_ID(type), sizeof(type))
@@ -235,7 +232,7 @@ entity_id world_add_entity(world *w) {
 
 entity *world_get_entity(const world *w, entity_id entity_id) {
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
-    return &WORLD_ENTITIES_GET(w->entities, entity_id);
+    return WORLD_ENTITIES_GET(w->entities, entity_id);
 }
 
 entity_id world_remove_entity(world *w, entity_id entity_id) {
