@@ -20,11 +20,11 @@
         return view; \
     } \
     type *type##_view_get(struct VIEW(type) view, size_t index) { \
-        assert(index < view.count); \
+        assert((index < view.count) && "Attempted to index outside of view range"); \
         return &view.elements[index]; \
     } \
     struct VIEW(type) type##_view_slice(struct VIEW(type) view, size_t start, size_t end) { \
-        assert(end <= view.count); \
+        assert((end <= view.count) && "Requested invalid subslice end"); \
         return type##_view_create(view.elements + start, end - start); \
     }
 

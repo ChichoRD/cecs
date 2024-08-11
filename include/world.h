@@ -57,7 +57,7 @@ entity *world_entities_add_enitity(world_entities *we, arena *entities_arena, co
 }
 
 linked_entity *world_entities_remove_entity(world_entities *we, arena *entity_arena, entity_id entity_id) {
-    assert(entity_id < WORLD_ENTITIES_COUNT(*we));
+    assert((entity_id < WORLD_ENTITIES_COUNT(*we)) && "Entity ID out of bounds");
     entity *e = &WORLD_ENTITIES_GET(*we, entity_id);
     e->active = false;
     e->mask = 0;
@@ -90,9 +90,11 @@ world_components world_components_create(arena *components_arena) {
 }
 
 void *world_components_add_component(world_components *wc, arena *components_arena, size_t entity_count, component_id component_id, void *component, size_t size) {
-    assert(component_id < COMPONENT_TYPE_COUNT);
+    assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
     if (wc->component_sizes[component_id] == -1) {
-        assert(wc->components[component_id].count == 0);
+        if (wc->components[component_id].count != 0) {
+            assert(0 && "unreachable: component_sizes and components are out of sync");
+        }
         wc->component_sizes[component_id] = size;
         
         void *last_added = NULL;
@@ -101,22 +103,22 @@ void *world_components_add_component(world_components *wc, arena *components_are
         }
         return last_added;
     } else {
-        assert(wc->component_sizes[component_id] == (ssize_t)size);
+        assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
         return list_add(&wc->components[component_id], components_arena, component, size);
     }
 }
 
 void *world_components_set_component(world_components *wc, component_id component_id, entity_id entity_id, void *component, size_t size) {
-    assert(component_id < COMPONENT_TYPE_COUNT);
-    assert(entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size));
-    assert(wc->component_sizes[component_id] == (ssize_t)size);
+    assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
+    assert((entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size)) && "Entity ID out of bounds");
+    assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
     return list_set(&wc->components[component_id], entity_id, component, size);
 }
 
 void *world_components_get_component(const world_components *wc, component_id component_id, entity_id entity_id, size_t size) {
-    assert(component_id < COMPONENT_TYPE_COUNT);
-    assert(entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size));
-    assert(wc->component_sizes[component_id] == (ssize_t)size);
+    assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
+    assert((entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size)) && "Entity ID out of bounds");
+    assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
     return list_get(&wc->components[component_id], entity_id, size);
 }
 #define WORLD_COMPONENTS_GET(type, world_components0, entity_id0) (type *)world_components_get_component((world_components0), COMPONENT_ID(type), (entity_id0), sizeof(type))
@@ -125,7 +127,9 @@ void world_components_grow_all(world_components *wc, arena *components_arena, si
     for (size_t i = 0; i < COMPONENT_TYPE_COUNT; i++) {
         ssize_t size = wc->component_sizes[i];
         if (size != -1) {
-            assert(LIST_COUNT_OF_SIZE(wc->components[i], size) > 0);
+            if (LIST_COUNT_OF_SIZE(wc->components[i], size) <= 0) {
+                assert(0 && "unreachable: component_sizes and components are out of sync");
+            }     
             world_components_add_component(wc, components_arena, entity_count, i, list_get(&wc->components[i], 0, size), size);
         }
     }
@@ -154,11 +158,13 @@ size_t world_resources_count(const world_resources *wr) {
 void *world_resources_add_resource(world_resources *wr, arena *resources_arena, resource_id id, void *resource, size_t size) {
     resource_offset offset = wr->resources.count;
     if (offset >= 0) {
-        assert(id == world_resources_count(wr));
+        assert((id == world_resources_count(wr)) && "Resource ID out of bounds");
         LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, offset);
         return list_add_range(&wr->resources, resources_arena, resource, size, sizeof(uint8_t));
     } else {
-        assert(id < world_resources_count(wr));
+        if (id >= world_resources_count(wr)) {
+            assert(0 && "unreachable: resource_offsets and resources are out of sync");
+        }
         resource_offset removed_offset = -offset - 1;
         LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
         return list_insert_range(&wr->resources, resources_arena, removed_offset, resource, size, sizeof(uint8_t));
@@ -167,12 +173,12 @@ void *world_resources_add_resource(world_resources *wr, arena *resources_arena, 
 #define WORLD_RESOURCES_ADD_RESOURCE(type, world_resources0, resources_arena0, resource) (type *)world_resources_add_resource(&(world_resources0), &(resources_arena0), RESOURCE_ID(type), &(resource), sizeof(type))
 
 void *world_resources_get_resource(const world_resources *wr, resource_id id, size_t size) {
-    assert(id < world_resources_count(wr));
+    assert((id < world_resources_count(wr)) && "Resource ID out of bounds");
     resource_offset offset = LIST_GET(resource_offset, &wr->resource_offsets, id);
-    assert(offset >= 0);
+    assert((offset >= 0) && "Resource has been removed");
 
     void *resource = (uint8_t *)wr->resources.elements + offset;
-    assert((uint8_t *)resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count);
+    assert(((uint8_t *)resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count) && "Resource out of bounds");
     return resource;
 }
 #define WORLD_RESOURCES_GET_RESOURCE(type, world_resources0) (type *)world_resources_get_resource(&(world_resources0), RESOURCE_ID(type), sizeof(type))
@@ -228,7 +234,7 @@ entity_id world_add_entity(world *w) {
 }
 
 entity *world_get_entity(const world *w, entity_id entity_id) {
-    assert(entity_id < world_entity_count(w));
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
     return &WORLD_ENTITIES_GET(w->entities, entity_id);
 }
 
@@ -237,7 +243,7 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
 }
 
 void *world_set_or_add_component(world *w, entity_id entity_id, component_id component_id, void *component, size_t size) {  
-    assert(entity_id < world_entity_count(w));
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
     entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
     e->mask |= mask;
@@ -251,7 +257,7 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
 #define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component) ((type *)world_set_or_add_component(&(world0), (entity_id0), COMPONENT_ID(type), &(component), sizeof(type)))
 
 void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
-    assert(entity_id < world_entity_count(w));
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
     entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
     e->mask &= ~mask;

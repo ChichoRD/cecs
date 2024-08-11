@@ -24,7 +24,7 @@ block block_create(size_t capacity) {
 
 void *block_alloc(block *b, size_t size) {
     size_t remaining = b->capacity - b->size;
-    assert(remaining >= size);
+    assert((remaining >= size) && "Requested size exceeds block capacity");
 
     void *ptr = b->data + b->size;
     b->size += size;
