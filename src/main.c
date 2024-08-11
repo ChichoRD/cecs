@@ -11,7 +11,7 @@
 #include "../include/query.h"
 #include "../include/resource.h"
 
-#define TARGET_FPS 1000.0
+#define TARGET_FPS 4.0
 
 #define BOARD_WIDTH 16
 #define BOARD_HEIGHT 16
