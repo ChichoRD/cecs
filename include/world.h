@@ -70,35 +70,35 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
         return world_components_add_component(&w->components, &w->components_arena, WORLD_ENTITIES_COUNT(w->entities), component_id, component, size);
     }
 }
-#define WORLD_SET_OR_ADD_COMPONENT(type, world0, entity_id0, component) ((type *)world_set_or_add_component(&(world0), (entity_id0), COMPONENT_ID(type), &(component), sizeof(type)))
+#define WORLD_SET_OR_ADD_COMPONENT(type, world_ref, entity_id0, component) ((type *)world_set_or_add_component(world_ref, (entity_id0), COMPONENT_ID(type), &(component), sizeof(type)))
 
-void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
+const void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
     entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
     e->mask &= ~mask;
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
-#define WORLD_REMOVE_COMPONENT(type, world0, entity_id0) (*(type *)world_remove_component(&(world0), (entity_id0), COMPONENT_ID(type), sizeof(type)))
+#define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0) (*(type *)world_remove_component(world_ref, entity_id0, COMPONENT_ID(type), sizeof(type)))
 
 void *world_get_component(const world *w, component_id component_id, entity_id entity_id, size_t size) {
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
-#define WORLD_GET_COMPONENT(type, world0, entity_id0) ((type *)world_get_component(&(world0), COMPONENT_ID(type), (entity_id0), sizeof(type)))
+#define WORLD_GET_COMPONENT(type, world_ref, entity_id0) ((type *)world_get_component(world_ref, COMPONENT_ID(type), entity_id0, sizeof(type)))
 
 void *world_add_resource(world *w, resource_id id, void *resource, size_t size) {
     return world_resources_add_resource(&w->resources, &w->resources_arena, id, resource, size);
 }
-#define WORLD_ADD_RESOURCE(type, world0, resource0) ((type *)world_add_resource(&(world0), RESOURCE_ID(type), &(resource0), sizeof(type)))
+#define WORLD_ADD_RESOURCE(type, world_ref, resource_ref) ((type *)world_add_resource(world_ref, RESOURCE_ID(type), resource_ref, sizeof(type)))
 
 void *world_get_resource(const world *w, resource_id id, size_t size) {
     return world_resources_get_resource(&w->resources, id, size);
 }
-#define WORLD_GET_RESOURCE(type, world0) ((type *)world_get_resource(&(world0), RESOURCE_ID(type), sizeof(type)))
+#define WORLD_GET_RESOURCE(type, world_ref) ((type *)world_get_resource(world_ref, RESOURCE_ID(type), sizeof(type)))
 
-void *world_remove_resource(world *w, resource_id id, size_t size) {
+const void *world_remove_resource(world *w, resource_id id, size_t size) {
     return world_resources_remove_resource(&w->resources, id, size);
 }
-#define WORLD_REMOVE_RESOURCE(type, world0) (*(type *)world_remove_resource(&(world0), RESOURCE_ID(type), sizeof(type)))
+#define WORLD_REMOVE_RESOURCE(type, world_ref) (*(type *)world_remove_resource(world_ref, RESOURCE_ID(type), sizeof(type)))
 
 #endif

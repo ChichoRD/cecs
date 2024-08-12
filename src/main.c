@@ -38,7 +38,7 @@ bool init(world *w) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
             //b.cells[x][y] = CELL_STATE_DEAD;
             b.cells[x][y] = rand() % 2 == 0 ? CELL_STATE_ALIVE : CELL_STATE_DEAD;
-            WORLD_SET_OR_ADD_COMPONENT(cell, *w, world_add_entity(w), ((cell){ .x = x, .y = y }));
+            WORLD_SET_OR_ADD_COMPONENT(cell, w, world_add_entity(w), ((cell){ .x = x, .y = y }));
         }
     }
     b.cells[1][0] = CELL_STATE_ALIVE;
@@ -46,7 +46,7 @@ bool init(world *w) {
     b.cells[0][2] = CELL_STATE_ALIVE;
     b.cells[1][2] = CELL_STATE_ALIVE;
     b.cells[2][2] = CELL_STATE_ALIVE;
-    return WORLD_ADD_RESOURCE(board, *w, b) == NULL;
+    return WORLD_ADD_RESOURCE(board, w, &b) == NULL;
 }
 
 bool update(world *w, double delta_time_seconds) {
@@ -54,7 +54,7 @@ bool update(world *w, double delta_time_seconds) {
     query q = QUERY_CREATE(cell);
     struct QUERY_RESULT(cell) *result = QUERY_RUN(q, *w, query_arena, cell);
 
-    board *b = WORLD_GET_RESOURCE(board, *w);
+    board *b = WORLD_GET_RESOURCE(board, w);
     board new_b = *b;
 
     size_t alive_count = 0;
@@ -98,7 +98,7 @@ bool update(world *w, double delta_time_seconds) {
         printf("\n");
     }
 
-    *WORLD_GET_RESOURCE(board, *w) = new_b;
+    *WORLD_GET_RESOURCE(board, w) = new_b;
 
     printf("\n\n");
     //printf("fps: %f\n", 1.0 / delta_time_seconds);
