@@ -11,7 +11,7 @@
 #include "../include/query.h"
 #include "../include/resource.h"
 
-#define TARGET_FPS 4.0
+#define TARGET_FPS 8.0
 
 #define BOARD_WIDTH 16
 #define BOARD_HEIGHT 16
@@ -31,13 +31,13 @@ RESOURCE_DEFINE(board) {
 } board;
 
 bool init(world *w) {
-    //srand(time(NULL));
+    srand(time(NULL));
 
     board b;
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
-            b.cells[x][y] = CELL_STATE_DEAD;
-            //b.cells[x][y] = rand() % 2 == 0 ? CELL_STATE_ALIVE : CELL_STATE_DEAD;
+            //b.cells[x][y] = CELL_STATE_DEAD;
+            b.cells[x][y] = rand() % 2 == 0 ? CELL_STATE_ALIVE : CELL_STATE_DEAD;
             WORLD_SET_OR_ADD_COMPONENT(cell, *w, world_add_entity(w), ((cell){ .x = x, .y = y }));
         }
     }
@@ -57,6 +57,7 @@ bool update(world *w, double delta_time_seconds) {
     board *b = WORLD_GET_RESOURCE(board, *w);
     board new_b = *b;
 
+    size_t alive_count = 0;
     for (size_t i = 0; i < result->cell_view.count; i++) {
         cell *c = result->cell_view.elements[i];
         int16_t alive_neighbours = 0;
@@ -78,6 +79,7 @@ bool update(world *w, double delta_time_seconds) {
         }
 
         if (b->cells[c->x][c->y] == CELL_STATE_ALIVE) {
+            ++alive_count;
             if (alive_neighbours < 2 || alive_neighbours > 3) {
                 new_b.cells[c->x][c->y] = CELL_STATE_DEAD;
             }
@@ -101,7 +103,7 @@ bool update(world *w, double delta_time_seconds) {
     printf("\n\n");
     //printf("fps: %f\n", 1.0 / delta_time_seconds);
     arena_free(&query_arena);
-    return false;
+    return alive_count <= 4;
 }
 
 void main(void) {
@@ -134,4 +136,5 @@ void main(void) {
     
     world_free(&w);
     printf("Freed world\n");
+    fscanf(stdin, "%*c");
 }

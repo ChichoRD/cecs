@@ -2,6 +2,7 @@
 #define ARENA_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -73,7 +74,7 @@ arena arena_create(void) {
     return a;
 }
 
-static void arena_prepend(arena *a, block *b) {
+static linked_block *arena_prepend(arena *a, block *b) {
     linked_block *new = (linked_block *)malloc(sizeof(linked_block));
     *new = linked_block_create(b, a->first_block);
 
@@ -81,6 +82,23 @@ static void arena_prepend(arena *a, block *b) {
     if (a->last_block == NULL) {
         a->last_block = new;
     }
+    return new;
+}
+
+static block *arena_add_block_exact(arena *a, size_t capacity) {
+    block *b = (block *)malloc(sizeof(block));
+    *b = block_create(capacity);
+    return arena_prepend(a, b)->b;
+}
+
+static block *arena_add_block(arena *a, size_t size) {
+    return arena_add_block_exact(a, size > DEFAULT_BLOCK_CAPACITY ? size : DEFAULT_BLOCK_CAPACITY);
+}
+
+arena arena_create_with_capacity(size_t capacity) {
+    arena a = arena_create();
+    arena_add_block_exact(&a, capacity);
+    return a;
 }
 
 void *arena_alloc(arena *a, size_t size) {
@@ -91,12 +109,34 @@ void *arena_alloc(arena *a, size_t size) {
         }
     }
 
-    int capacity = size > DEFAULT_BLOCK_CAPACITY ? size : DEFAULT_BLOCK_CAPACITY;
-    block *b = (block *)malloc(sizeof(block));
-    *b = block_create(capacity);
-    arena_prepend(a, b);
+    return block_alloc(arena_add_block(a, size), size);
+}
 
-    return block_alloc(a->first_block->b, size);
+void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_size) {
+    linked_block *best_fit = NULL;
+    printf("Current size: %d, New size: %d\n", current_size, new_size);
+    ARENA_FOREACH(*a, current) {
+        size_t remaining = current->b->capacity - current->b->size;
+        if ((data_block >= current->b->data) && ((uint8_t *)data_block + current_size == current->b->data + current->b->size)) {
+            if (new_size <= remaining) {
+                int32_t expansion = new_size - current_size;
+                current->b->size += expansion;
+                return data_block;
+            }
+        } else if ((remaining >= new_size) && ((best_fit == NULL) || (remaining < best_fit->b->capacity - best_fit->b->size))) {
+            best_fit = current;
+        }
+    }
+    
+    if (best_fit != NULL) {
+        void *new_data_block = block_alloc(best_fit->b, new_size);
+        memcpy(new_data_block, data_block, new_size < current_size ? new_size : current_size);
+        return new_data_block;
+    } else {
+        void *new_data_block = block_alloc(arena_add_block(a, new_size), new_size);
+        memcpy(new_data_block, data_block, new_size < current_size ? new_size : current_size);
+        return new_data_block;
+    }
 }
 
 void arena_free(arena *a) {
