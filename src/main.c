@@ -4,12 +4,7 @@
 #include <stdbool.h>
 #include <windows.h>
 #include <time.h>
-#include "../include/arena.h"
-#include "../include/list.h"
-#include "../include/world.h"
-#include "../include/entity.h"
-#include "../include/query.h"
-#include "../include/resource.h"
+#include "../include/lib.h"
 
 #define TARGET_FPS 8.0
 
@@ -31,14 +26,27 @@ RESOURCE_DEFINE(board) {
 } board;
 
 bool init(world *w) {
-    srand(time(NULL));
+    game_time *t = WORLD_ADD_RESOURCE(
+        game_time,
+        w,
+        &((game_time) {
+            .game_start = {0},
+            .frame_start = {0},
+            .frame_end = {0},
+            .delta_time_seconds = 0.0,
+            .time_since_start_seconds = 0.0
+        })
+    );
+    srand(timespec_get(&t->game_start, TIME_UTC));
 
     board b;
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
             //b.cells[x][y] = CELL_STATE_DEAD;
             b.cells[x][y] = rand() % 2 == 0 ? CELL_STATE_ALIVE : CELL_STATE_DEAD;
-            WORLD_SET_OR_ADD_COMPONENT(cell, w, world_add_entity(w), ((cell){ .x = x, .y = y }));
+            entity_id cell_entity = world_add_entity(w);
+            WORLD_SET_OR_ADD_COMPONENT(cell, w, cell_entity, &((cell){ .x = x, .y = y }));
+            WORLD_SET_OR_ADD_COMPONENT(entity_reference, w, cell_entity, &((entity_reference){ .id = cell_entity }));
         }
     }
     b.cells[1][0] = CELL_STATE_ALIVE;
@@ -116,21 +124,18 @@ void main(void) {
         app_error = true;
     }
 
-    struct timespec start;
-    struct timespec end;
-    timespec_get(&start, TIME_UTC);
+    game_time *t = WORLD_GET_RESOURCE(game_time, &w);
+    timespec_get(&t->frame_start, TIME_UTC);
     Sleep(1000.0 / TARGET_FPS);
     while (!quitting && !app_error)
     {
-        timespec_get(&end, TIME_UTC);
-        double delta_time_seconds =
-            (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+        timespec_get(&t->frame_end, TIME_UTC);
 
-        if (update(&w, delta_time_seconds)) {
+        if (update(&w, game_time_update_delta_time(t))) {
             app_error = true;
         }
 
-        timespec_get(&start, TIME_UTC);
+        timespec_get(&t->frame_start, TIME_UTC);
         Sleep(1000.0 / TARGET_FPS);
     }
     

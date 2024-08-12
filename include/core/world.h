@@ -70,7 +70,7 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
         return world_components_add_component(&w->components, &w->components_arena, WORLD_ENTITIES_COUNT(w->entities), component_id, component, size);
     }
 }
-#define WORLD_SET_OR_ADD_COMPONENT(type, world_ref, entity_id0, component) ((type *)world_set_or_add_component(world_ref, (entity_id0), COMPONENT_ID(type), &(component), sizeof(type)))
+#define WORLD_SET_OR_ADD_COMPONENT(type, world_ref, entity_id0, component_ref) ((type *)world_set_or_add_component(world_ref, (entity_id0), COMPONENT_ID(type), component_ref, sizeof(type)))
 
 const void *world_remove_component(world *w, entity_id entity_id, component_id component_id, size_t size) {
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
