@@ -6,21 +6,27 @@
 
 #define COMPONENT_MASK_TYPE uint32_t
 typedef COMPONENT_MASK_TYPE component_mask;
+
+#define TAG_MASK_TYPE uint32_t
+typedef TAG_MASK_TYPE tag_mask;
+
 typedef uint32_t entity_id;
 
 typedef struct entity
 {
     bool active;
     const entity_id id;
-    component_mask mask;
+    component_mask components;
+    tag_mask tags;
 } entity;
 
-entity entity_create(bool active, const entity_id id, component_mask mask)
+entity entity_create(bool active, const entity_id id, component_mask components, tag_mask tags)
 {
     return (entity){
         .active = active,
         .id = id,
-        .mask = mask,
+        .components = components,
+        .tags = tags
     };
 }
 
@@ -55,14 +61,15 @@ world_entities world_entities_create(arena *entities_arena) {
     return we;
 }
 
-entity *world_entities_add_enitity(world_entities *we, arena *entities_arena, component_mask mask) {
+entity *world_entities_add_enitity(world_entities *we, arena *entities_arena, component_mask components, tag_mask tags) {
     if (we->last_unactive_entity == NULL) {
-        entity e = entity_create(true, WORLD_ENTITIES_COUNT(*we), mask);
+        entity e = entity_create(true, WORLD_ENTITIES_COUNT(*we), components, tags);
         return &LIST_ADD(entity, &we->entities, entities_arena, e);
     } else {
         linked_entity *le = we->last_unactive_entity;
         le->e->active = true;
-        le->e->mask = mask;
+        le->e->components = components;
+        le->e->tags = tags;
         we->last_unactive_entity = le->next;
         return le->e;
     }
@@ -72,7 +79,7 @@ linked_entity *world_entities_remove_entity(world_entities *we, arena *entity_ar
     assert((entity_id < WORLD_ENTITIES_COUNT(*we)) && "Entity ID out of bounds");
     entity *e = WORLD_ENTITIES_GET(*we, entity_id);
     e->active = false;
-    e->mask = 0;
+    e->components = 0;
 
     linked_entity *removed = (linked_entity *)arena_alloc(entity_arena, sizeof(linked_entity));
     *removed = linked_entity_create(e, we->last_unactive_entity);

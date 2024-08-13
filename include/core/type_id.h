@@ -21,8 +21,8 @@ static type_id type_id_count = 0;
 #define TYPE_ID_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type, type_id_count)
 #define TYPE_ID(type) type##_type_id()
 
-#define TYPE_ID_DEFINE(type) \
+#define TYPE_ID_DEFINE(layout, type) \
     TYPE_ID_IMPLEMENT(type) \
-    typedef struct type
+    typedef layout type
 
 #endif

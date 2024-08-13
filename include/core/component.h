@@ -2,6 +2,8 @@
 #define COMPONENT_H
 
 #include <stdint.h>
+#include <assert.h>
+#include <stdlib.h>
 #include "map.h"
 #include "type_id.h"
 #include "entity.h"
@@ -11,9 +13,9 @@ static component_id component_id_count = 0;
 
 #define COMPONENT(type) type##_component
 #define COMPONENT_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type##_component, component_id_count)
-#define COMPONENT_DEFINE(type) \
+#define COMPONENT_DEFINE(layout, type) \
     COMPONENT_IMPLEMENT(type) \
-    typedef struct type##_component
+    typedef layout type##_component
 
 #define COMPONENT_ID(type) ((component_id)TYPE_ID(type##_component))
 #define COMPONENT_ID_ARRAY(...) (component_id[]){ MAP_LIST(COMPONENT_ID, __VA_ARGS__) }
@@ -22,7 +24,6 @@ static component_id component_id_count = 0;
 
 #define _COMPONENT_MASK_OR(type) COMPONENT_MASK(type) |
 #define COMPONENTS_MASK(...) (MAP(_COMPONENT_MASK_OR, __VA_ARGS__) 0)
-
 
 
 #define COMPONENT_TYPE_COUNT (8 * sizeof(component_mask))
@@ -49,6 +50,7 @@ void *world_components_add_component(world_components *wc, arena *components_are
     if (wc->component_sizes[component_id] == -1) {
         if (wc->components[component_id].count != 0) {
             assert(0 && "unreachable: component_sizes and components are out of sync");
+            exit(EXIT_FAILURE);
         }
         wc->component_sizes[component_id] = size;
         
@@ -83,6 +85,7 @@ void world_components_grow_all(world_components *wc, arena *components_arena, si
         if (size != -1) {
             if (LIST_COUNT_OF_SIZE(wc->components[i], size) <= 0) {
                 assert(0 && "unreachable: component_sizes and components are out of sync");
+                exit(EXIT_FAILURE);
             }     
             world_components_add_component(wc, components_arena, entity_count, i, list_get(&wc->components[i], 0, size), size);
         }

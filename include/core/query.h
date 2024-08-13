@@ -49,7 +49,7 @@ void *query_run(const query q, const world *w, arena *query_arena) {
 
     for (size_t i = 0; i < enitity_count; i++) {
         entity e = *world_get_entity(w, i);
-        if ((e.mask & q.mask) == q.mask) {
+        if ((e.components & q.mask) == q.mask) {
             for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
                     &w->components,

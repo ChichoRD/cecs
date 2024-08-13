@@ -3,8 +3,10 @@
 
 #include <assert.h>
 #include <memory.h>
+#include <stdbool.h>
 #include "entity.h"
 #include "component.h"
+#include "tag.h"
 #include "arena.h"
 #include "list.h"
 #include "resource.h"
@@ -44,7 +46,7 @@ size_t world_entity_count(const world *w) {
 }
 
 entity_id world_add_entity(world *w) {
-    entity_id id = world_entities_add_enitity(&w->entities, &w->entities_arena, 0)->id;
+    entity_id id = world_entities_add_enitity(&w->entities, &w->entities_arena, 0, 0)->id;
     world_components_grow_all(&w->components, &w->components_arena, WORLD_ENTITIES_COUNT(w->entities));
     return id;
 }
@@ -62,7 +64,7 @@ void *world_set_or_add_component(world *w, entity_id entity_id, component_id com
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
     entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
-    e->mask |= mask;
+    e->components |= mask;
     
     if (entity_id < LIST_COUNT_OF_SIZE(w->components.components[component_id], size)) {
         return world_components_set_component(&w->components, component_id, entity_id, component, size);
@@ -76,7 +78,7 @@ const void *world_remove_component(world *w, entity_id entity_id, component_id c
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
     entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
-    e->mask &= ~mask;
+    e->components &= ~mask;
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
 #define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0) (*(type *)world_remove_component(world_ref, entity_id0, COMPONENT_ID(type), sizeof(type)))
@@ -85,6 +87,48 @@ void *world_get_component(const world *w, component_id component_id, entity_id e
     return world_components_get_component(&w->components, component_id, entity_id, size);
 }
 #define WORLD_GET_COMPONENT(type, world_ref, entity_id0) ((type *)world_get_component(world_ref, COMPONENT_ID(type), entity_id0, sizeof(type)))
+
+tag_mask world_add_tag(world *w, entity_id entity_id, tag_id tag_id) {
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    entity *e = world_get_entity(w, entity_id);
+    tag_mask mask = 1 << tag_id;
+    e->tags |= mask;
+    return e->tags;
+}
+#define WORLD_ADD_TAG(type, world_ref, entity_id0) world_add_tag(world_ref, entity_id0, TAG_ID(tag_type))
+
+tag_mask world_remove_tag(world *w, entity_id entity_id, tag_id tag_id) {
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    entity *e = world_get_entity(w, entity_id);
+    tag_mask mask = 1 << tag_id;
+    e->tags &= ~mask;
+    return e->tags;
+}
+#define WORLD_REMOVE_TAG(type, world_ref, entity_id0) world_remove_tag(world_ref, entity_id0, TAG_ID(tag_type))
+
+tag_mask world_set_tags(world *w, entity_id entity_id, tag_mask tags) {
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    entity *e = world_get_entity(w, entity_id);
+    e->tags = tags;
+    return e->tags;
+}
+#define WORLD_SET_TAGS(world_ref, entity_id0, ...) world_set_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
+
+tag_mask world_add_tags(world *w, entity_id entity_id, tag_mask tags) {
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    entity *e = world_get_entity(w, entity_id);
+    e->tags |= tags;
+    return e->tags;
+}
+#define WORLD_ADD_TAGS(world_ref, entity_id0, ...) world_add_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
+
+tag_mask world_remove_tags(world *w, entity_id entity_id, tag_mask tags) {
+    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    entity *e = world_get_entity(w, entity_id);
+    e->tags &= ~tags;
+    return e->tags;
+}
+#define WORLD_REMOVE_TAGS(world_ref, entity_id0, ...) world_remove_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
 
 void *world_add_resource(world *w, resource_id id, void *resource, size_t size) {
     return world_resources_add_resource(&w->resources, &w->resources_arena, id, resource, size);

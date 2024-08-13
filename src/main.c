@@ -16,14 +16,18 @@ typedef enum cell_state {
     CELL_STATE_DEAD
 } cell_state;
 
-COMPONENT_DEFINE(cell) {
+COMPONENT_DEFINE(struct, cell) {
     const uint16_t x;
     const uint16_t y;
 } cell;
 
-RESOURCE_DEFINE(board) {
+RESOURCE_DEFINE(struct, board) {
     cell_state cells[BOARD_WIDTH][BOARD_HEIGHT];
 } board;
+
+TAG_DEFINE(on_fire) on_fire;
+TAG_DEFINE(on_ice) on_ice;
+TAG_DEFINE(on_water) on_water;
 
 bool init(world *w) {
     game_time *t = WORLD_ADD_RESOURCE(

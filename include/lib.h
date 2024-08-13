@@ -10,7 +10,7 @@
 #include "../include/core/query.h"
 #include "../include/core/resource.h"
 
-RESOURCE_DEFINE(game_time) {
+RESOURCE_DEFINE(struct, game_time) {
     struct timespec game_start;
     struct timespec frame_start;
     struct timespec frame_end;
@@ -29,7 +29,7 @@ double game_time_update_time_since_start(game_time *t) {
 }
 
 
-COMPONENT_DEFINE(entity_reference) {
+COMPONENT_DEFINE(struct, entity_reference) {
     const entity_id id;
 } entity_reference;
 
