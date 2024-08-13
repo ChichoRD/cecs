@@ -17,6 +17,7 @@ static tag_id tag_id_count = 0;
     typedef bool 
 
 #define TAG_ID(type) ((tag_id)TYPE_ID(type##_tag))
+#define TAG_ID_ARRAY(...) (tag_id[]){ MAP_LIST(TAG_ID, __VA_ARGS__) }
 
 #define TAG_MASK(type) (1 << TAG_ID(type))
 

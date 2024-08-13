@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <limits.h>
 
 #define DEFAULT_BLOCK_CAPACITY (8 * 1024)
 
@@ -118,11 +119,11 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
     }
 
     linked_block *best_fit = NULL;
-    size_t best_fit_remaining = -1u;
+    size_t best_fit_remaining = SIZE_MAX;
     size_t expansion = new_size - current_size;
     ARENA_FOREACH(a, current) {
         size_t remaining = current->b->capacity - current->b->size;
-        if ((data_block >= current->b->data)
+        if (((uint8_t *)data_block >= current->b->data)
             && ((uint8_t *)data_block + current_size == (current->b->data + current->b->size))) {
             if (remaining >= expansion) {
                 current->b->size += expansion;
@@ -145,6 +146,12 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         void *new_data_block = block_alloc(arena_add_block(a, new_size), new_size);
         memcpy(new_data_block, data_block, current_size);
         return new_data_block;
+    }
+}
+
+void arena_clear(arena *a) {
+    ARENA_FOREACH(a, current) {
+        current->b->size = 0;
     }
 }
 

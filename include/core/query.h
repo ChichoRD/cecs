@@ -7,26 +7,43 @@
 #include "arena.h"
 #include "list.h"
 #include "view.h"
+#include "component.h"
+#include "tag.h"
+
+typedef struct query_mask {
+    const component_mask component_mask;
+    const tag_mask tag_mask;
+} query_mask;
 
 typedef struct query {
-    const component_mask mask;
+    const query_mask mask;
     const component_id *component_ids;
     const size_t component_count;
 } query;
 
-query query_create(const component_mask mask, const component_id *component_ids, const size_t component_count) {
+query query_create(const component_mask component_mask, const component_id *component_ids, const size_t component_count, const tag_mask tag_mask) {
     return (query) {
-        .mask = mask,
+        .mask = (query_mask) {
+            .component_mask = component_mask,
+            .tag_mask = tag_mask,
+        },
         .component_ids = component_ids,
-        .component_count = component_count
+        .component_count = component_count,
     };
 }
-#define QUERY_CREATE(...) \
+#define QUERY_CREATE(with_components, with_tags) \
     query_create( \
-        COMPONENTS_MASK(__VA_ARGS__), \
-        COMPONENT_ID_ARRAY(__VA_ARGS__), \
-        sizeof(COMPONENT_ID_ARRAY(__VA_ARGS__)) / sizeof(component_id) \
+        with_components, \
+        with_tags \
     )
+
+#define WITH_COMPONENTS(...) \
+    COMPONENTS_MASK(__VA_ARGS__), \
+    COMPONENT_ID_ARRAY(__VA_ARGS__), \
+    sizeof(COMPONENT_ID_ARRAY(__VA_ARGS__)) / sizeof(component_id)
+#define WITH_TAGS(...) TAGS_MASK(__VA_ARGS__)
+#define WITHOUT_TAGS (0)
+
 
 #define _PREPEND_UNDERSOCRE(x) _##x
 #define QUERY_RESULT(...) CAT(query_result, MAP_LIST(_PREPEND_UNDERSOCRE, __VA_ARGS__))
@@ -49,7 +66,8 @@ void *query_run(const query q, const world *w, arena *query_arena) {
 
     for (size_t i = 0; i < enitity_count; i++) {
         entity e = *world_get_entity(w, i);
-        if ((e.components & q.mask) == q.mask) {
+        if (((e.components & q.mask.component_mask) == q.mask.component_mask)
+            && ((e.tags & q.mask.tag_mask) == q.mask.tag_mask)) {
             for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
                     &w->components,

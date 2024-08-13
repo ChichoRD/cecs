@@ -63,7 +63,7 @@ bool init(world *w) {
 
 bool update(world *w, double delta_time_seconds) {
     arena query_arena = arena_create();
-    query q = QUERY_CREATE(cell);
+    query q = QUERY_CREATE(WITH_COMPONENTS(cell), WITHOUT_TAGS);
     struct QUERY_RESULT(cell) *result = QUERY_RUN(q, *w, query_arena, cell);
 
     board *b = WORLD_GET_RESOURCE(board, w);
@@ -147,5 +147,5 @@ void main(void) {
         world_free(&w);
         printf("Freed world\n");
     }
-    fscanf(stdin, "%*c");
+    scanf_s("%*c");
 }

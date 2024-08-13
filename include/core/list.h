@@ -103,6 +103,11 @@ void list_remove_range(list *l, arena *a, size_t index, size_t count, size_t siz
 }
 #define LIST_REMOVE_RANGE(type, list0, arena0, index, count) list_remove_range(list0, arena0, index, count, sizeof(type))
 
+void list_clear(list *l)
+{
+    l->count = 0;
+}
+
 void *list_get(const list *l, size_t index, size_t size)
 {
     assert((index * size < l->count) && "Attempted to get element with index out of bounds");
