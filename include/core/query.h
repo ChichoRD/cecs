@@ -51,6 +51,7 @@ query query_create(const component_mask component_mask, const component_id *comp
 #define _QUERY_RESULT_FIELD(type) VIEW_STRUCT_INDIRECT(type, *) VIEW(type);
 #define QUERY_RESULT_STRUCT(...) \
     struct QUERY_RESULT(__VA_ARGS__) { \
+        VIEW_STRUCT(entity_id) VIEW(entity_id); \
         MAP(_QUERY_RESULT_FIELD, __VA_ARGS__) \
     }
 
@@ -58,9 +59,12 @@ query query_create(const component_mask component_mask, const component_id *comp
     MAP(VIEW_IMPLEMENT, __VA_ARGS__)
 
 void *query_run(const query q, const world *w, arena *query_arena) {
-    list *results = arena_alloc(query_arena, sizeof(list) * q.component_count);
+    size_t query_results_count = q.component_count + 1;
     size_t enitity_count = world_entity_count(w);
-    for (size_t i = 0; i < q.component_count; i++) {
+
+    list *results = arena_alloc(query_arena, sizeof(list) * query_results_count);
+    results[0] = list_create(query_arena, sizeof(entity_id) * enitity_count);
+    for (size_t i = 1; i < query_results_count; i++) {
         results[i] = list_create(query_arena, sizeof(intptr_t) * enitity_count);
     }
 
@@ -68,7 +72,9 @@ void *query_run(const query q, const world *w, arena *query_arena) {
         entity e = *world_get_entity(w, i);
         if (((e.components & q.mask.component_mask) == q.mask.component_mask)
             && ((e.tags & q.mask.tag_mask) == q.mask.tag_mask)) {
-            for (size_t j = 0; j < q.component_count; j++) {
+            list_add(&results[0], query_arena, &e.id, sizeof(entity_id));
+            
+            for (size_t j = 1; j < query_results_count; j++) {
                 void *component = world_components_get_component(
                     &w->components,
                     q.component_ids[j],
@@ -81,12 +87,18 @@ void *query_run(const query q, const world *w, arena *query_arena) {
         }
     }
 
-    VIEW_STRUCT_INDIRECT(void, *) *views = arena_alloc(query_arena, sizeof(struct VIEW(void)) * q.component_count);  
+    VIEW_STRUCT(entity_id) *entity_id_view;
+    VIEW_STRUCT_INDIRECT(void, *) *component_views;
+    entity_id_view = arena_alloc(query_arena, sizeof(struct VIEW(void)) * q.component_count + sizeof(struct VIEW(entity_id)));
+    component_views = (struct VIEW(void) *)(entity_id_view + 1);
+
+    entity_id_view->count = LIST_COUNT_OF_SIZE(results[0], sizeof(entity_id));
+    entity_id_view->elements = results[0].elements;
     for (size_t i = 0; i < q.component_count; i++) {
-        views[i].count = LIST_COUNT_OF_SIZE(results[i], sizeof(intptr_t));
-        views[i].elements = results[i].elements;
+        component_views[i].count = LIST_COUNT_OF_SIZE(results[i + 1], sizeof(intptr_t));
+        component_views[i].elements = results[i + 1].elements;
     }
-    return views;
+    return entity_id_view;
 }
 #define QUERY_RUN(query0, world0, arena0, ...) (QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_run((query0), &(world0), &(arena0))
 
