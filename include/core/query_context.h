@@ -50,24 +50,29 @@ query_search_result query_context_search_query(query_context *qc, const query q,
 
     uint32_t tag_count = __popcnt(q.mask.tag_mask);
     size_t rank = tag_count + q.component_count;
+    printf("tag_count: %d, rank: %zu\n", tag_count, rank);
 
-    query_mask_values qmv = *(query_mask_values *)(&q.mask);
+    query_mask_values qmv = { .mask = q.mask };
     query_search_result result = QUERY_SEARCH_RESULT_NOT_FOUND;
 
-    for (size_t i = rank; i >= 0; i--) {
+    for (int32_t i = rank; i >= 0; i--) {
+        printf("i: %zu\n", i);
         list *query_operations = &qc->queries_operations[i];
         
         size_t start = 0;
         size_t end = LIST_COUNT(query_operation, *query_operations);
+        size_t mid = 0;
+        printf("query_operations count: %d, capacity: %d\n", query_operations->count, query_operations->capacity);
 
         while (start < end) {
-            size_t mid = (start + end) / 2;
+            mid = (start + end) / 2;
+            printf("start: %zu, mid: %zu, end: %zu\n", start, mid, end);
             query_operation *op = LIST_GET(query_operation, query_operations, mid);
-            query_mask_values op_qmv = *(query_mask_values *)(&op->query);
+            query_mask_values op_qmv = { .mask = op->query };
 
             bool less = false;
-            for (size_t i = 0; i < QUERY_MASK_LENGTH; i++) {
-                if (qmv.values[i] < (op_qmv.values[i] << (rank - i))) {
+            for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
+                if (qmv.values[j] < (op_qmv.values[j] << (rank - i))) {
                     less = true;
                     break;
                 }
@@ -81,46 +86,46 @@ query_search_result query_context_search_query(query_context *qc, const query q,
         }
 
         if (rank == i) {
-            if (start >= LIST_COUNT(query_operation, *query_operations)) {
+            if (mid >= LIST_COUNT(query_operation, *query_operations)) {
                 result = QUERY_SEARCH_RESULT_NOT_FOUND;
                 *out_query_operations = query_operations;
-                *out_query_operation_index = start;
+                *out_query_operation_index = mid;
                 *out_submask_operation = NULL;
             } else {
-                query_operation *op = LIST_GET(query_operation, query_operations, start);
-                query_mask_values op_qmv = *(query_mask_values *)(&op->query);
+                query_operation *op = LIST_GET(query_operation, query_operations, mid);
+                query_mask_values op_qmv = { .mask = op->query };
                 bool equal = true;
-                for (size_t i = 0; i < QUERY_MASK_LENGTH; i++) {
-                    if (qmv.values[i] != op_qmv.values[i]) {
+                for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
+                    if (qmv.values[j] != op_qmv.values[j]) {
                         equal = false;
                         break;
                     }
                 }
                 if (equal) {
-                    result = QUERY_SEARCH_RESULT_FOUND;
                     *out_query_operations = query_operations;
-                    *out_query_operation_index = start;
+                    *out_query_operation_index = mid;
                     *out_submask_operation = op;
+                    return QUERY_SEARCH_RESULT_FOUND;
                 } else {
                     result = QUERY_SEARCH_RESULT_NOT_FOUND;
                     *out_query_operations = query_operations;
-                    *out_query_operation_index = start;
+                    *out_query_operation_index = mid;
                     *out_submask_operation = NULL;
                 }
             }
-        } else if (start < LIST_COUNT(query_operation, *query_operations)) {
-            query_operation *op = LIST_GET(query_operation, query_operations, start);
-            query_mask_values op_qmv = *(query_mask_values *)(&op->query);
+        } else if (mid < LIST_COUNT(query_operation, *query_operations)) {
+            query_operation *op = LIST_GET(query_operation, query_operations, mid);
+            query_mask_values op_qmv = { .mask = op->query };
             bool submask = true;
-            for (size_t i = 0; i < QUERY_MASK_LENGTH; i++) {
-                if ((qmv.values[i] & op_qmv.values[i]) != op_qmv.values[i]) {
+            for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
+                if ((qmv.values[j] & op_qmv.values[j]) != op_qmv.values[j]) {
                     submask = false;
                     break;
                 }
             }
             if (submask) {
                 *out_query_operations = query_operations;
-                *out_query_operation_index = start;
+                *out_query_operation_index = mid;
                 *out_submask_operation = op->result;
                 return QUERY_SEARCH_RESULT_FOUND_SUBMASK;
             }
@@ -147,7 +152,7 @@ void *query_context_run_query_on_operation(const query q, const world *w, arena 
             && ((e.tags & q.mask.tag_mask) == q.mask.tag_mask)) {
             list_add(&results[0], query_arena, &e.id, sizeof(entity_id));
 
-            for (size_t j = 1; j < query_results_count; j++) {
+            for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
                     &w->components,
                     q.component_ids[j],
@@ -155,7 +160,7 @@ void *query_context_run_query_on_operation(const query q, const world *w, arena 
                     w->components.component_sizes[q.component_ids[j]]
                 );
 
-                list_add(&results[j], query_arena, &component, sizeof(intptr_t));
+                list_add(&results[j + 1], query_arena, &component, sizeof(intptr_t));
             }
         }
     }
@@ -185,7 +190,7 @@ void *query_context_run_query(query_context *qc, const query q, const world *w, 
                 .query = q.mask,
                 .result = query_run(q, w, query_arena)
             };
-            LIST_ADD(query_operation, query_operations, query_arena, op);
+            LIST_INSERT(query_operation, query_operations, query_arena, query_operation_index, op);
             return op.result;
         }
 
@@ -200,13 +205,13 @@ void *query_context_run_query(query_context *qc, const query q, const world *w, 
                 .query = q.mask,
                 .result = query_context_run_query_on_operation(q, w, query_arena, *submask_operation)
             };
-            LIST_ADD(query_operation, query_operations, query_arena, op);
+            LIST_INSERT(query_operation, query_operations, query_arena, query_operation_index, op);
             return op.result;
         }   
         default: {
             assert(0 && "unreachable: query_context_search_query returned invalid value");
             exit(EXIT_FAILURE);
-            return NULL;
+            //return NULL;
         }
     }
 }

@@ -61,10 +61,10 @@ bool init(world *w) {
     return WORLD_ADD_RESOURCE(board, w, &b) == NULL;
 }
 
-bool update(world *w, double delta_time_seconds) {
-    arena query_arena = arena_create();
+bool update(world *w, query_context *qc, arena *query_arena, double delta_time_seconds) {
     query q = QUERY_CREATE(WITH_COMPONENTS(cell), WITHOUT_TAGS);
-    struct QUERY_RESULT(cell) *result = QUERY_RUN(q, *w, query_arena, cell);
+    //struct QUERY_RESULT(cell) *result = QUERY_RUN(q, *w, query_arena, cell);
+    struct QUERY_RESULT(cell) *result = QUERY_CONTEXT_RUN_QUERY(qc, q, w, query_arena, cell);
 
     board *b = WORLD_GET_RESOURCE(board, w);
     board new_b = *b;
@@ -114,13 +114,15 @@ bool update(world *w, double delta_time_seconds) {
 
     printf("\n\n");
     //printf("fps: %f\n", 1.0 / delta_time_seconds);
-    arena_free(&query_arena);
+    //arena_free(&query_arena);
     return alive_count <= 4;
 }
 
 void main(void) {
     {
+        arena qc_arena = arena_create();
         world w = world_create();
+        query_context qc = query_context_create(&qc_arena);
 
         bool quitting = false;
         bool app_error = false;
@@ -136,7 +138,7 @@ void main(void) {
         {
             timespec_get(&t->frame_end, TIME_UTC);
 
-            if (update(&w, game_time_update_delta_time(t))) {
+            if (update(&w, &qc, &qc_arena, game_time_update_delta_time(t))) {
                 app_error = true;
             }
 
@@ -145,6 +147,7 @@ void main(void) {
         }
 
         world_free(&w);
+        arena_free(&qc_arena);
         printf("Freed world\n");
     }
     scanf_s("%*c");

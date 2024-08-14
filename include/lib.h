@@ -9,6 +9,7 @@
 #include "../include/core/entity.h"
 #include "../include/core/query.h"
 #include "../include/core/resource.h"
+#include "../include/core/query_context.h"
 
 RESOURCE_DEFINE(struct, game_time) {
     struct timespec game_start;

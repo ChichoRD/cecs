@@ -74,7 +74,7 @@ void *query_run(const query q, const world *w, arena *query_arena) {
             && ((e.tags & q.mask.tag_mask) == q.mask.tag_mask)) {
             list_add(&results[0], query_arena, &e.id, sizeof(entity_id));
             
-            for (size_t j = 1; j < query_results_count; j++) {
+            for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
                     &w->components,
                     q.component_ids[j],
@@ -82,7 +82,7 @@ void *query_run(const query q, const world *w, arena *query_arena) {
                     w->components.component_sizes[q.component_ids[j]]
                 );
 
-                list_add(&results[j], query_arena, &component, sizeof(intptr_t));
+                list_add(&results[j + 1], query_arena, &component, sizeof(intptr_t));
             }
         }
     }

@@ -47,7 +47,7 @@ static void list_shrink(list *l, arena *a, size_t new_capacity) {
     l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
 }
 
-void *list_add(list *l, arena *a, void *element, size_t size)
+void *list_add(list *l, arena *a, const void *element, size_t size)
 {
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
