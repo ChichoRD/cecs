@@ -35,7 +35,7 @@ world_resources world_resources_create(arena *resources_arena) {
 }
 
 size_t world_resources_count(const world_resources *wr) {
-    return LIST_COUNT_OF_SIZE(wr->resource_offsets, sizeof(resource_offset));
+    return list_count_of_size(&wr->resource_offsets, sizeof(resource_offset));
 }
 
 void *world_resources_add_resource(world_resources *wr, arena *resources_arena, resource_id id, void *resource, size_t size) {
@@ -44,7 +44,8 @@ void *world_resources_add_resource(world_resources *wr, arena *resources_arena, 
         : wr->resources.count;
     if (offset >= 0) {
         assert((id == world_resources_count(wr)) && "Resource ID out of bounds");
-        LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, offset);
+        LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, &offset);
+        printf("Adding resource at offset %ld\n", offset);
         return list_add_range(&wr->resources, resources_arena, resource, size, sizeof(uint8_t));
     } else {
         if (id >= world_resources_count(wr)) {
@@ -52,7 +53,7 @@ void *world_resources_add_resource(world_resources *wr, arena *resources_arena, 
             exit(EXIT_FAILURE);
         }
         resource_offset removed_offset = -offset - 1;
-        LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
+        LIST_SET(resource_offset, &wr->resource_offsets, id, &removed_offset);
         return (uint8_t *)wr->resources.elements + removed_offset;
     }
 }
@@ -71,7 +72,7 @@ void *world_resources_remove_resource(world_resources *wr, resource_id id, size_
     void *resource = world_resources_get_resource(wr, id, size);
 
     resource_offset removed_offset = (uint8_t *)wr->resources.elements - (uint8_t *)resource - 1;
-    LIST_SET(resource_offset, &wr->resource_offsets, id, removed_offset);
+    LIST_SET(resource_offset, &wr->resource_offsets, id, &removed_offset);
     return resource;
 }
 

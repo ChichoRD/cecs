@@ -11,13 +11,21 @@ typedef struct list
     void *elements;
 } list;
 
-#define LIST_COUNT_OF_SIZE(list0, size) ((list0).count / size)
-#define LIST_CAPACITY_OF_SIZE(list0, size) ((list0).capacity / size)
+inline size_t list_count_of_size(const list *l, size_t size)
+{
+    return l->count / size;
+}
 
-#define LIST_COUNT(type, list0) LIST_COUNT_OF_SIZE(list0, sizeof(type))
-#define LIST_CAPACITY(type, list0) LIST_CAPACITY_OF_SIZE(list0, sizeof(type))
+inline size_t list_capacity_of_size(const list *l, size_t size)
+{
+    return l->capacity / size;
+}
 
-#define LIST_FOREACH(type, list0, element) for (type *element = (type *)(list0).elements; element < (type *)(list0).elements + (list0).count; element++)
+#define LIST_COUNT(type, list_ref) list_count_of_size(list_ref, sizeof(type))
+#define LIST_CAPACITY(type, list_ref) list_capacity_of_size(list_ref, sizeof(type))
+
+#define LIST_FOREACH(type, list_ref, element) \
+    for (type *element = (type *)(list_ref)->elements; element < (type *)(list_ref)->elements + (list_ref).count; element++)
 
 list list_create(arena *a, size_t capacity)
 {
@@ -27,7 +35,7 @@ list list_create(arena *a, size_t capacity)
     l.elements = arena_alloc(a, capacity);
     return l;
 }
-#define LIST_CREATE(type, arena0, capacity) list_create(arena0, capacity * sizeof(type))
+#define LIST_CREATE(type, arena_ref, capacity) list_create(arena_ref, capacity * sizeof(type))
 
 static void list_grow(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity > l->capacity && "Attempted to grow list to smaller capacity");
@@ -49,6 +57,7 @@ static void list_shrink(list *l, arena *a, size_t new_capacity) {
 
 void *list_add(list *l, arena *a, const void *element, size_t size)
 {
+    assert(l->elements != NULL && "Attempted to add element to list without initializing it first");
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);
@@ -57,7 +66,8 @@ void *list_add(list *l, arena *a, const void *element, size_t size)
     l->count = new_count;
     return ptr;
 }
-#define LIST_ADD(type, list0, arena0, element) (*(type *)list_add(list0, arena0, &(element), sizeof(type)))
+#define LIST_ADD(type, list_ref, arena_ref, element_ref) \
+    ((type *)list_add(list_ref, arena_ref, element_ref, sizeof(type)))
 
 void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t size)
 {
@@ -69,7 +79,8 @@ void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t siz
     l->count = new_count;
     return ptr;
 }
-#define LIST_ADD_RANGE(type, list0, arena0, elements, count) list_add_range(list0, arena0, elements, count, sizeof(type))
+#define LIST_ADD_RANGE(type, list_ref, arena_ref, elements_ref, count) \
+    list_add_range(list_ref, arena_ref, elements_ref, count, sizeof(type))
 
 void list_remove(list *l, arena *a, size_t index, size_t size)
 {
@@ -85,7 +96,8 @@ void list_remove(list *l, arena *a, size_t index, size_t size)
 
     l->count = new_count;
 }
-#define LIST_REMOVE(type, list0, arena0, index) list_remove(list0, arena0, index, sizeof(type))
+#define LIST_REMOVE(type, list_ref, arena_ref, index) \
+    list_remove(list_ref, arena_ref, index, sizeof(type))
 
 void list_remove_range(list *l, arena *a, size_t index, size_t count, size_t size)
 {
@@ -101,7 +113,7 @@ void list_remove_range(list *l, arena *a, size_t index, size_t count, size_t siz
         list_shrink(l, a, new_count);
     l->count = new_count;
 }
-#define LIST_REMOVE_RANGE(type, list0, arena0, index, count) list_remove_range(list0, arena0, index, count, sizeof(type))
+#define LIST_REMOVE_RANGE(type, lis_ref, arena_ref, index, count) list_remove_range(lis_ref, arena_ref, index, count, sizeof(type))
 
 void list_clear(list *l)
 {
@@ -113,14 +125,15 @@ void *list_get(const list *l, size_t index, size_t size)
     assert((index * size < l->count) && "Attempted to get element with index out of bounds");
     return (uint8_t *)l->elements + index * size;
 }
-#define LIST_GET(type, list0, index) ((type *)list_get(list0, index, sizeof(type)))
+#define LIST_GET(type, lis_ref, index) ((type *)list_get(lis_ref, index, sizeof(type)))
 
 void *list_set(list *l, size_t index, void *element, size_t size)
 {
     assert((index * size < l->count) && "Attempted to set element with index out of bounds");
     return memcpy((uint8_t *)l->elements + index * size, element, size);
 }
-#define LIST_SET(type, list0, index, element) ((type *)list_set(list0, index, &(element), sizeof(type)))
+#define LIST_SET(type, lis_ref, index, element_ref) \
+    ((type *)list_set(lis_ref, index, element_ref, sizeof(type)))
 
 void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
 {
@@ -137,7 +150,8 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
     l->count = new_count;
     return ptr;
 }
-#define LIST_INSERT(type, list0, arena0, index, element) ((type *)list_insert(list0, arena0, index, &(element), sizeof(type)))
+#define LIST_INSERT(type, lis_ref, arena_ref, index, element_ref) \
+    ((type *)list_insert(lis_ref, arena_ref, index, element_ref, sizeof(type)))
 
 void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t count, size_t size)
 {
@@ -154,6 +168,7 @@ void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t 
     l->count = new_count;
     return ptr;
 }
-#define LIST_INSERT_RANGE(type, list0, arena0, index, elements, count) list_insert_range(list0, arena0, index, elements, count, sizeof(type))
+#define LIST_INSERT_RANGE(type, lis_ref, arena_ref, index, elements_ref, count) \
+    list_insert_range(lis_ref, arena_ref, index, elements_ref, count, sizeof(type))
 
 #endif

@@ -83,7 +83,7 @@ void world_components_grow_all(world_components *wc, arena *components_arena, si
     for (size_t i = 0; i < COMPONENT_TYPE_COUNT; i++) {
         ssize_t size = wc->component_sizes[i];
         if (size != -1) {
-            if (LIST_COUNT_OF_SIZE(wc->components[i], size) <= 0) {
+            if (list_count_of_size(&wc->components[i], size) <= 0) {
                 assert(0 && "unreachable: component_sizes and components are out of sync");
                 exit(EXIT_FAILURE);
             }     
