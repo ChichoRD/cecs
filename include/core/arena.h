@@ -36,17 +36,18 @@ void *block_alloc(block *b, size_t size) {
 void block_free(block *b) {
     b->size = 0;
     b->capacity = 0;
-    free(b->data);
+    uint8_t *data = b->data;
     b->data = NULL;
+    free(data);
 }
 
 
 typedef struct linked_block {
-    block *b;
+    block b;
     struct linked_block *next;
 } linked_block;
 
-linked_block linked_block_create(block *b, linked_block *next) {
+linked_block linked_block_create(block b, linked_block *next) {
     linked_block lb;
     lb.b = b;
     lb.next = next;
@@ -54,9 +55,8 @@ linked_block linked_block_create(block *b, linked_block *next) {
 }
 
 void linked_block_free(linked_block *lb) {
-    block_free(lb->b);
-    free(lb->b);
-    lb->b = NULL;
+    block_free(&lb->b);
+    lb->b = (block){0};
     lb->next = NULL;
 }
 
@@ -66,8 +66,6 @@ typedef struct arena {
     linked_block *last_block;
 } arena;
 
-#define ARENA_FOREACH(arena_ref, linked_block_ref) for (linked_block *(linked_block_ref) = (arena_ref)->first_block; (linked_block_ref) != NULL; (linked_block_ref) = (linked_block_ref)->next)
-
 arena arena_create(void) {
     arena a;
     a.first_block = NULL;
@@ -75,7 +73,7 @@ arena arena_create(void) {
     return a;
 }
 
-static linked_block *arena_prepend(arena *a, block *b) {
+static linked_block *arena_prepend(arena *a, block b) {
     linked_block *new = (linked_block *)malloc(sizeof(linked_block));
     *new = linked_block_create(b, a->first_block);
 
@@ -87,9 +85,8 @@ static linked_block *arena_prepend(arena *a, block *b) {
 }
 
 static block *arena_add_block_exact(arena *a, size_t capacity) {
-    block *b = (block *)malloc(sizeof(block));
-    *b = block_create(capacity);
-    return arena_prepend(a, b)->b;
+    block b = block_create(capacity);
+    return &arena_prepend(a, b)->b;
 }
 
 static block *arena_add_block(arena *a, size_t size) {
@@ -103,11 +100,13 @@ arena arena_create_with_capacity(size_t capacity) {
 }
 
 void *arena_alloc(arena *a, size_t size) {
-    ARENA_FOREACH(a, current) {
-        size_t remaining = current->b->capacity - current->b->size;
+    linked_block *current = a->first_block;
+    while(current != NULL) {
+        size_t remaining = current->b.capacity - current->b.size;
         if (remaining >= size) {
-            return block_alloc(current->b, size);
+            return block_alloc(&current->b, size);
         }
+        current = current->next;
     }
 
     return block_alloc(arena_add_block(a, size), size);
@@ -121,25 +120,28 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
     linked_block *best_fit = NULL;
     size_t best_fit_remaining = SIZE_MAX;
     size_t expansion = new_size - current_size;
-    ARENA_FOREACH(a, current) {
-        size_t remaining = current->b->capacity - current->b->size;
-        if (((uint8_t *)data_block >= current->b->data)
-            && ((uint8_t *)data_block + current_size == (current->b->data + current->b->size))) {
+
+    linked_block *current = a->first_block;
+    while (current != NULL) {
+        size_t remaining = current->b.capacity - current->b.size;
+        if (((uint8_t *)data_block >= current->b.data)
+            && ((uint8_t *)data_block + current_size == (current->b.data + current->b.size))) {
             if (remaining >= expansion) {
-                current->b->size += expansion;
+                current->b.size += expansion;
                 return data_block;
             } else {
-                current->b->size -= current_size;
+                current->b.size -= current_size;
             }
         } else if ((remaining >= new_size)
             && (best_fit == NULL || (remaining < best_fit_remaining))) {
             best_fit = current;
             best_fit_remaining = remaining;
         }
+        current = current->next;
     }
 
     if (best_fit != NULL) {
-        void *new_data_block = block_alloc(best_fit->b, new_size);
+        void *new_data_block = block_alloc(&best_fit->b, new_size);
         memcpy(new_data_block, data_block, current_size);
         return new_data_block;
     } else {
@@ -150,8 +152,10 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
 }
 
 void arena_clear(arena *a) {
-    ARENA_FOREACH(a, current) {
-        current->b->size = 0;
+    linked_block *current = a->first_block;
+    while (current != NULL) {
+        current->b.size = 0;
+        current = current->next;
     }
 }
 
