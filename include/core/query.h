@@ -59,20 +59,22 @@ query query_create(const component_mask component_mask, const component_id *comp
     MAP(VIEW_IMPLEMENT, __VA_ARGS__)
 
 void *query_run(const query q, const world *w, arena *query_arena) {
-    size_t query_results_count = q.component_count + 1;
-    size_t enitity_count = world_entity_count(w);
+    size_t entity_count = world_entity_count(w);
+    size_t initial_capacity = entity_count / 2 + 1;
 
-    list *results = arena_alloc(query_arena, sizeof(list) * query_results_count);
-    results[0] = list_create(query_arena, sizeof(entity_id) * enitity_count);
-    for (size_t i = 1; i < query_results_count; i++) {
-        results[i] = list_create(query_arena, sizeof(intptr_t) * enitity_count);
+    list *entity_results = (list *)arena_alloc(query_arena, sizeof(list) * (q.component_count + 1));
+    *entity_results = list_create(query_arena, sizeof(entity_id) * (initial_capacity));
+
+    list *component_results = entity_results + 1; 
+    for (size_t i = 0; i < q.component_count; i++) {
+        component_results[i] = list_create(query_arena, sizeof(void *) * (initial_capacity));
     }
 
-    for (size_t i = 0; i < enitity_count; i++) {
+    for (size_t i = 0; i < entity_count; i++) {
         entity e = *world_get_entity(w, i);
         if (((e.components & q.mask.component_mask) == q.mask.component_mask)
             && ((e.tags & q.mask.tag_mask) == q.mask.tag_mask)) {
-            list_add(&results[0], query_arena, &e.id, sizeof(entity_id));
+            list_add(entity_results, query_arena, &e.id, sizeof(entity_id));
             
             for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
@@ -81,25 +83,33 @@ void *query_run(const query q, const world *w, arena *query_arena) {
                     e.id,
                     w->components.component_sizes[q.component_ids[j]]
                 );
-
-                list_add(&results[j + 1], query_arena, &component, sizeof(intptr_t));
+                if (component == NULL) {
+                    assert(0 && "unreachable: component not found");
+                    exit(EXIT_FAILURE);
+                }
+                list_add(&component_results[j], query_arena, &component, sizeof(void *));
             }
         }
     }
 
-    VIEW_STRUCT(entity_id) *entity_id_view;
-    VIEW_STRUCT_INDIRECT(void, *) *component_views;
-    entity_id_view = arena_alloc(query_arena, sizeof(struct VIEW(void)) * q.component_count + sizeof(struct VIEW(entity_id)));
-    component_views = (struct VIEW(void) *)(entity_id_view + 1);
+    VIEW_STRUCT_INDIRECT(void, *) *component_views_result;
+    VIEW_STRUCT(entity_id) *entity_view_result =
+        arena_alloc(query_arena, sizeof(struct VIEW(entity_id)) + sizeof(struct VIEW(void)) * q.component_count);
+    *entity_view_result = (struct VIEW(entity_id)) {
+        .count = list_count_of_size(entity_results, sizeof(entity_id)),
+        .elements = entity_results->elements,
+    };
 
-    entity_id_view->count = LIST_COUNT_OF_SIZE(results[0], sizeof(entity_id));
-    entity_id_view->elements = results[0].elements;
+    component_views_result = (struct VIEW(void) *)(entity_view_result + 1);
     for (size_t i = 0; i < q.component_count; i++) {
-        component_views[i].count = LIST_COUNT_OF_SIZE(results[i + 1], sizeof(intptr_t));
-        component_views[i].elements = results[i + 1].elements;
+        component_views_result[i] = (struct VIEW(void)) {
+            .count = list_count_of_size(&component_results[i], sizeof(void *)),
+            .elements = component_results[i].elements,
+        };
     }
-    return entity_id_view;
+    return entity_view_result;
 }
-#define QUERY_RUN(query0, world0, arena0, ...) (QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_run((query0), &(world0), &(arena0))
+#define QUERY_RUN(query0, world_ref, arena_ref, ...) \
+    (QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_run(query0, world_ref, arena_ref)
 
 #endif
