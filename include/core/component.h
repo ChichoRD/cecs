@@ -27,7 +27,7 @@ static component_id component_id_count = 0;
 
 
 #define COMPONENT_TYPE_COUNT (8 * sizeof(component_mask))
-#define DEFAULT_COMPONENT_SIZE 128
+#define DEFAULT_COMPONENT_SIZE 64
 
 typedef int32_t ssize_t;
 
@@ -67,14 +67,14 @@ void *world_components_add_component(world_components *wc, arena *components_are
 
 void *world_components_set_component(world_components *wc, component_id component_id, entity_id entity_id, void *component, size_t size) {
     assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
-    assert((entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size)) && "Entity ID out of bounds");
+    assert((entity_id < list_count_of_size(&wc->components[component_id], size)) && "Entity ID out of bounds");
     assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
     return list_set(&wc->components[component_id], entity_id, component, size);
 }
 
 void *world_components_get_component(const world_components *wc, component_id component_id, entity_id entity_id, size_t size) {
     assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
-    assert((entity_id < LIST_COUNT_OF_SIZE(wc->components[component_id], size)) && "Entity ID out of bounds");
+    assert((entity_id < list_count_of_size(&wc->components[component_id], size)) && "Entity ID out of bounds");
     assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
     return list_get(&wc->components[component_id], entity_id, size);
 }
