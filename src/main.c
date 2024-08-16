@@ -51,9 +51,9 @@ bool init(world *w) {
     console_buffer cb;
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
-            b.cells[x][y] = CELL_STATE_DEAD;
+            //b.cells[x][y] = CELL_STATE_DEAD;
             cb.buffer[x][y] = ". ";
-            //b.cells[x][y] = rand() % 2 == 0 ? CELL_STATE_ALIVE : CELL_STATE_DEAD;
+            b.cells[x][y] = rand() % 2 == 0 ? CELL_STATE_ALIVE : CELL_STATE_DEAD;
             entity_id cell_entity = world_add_entity(w);
             WORLD_SET_OR_ADD_COMPONENT(cell, w, cell_entity, &((cell){ .x = x, .y = y }));
             WORLD_SET_OR_ADD_COMPONENT(entity_reference, w, cell_entity, &((entity_reference){ .id = cell_entity }));
@@ -215,7 +215,6 @@ bool cell_render_system(world *w, query_context *qc) {
 bool update(world *w, query_context *qc, double delta_time_seconds) {
     bool result = cell_update_system(w, qc, qc)
         || cell_render_system(w, qc, qc);
-    //query_context_clear_temporal(qc);
     return result;
 }
 

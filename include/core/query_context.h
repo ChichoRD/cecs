@@ -222,7 +222,6 @@ void *query_context_run_query(query_context *qc, const query q, const world *w) 
     size_t query_operation_index = 0;
     query_operation *submask_operation = NULL;
     query_search_result search_result = query_context_search_query(qc, q, &query_operations, &query_operation_index, &submask_operation);
-    printf("search result: %d\n", search_result);
     switch (search_result)
     {
         case QUERY_SEARCH_RESULT_NOT_FOUND: {
