@@ -109,7 +109,7 @@ void *query_run(const query q, const world *w, arena *query_arena) {
     }
     return entity_view_result;
 }
-#define QUERY_RUN(query0, world_ref, arena_ref, ...) \
-    (QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_run(query0, world_ref, arena_ref)
+#define QUERY_RUN(query0, world_ref, arena_ref, temporal_arena_ref, ...) \
+    (QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_run(query0, world_ref, arena_ref, temporal_arena_ref)
 
 #endif

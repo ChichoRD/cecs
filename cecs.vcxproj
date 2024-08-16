@@ -38,6 +38,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -87,8 +88,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <AdditionalOptions>/fsanitize=address /Zi %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>5045; 4115; 4255; 4668</DisableSpecificWarnings>
+      <TreatSpecificWarningsAsErrors>4022</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

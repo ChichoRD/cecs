@@ -88,7 +88,7 @@ void list_remove(list *l, arena *a, size_t index, size_t size)
     memmove(
         (uint8_t *)l->elements + index * size,
         (uint8_t *)l->elements + (index + 1) * size,
-        ((l->count - index - 1) * size));
+        (l->count - (index + 1) * size));
 
     size_t new_count = l->count - size;
     if (new_count <= l->capacity / 2)
@@ -106,7 +106,7 @@ void list_remove_range(list *l, arena *a, size_t index, size_t count, size_t siz
     memmove(
         (uint8_t *)l->elements + index * size,
         (uint8_t *)l->elements + (index + count) * size,
-        ((l->count - index - count) * size));
+        (l->count - (index + count) * size));
 
     size_t new_count = l->count - count * size;
     if (new_count <= l->capacity / 2)
@@ -145,7 +145,7 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
     memmove(
         (uint8_t *)l->elements + (index + 1) * size,
         (uint8_t *)l->elements + index * size,
-        (l->count - index) * size);
+        (l->count - index * size));
     void *ptr = memcpy((uint8_t *)l->elements + index * size, element, size);
     l->count = new_count;
     return ptr;
@@ -163,7 +163,7 @@ void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t 
     memmove(
         (uint8_t *)l->elements + (index + count) * size,
         (uint8_t *)l->elements + index * size,
-        (l->count - index) * size);
+        (l->count - index * size));
     void *ptr = memcpy((uint8_t *)l->elements + index * size, elements, count * size);
     l->count = new_count;
     return ptr;

@@ -20,15 +20,28 @@ typedef struct query_operation {
 
 typedef struct query_context {
     list queries_operations[QUERY_VARIANTS_COUNT];
+    arena query_arena;
 } query_context;
 
 
-query_context query_context_create(arena *query_arena) {
+query_context query_context_create() {
     query_context qc;
+    qc.query_arena = arena_create();
     for (size_t i = 0; i < QUERY_VARIANTS_COUNT; i++) {
-        qc.queries_operations[i] = LIST_CREATE(query_operation, query_arena, 1);
+        qc.queries_operations[i] = LIST_CREATE(query_operation, &qc.query_arena, 1);
     }
     return qc;
+}
+
+void query_context_clear(query_context *qc) {
+    for (size_t i = 0; i < QUERY_VARIANTS_COUNT; i++) {
+        list_clear(&qc->queries_operations[i]);
+    }
+    arena_clear(&qc->query_arena);
+}
+
+void query_context_free(query_context *qc) {
+    arena_free(&qc->query_arena);
 }
 
 typedef enum query_search_result {
@@ -81,7 +94,7 @@ static query_search_result query_context_search_query(query_context *qc, const q
             }
         }
 
-        if (rank == i) {
+        if (rank == (size_t)i) {
             if (mid >= LIST_COUNT(query_operation, query_operations)) {
                 result = QUERY_SEARCH_RESULT_NOT_FOUND;
                 *out_query_operations = query_operations;
@@ -120,7 +133,7 @@ static query_search_result query_context_search_query(query_context *qc, const q
                 }
             }
             if (submask) {
-                *out_query_operations = query_operations;
+                assert(*out_query_operations != NULL && "out_query_operations is NULL, but submask is true");
                 *out_query_operation_index = mid;
                 *out_submask_operation = op;
                 return QUERY_SEARCH_RESULT_FOUND_SUBMASK;
@@ -131,24 +144,24 @@ static query_search_result query_context_search_query(query_context *qc, const q
     return result;
 }
 
-static void *query_context_run_query_on_operation(const query q, const world *w, arena *query_arena, const query_operation operation) {
+static void *query_context_run_query_on_operation(query_context *qc, const query q, const world *w, const query_operation operation) {
     VIEW_STRUCT(entity_id) *operation_views = (struct VIEW(entity_id) *)operation.result;
     size_t entity_count = operation_views->count;
     size_t initial_capacity = entity_count / 2 + 1;
 
-    list *entity_results = (list *)arena_alloc(query_arena, sizeof(list) * (q.component_count + 1));
-    *entity_results = list_create(query_arena, sizeof(entity_id) * (initial_capacity));
+    list *entity_results = (list *)arena_alloc(&qc->query_arena, sizeof(list) * (q.component_count + 1));
+    *entity_results = list_create(&qc->query_arena, sizeof(entity_id) * (initial_capacity));
 
     list *component_results = entity_results + 1; 
     for (size_t i = 0; i < q.component_count; i++) {
-        component_results[i] = list_create(query_arena, sizeof(void *) * (initial_capacity));
+        component_results[i] = list_create(&qc->query_arena, sizeof(void *) * (initial_capacity));
     }
     
     for (size_t i = 0; i < entity_count; i++) {
         entity e = *world_get_entity(w, operation_views->elements[i]);
         if (((e.components & q.mask.component_mask) == q.mask.component_mask)
             && ((e.tags & q.mask.tag_mask) == q.mask.tag_mask)) {
-            list_add(entity_results, query_arena, &e.id, sizeof(entity_id));
+            list_add(entity_results, &qc->query_arena, &e.id, sizeof(entity_id));
 
             for (size_t j = 0; j < q.component_count; j++) {
                 void *component = world_components_get_component(
@@ -158,14 +171,14 @@ static void *query_context_run_query_on_operation(const query q, const world *w,
                     w->components.component_sizes[q.component_ids[j]]
                 );
 
-                list_add(&component_results[j], query_arena, &component, sizeof(void *));
+                list_add(&component_results[j], &qc->query_arena, &component, sizeof(void *));
             }
         }
     }
 
     VIEW_STRUCT_INDIRECT(void, *) *component_views_result;
     struct VIEW(entity_id) *entity_view_result =
-        arena_alloc(query_arena, sizeof(struct VIEW(entity_id)) + sizeof(struct VIEW(void)) * q.component_count);
+        arena_alloc(&qc->query_arena, sizeof(struct VIEW(entity_id)) + sizeof(struct VIEW(void)) * q.component_count);
     *entity_view_result = (struct VIEW(entity_id)) {
         .count = list_count_of_size(entity_results, sizeof(entity_id)),
         .elements = entity_results->elements,
@@ -178,40 +191,35 @@ static void *query_context_run_query_on_operation(const query q, const world *w,
             .elements = component_results[i].elements,
         };
     }
+
     return entity_view_result;
 }
 
-void *query_context_run_query(query_context *qc, const query q, const world *w, arena *query_arena) {
+void *query_context_run_query(query_context *qc, const query q, const world *w) {
     list *query_operations = NULL;
     size_t query_operation_index = 0;
     query_operation *submask_operation = NULL;
     switch (query_context_search_query(qc, q, &query_operations, &query_operation_index, &submask_operation))
     {
         case QUERY_SEARCH_RESULT_NOT_FOUND: {
-            printf("QUERY_SEARCH_RESULT_NOT_FOUND\n");
             query_operation op = {
                 .query = q.mask,
-                .result = query_run(q, w, query_arena)
+                .result = query_run(q, w, &qc->query_arena)
             };
-            LIST_INSERT(query_operation, query_operations, query_arena, query_operation_index, &op);
-            return op.result;
+            return LIST_INSERT(query_operation, query_operations, &qc->query_arena, query_operation_index, &op)->result;
         }
 
         case QUERY_SEARCH_RESULT_FOUND: {
-            printf("QUERY_SEARCH_RESULT_FOUND\n");
-            query_operation *op = LIST_GET(query_operation, query_operations, query_operation_index);
-            return op->result;
+            return LIST_GET(query_operation, query_operations, query_operation_index)->result;
         }
 
         case QUERY_SEARCH_RESULT_FOUND_SUBMASK: {
-            printf("QUERY_SEARCH_RESULT_FOUND_SUBMASK\n");
-            assert(submask_operation != NULL && "submask_operation is NULL");
+            assert(submask_operation != NULL && "submask_operation is NULL, but search result is QUERY_SEARCH_RESULT_FOUND_SUBMASK");
             query_operation op = {
                 .query = q.mask,
-                .result = query_context_run_query_on_operation(q, w, query_arena, *submask_operation)
+                .result = query_context_run_query_on_operation(qc, q, w, *submask_operation)
             };
-            LIST_INSERT(query_operation, query_operations, query_arena, query_operation_index, &op);
-            return op.result;
+            return LIST_INSERT(query_operation, query_operations, &qc->query_arena, query_operation_index, &op)->result;
         }   
 
         default: {
@@ -221,7 +229,7 @@ void *query_context_run_query(query_context *qc, const query q, const world *w, 
         }
     }
 }
-#define QUERY_CONTEXT_RUN_QUERY(query_context_ref, query0, world_ref, query_arena_ref, ...) \
-    ((QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_context_run_query(query_context_ref, query0, world_ref, query_arena_ref))
+#define QUERY_CONTEXT_RUN_QUERY(query_context_ref, query0, world_ref, ...) \
+    ((QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_context_run_query(query_context_ref, query0, world_ref))
 
 #endif

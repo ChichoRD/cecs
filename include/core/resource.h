@@ -45,7 +45,6 @@ void *world_resources_add_resource(world_resources *wr, arena *resources_arena, 
     if (offset >= 0) {
         assert((id == world_resources_count(wr)) && "Resource ID out of bounds");
         LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, &offset);
-        printf("Adding resource at offset %ld\n", offset);
         return list_add_range(&wr->resources, resources_arena, resource, size, sizeof(uint8_t));
     } else {
         if (id >= world_resources_count(wr)) {
