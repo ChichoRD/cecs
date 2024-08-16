@@ -50,13 +50,77 @@ typedef enum query_search_result {
     QUERY_SEARCH_RESULT_FOUND_SUBMASK,
 } query_search_result;
 
-static query_search_result query_context_search_query(query_context *qc, const query q, list **out_query_operations, size_t *out_query_operation_index, query_operation **out_submask_operation) {
-    typedef union query_mask_values {
-        query_mask mask;
-        uint32_t values[(sizeof(component_mask) + sizeof(tag_mask)) / sizeof(uint32_t)];
-    } query_mask_values;
-    #define QUERY_MASK_LENGTH (sizeof(query_mask_values) / sizeof(uint32_t))
+typedef union query_mask_values {
+    query_mask mask;
+    uint32_t values[(sizeof(component_mask) + sizeof(tag_mask)) / sizeof(uint32_t)];
+} query_mask_values;
+#define QUERY_MASK_LENGTH (sizeof(query_mask_values) / sizeof(uint32_t))
 
+static inline int32_t query_mask_values_compare(query_mask_values a, query_mask_values b) {
+	for (size_t i = 0; i < QUERY_MASK_LENGTH; i++) {
+		if (a.values[i] != b.values[i]) {
+			return a.values[i] - b.values[i];
+		}
+	}
+	return 0;
+}
+
+static size_t binary_search_operation_of_rank(const list* query_operations, query_mask_values values, size_t rank, size_t subrank) {
+    size_t start = 0;
+    size_t end = LIST_COUNT(query_operation, query_operations);
+    size_t mid = 0;
+
+    while (start < end) {
+        mid = (start + end) / 2;
+        query_operation* op = LIST_GET(query_operation, query_operations, mid);
+        query_mask_values op_qmv = { .mask = op->query };
+        for (size_t i = 0; i < QUERY_MASK_LENGTH; i++)
+            op_qmv.values[i] <<= (rank - subrank);
+
+        int32_t cmp = query_mask_values_compare(values, op_qmv);
+        if (cmp < 0) {
+			end = mid;
+		} else if (cmp > 0) {
+			start = mid + 1;
+		} else {
+			return mid;
+		}
+    }
+
+    return start;
+}
+
+static query_search_result interpret_operation_index_of_rank(const list *query_operations, query_mask_values values, size_t operation_index, size_t rank, size_t subrank) {
+    if (rank == subrank) {
+        if (operation_index >= LIST_COUNT(query_operation, query_operations)) {
+			return QUERY_SEARCH_RESULT_NOT_FOUND;
+        }
+        else {
+            query_operation* op = LIST_GET(query_operation, query_operations, operation_index);
+            query_mask_values op_qmv = { .mask = op->query };
+            return query_mask_values_compare(values, op_qmv) == 0
+                ? QUERY_SEARCH_RESULT_FOUND
+                : QUERY_SEARCH_RESULT_NOT_FOUND;
+        }
+    } else if (operation_index < LIST_COUNT(query_operation, query_operations)) {
+        query_operation* op = LIST_GET(query_operation, query_operations, operation_index);
+        query_mask_values op_qmv = { .mask = op->query };
+        bool submask = true;
+        for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
+            if ((values.values[j] & op_qmv.values[j]) != op_qmv.values[j]) {
+                submask = false;
+                break;
+            }
+        }
+        if (submask) {
+            return QUERY_SEARCH_RESULT_FOUND_SUBMASK;
+        }
+    }
+
+    return QUERY_SEARCH_RESULT_NOT_FOUND;
+}
+
+static query_search_result query_context_search_query(query_context *qc, const query q, list **out_query_operations, size_t *out_query_operation_index, query_operation **out_submask_operation) {
     *out_query_operations = NULL;
     *out_query_operation_index = 0;
     *out_submask_operation = NULL;
@@ -68,75 +132,33 @@ static query_search_result query_context_search_query(query_context *qc, const q
     query_search_result result = QUERY_SEARCH_RESULT_NOT_FOUND;
 
     for (int32_t i = rank; i >= 0; i--) {
-        list *query_operations = &qc->queries_operations[i];
-        
-        size_t start = 0;
-        size_t end = LIST_COUNT(query_operation, query_operations);
-        size_t mid = 0;
+        list *query_operations = &qc->queries_operations[i];    
+        size_t index = binary_search_operation_of_rank(query_operations, qmv, rank, i);
 
-        while (start < end) {
-            mid = (start + end) / 2;
-            query_operation *op = LIST_GET(query_operation, query_operations, mid);
-            query_mask_values op_qmv = { .mask = op->query };
-
-            bool less = false;
-            for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
-                if (qmv.values[j] < (op_qmv.values[j] << (rank - i))) {
-                    less = true;
-                    break;
-                }
-            }
-
-            if (less) {
-                end = mid;
-            } else {
-                start = mid + 1;
-            }
-        }
-
-        if (rank == (size_t)i) {
-            if (mid >= LIST_COUNT(query_operation, query_operations)) {
-                result = QUERY_SEARCH_RESULT_NOT_FOUND;
+        switch (interpret_operation_index_of_rank(query_operations, qmv, index, rank, i))
+        {
+            case QUERY_SEARCH_RESULT_NOT_FOUND: {
                 *out_query_operations = query_operations;
-                *out_query_operation_index = mid;
+				*out_query_operation_index = index;
                 *out_submask_operation = NULL;
-            } else {
-                query_operation *op = LIST_GET(query_operation, query_operations, mid);
-                query_mask_values op_qmv = { .mask = op->query };
-                bool equal = true;
-                for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
-                    if (qmv.values[j] != op_qmv.values[j]) {
-                        equal = false;
-                        break;
-                    }
-                }
-                if (equal) {
-                    *out_query_operations = query_operations;
-                    *out_query_operation_index = mid;
-                    *out_submask_operation = op;
-                    return QUERY_SEARCH_RESULT_FOUND;
-                } else {
-                    result = QUERY_SEARCH_RESULT_NOT_FOUND;
-                    *out_query_operations = query_operations;
-                    *out_query_operation_index = mid;
-                    *out_submask_operation = NULL;
-                }
+				result = QUERY_SEARCH_RESULT_NOT_FOUND;
+				break;
             }
-        } else if (mid < LIST_COUNT(query_operation, query_operations)) {
-            query_operation *op = LIST_GET(query_operation, query_operations, mid);
-            query_mask_values op_qmv = { .mask = op->query };
-            bool submask = true;
-            for (size_t j = 0; j < QUERY_MASK_LENGTH; j++) {
-                if ((qmv.values[j] & op_qmv.values[j]) != op_qmv.values[j]) {
-                    submask = false;
-                    break;
-                }
-            }
-            if (submask) {
-                assert(*out_query_operations != NULL && "out_query_operations is NULL, but submask is true");
-                *out_query_operation_index = mid;
-                *out_submask_operation = op;
+            case QUERY_SEARCH_RESULT_FOUND: {
+				*out_query_operations = query_operations;
+				*out_query_operation_index = index;
+                *out_submask_operation = NULL;
+				return QUERY_SEARCH_RESULT_FOUND;
+			}
+            case QUERY_SEARCH_RESULT_FOUND_SUBMASK: {
+                assert(*out_query_operations != NULL && "out_query_operations is NULL, but interpret_operation_index_of_rank returned QUERY_SEARCH_RESULT_FOUND_SUBMASK");
+                *out_query_operation_index = index;
+                *out_submask_operation = LIST_GET(query_operation, query_operations, index);
                 return QUERY_SEARCH_RESULT_FOUND_SUBMASK;
+            }
+            default: {
+                assert(0 && "unreachable: interpret_operation_index_of_rank returned invalid value");
+                exit(EXIT_FAILURE);
             }
         }
     }
@@ -199,7 +221,9 @@ void *query_context_run_query(query_context *qc, const query q, const world *w) 
     list *query_operations = NULL;
     size_t query_operation_index = 0;
     query_operation *submask_operation = NULL;
-    switch (query_context_search_query(qc, q, &query_operations, &query_operation_index, &submask_operation))
+    query_search_result search_result = query_context_search_query(qc, q, &query_operations, &query_operation_index, &submask_operation);
+    printf("search result: %d\n", search_result);
+    switch (search_result)
     {
         case QUERY_SEARCH_RESULT_NOT_FOUND: {
             query_operation op = {
