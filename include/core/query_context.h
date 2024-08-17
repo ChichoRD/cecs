@@ -37,7 +37,6 @@ void query_context_clear(query_context *qc) {
     for (size_t i = 0; i < QUERY_VARIANTS_COUNT; i++) {
         list_clear(&qc->queries_operations[i]);
     }
-    arena_clear(&qc->query_arena);
 }
 
 void query_context_free(query_context *qc) {
@@ -150,12 +149,6 @@ static query_search_result query_context_search_query(query_context *qc, const q
                     *out_query_operations = query_operations;
                 *out_query_operation_index = index;
                 *out_submask_operation = NULL;
-                for (size_t i = 0; i < LIST_COUNT(query_operation, query_operations); i++)
-                {
-                    query_operation* op = LIST_GET(query_operation, query_operations, i);
-                    printf("components: %d, tags: %d\n", op->query.component_mask, op->query.tag_mask);
-                }
-                printf("\n");
 				return QUERY_SEARCH_RESULT_FOUND;
 			}
             case QUERY_SEARCH_RESULT_FOUND_SUBMASK: {

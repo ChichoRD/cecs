@@ -135,6 +135,14 @@ void *list_set(list *l, size_t index, void *element, size_t size)
 #define LIST_SET(type, lis_ref, index, element_ref) \
     ((type *)list_set(lis_ref, index, element_ref, sizeof(type)))
 
+void *list_set_range(list *l, size_t index, void *elements, size_t count, size_t size) {
+    assert((index * size < l->count) && "Attempted to set elements with starting index out of bounds");
+    assert(((index + count) * size <= l->count) && "Attempted to set elements with end out of bounds");
+    return memcpy((uint8_t *)l->elements + index * size, elements, count * size);
+}
+#define LIST_SET_RANGE(type, lis_ref, index, elements_ref, count) \
+    list_set_range(lis_ref, index, elements_ref, count, sizeof(type))
+
 void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
 {
     assert((index * size <= l->count) && "Attempted to insert element with index out of bounds");

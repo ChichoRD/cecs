@@ -138,11 +138,15 @@ tag_mask world_remove_tags(world *w, entity_id entity_id, tag_mask tags) {
 #define WORLD_REMOVE_TAGS(world_ref, entity_id0, ...) \
     world_remove_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
 
-void *world_add_resource(world *w, resource_id id, void *resource, size_t size) {
-    return world_resources_add_resource(&w->resources, &w->resources_arena, id, resource, size);
+void *world_set_or_add_resource(world *w, resource_id id, void *resource, size_t size) {
+    if (id < world_resources_count(&w->resources)) {
+        return world_resources_set_resource(&w->resources, id, resource, size);
+    } else {
+        return world_resources_add_resource(&w->resources, &w->resources_arena, id, resource, size);
+    }
 }
-#define WORLD_ADD_RESOURCE(type, world_ref, resource_ref) \
-    ((type *)world_add_resource(world_ref, RESOURCE_ID(type), resource_ref, sizeof(type)))
+#define WORLD_SET_OR_ADD_RESOURCE(type, world_ref, resource_ref) \
+    ((type *)world_set_or_add_resource(world_ref, RESOURCE_ID(type), resource_ref, sizeof(type)))
 
 void *world_get_resource(const world *w, resource_id id, size_t size) {
     return world_resources_get_resource(&w->resources, id, size);
