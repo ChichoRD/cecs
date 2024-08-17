@@ -14,7 +14,7 @@ static tag_id tag_id_count = 0;
 #define TAG_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type##_tag, tag_id_count)
 #define TAG_DEFINE(type) \
     TAG_IMPLEMENT(type) \
-    typedef bool 
+    typedef bool type
 
 #define TAG_ID(type) ((tag_id)TYPE_ID(type##_tag))
 #define TAG_ID_ARRAY(...) (tag_id[]){ MAP_LIST(TAG_ID, __VA_ARGS__) }

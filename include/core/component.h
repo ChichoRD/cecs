@@ -15,7 +15,7 @@ static component_id component_id_count = 0;
 #define COMPONENT_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type##_component, component_id_count)
 #define COMPONENT_DEFINE(layout, type) \
     COMPONENT_IMPLEMENT(type) \
-    typedef layout type##_component
+    typedef layout type
 
 #define COMPONENT_ID(type) ((component_id)TYPE_ID(type##_component))
 #define COMPONENT_ID_ARRAY(...) (component_id[]){ MAP_LIST(COMPONENT_ID, __VA_ARGS__) }

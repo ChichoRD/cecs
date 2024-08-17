@@ -12,7 +12,7 @@ static resource_id resource_id_count = 0;
 #define RESOURCE_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type##_resource, resource_id_count)
 #define RESOURCE_DEFINE(layout, type) \
     RESOURCE_IMPLEMENT(type) \
-    typedef layout type##_resource
+    typedef layout type
 
 #define RESOURCE_ID(type) ((resource_id)TYPE_ID(type##_resource))
 #define RESOURCE_ID_ARRAY(...) (resource_id[]){ MAP_LIST(RESOURCE_ID, __VA_ARGS__) }
@@ -34,7 +34,7 @@ world_resources world_resources_create(arena *resources_arena) {
     return wr;
 }
 
-size_t world_resources_count(const world_resources *wr) {
+inline size_t world_resources_count(const world_resources *wr) {
     return list_count_of_size(&wr->resource_offsets, sizeof(resource_offset));
 }
 
@@ -65,6 +65,16 @@ void *world_resources_get_resource(const world_resources *wr, resource_id id, si
     void *resource = (uint8_t *)wr->resources.elements + offset;
     assert(((uint8_t *)resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count) && "Resource out of bounds");
     return resource;
+}
+
+void *world_resources_set_resource(world_resources *wr, resource_id id, void *resource, size_t size) {
+    assert((id < world_resources_count(wr)) && "Resource ID out of bounds");
+    resource_offset offset = *LIST_GET(resource_offset, &wr->resource_offsets, id);
+    assert((offset >= 0) && "Resource has been removed");
+
+    void *old_resource = (uint8_t *)wr->resources.elements + offset;
+    assert(((uint8_t *)old_resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count) && "Resource out of bounds");
+    return list_set_range(&wr->resources, offset, resource, size, sizeof(uint8_t));
 }
 
 void *world_resources_remove_resource(world_resources *wr, resource_id id, size_t size) {
