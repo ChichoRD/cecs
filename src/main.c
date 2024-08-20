@@ -9,7 +9,7 @@
 #include "../include/color.h"
 #include "../include/core/relation.h"
 
-#define TARGET_FPS 60.0
+#define TARGET_FPS 240.0
 
 #define BOARD_WIDTH 48
 #define BOARD_HEIGHT 16
@@ -515,6 +515,7 @@ bool render(const world *w, query_context *qc) {
         printf("\n");
     }
     //printf("\n");
+    printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
 
     WORLD_SET_OR_ADD_RESOURCE(console_buffer, w, &new_console_buffer);
     return EXIT_SUCCESS;
@@ -578,6 +579,7 @@ void main(void) {
         {
             timespec_get(&t->frame_end, TIME_UTC);
 
+            game_time_update_time_since_start(t);
             if (update(&w, &qc, game_time_update_delta_time(t))) {
                 app_error = true;
             }

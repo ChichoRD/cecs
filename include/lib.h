@@ -16,12 +16,17 @@ RESOURCE_DEFINE(struct, game_time) {
     struct timespec frame_start;
     struct timespec frame_end;
     double delta_time_seconds;
+    double averaged_delta_time_seconds;
     double time_since_start_seconds;
 } game_time;
 
 double game_time_update_delta_time(game_time *t) {
-    return (t->delta_time_seconds = 
-        ((t->frame_end.tv_sec - t->frame_start.tv_sec) + (t->frame_end.tv_nsec - t->frame_start.tv_nsec) / 1000000000.0));
+    t->delta_time_seconds =
+        ((t->frame_end.tv_sec - t->frame_start.tv_sec) + (t->frame_end.tv_nsec - t->frame_start.tv_nsec) / 1000000000.0);
+    t->averaged_delta_time_seconds =
+        t->averaged_delta_time_seconds
+            + (t->delta_time_seconds - t->averaged_delta_time_seconds) / (t->time_since_start_seconds / t->delta_time_seconds);
+    return t->delta_time_seconds;
 }
 
 double game_time_update_time_since_start(game_time *t) {
