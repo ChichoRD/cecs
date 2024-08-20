@@ -493,14 +493,14 @@ bool render(const world *w, query_context *qc) {
     for (size_t i = 0; i < qr->view_count; i++) {
         struct QUERY_VIEW(position, renderable) view = qr->query_views[i];
         for (size_t j = 0; j < view.count; j++) {
-            position *p = &view.query_elements.position_elements[j];
-            renderable *r = &view.query_elements.renderable_elements[j];
-            for (int16_t x = 0; x < r->size.x; x++) {
-                for (int16_t y = 0; y < r->size.y; y++) {
-                    int16_t cx = p->x + x + r->offset.x;
-                    int16_t cy = p->y + y + r->offset.y;
+            position p = view.query_elements.position_elements[j];
+            renderable r = view.query_elements.renderable_elements[j];
+            for (int16_t x = 0; x < r.size.x; x++) {
+                for (int16_t y = 0; y < r.size.y; y++) {
+                    int16_t cx = p.x + x + r.offset.x;
+                    int16_t cy = p.y + y + r.offset.y;
                     if (cx >= 0 && cx < BOARD_WIDTH && cy >= 0 && cy < BOARD_HEIGHT) {
-                        new_console_buffer.buffer[cx][cy] = r->sprite[x + r->size.x * y];
+                        new_console_buffer.buffer[cx][cy] = r.sprite[x + r.size.x * y];
                     }
                 }
             }
