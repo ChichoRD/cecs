@@ -2,7 +2,10 @@
 #define LIST_H
 
 #include <memory.h>
+#include <stddef.h>
 #include "arena.h"
+
+#define padding_between(type, next_type) (offsetof(struct { type _a; next_type _b; }, _b) - sizeof(type))
 
 typedef struct list
 {

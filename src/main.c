@@ -7,6 +7,7 @@
 #include <conio.h>
 #include "../include/lib.h"
 #include "../include/color.h"
+#include "../include/core/relation.h"
 
 #define TARGET_FPS 60.0
 
@@ -49,6 +50,8 @@ COMPONENT_DEFINE(struct, renderable) {
     char **sprite;
 } renderable;
 
+//RELATION_DEFINE(is_duck, position);
+
 static renderable renderable_create(arena *a, char **sprite, vector2int offset, vector2int size) {
 	renderable r = (renderable) {
 		.sprite = arena_alloc(a, sizeof(char*) * size.x * size.y),
@@ -77,9 +80,8 @@ static renderable renderable_create_lonk(arena *a) {
 }
 
 static renderable renderable_create_shockwave(arena *a, int16_t radius) {
-    arena temp = arena_create();
     int16_t size = radius * 2 + 1;
-    char **sprite = arena_alloc(&temp, sizeof(char *) * size * size);
+    char **sprite = calloc(size * size, sizeof(char *));
     for (int16_t i = -radius; i <= radius; i++) {
         for (int16_t j = -radius; j <= radius; j++) {
             size_t index = i + radius + (j + radius) * size;
@@ -96,7 +98,7 @@ static renderable renderable_create_shockwave(arena *a, int16_t radius) {
         (vector2int){-radius, -radius},
         (vector2int){size, size}
     );
-    arena_free(&temp);
+    free(sprite);
     return r;
 }
 
@@ -329,34 +331,39 @@ bool create_shockwave(world *w, query_context *qc, position *p, velocity *v) {
 }
 
 bool update_controllables(world *w, query_context *qc, double delta_time_seconds) {
-    query q = QUERY_CREATE(WITH_COMPONENTS(position, velocity, controllable), WITHOUT_TAGS);
-    struct QUERY_RESULT(position, velocity, controllable) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, position, velocity, controllable);
+    query q = QUERY_CREATE(WITH_COMPONENTS(velocity, controllable), WITHOUT_TAGS);
+    struct QUERY_RESULT(velocity, controllable) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, velocity, controllable);
 
-    for (size_t i = 0; i < qr->entity_id_view.count; i++) {
-        velocity *v = qr->velocity_view.elements[i];
-        controllable *c = qr->controllable_view.elements[i];
-        if (c->buffer_count <= 0) {
-            *v = (velocity){0, 0};
-        } else {
-            for (size_t j = 0; j < c->buffer_count; j++) {
-                switch (c->buffer[j]) {
-                    case 'w':
-                        *v = (velocity){0, -1};
-                        break;
-                    case 'a':
-                        *v = (velocity){-1, 0};
-                        break;
-                    case 's':
-                        *v = (velocity){0, 1};
-                        break;
-                    case 'd':
-                        *v = (velocity){1, 0};
-                        break;
+    for (size_t i = 0; i < qr->view_count; i++)
+    {
+        struct QUERY_VIEW(velocity, controllable) view = qr->query_views[i];
+        for (size_t j = 0; j < view.count; j++)
+        {
+            velocity *v = &view.query_elements.velocity_elements[j];
+            controllable c = view.query_elements.controllable_elements[j];
+            if (c.buffer_count <= 0) {
+                *v = (velocity){0, 0};
+            } else {
+                for (size_t k = 0; k < c.buffer_count; k++) {
+                    switch (c.buffer[k]) {
+                        case 'w':
+                            *v = (velocity){0, -1};
+                            break;
+                        case 'a':
+                            *v = (velocity){-1, 0};
+                            break;
+                        case 's':
+                            *v = (velocity){0, 1};
+                            break;
+                        case 'd':
+                            *v = (velocity){1, 0};
+                            break;
+                    }
                 }
             }
         }
     }
-    return EXIT_SUCCESS;
+        return EXIT_SUCCESS;
 }
 
 bool update_lonk(world *w, query_context *qc, double delta_time_seconds) {
@@ -364,26 +371,32 @@ bool update_lonk(world *w, query_context *qc, double delta_time_seconds) {
     struct QUERY_RESULT(position, velocity, renderable, velocity_register, controllable) *qr =
         QUERY_CONTEXT_RUN_QUERY(qc, q, w, position, velocity, renderable, velocity_register, controllable);
 
-    for (size_t i = 0; i < qr->entity_id_view.count; i++) {
-        position *p = qr->position_view.elements[i];
-        velocity *v = qr->velocity_view.elements[i];
-        p->x += v->x;
-        p->y += v->y;
+    for (size_t i = 0; i < qr->view_count; i++) {
+        struct QUERY_VIEW(position, velocity, renderable, velocity_register, controllable) view =
+            qr->query_views[i];
+        for (size_t j = 0; j < view.count; j++)
+        {
+            position *p = &view.query_elements.position_elements[j];
+            velocity v = view.query_elements.velocity_elements[j];
+            p->x += v.x;
+            p->y += v.y;
 
-        velocity_register *vr = qr->velocity_register_view.elements[i];
-        if (v->x != 0 || v->y != 0) {
-            vr->velocity = *v;
-        }
-        controllable *c = qr->controllable_view.elements[i];
-
-        for (size_t j = 0; j < c->buffer_count; j++) {
-            switch (c->buffer[j]) {
-                case 'x':
-                    create_shockwave(w, qc, p, &vr->velocity);
-                    break;
+            velocity_register *vr = &view.query_elements.velocity_register_elements[j];
+            if (v.x != 0 || v.y != 0) {
+                vr->velocity = v;
             }
-        }
+            controllable c = view.query_elements.controllable_elements[j];
 
+            for (size_t k = 0; k < c.buffer_count; k++) {
+                switch (c.buffer[j]) {
+                    case 'x':
+                        create_shockwave(w, qc, p, &vr->velocity);
+                        break;
+                }
+            }
+
+        }
+        
     }
     return EXIT_SUCCESS;
 }
@@ -392,22 +405,25 @@ bool update_ducks(world *w, query_context *qc, double delta_time_seconds) {
     query q = QUERY_CREATE(WITH_COMPONENTS(position), WITH_TAGS(is_duck));
     struct QUERY_RESULT(position) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, position);
 
-    for (size_t i = 0; i < qr->entity_id_view.count; i++) {
-        position *p = qr->position_view.elements[i];
-        if (rand() % 2 == 0) {
-            switch (rand() % 4) {
-                case 0:
-                    p->y--;
-                    break;
-                case 1:
-                    p->x--;
-                    break;
-                case 2:
-                    p->y++;
-                    break;
-                case 3:
-                    p->x++;
-                    break;
+    for (size_t i = 0; i < qr->view_count; i++) {
+        struct QUERY_VIEW(position) view = qr->query_views[i];
+        for (size_t j = 0; j < view.count; j++) {
+            position *p = &view.query_elements.position_elements[j];
+            if (rand() % 2 == 0) {
+                switch (rand() % 4) {
+                    case 0:
+                        p->y--;
+                        break;
+                    case 1:
+                        p->x--;
+                        break;
+                    case 2:
+                        p->y++;
+                        break;
+                    case 3:
+                        p->x++;
+                        break;
+                }
             }
         }
     }
@@ -419,32 +435,36 @@ bool update_shockwaves(world *w, query_context *qc, double delta_time_seconds) {
     struct QUERY_RESULT(position, velocity, renderable) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, position, velocity, renderable);
 
     strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
-    for (size_t i = 0; i < qr->entity_id_view.count; i++) {
-        position *p = qr->position_view.elements[i];
-        velocity *v = qr->velocity_view.elements[i];
-        p->x += v->x;
-        p->y += v->y;
+    for (size_t i = 0; i < qr->view_count; i++) {
+        struct QUERY_VIEW(position, velocity, renderable) view = qr->query_views[i];
+        for (size_t j = 0; j < view.count; j++) {
+            position *p = &view.query_elements.position_elements[j];
+            velocity *v = &view.query_elements.velocity_elements[j];
+            p->x += v->x;
+            p->y += v->y;
 
-        renderable new_r = renderable_create_shockwave(&sa->a, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
-        WORLD_SET_OR_ADD_COMPONENT(
-            renderable,
-            w,
-            qr->entity_id_view.elements[i],
-            &new_r
-        );
+            renderable new_r = renderable_create_shockwave(&sa->a, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
+            WORLD_SET_OR_ADD_COMPONENT(
+                renderable,
+                w,
+                view.query_elements.entity_id_view_start + j,
+                &new_r
+            );
 
-        if (p->x < 0 || p->x >= BOARD_WIDTH
-            || p->y < 0 || p->y >= BOARD_HEIGHT
-            || v->x == 0 && v->y == 0) {
-            world_remove_entity(w, qr->entity_id_view.elements[i]);
-            query_context_clear(qc);
-        }
+            if (p->x < 0 || p->x >= BOARD_WIDTH
+                || p->y < 0 || p->y >= BOARD_HEIGHT
+                || v->x == 0 && v->y == 0) {
+                world_remove_entity(w, view.query_elements.entity_id_view_start + j);
+                query_context_clear(qc);
+            }
 
-        if (abs(v->x) > 0) {
-            v->x -= v->x / abs(v->x);
-        }
-        if (abs(v->y) > 0) {
-            v->y -= v->y / abs(v->y);
+            if (abs(v->x) > 0) {
+                v->x -= v->x / abs(v->x);
+            }
+            if (abs(v->y) > 0) {
+                v->y -= v->y / abs(v->y);
+            }
+
         }
     }
     return EXIT_SUCCESS;
@@ -470,16 +490,18 @@ bool render(const world *w, query_context *qc) {
         }
     }
 
-    for (size_t i = 0; i < qr->entity_id_view.count; i++) {
-        position *p = qr->position_view.elements[i];
-        renderable *r = qr->renderable_view.elements[i];
-
-        for (int16_t x = 0; x < r->size.x; x++) {
-            for (int16_t y = 0; y < r->size.y; y++) {
-                int16_t cx = p->x + x + r->offset.x;
-                int16_t cy = p->y + y + r->offset.y;
-                if (cx >= 0 && cx < BOARD_WIDTH && cy >= 0 && cy < BOARD_HEIGHT) {
-                    new_console_buffer.buffer[cx][cy] = r->sprite[x + r->size.x * y];
+    for (size_t i = 0; i < qr->view_count; i++) {
+        struct QUERY_VIEW(position, renderable) view = qr->query_views[i];
+        for (size_t j = 0; j < view.count; j++) {
+            position *p = &view.query_elements.position_elements[j];
+            renderable *r = &view.query_elements.renderable_elements[j];
+            for (int16_t x = 0; x < r->size.x; x++) {
+                for (int16_t y = 0; y < r->size.y; y++) {
+                    int16_t cx = p->x + x + r->offset.x;
+                    int16_t cy = p->y + y + r->offset.y;
+                    if (cx >= 0 && cx < BOARD_WIDTH && cy >= 0 && cy < BOARD_HEIGHT) {
+                        new_console_buffer.buffer[cx][cy] = r->sprite[x + r->size.x * y];
+                    }
                 }
             }
         }
@@ -518,10 +540,13 @@ bool process_input(world *w, query_context *qc) {
     query q = QUERY_CREATE(WITH_COMPONENTS(controllable), WITHOUT_TAGS);
     struct QUERY_RESULT(controllable) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, controllable);
 
-    for (size_t i = 0; i < qr->entity_id_view.count; i++) {
-        controllable *current = qr->controllable_view.elements[i];
-        if (current->active) {
-            *current = c;
+    for (size_t i = 0; i < qr->view_count; i++) {
+        struct QUERY_VIEW(controllable) view = qr->query_views[i];
+        for (size_t j = 0; j < view.count; j++) {
+            controllable *current = &view.query_elements.controllable_elements[j];
+            if (current->active) {
+                *current = c;
+            }
         }
     }
     return EXIT_SUCCESS;

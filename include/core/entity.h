@@ -30,6 +30,13 @@ entity entity_create(bool active, const entity_id id, component_mask components,
     };
 }
 
+inline bool entity_has_components(const entity *e, const component_mask components) {
+    return (e->components & components) == components;
+}
+
+inline bool entity_has_tags(const entity *e, const tag_mask tags) {
+    return (e->tags & tags) == tags;
+}
 
 #define DEFAULT_ENTITY_CAPACITY 512
 
