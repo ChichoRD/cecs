@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <assert.h>
 #include "entity.h"
 #include "world.h"
 #include "arena.h"
@@ -81,10 +82,7 @@ void *query_run(const query q, const world *w, arena *query_arena) {
         sizeof(entity_id) + padding_between(entity_id, void *)
         + sizeof(void *) * (q.component_count)
         + padding_between(void *, size_t) + sizeof(size_t);
-    list *views_result = arena_alloc(query_arena, sizeof(list));
-    *views_result = list_create(
-        query_arena,
-        size_of_partial_view);
+    list views_result = list_create(query_arena, size_of_partial_view);
 
     size_t total_count = 0;
     size_t contiguous_count = 0;
@@ -92,9 +90,9 @@ void *query_run(const query q, const world *w, arena *query_arena) {
         entity *e = world_get_entity(w, i);
         if (entity_classifies_for_query(e, q.mask)) {
             if (contiguous_count <= 0) {
-                list_add(views_result, query_arena, &e->id, sizeof(entity_id));
+                list_add(&views_result, query_arena, &e->id, sizeof(entity_id));
                 list_add(
-                    views_result,
+                    &views_result,
                     query_arena,
                     ((uint8_t[padding_between(entity_id, void *) + 1]){0}),
                     padding_between(entity_id, void *)
@@ -110,30 +108,30 @@ void *query_run(const query q, const world *w, arena *query_arena) {
                         assert(0 && "unreachable: component not found");
                         exit(EXIT_FAILURE);
                     }
-                    list_add(views_result, query_arena, &component, sizeof(void *));
+                    list_add(&views_result, query_arena, &component, sizeof(void *));
                 }
             }
 
             ++contiguous_count;
             if (i + 1 >= entity_count) {
                 list_add(
-                    views_result,
+                    &views_result,
                     query_arena,
                     ((uint8_t[padding_between(void *, size_t) + 1]){0}),
                     padding_between(void *, size_t)
                 );
-                list_add(views_result, query_arena, &contiguous_count, sizeof(size_t));
+                list_add(&views_result, query_arena, &contiguous_count, sizeof(size_t));
                 total_count += contiguous_count;
                 contiguous_count = 0;
             }
         } else if ((contiguous_count > 0) || (i + 1 >= entity_count)) {
             list_add(
-                views_result,
+                &views_result,
                 query_arena,
                 ((uint8_t[padding_between(void *, size_t) + 1]){0}),
                 padding_between(void *, size_t)
             );
-            list_add(views_result, query_arena, &contiguous_count, sizeof(size_t));
+            list_add(&views_result, query_arena, &contiguous_count, sizeof(size_t));
             total_count += contiguous_count;
             contiguous_count = 0;
         }
@@ -141,13 +139,70 @@ void *query_run(const query q, const world *w, arena *query_arena) {
 
     QUERY_RESULT_STRUCT(void) *result = (struct QUERY_RESULT(void) *)arena_alloc(query_arena, sizeof(struct QUERY_RESULT(void)));
     *result = (struct QUERY_RESULT(void)) {
-        .query_views = views_result->elements,
-        .view_count = list_count_of_size(views_result, size_of_partial_view),
+        .query_views = views_result.elements,
+        .view_count = list_count_of_size(&views_result, size_of_partial_view),
         .found_entities_count = total_count,
     };
     return result;
 }
 #define QUERY_RUN(query0, world_ref, arena_ref, ...) \
     (QUERY_RESULT_STRUCT(__VA_ARGS__) *)query_run(query0, world_ref, arena_ref)
+
+
+typedef struct query_iterator {
+    const QUERY_RESULT_STRUCT(void) *result;
+    const size_t view_size;
+    size_t view_index;
+    size_t current_view_index;
+} query_iterator;
+
+query_iterator query_iterator_create(const void *query_result, const size_t view_size) {
+    return (query_iterator) {
+        .result = query_result,
+        .view_size = view_size,
+        .view_index = 0,
+        .current_view_index = 0,
+    };
+}
+#define QUERY_ITERATOR_CREATE(query_result_ref, ...) \
+    query_iterator_create(query_result_ref, sizeof(QUERY_VIEW_STRUCT(__VA_ARGS__)))
+
+void *query_iterator_current_count(const query_iterator *it, size_t *current_view_count) {
+    assert(it->view_index < it->result->view_count);
+    void *current_view = ((uint8_t *)it->result->query_views) + it->view_size * it->view_index;
+    *current_view_count = *(((size_t *)(((uint8_t *)current_view) + it->view_size)) - 1);
+    assert(it->current_view_index < current_view_count);
+    return current_view;
+}
+#define QUERY_ITERATOR_CURRENT_COUNT(query_iterator_ref, ...) \
+    ((QUERY_VIEW_STRUCT(__VA_ARGS__) *)query_iterator_current_count(query_iterator_ref, &((size_t){0})))
+
+void *query_iterator_current(const query_iterator *it) {
+    assert(it->view_index < it->result->view_count
+        && "invalid iterator state, it may have reached the end of its query already; create a new iterator");
+    void *current_view = ((uint8_t *)it->result->query_views) + it->view_size * it->view_index;
+    size_t current_view_count = *(((size_t *)(((uint8_t *)current_view) + it->view_size)) - 1);
+    assert(it->current_view_index < current_view_count
+        && "invalid iterator state, it may have reached the end of its query already; create a new iterator");
+    return current_view;
+}
+#define QUERY_ITERATOR_CURRENT(query_iterator_ref, ...) \
+    ((QUERY_VIEW_ELEMENTS_STRUCT(__VA_ARGS__) *)query_iterator_current(query_iterator_ref))
+
+void query_iterator_next(query_iterator *it) {
+    size_t current_view_count = 0;
+    void *current_view = query_iterator_current_count(it, &current_view_count);
+    if (++it->current_view_index >= current_view_count) {
+        ++it->view_index;
+        it->current_view_index = 0;
+    }
+}
+
+bool query_iterator_done(const query_iterator *it) {
+    return it->view_index >= it->result->view_count;
+}
+
+#define QUERY_RUN_INTO_ITER(query0, world_ref, arena_ref, ...) \
+    (QUERY_ITERATOR_CREATE(query_run(query0, world_ref, arena_ref), __VA_ARGS__))
 
 #endif

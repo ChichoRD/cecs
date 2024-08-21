@@ -368,35 +368,58 @@ bool update_controllables(world *w, query_context *qc, double delta_time_seconds
 
 bool update_lonk(world *w, query_context *qc, double delta_time_seconds) {
     query q = QUERY_CREATE(WITH_COMPONENTS(position, velocity, renderable, velocity_register, controllable), WITHOUT_TAGS);
-    struct QUERY_RESULT(position, velocity, renderable, velocity_register, controllable) *qr =
-        QUERY_CONTEXT_RUN_QUERY(qc, q, w, position, velocity, renderable, velocity_register, controllable);
 
-    for (size_t i = 0; i < qr->view_count; i++) {
-        struct QUERY_VIEW(position, velocity, renderable, velocity_register, controllable) view =
-            qr->query_views[i];
-        for (size_t j = 0; j < view.count; j++)
-        {
-            position *p = &view.query_elements.position_elements[j];
-            velocity v = view.query_elements.velocity_elements[j];
+    // for (size_t i = 0; i < qr->view_count; i++) {
+    //     struct QUERY_VIEW(position, velocity, renderable, velocity_register, controllable) view =
+    //         qr->query_views[i];
+    //     for (size_t j = 0; j < view.count; j++)
+    //     {
+    //         position *p = &view.query_elements.position_elements[j];
+    //         velocity v = view.query_elements.velocity_elements[j];
+    //         p->x += v.x;
+    //         p->y += v.y;
+
+    //         velocity_register *vr = &view.query_elements.velocity_register_elements[j];
+    //         if (v.x != 0 || v.y != 0) {
+    //             vr->velocity = v;
+    //         }
+    //         controllable c = view.query_elements.controllable_elements[j];
+
+    //         for (size_t k = 0; k < c.buffer_count; k++) {
+    //             switch (c.buffer[j]) {
+    //                 case 'x':
+    //                     create_shockwave(w, qc, p, &vr->velocity);
+    //                     break;
+    //             }
+    //         }
+
+    //     }
+        
+    // }
+    for (
+        query_iterator qi = QUERY_CONTEXT_RUN_QUERY_INTO_ITER(qc, q, w, position, velocity, renderable, velocity_register, controllable);
+        !query_iterator_done(&qi);
+        query_iterator_next(&qi)
+        ) {
+        struct QUERY_VIEW_ELEMENTS *view = QUERY_ITERATOR_CURRENT(&qi, position, velocity, renderable, velocity_register, controllable);
+            position *p = &view->position_elements[qi.current_view_index];
+            velocity v = view->velocity_elements[qi.current_view_index];
             p->x += v.x;
             p->y += v.y;
 
-            velocity_register *vr = &view.query_elements.velocity_register_elements[j];
+            velocity_register *vr = &view->velocity_register_elements[qi.current_view_index];
             if (v.x != 0 || v.y != 0) {
                 vr->velocity = v;
             }
-            controllable c = view.query_elements.controllable_elements[j];
+            controllable c = view->controllable_elements[qi.current_view_index];
 
             for (size_t k = 0; k < c.buffer_count; k++) {
-                switch (c.buffer[j]) {
+                switch (c.buffer[k]) {
                     case 'x':
                         create_shockwave(w, qc, p, &vr->velocity);
                         break;
                 }
             }
-
-        }
-        
     }
     return EXIT_SUCCESS;
 }
