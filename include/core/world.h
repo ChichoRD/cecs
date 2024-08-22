@@ -7,8 +7,8 @@
 #include "entity.h"
 #include "component.h"
 #include "tag.h"
-#include "arena.h"
-#include "list.h"
+#include "../containers/arena.h"
+#include "../containers/list.h"
 #include "resource.h"
 
 typedef struct world {

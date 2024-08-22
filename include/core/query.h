@@ -7,9 +7,9 @@
 #include <assert.h>
 #include "entity.h"
 #include "world.h"
-#include "arena.h"
-#include "list.h"
-#include "view.h"
+#include "../containers/arena.h"
+#include "../containers/list.h"
+#include "../containers/view.h"
 #include "component.h"
 #include "tag.h"
 

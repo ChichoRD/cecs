@@ -3,8 +3,8 @@
 
 #include <time.h>
 #include <stdint.h>
-#include "../include/core/arena.h"
-#include "../include/core/list.h"
+#include "../include/containers/arena.h"
+#include "../include/containers/list.h"
 #include "../include/core/world.h"
 #include "../include/core/entity.h"
 #include "../include/core/query.h"

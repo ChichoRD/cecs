@@ -127,8 +127,8 @@ static renderable renderable_create_slime(arena *a) {
     );
 }
 
-static renderable renderable_create_duck(arena *a) {
-    char *sprite[1][2] = { { YEL "\xc2\xac" CRESET, WHT "\xe2\x96\x84" CRESET } };
+static renderable renderable_create_duck(arena *a, char *color) {
+    char *sprite[1][2] = { { YEL "\xc2\xac" CRESET, color } };
     return renderable_create(
         a,
         sprite,
@@ -153,7 +153,10 @@ bool create_duck(arena *a, world *w, vector2int initial_position) {
         e,
         &initial_position
     );
-    renderable r = renderable_create_duck(a);
+
+    char *default_color = WHT "\xe2\x96\x84" CRESET;
+    char *golden_color = YEL "\xe2\x96\x84" CRESET;
+    renderable r = renderable_create_duck(a, rand() % 1000 < 45 ? golden_color : default_color);
     WORLD_SET_OR_ADD_COMPONENT(
         renderable,
         w,
@@ -290,7 +293,7 @@ bool init(world *w) {
     SetConsoleOutputCP(65001);
     create_lonk(&sa->a, w);
     create_map(&sa->a, w);
-    for (size_t i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 100; i++) {
         create_duck(&sa->a, w, (vector2int){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
     }
     create_slime(&sa->a, w, (vector2int){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2});
@@ -530,14 +533,21 @@ bool render(const world *w, query_context *qc) {
         }
     }
     
-    system("cls");
+    printf("\x1b[%d;%dH", 0, 0);
+    fflush(stdout);
+    //system("cls");
+    arena screen_arena = arena_create();
+    list screen = list_create(&screen_arena, sizeof(char) * BOARD_WIDTH * BOARD_HEIGHT);
     for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
         for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
-            printf("%s", new_console_buffer.buffer[x][y]);
+            size_t i = 0;
+            while (new_console_buffer.buffer[x][y][i] != '\0')
+                list_add(&screen, &screen_arena, &new_console_buffer.buffer[x][y][i++], sizeof(char));        
         }
-        printf("\n");
+        list_add(&screen, &screen_arena, "\n", sizeof(char));
     }
-    //printf("\n");
+    printf("%s", screen.elements);
+    arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
 
     WORLD_SET_OR_ADD_RESOURCE(console_buffer, w, &new_console_buffer);
@@ -583,8 +593,15 @@ bool update(world *w, query_context *qc, double delta_time_seconds) {
     return result;
 }
 
+#include "../include/containers/bitset.h"
 void main(void) {
     {
+        arena a = arena_create();
+        bitset b = bitset_create(&a);
+        printf("layer word index: %d\n", layer_word_index(4 * 4 * 4 * 64, 0));
+        printf("layer bit index: %d\n", layer_bit_index(4 * 4 * 4 * 64, 0));
+        arena_free(&a);
+        return;
         world w = world_create();
         query_context qc = query_context_create();
 

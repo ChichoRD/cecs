@@ -7,8 +7,8 @@
 #include "query.h"
 #include "component.h"
 #include "tag.h"
-#include "list.h"
-#include "view.h"
+#include "../containers/list.h"
+#include "../containers/view.h"
 #include "entity.h"
 
 #define QUERY_VARIANTS_COUNT (COMPONENT_TYPE_COUNT + TAG_TYPE_COUNT)
