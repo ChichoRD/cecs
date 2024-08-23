@@ -5,16 +5,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static inline ssize_t max(ssize_t a, ssize_t b) {
-    return (a > b) ? a : b;
-}
-
-static inline ssize_t min(ssize_t a, ssize_t b) {
-    return (a < b) ? a : b;
-}
-
-
 typedef ptrdiff_t ssize_t;
+
+inline ssize_t ssize_t_max(ssize_t a, ssize_t b) {
+    return a > b ? a : b;
+}
+
+inline ssize_t ssize_t_min(ssize_t a, ssize_t b) {
+    return a < b ? a : b;
+}
 
 typedef struct range {
     ssize_t start;
@@ -47,15 +46,15 @@ inline bool range_equals(const range range1, const range range2) {
 
 inline range range_intersection(const range range1, const range range2) {
     return (range) {
-        .start = max(range1.start, range2.start),
-        .end = min(range1.end, range2.end)
+        .start = ssize_t_max(range1.start, range2.start),
+        .end = ssize_t_min(range1.end, range2.end)
     };
 }
 
 inline range range_union(const range range1, const range range2) {
     return (range) {
-        .start = min(range1.start, range2.start),
-        .end = max(range1.end, range2.end)
+        .start = ssize_t_min(range1.start, range2.start),
+        .end = ssize_t_max(range1.end, range2.end)
     };
 }
 
