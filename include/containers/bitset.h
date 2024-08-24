@@ -75,8 +75,8 @@ void bit_set_ensure_layer_range(bitset *b, arena *a, layer_range range, size_t l
 void bitset_set(bitset *b, arena *a, size_t index) {
     for (ssize_t layer = BIT_LAYER_COUNT; layer >= 0; layer--) {
         size_t layer_index = layer_word_index(index, layer);
-        bit_set_ensure_layer_range(b, a, layer_range_singleton(layer_index), layer);
-        ssize_t layer_list_index = (ssize_t)layer_index - b->layer_ranges[layer].first_bit_word_index;
+        bit_set_ensure_layer_range(b, a, exclusive_range_singleton(layer_index), layer);
+        ssize_t layer_list_index = (ssize_t)layer_index - b->layer_ranges[layer].start;
         assert(
             (layer_list_index >= 0)
             && (layer_list_index < layer_range_length(b->layer_ranges[layer]))
