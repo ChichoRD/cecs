@@ -243,6 +243,17 @@ bit_word hibitset_get_word(const hibitset *b, size_t bit_index) {
     return bitset_get_word(&b->bitsets[0], bit_index);
 }
 
+exclusive_range hibitset_bit_range(const hibitset *b) {
+    return (exclusive_range){ 
+        .start = bit0_from_layer_word_index(b->bitsets[0].word_range.start, 0),
+        .end = bit0_from_layer_word_index(b->bitsets[0].word_range.end, 0),
+    };
+}
+
+bool hibitset_bit_in_range(const hibitset *b, size_t bit_index) {
+    return exclusive_range_contains(b->bitsets[0].word_range, layer_word_index(bit_index, 0));
+}
+
 
 typedef struct hibitset_iterator {
     const hibitset *const hibitset;
@@ -284,44 +295,56 @@ inline bool hibitset_iterator_current_is_set(const hibitset_iterator *it) {
 
 hibitset hibitset_intersection(hibitset *bitsets, size_t count, arena *a) {
     hibitset b = hibitset_create(a);
-    hibitset_iterator it = hibitset_iterator_create(&bitsets[0]);
-    while (!hibitset_iterator_done(&it)) {
-        bool all_set = true;
-        size_t max_next_bit = hibitset_iterator_current(&it);
-        for (size_t i = 0; i < count; i++) {
-            all_set &= hibitset_is_set(&bitsets[i], hibitset_iterator_current(&it));
+    size_t current_bit = hibitset_bit_range(&bitsets[0]).start;
+    bool any_done = false;
 
+    while (!any_done) {
+        size_t max_next_bit = current_bit + 1;
+        bool all_set = true;
+
+        for (size_t i = 0; i < count; i++) {
             hibitset_iterator j = hibitset_iterator_create(&bitsets[i]);
-            j.current_bit_index = it.current_bit_index;
+            j.current_bit_index = current_bit;
             size_t next_bit = hibitset_iterator_next_set(&j);
             max_next_bit = max(max_next_bit, next_bit);
+
+            all_set &= hibitset_is_set(&bitsets[i], current_bit);
+            any_done |= !hibitset_bit_in_range(&bitsets[i], max_next_bit);
         }
         if (all_set) {
-            hibitset_set(&b, a, hibitset_iterator_current(&it));
+            hibitset_set(&b, a, current_bit);
         }
-        it.current_bit_index = max_next_bit;
+        
+        current_bit = max_next_bit;
     }
     return b;
 }
 
 hibitset hibitset_union(hibitset *bitsets, size_t count, arena *a) {
     hibitset b = hibitset_create(a);
-    hibitset_iterator it = hibitset_iterator_create(&bitsets[0]);
-    while (!hibitset_iterator_done(&it)) {
-        bool any_set = false;
-        size_t min_next_bit = SIZE_MAX;
-        for (size_t i = 0; i < count; i++) {
-            any_set |= hibitset_is_set(&bitsets[i], hibitset_iterator_current(&it));
+    size_t current_bit = 0;
+    bool all_done = false;
 
+    while (!all_done) {
+        size_t min_next_bit = SIZE_MAX;
+        bool any_set = false;
+        bool all_done_at_current = true;
+
+        for (size_t i = 0; i < count; i++) {
             hibitset_iterator j = hibitset_iterator_create(&bitsets[i]);
-            j.current_bit_index = it.current_bit_index;
+            j.current_bit_index = current_bit;
             size_t next_bit = hibitset_iterator_next_set(&j);
             min_next_bit = min(min_next_bit, next_bit);
+
+            any_set |= hibitset_is_set(&bitsets[i], current_bit);
+            all_done_at_current &= !hibitset_bit_in_range(&bitsets[i], min_next_bit);
         }
         if (any_set) {
-            hibitset_set(&b, a, hibitset_iterator_current(&it));
+            hibitset_set(&b, a, current_bit);
         }
-        it.current_bit_index = min_next_bit;
+
+        current_bit = min_next_bit;
+        all_done = all_done_at_current;
     }
     return b;
 }
