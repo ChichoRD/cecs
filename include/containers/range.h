@@ -58,8 +58,21 @@ inline range range_union(const range range1, const range range2) {
     };
 }
 
+typedef struct range_splitting {
+    range ranges[2];
+} range_splitting;
 
-typedef struct exclusive_range {
+inline range_splitting range_difference(const range range1, const range range2) {
+    return (range_splitting) {
+        .ranges = {
+            (range) { .start = range1.start, .end = range2.start },
+            (range) { .start = range2.end, .end = range1.end }
+        },
+    };
+}
+
+
+typedef union exclusive_range {
     struct {
         ssize_t start;
         ssize_t end;
