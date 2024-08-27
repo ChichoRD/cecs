@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <intrin.h>
 #include "list.h"
 #include "range.h"
 #include "view.h"
@@ -120,16 +121,6 @@ bit_word bitset_unset(bitset *b, arena *a, size_t bit_index) {
     return (*w &= ~((bit_word)1 << layer_word_bit_index(bit_index, 0)));
 }
 
-bool bitset_is_set(bitset *b, size_t bit_index) {
-    size_t word_index = layer_word_index(bit_index, 0);
-    if (!exclusive_range_contains(b->word_range, word_index)) {
-        return false;
-    }
-    ssize_t list_index = (ssize_t)word_index - b->word_range.start;
-    bit_word *w = LIST_GET(bit_word, &b->bit_words, list_index);
-    return (*w & ((bit_word)1 << layer_word_bit_index(bit_index, 0))) != 0;
-}
-
 bit_word bitset_get_word(bitset *b, size_t bit_index) {
     size_t word_index = layer_word_index(bit_index, 0);
     if (!exclusive_range_contains(b->word_range, word_index)) {
@@ -139,6 +130,12 @@ bit_word bitset_get_word(bitset *b, size_t bit_index) {
     bit_word *w = LIST_GET(bit_word, &b->bit_words, list_index);
     return *w;
 }
+
+bool bitset_is_set(bitset *b, size_t bit_index) {
+    return (bitset_get_word(b, bit_index)
+        & ((bit_word)1 << layer_word_bit_index(bit_index, 0))) != 0;
+}
+
 
 
 typedef struct bitset_iterator {
@@ -229,9 +226,16 @@ bool hibitset_is_set_skip_unset(const hibitset *b, size_t bit_index, ssize_t *ou
     *out_unset_bit_skip_count = 1;
     for (ssize_t layer = BIT_LAYER_COUNT - 1; layer >= 0; layer--) {
         size_t layer_bit = layer_bit_index(bit_index, layer);
-        if (!bitset_is_set(&b->bitsets[layer], layer_bit)) {
+        bit_word word = bitset_get_word(&b->bitsets[layer], layer_bit);
+        size_t layer_word_bit = layer_bit & (BIT_WORD_BIT_COUNT - 1);
+        bit_word word_shifted_to_bit = word >> layer_word_bit;
+        if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
+            size_t unset_continuous_count = 1;
+            if (!_BitScanReverse(&unset_continuous_count, word_shifted_to_bit)) {
+                unset_continuous_count = BIT_WORD_BIT_COUNT - layer_word_bit;
+            }
             *out_unset_bit_skip_count =
-                bit0_from_layer_bit_index(layer_bit + 1, layer) - bit_index;
+                bit0_from_layer_bit_index(layer_bit + unset_continuous_count, layer) - bit_index;
             assert(*out_unset_bit_skip_count > 0);
             return false;
         }
