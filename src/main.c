@@ -601,14 +601,15 @@ void main(void) {
     {
         arena a = arena_create();
         hibitset b = hibitset_create(&a);
-        hibitset_set(&b, &a, 64);
+        hibitset_set(&b, &a, 67);
         hibitset_set(&b, &a, 65);
         hibitset_set(&b, &a, 66);
         hibitset_set(&b, &a, 128);
-        hibitset_set(&b, &a, 999);
         hibitset_set(&b, &a, 9);
+        hibitset_set(&b, &a, 999);
         hibitset_unset(&b, &a, 65);
 
+        printf("bit range: start %d, end %d\n", hibitset_bit_range(&b).start, hibitset_bit_range(&b).end);
         for (hibitset_iterator it = hibitset_iterator_create(&b); !hibitset_iterator_done(&it); hibitset_iterator_next_set(&it)) {
             printf("bit %d is set: %d\n", hibitset_iterator_current(&it), hibitset_iterator_current_is_set(&it));
         }
