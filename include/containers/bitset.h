@@ -66,6 +66,11 @@ bitset bitset_create(arena *a, size_t capacity) {
 }
 
 word_range bitset_expand(bitset *b, arena *a, size_t word_index) {
+    if (exclusive_range_is_empty(b->word_range)) {
+        assert(LIST_COUNT(bit_word, &b->bit_words) == 0);
+        LIST_ADD(bit_word, &b->bit_words, a, &((bit_word){0}));
+        return (b->word_range = exclusive_range_singleton(word_index));
+    }
     word_range expanded_range = exclusive_range_from(
         range_union(b->word_range.range, exclusive_range_singleton(word_index).range)
     );
@@ -87,7 +92,7 @@ word_range bitset_expand(bitset *b, arena *a, size_t word_index) {
         LIST_ADD_RANGE(bit_word, &b->bit_words, a, buffer, missing_count);
         free(buffer);
     }
-    
+
     return (b->word_range = expanded_range);
 }
 
