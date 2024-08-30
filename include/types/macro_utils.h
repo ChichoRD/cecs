@@ -75,17 +75,70 @@
         EVAL(_MAP_PAIRS(f, separator, __VA_ARGS__)) \
     )
 
-#define _FOLD_() _FOLD
-#define _FOLD(f, initial, first, ...) \
+#define _FOLD_L_() _FOLD_L
+#define _FOLD_L(f, initial, first, ...) \
     IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
-        DEFER2(_FOLD_)()(f, f(initial, first), __VA_ARGS__), \
+        DEFER2(_FOLD_L_)()(f, f(initial, first), __VA_ARGS__), \
         f(initial, first) \
     )
-#define FOLD(f, initial, ...) \
+#define FOLD_L(f, ...) \
     IF(HAS_ARGUMENTS(__VA_ARGS__))( \
-        EVAL(_FOLD(f, initial, __VA_ARGS__)) \
+        EVAL(_FOLD_L(f, __VA_ARGS__)) \
+    )
+    
+#define _FOLD_L1(f, initial, ...) \
+    IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
+        FOLD_L(f, initial, __VA_ARGS__), \
+        initial \
+    )
+#define FOLD_L1(f, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        _FOLD_L1(f, __VA_ARGS__) \
     )
 
+#define _REVERSE_() _REVERSE
+#define _REVERSE(separator, first, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        DEFER2(_REVERSE_)()(separator, __VA_ARGS__)separator() \
+    ) \
+    first 
+#define REVERSE(separator, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        EVAL(_REVERSE(separator, __VA_ARGS__)) \
+    )
+
+#define SWAP(a, b) (b, a)
+#define _FOLD_R_(f, initial, first, ...) \
+    f(initial, FOLD_L(DEFER1(f)SWAP, first, __VA_ARGS__))
+#define _FOLD_R(f, initial, first, ...) \
+    IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
+        _FOLD_R_(f, initial, REVERSE(COMMA, first, __VA_ARGS__)), \
+        f(initial, first) \
+    )
+#define FOLD_R(f, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        _FOLD_R(f, __VA_ARGS__) \
+    )
+
+#define _FOLD_R1(f, initial, ...) \
+    IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
+        FOLD_R(f, initial, __VA_ARGS__), \
+        initial \
+    )
+#define FOLD_R1(f, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        _FOLD_R1(f, __VA_ARGS__) \
+    )
+
+
 #define CAT(...) FOLD(CAT2, __VA_ARGS__)
+
+#define MUL(i, x) (i * x)
+void foo() {
+    //REVERSE(COMMA, 1, 2, 3);
+    FOLD_L(MUL, 1, 2, 3, 4);
+    FOLD_R(MUL, 1, 2, 3, 4);
+    //FOLD(MUL, 1);
+}
 
 #endif
