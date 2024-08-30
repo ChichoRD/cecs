@@ -38,7 +38,7 @@ list list_create(arena *a, size_t capacity)
     l.elements = arena_alloc(a, capacity);
     return l;
 }
-#define LIST_CREATE(type, arena_ref, capacity) list_create(arena_ref, capacity * sizeof(type))
+#define LIST_CREATE(type, arena_ref, capacity) list_create(arena_ref, (capacity) * sizeof(type))
 
 static void list_grow(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity > l->capacity && "Attempted to grow list to smaller capacity");
@@ -118,6 +118,30 @@ void list_remove_range(list *l, arena *a, size_t index, size_t count, size_t siz
 }
 #define LIST_REMOVE_RANGE(type, lis_ref, arena_ref, index, count) list_remove_range(lis_ref, arena_ref, index, count, sizeof(type))
 
+void *list_set(list *l, size_t index, void *element, size_t size)
+{
+    assert((index * size < l->count) && "Attempted to set element with index out of bounds");
+    return memcpy((uint8_t *)l->elements + index * size, element, size);
+}
+#define LIST_SET(type, lis_ref, index, element_ref) \
+    ((type *)list_set(lis_ref, index, element_ref, sizeof(type)))
+
+inline void *list_last(const list *l, size_t size) {
+    assert(l->count > 0 && "Attempted to get last element of empty list");
+    return (uint8_t *)l->elements + (l->count - 1) * size;
+}
+#define LIST_LAST(type, lis_ref) ((type *)list_last(lis_ref, sizeof(type)))
+
+void list_remove_swap_last(list *l, arena *a, size_t index, size_t size) {
+    list_set(l, index, list_last(l, size), size);
+
+    size_t new_count = l->count - size;
+    if (new_count <= l->capacity / 2)
+        list_shrink(l, a, new_count);
+    l->count = new_count;
+}
+#define LIST_REMOVE_SWAP_LAST(type, lis_ref, arena_ref, index) list_remove_swap_last(lis_ref, arena_ref, index, sizeof(type))
+
 void list_clear(list *l)
 {
     l->count = 0;
@@ -130,13 +154,14 @@ void *list_get(const list *l, size_t index, size_t size)
 }
 #define LIST_GET(type, lis_ref, index) ((type *)list_get(lis_ref, index, sizeof(type)))
 
-void *list_set(list *l, size_t index, void *element, size_t size)
+void *list_get_range(const list *l, size_t index, size_t count, size_t size)
 {
-    assert((index * size < l->count) && "Attempted to set element with index out of bounds");
-    return memcpy((uint8_t *)l->elements + index * size, element, size);
+    assert((index * size < l->count) && "Attempted to get elements with starting index out of bounds");
+    assert(((index + count) * size <= l->count) && "Attempted to get elements with end out of bounds");
+    return (uint8_t *)l->elements + index * size;
 }
-#define LIST_SET(type, lis_ref, index, element_ref) \
-    ((type *)list_set(lis_ref, index, element_ref, sizeof(type)))
+#define LIST_GET_RANGE(type, lis_ref, index, count) \
+    ((type *)list_get_range(lis_ref, index, count, sizeof(type)))
 
 void *list_set_range(list *l, size_t index, void *elements, size_t count, size_t size) {
     assert((index * size < l->count) && "Attempted to set elements with starting index out of bounds");

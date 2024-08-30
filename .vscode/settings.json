@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "*.h": "c",
+        "iterator": "c",
+        "list": "c",
+        "initializer_list": "c",
+        "utility": "c",
+        "xutility": "c",
+        "compare": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "xmemory": "c",
+        "xstring": "c",
+        "xtr1common": "c",
+        "functional": "c"
+    }
+}

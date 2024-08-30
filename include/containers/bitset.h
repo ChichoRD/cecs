@@ -69,11 +69,11 @@ word_range bitset_expand(bitset *b, arena *a, size_t word_index) {
     word_range expanded_range = exclusive_range_from(
         range_union(b->word_range.range, exclusive_range_singleton(word_index).range)
     );
-    range_splitting expansion_ranges = range_difference(
-        expanded_range.range,
-        b->word_range.range
+    range_splitting expansion_ranges = exclusive_range_difference(
+        expanded_range,
+        b->word_range
     );
-
+    
     word_range range0 = exclusive_range_from(expansion_ranges.ranges[0]);
     word_range range1 = exclusive_range_from(expansion_ranges.ranges[1]);
     if (!exclusive_range_is_empty(range0)) {
@@ -87,7 +87,7 @@ word_range bitset_expand(bitset *b, arena *a, size_t word_index) {
         LIST_ADD_RANGE(bit_word, &b->bit_words, a, buffer, missing_count);
         free(buffer);
     }
-
+    
     return (b->word_range = expanded_range);
 }
 
@@ -151,7 +151,7 @@ bitset_iterator bitset_iterator_create(const bitset *b) {
 };
 
 inline bool bitset_iterator_done(const bitset_iterator *it) {
-    return layer_word_index(it->current_bit_index, 0) >= it->bitset->word_range.end;
+    return (ssize_t)layer_word_index(it->current_bit_index, 0) >= it->bitset->word_range.end;
 }
 
 inline size_t bitset_iterator_next(bitset_iterator *it) {
@@ -227,12 +227,12 @@ bool hibitset_is_set_skip_unset(const hibitset *b, size_t bit_index, ssize_t *ou
     for (ssize_t layer = BIT_LAYER_COUNT - 1; layer >= 0; layer--) {
         size_t layer_bit = layer_bit_index(bit_index, layer);
         bit_word word = bitset_get_word(&b->bitsets[layer], layer_bit);
-        size_t layer_word_bit = layer_bit & (BIT_WORD_BIT_COUNT - 1);
-        bit_word word_shifted_to_bit = word >> layer_word_bit;
+        size_t layer_word_bit_shift = layer_bit & (BIT_WORD_BIT_COUNT - 1);
+        bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
         if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
             size_t unset_continuous_count = 1;
             if (!_BitScanReverse(&unset_continuous_count, word_shifted_to_bit)) {
-                unset_continuous_count = BIT_WORD_BIT_COUNT - layer_word_bit;
+                unset_continuous_count = BIT_WORD_BIT_COUNT - layer_word_bit_shift;
             }
             *out_unset_bit_skip_count =
                 bit0_from_layer_bit_index(layer_bit + unset_continuous_count, layer) - bit_index;
@@ -272,7 +272,7 @@ hibitset_iterator hibitset_iterator_create(const hibitset *b) {
 };
 
 inline bool hibitset_iterator_done(const hibitset_iterator *it) {
-    return layer_word_index(it->current_bit_index, 0) >= it->hibitset->bitsets[0].word_range.end;
+    return (ssize_t)layer_word_index(it->current_bit_index, 0) >= it->hibitset->bitsets[0].word_range.end;
 }
 
 inline size_t hibitset_iterator_next(hibitset_iterator *it) {

@@ -5,7 +5,7 @@
 #include <memory.h>
 #include <stdbool.h>
 #include "entity.h"
-#include "component.h"
+#include "component/component.h"
 #include "tag.h"
 #include "../containers/arena.h"
 #include "../containers/list.h"

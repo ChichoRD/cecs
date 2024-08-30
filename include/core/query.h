@@ -10,7 +10,7 @@
 #include "../containers/arena.h"
 #include "../containers/list.h"
 #include "../containers/view.h"
-#include "component.h"
+#include "component/component.h"
 #include "tag.h"
 
 typedef struct query_mask {

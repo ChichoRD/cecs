@@ -533,7 +533,7 @@ bool render(const world *w, query_context *qc) {
         }
     }
     
-    printf("\x1b[%d;%dH", 0, 0);
+    printf("\x1b[%d;%dH\x1b[J", 0, 0);
     fflush(stdout);
     //system("cls");
     arena screen_arena = arena_create();
@@ -594,12 +594,25 @@ bool update(world *w, query_context *qc, double delta_time_seconds) {
 }
 
 #include "../include/containers/bitset.h"
+//#include "../include/containers/tagged_union.h"
+#include "../include/types/macro_utils.h"
+
 void main(void) {
     {
         arena a = arena_create();
-        bitset b = bitset_create(&a);
-        printf("layer word index: %d\n", layer_word_index(4 * 4 * 4 * 64, 0));
-        printf("layer bit index: %d\n", layer_bit_index(4 * 4 * 4 * 64, 0));
+        hibitset b = hibitset_create(&a);
+        hibitset_set(&b, &a, 64);
+        hibitset_set(&b, &a, 65);
+        hibitset_set(&b, &a, 66);
+        hibitset_set(&b, &a, 128);
+        hibitset_set(&b, &a, 999);
+        hibitset_set(&b, &a, 9);
+        hibitset_unset(&b, &a, 65);
+
+        for (hibitset_iterator it = hibitset_iterator_create(&b); !hibitset_iterator_done(&it); hibitset_iterator_next_set(&it)) {
+            printf("bit %d is set: %d\n", hibitset_iterator_current(&it), hibitset_iterator_current_is_set(&it));
+        }
+
         arena_free(&a);
         return;
         world w = world_create();

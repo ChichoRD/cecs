@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "query.h"
-#include "component.h"
+#include "component/component.h"
 #include "tag.h"
 #include "../containers/list.h"
 #include "../containers/view.h"

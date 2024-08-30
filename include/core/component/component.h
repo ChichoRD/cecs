@@ -29,7 +29,7 @@ static component_id component_id_count = 0;
 #define COMPONENT_TYPE_COUNT (8 * sizeof(component_mask))
 #define DEFAULT_COMPONENT_SIZE 64
 
-typedef int32_t ssize_t;
+typedef ptrdiff_t ssize_t;
 
 typedef struct world_components {
     list components[COMPONENT_TYPE_COUNT];

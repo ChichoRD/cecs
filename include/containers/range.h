@@ -62,15 +62,6 @@ typedef struct range_splitting {
     range ranges[2];
 } range_splitting;
 
-inline range_splitting range_difference(const range range1, const range range2) {
-    return (range_splitting) {
-        .ranges = {
-            (range) { .start = range1.start, .end = range2.start },
-            (range) { .start = range2.end, .end = range1.end }
-        },
-    };
-}
-
 
 typedef union exclusive_range {
     struct {
@@ -100,6 +91,15 @@ inline bool exclusive_range_is_empty(const exclusive_range range) {
     return range.start >= range.end;
 }
 
+inline range_splitting exclusive_range_difference(const exclusive_range range1, const exclusive_range range2) {
+    return (range_splitting) {
+        .ranges = {
+            (range) { .start = range1.start, .end = range2.start },
+            (range) { .start = range2.end, .end = range1.end }
+        }
+    };
+}
+
 
 typedef union inclusive_range {
     struct {
@@ -127,6 +127,15 @@ inline bool inclusive_range_contains(const inclusive_range range, const ssize_t 
 
 inline bool inclusive_range_is_empty(const inclusive_range range) {
     return range.start > range.end;
+}
+
+inline range_splitting inclusive_range_difference(const inclusive_range range1, const inclusive_range range2) {
+    return (range_splitting) {
+        .ranges = {
+            (range) { .start = range1.start, .end = range2.start - 1 },
+            (range) { .start = range2.end + 1, .end = range1.end }
+        }
+    };
 }
 
 #endif
