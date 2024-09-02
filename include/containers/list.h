@@ -128,7 +128,7 @@ void *list_set(list *l, size_t index, void *element, size_t size)
 
 inline void *list_last(const list *l, size_t size) {
     assert(l->count > 0 && "Attempted to get last element of empty list");
-    return (uint8_t *)l->elements + (l->count - 1) * size;
+    return (uint8_t *)l->elements + (l->count - size);
 }
 #define LIST_LAST(type, lis_ref) ((type *)list_last(lis_ref, sizeof(type)))
 
@@ -206,5 +206,22 @@ void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t 
 }
 #define LIST_INSERT_RANGE(type, lis_ref, arena_ref, index, elements_ref, count) \
     list_insert_range(lis_ref, arena_ref, index, elements_ref, count, sizeof(type))
+
+void *list_append_empty(list *l, arena *a, size_t count, size_t size) {
+    size_t new_count = l->count + count * size;
+    if (new_count > l->capacity)
+        list_grow(l, a, new_count);
+    l->count = new_count;
+    return list_last(l, size);
+}
+#define LIST_APPEND_EMPTY(type, lis_ref, arena_ref, count) \
+    ((type *)list_append_empty(lis_ref, arena_ref, count, sizeof(type)))
+
+void *list_prepend_empty(list *l, arena *a, size_t count, size_t size) {
+    list_insert_range(l, a, count, l->elements, l->count, size);
+    return l->elements;
+}
+#define LIST_PREPEND_EMPTY(type, lis_ref, arena_ref, count) \
+    ((type *)list_prepend_empty(lis_ref, arena_ref, count, sizeof(type)))
 
 #endif

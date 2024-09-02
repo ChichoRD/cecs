@@ -227,7 +227,7 @@ bool hibitset_is_set(const hibitset *b, size_t bit_index) {
     return bitset_is_set(&b->bitsets[0], bit_index);
 }
 
-#pragma intrinsic(_BitScanReverse)
+#pragma intrinsic(_BitScanForward)
 bool hibitset_is_set_skip_unset(const hibitset *b, size_t bit_index, ssize_t *out_unset_bit_skip_count) {
     *out_unset_bit_skip_count = 1;
     for (ssize_t layer = BIT_LAYER_COUNT - 1; layer >= 0; layer--) {
@@ -235,39 +235,66 @@ bool hibitset_is_set_skip_unset(const hibitset *b, size_t bit_index, ssize_t *ou
         bit_word word = bitset_get_word(&b->bitsets[layer], layer_bit);
         size_t layer_word_bit_shift = layer_bit & (BIT_WORD_BIT_COUNT - 1);
         bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
-        // printf("bit_index: %d\n", bit_index);
-        // printf("layer_word_bit_shift: %d\n", layer_word_bit_shift);
-        // printf("word_shifted_to_bit: %x\n", word_shifted_to_bit);
-        //printf("word at layer: %d, %X\n", layer, word);
+
         if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
             size_t unset_low = 1;
             size_t unset_high = 0;
             uint32_t word_low = (uint32_t)word_shifted_to_bit;
-            // printf("word low: %d\n", word_low);
             uint32_t word_high = (uint32_t)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
+
             size_t unset_continuous_count = 0;
             if (!_BitScanForward(&unset_low, word_low)) {
                 if (!_BitScanForward(&unset_high, word_high)) {
                     unset_continuous_count = BIT_WORD_BIT_COUNT - layer_word_bit_shift;
-                    //printf("unset continuous count: %d\n", unset_continuous_count);
                 } else {
                     unset_continuous_count = unset_high + (BIT_WORD_BIT_COUNT >> 1);
-                    //printf("unset high: %d\n", unset_high);
                 }
             } else {
                 unset_continuous_count = unset_low;
-                //printf("unset low: %d\n", unset_low);
             }
             *out_unset_bit_skip_count =
                 bit0_from_layer_bit_index(layer_bit + unset_continuous_count, layer) - bit_index;
-            // printf("unset continuous count: %d\n", unset_continuous_count);
-            // printf("shifted word: %d\n", word_shifted_to_bit);
             assert(*out_unset_bit_skip_count > 0);
             return false;
         }
     }
     return true;
 }
+
+#pragma intrinsic(_BitScanReverse)
+bool hibitset_is_set_skip_unset_reverse(const hibitset *b, size_t bit_index, ssize_t *out_unset_bit_skip_count) {
+    *out_unset_bit_skip_count = 1;
+    for (ssize_t layer = BIT_LAYER_COUNT - 1; layer >= 0; layer--) {
+        size_t layer_bit = layer_bit_index(bit_index, layer);
+        bit_word word = bitset_get_word(&b->bitsets[layer], layer_bit);
+        size_t layer_word_bit_shift = layer_bit & (BIT_WORD_BIT_COUNT - 1);
+        bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
+
+        if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
+            size_t unset_low = 1;
+            size_t unset_high = 0;
+            uint32_t word_low = (uint32_t)word_shifted_to_bit;
+            uint32_t word_high = (uint32_t)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
+
+            size_t unset_continuous_count = 0;
+            if (!_BitScanReverse(&unset_low, word_low)) {
+                if (!_BitScanReverse(&unset_high, word_high)) {
+                    unset_continuous_count = BIT_WORD_BIT_COUNT - layer_word_bit_shift;
+                } else {
+                    unset_continuous_count = unset_high + (BIT_WORD_BIT_COUNT >> 1);
+                }
+            } else {
+                unset_continuous_count = unset_low;
+            }
+            *out_unset_bit_skip_count =
+                bit_index - bit0_from_layer_bit_index(layer_bit - unset_continuous_count, layer);
+            assert(*out_unset_bit_skip_count > 0);
+            return false;
+        }
+    }
+    return true;
+}
+
 
 bit_word hibitset_get_word(const hibitset *b, size_t bit_index) {
     return bitset_get_word(&b->bitsets[0], bit_index);
@@ -297,12 +324,27 @@ hibitset_iterator hibitset_iterator_create(const hibitset *b) {
     };
 };
 
+hibitset_iterator hibitset_iterator_create_at_last(const hibitset *b) {
+    return (hibitset_iterator){
+        .hibitset = b,
+        .current_bit_index = hibitset_bit_range(b).end - 1,
+    };
+};
+
+
 inline bool hibitset_iterator_done(const hibitset_iterator *it) {
-    return (ssize_t)layer_word_index(it->current_bit_index, 0) >= it->hibitset->bitsets[0].word_range.end;
+    return (
+        (ssize_t)layer_word_index(it->current_bit_index, 0) < it->hibitset->bitsets[0].word_range.start
+        || (ssize_t)layer_word_index(it->current_bit_index, 0) >= it->hibitset->bitsets[0].word_range.end
+    );
 }
 
 inline size_t hibitset_iterator_next(hibitset_iterator *it) {
     return ++it->current_bit_index;
+}
+
+inline size_t hibitset_iterator_previous(hibitset_iterator *it) {
+    return --it->current_bit_index;
 }
 
 size_t hibitset_iterator_next_set(hibitset_iterator *it) {
@@ -311,6 +353,16 @@ size_t hibitset_iterator_next_set(hibitset_iterator *it) {
         it->current_bit_index += unset_bit_skip_count;
     } while (!hibitset_iterator_done(it)
         && !hibitset_is_set_skip_unset(it->hibitset, it->current_bit_index, &unset_bit_skip_count));
+    return it->current_bit_index;
+}
+
+size_t hibitset_iterator_previous_set(hibitset_iterator *it) {
+    ssize_t unset_bit_skip_count = 1;
+    do {
+        it->current_bit_index -= unset_bit_skip_count;
+    } while (!hibitset_iterator_done(it)
+        && !hibitset_is_set_skip_unset_reverse(it->hibitset, it->current_bit_index, &unset_bit_skip_count)
+        && it->current_bit_index >= unset_bit_skip_count);
     return it->current_bit_index;
 }
 

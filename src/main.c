@@ -596,24 +596,21 @@ bool update(world *w, query_context *qc, double delta_time_seconds) {
 #include "../include/containers/bitset.h"
 //#include "../include/containers/tagged_union.h"
 #include "../include/types/macro_utils.h"
+#include "../include/core/component/component_storage.h"
 
 void main(void) {
     {
         arena a = arena_create();
-        hibitset b = hibitset_create(&a);
-        hibitset_set(&b, &a, 67);
-        hibitset_set(&b, &a, 65);
-        hibitset_set(&b, &a, 66);
-        hibitset_set(&b, &a, 128);
-        hibitset_set(&b, &a, 9);
-        hibitset_set(&b, &a, 999);
-        hibitset_unset(&b, &a, 65);
-
-        printf("bit range: start %d, end %d\n", hibitset_bit_range(&b).start, hibitset_bit_range(&b).end);
-        for (hibitset_iterator it = hibitset_iterator_create(&b); !hibitset_iterator_done(&it); hibitset_iterator_next_set(&it)) {
-            printf("bit %d is set: %d\n", hibitset_iterator_current(&it), hibitset_iterator_current_is_set(&it));
+        component_storage cs = component_storage_create(&a, 32, sizeof(int));
+        
+        for (int i = 0; i < 32; i++) {
+            COMPONENT_STORAGE_SET(int, &cs, &a, i, &i);
         }
-
+        printf("%d", *COMPONENT_STORAGE_GET(int, &cs, 31));
+        COMPONENT_STORAGE_REMOVE(int, &cs, &a, 25);
+        //COMPONENT_STORAGE_SET(int, &cs, &a, 29, &((int){95}));
+        int val = *COMPONENT_STORAGE_GET(int, &cs, 31);
+        printf("%d\n", val);
         arena_free(&a);
         return;
         world w = world_create();

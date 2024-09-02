@@ -42,14 +42,19 @@
 
 
 typedef uint8_t none;
-#define NONE 0
-#define OPTION(type) option_##type
-#define OPTION_STRUCT(type, identifier) _TAGGED_UNION_STRUCT(OPTION(identifier), none, None, type, identifier)
+#define NONE ((none)0)
+#define OPTION(identifier) option_##identifier
+#define OPTION_STRUCT(type, identifier) _TAGGED_UNION_STRUCT(OPTION(identifier), none, none, type, identifier)
 
-#define OPTION_CREATE(identifier, value) TAGGED_UNION_CREATE(identifier, value)
-#define OPTION_CREATE_STRUCT(identifier, value) (OPTION_STRUCT(identifier)) OPTION_CREATE(identifier, value)
-#define OPTION_HAS(option) ((option).variant != TAGGED_UNION_VARIANT(None))
+#define OPTION_CREATE_SOME(identifier, value) TAGGED_UNION_CREATE(identifier, value)
+#define OPTION_CREATE_NONE() TAGGED_UNION_CREATE(none, NONE)
+
+#define OPTION_CREATE_SOME_STRUCT(identifier, value) ((struct OPTION(identifier))OPTION_CREATE_SOME(identifier, value))
+#define OPTION_CREATE_NONE_STRUCT(identifier) ((struct OPTION(identifier))OPTION_CREATE_NONE())
+
+#define OPTION_HAS(option) ((option).variant != TAGGED_UNION_VARIANT(none))
 #define OPTION_HAS_ASSERT(option) (assert(OPTION_HAS(option) && "Invalid option access"))
-#define OPTION_GET(identifier, option) (OPTION_HAS_ASSERT(option), (option).TAGGED_UNION_VALUE(identifier))
+#define OPTION_GET_UNCHECKED(identifier, option) ((option).TAGGED_UNION_VALUE(identifier))
+#define OPTION_GET(identifier, option) (OPTION_HAS_ASSERT(option), OPTION_GET_UNCHECKED(identifier, option))
 
 #endif

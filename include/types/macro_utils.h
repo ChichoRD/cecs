@@ -16,6 +16,7 @@
 
 #define FIRST(first, ...) first
 #define SECOND(first, second, ...) second
+#define TAIL(first, ...) __VA_ARGS__
 
 #define IS_PROBE(...) SECOND(__VA_ARGS__, 0)
 #define PROBE() ~, 1
@@ -26,6 +27,16 @@
 #define _NOT_0 PROBE()
 #define NOT(x) IS_PROBE(CAT2(_NOT_, x))
 #define BOOL(x) NOT(NOT(x))
+
+#define _AND_0(...) 0
+#define _AND_1(...) __VA_ARGS__
+#define _AND2(b0, b1) CAT2(_AND_, b0)(b1)
+#define AND2(condition0, condition1) _AND2(BOOL(condition0), BOOL(condition1))
+
+#define _OR_0(...) __VA_ARGS__
+#define _OR_1(...) 1
+#define _OR2(b0, b1) CAT2(_OR_, b0)(b1)
+#define OR2(condition0, condition1) _OR2(BOOL(condition0), BOOL(condition1))
 
 #define _IF_0(...)
 #define _IF_1(...) __VA_ARGS__
@@ -110,10 +121,14 @@
         EVAL(_REVERSE(separator, __VA_ARGS__)) \
     )
 
+#define AND(condition0, condition1, ...) FOLD_L(AND2, condition0, condition1, __VA_ARGS__)
+#define OR(condition0, condition1, ...) FOLD_L(OR2, condition0, condition1, __VA_ARGS__)
+
 #define SWAP(a, b) (b, a)
-#define COMPOSE(f, g) DEFER1(f)g
+#define COMPOSE2(f, g) DEFER1(f)g
+#define COMPOSE(...) FOLD_L(COMPOSE2, __VA_ARGS__)
 #define _FOLD_R_(f, initial, first, ...) \
-    f(initial, FOLD_L(COMPOSE(f, SWAP), first, __VA_ARGS__))
+    f(initial, FOLD_L(COMPOSE2(f, SWAP), first, __VA_ARGS__))
 #define _FOLD_R(f, initial, first, ...) \
     IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
         _FOLD_R_(f, initial, REVERSE(COMMA, first, __VA_ARGS__)), \
@@ -136,5 +151,105 @@
 
 
 #define CAT(...) FOLD_L(CAT2, __VA_ARGS__)
+
+#define _FILTER_() _FILTER
+#define _FILTER(f, separator, first, ...) \
+    IF(f(first))( \
+        first IF(HAS_ARGUMENTS(__VA_ARGS__))(separator()) \
+    ) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        DEFER2(_FILTER_)()(f, separator, __VA_ARGS__) \
+    )
+#define FILTER(f, separator, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        EVAL(_FILTER(f, separator, __VA_ARGS__)) \
+    )
+
+#define COMPARE_0(x) x
+#define COMPARE_1(x) x
+#define _COMPARE(x, y) \
+    IS_PROBE( \
+        CAT2(COMPARE_, x)(CAT2(COMPARE_, y))(PROBE()) \
+    )
+#define IS_COMPARABLE(x) IS_PROBE(CAT2(COMPARE_, x)(PROBE()))
+
+#define NOT_EQUAL(x, y) \
+    IF_ELSE(AND2(IS_COMPARABLE(x), IS_COMPARABLE(y)))( \
+        _COMPARE(x, y), \
+        1 \
+    )
+#define EQUAL(x, y) NOT(NOT_EQUAL(x, y))
+#define IS_BOOL(x) OR2(EQUAL(x, 0), EQUAL(x, 1))
+
+#define _MATCH_() _MATCH
+#define _MATCH(obj, default, first, second, ...) \
+    IF_ELSE(OR2(AND2(IS_BOOL(first), first), AND2(IS_BOOL(first(obj)), first(obj))))( \
+        second, \
+        IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
+            DEFER3(_MATCH_)()(obj, default, __VA_ARGS__), \
+            default \
+        ) \
+    ) 
+
+#define MATCH(obj, default, ...) \
+    IF_ELSE(HAS_ARGUMENTS(__VA_ARGS__))( \
+        EVAL(_MATCH(obj, default, __VA_ARGS__)), \
+        default \
+    )
+
+#define COMPARE_int(x) x
+#define COMPARE_char(x) x
+#define COMPARE_float(x) x
+#define COMPARE_double(x) x
+#define SIZE_OF_PRIMITIVE(type) \
+    MATCH( \
+        type, \
+        -1, \
+        \
+        EQUAL(type, char), \
+        1, \
+        \
+        EQUAL(type, int), \
+        4, \
+        \
+        EQUAL(type, float), \
+        4, \
+        \
+        EQUAL(type, double), \
+        8, \
+        \
+    )
+
+#define REP0(separator, ...)
+#define REP1(separator, ...) __VA_ARGS__ separator()
+#define REP2(separator, ...) REP1(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP3(separator, ...) REP2(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP4(separator, ...) REP3(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP5(separator, ...) REP4(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP6(separator, ...) REP5(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP7(separator, ...) REP6(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP8(separator, ...) REP7(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP9(separator, ...) REP8(separator, __VA_ARGS__) __VA_ARGS__ separator()
+#define REP10(separator, ...) REP9(separator, __VA_ARGS__) __VA_ARGS__
+
+#define REMOVE_TRAILING_COMMAS(...) MAP(PASS, COMMA, __VA_ARGS__)
+#define REP(separator, c, d, u, ...) \
+    CAT2(REP, c)(separator, REP10(separator, REP10(separator, __VA_ARGS__))) \
+    CAT2(REP, d)(separator, REP10(separator, __VA_ARGS__)) \
+    CAT2(REP, u)(separator, __VA_ARGS__)
+
+#define __DO_() _DO_
+#define _DO_(separator, f, first, ...) \
+    f \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        separator() DEFER2(__DO_)()(separator, f, __VA_ARGS__) \
+    )
+
+#define _DO(separator, f, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        EVAL(_DO_(separator, f, __VA_ARGS__)) \
+    )
+#define DO(separator, f, ...) _DO(separator, f, REP(COMMA, __VA_ARGS__, 1))
+
 
 #endif
