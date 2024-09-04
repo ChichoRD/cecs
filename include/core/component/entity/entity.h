@@ -4,26 +4,24 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define COMPONENT_MASK_TYPE uint32_t
+#define COMPONENT_MASK_TYPE uint64_t
 typedef COMPONENT_MASK_TYPE component_mask;
 
-#define TAG_MASK_TYPE uint32_t
+#define TAG_MASK_TYPE uint64_t
 typedef TAG_MASK_TYPE tag_mask;
 
-typedef uint32_t entity_id;
+typedef uint64_t entity_id;
 
 typedef struct entity
 {
-    bool active;
     const entity_id id;
     component_mask components;
     tag_mask tags;
 } entity;
 
-entity entity_create(bool active, const entity_id id, component_mask components, tag_mask tags)
+entity entity_create(const entity_id id, component_mask components, tag_mask tags)
 {
     return (entity){
-        .active = active,
         .id = id,
         .components = components,
         .tags = tags

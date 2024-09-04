@@ -6,7 +6,7 @@
 #include "../include/containers/arena.h"
 #include "../include/containers/list.h"
 #include "../include/core/world.h"
-#include "../include/core/entity.h"
+#include "../include/core/component/entity/entity.h"
 #include "../include/core/query.h"
 #include "../include/core/resource.h"
 #include "../include/core/query_context.h"
@@ -35,8 +35,8 @@ double game_time_update_time_since_start(game_time *t) {
 }
 
 
-COMPONENT_DEFINE(struct, entity_reference) {
-    const entity_id id;
-} entity_reference;
+// COMPONENT_DEFINE(struct, entity_reference) {
+//     const entity_id id;
+// } entity_reference;
 
 #endif

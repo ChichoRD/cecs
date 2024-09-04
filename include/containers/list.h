@@ -132,15 +132,16 @@ inline void *list_last(const list *l, size_t size) {
 }
 #define LIST_LAST(type, lis_ref) ((type *)list_last(lis_ref, sizeof(type)))
 
-void list_remove_swap_last(list *l, arena *a, size_t index, size_t size) {
-    list_set(l, index, list_last(l, size), size);
+void *list_remove_swap_last(list *l, arena *a, size_t index, size_t size) {
+    void *swapped = list_set(l, index, list_last(l, size), size);
 
     size_t new_count = l->count - size;
     if (new_count <= l->capacity / 2)
         list_shrink(l, a, new_count);
     l->count = new_count;
+    return swapped;
 }
-#define LIST_REMOVE_SWAP_LAST(type, lis_ref, arena_ref, index) list_remove_swap_last(lis_ref, arena_ref, index, sizeof(type))
+#define LIST_REMOVE_SWAP_LAST(type, lis_ref, arena_ref, index) ((type *)list_remove_swap_last(lis_ref, arena_ref, index, sizeof(type)))
 
 void list_clear(list *l)
 {

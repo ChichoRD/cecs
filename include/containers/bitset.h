@@ -18,7 +18,7 @@
 
 typedef BIT_WORD_TYPE bit_word;
 #define BIT_WORD_BIT_COUNT (8 * sizeof(bit_word))
-_STATIC_ASSERT(BIT_WORD_BITS == BIT_WORD_BIT_COUNT);
+static_assert(BIT_WORD_BITS == BIT_WORD_BIT_COUNT, "BIT_WORD_BITS != BIT_WORD_BIT_COUNT");
 
 #define BIT_LAYER_COUNT (BIT_WORD_BITS_LOG2 - BIT_PAGE_SIZE_LOG2)
 
@@ -317,7 +317,14 @@ typedef struct hibitset_iterator {
     size_t current_bit_index;
 } hibitset_iterator;
 
-hibitset_iterator hibitset_iterator_create(const hibitset *b) {
+hibitset_iterator hibitset_iterator_create_at(const hibitset *b, size_t bit_index) {
+    return (hibitset_iterator){
+        .hibitset = b,
+        .current_bit_index = bit_index,
+    };
+}
+
+hibitset_iterator hibitset_iterator_create_at_first(const hibitset *b) {
     return (hibitset_iterator){
         .hibitset = b,
         .current_bit_index = hibitset_bit_range(b).start,
@@ -385,8 +392,7 @@ hibitset hibitset_intersection(hibitset *bitsets, size_t count, arena *a) {
         bool all_set = true;
 
         for (size_t i = 0; i < count; i++) {
-            hibitset_iterator j = hibitset_iterator_create(&bitsets[i]);
-            j.current_bit_index = current_bit;
+            hibitset_iterator j = hibitset_iterator_create_at(&bitsets[i], current_bit);
             size_t next_bit = hibitset_iterator_next_set(&j);
             max_next_bit = max(max_next_bit, next_bit);
 
@@ -413,8 +419,7 @@ hibitset hibitset_union(hibitset *bitsets, size_t count, arena *a) {
         bool all_done_at_current = true;
 
         for (size_t i = 0; i < count; i++) {
-            hibitset_iterator j = hibitset_iterator_create(&bitsets[i]);
-            j.current_bit_index = current_bit;
+            hibitset_iterator j = hibitset_iterator_create_at(&bitsets[i], current_bit);
             size_t next_bit = hibitset_iterator_next_set(&j);
             min_next_bit = min(min_next_bit, next_bit);
 

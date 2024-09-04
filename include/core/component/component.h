@@ -2,93 +2,108 @@
 #define COMPONENT_H
 
 #include <stdint.h>
-#include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
-#include "map.h"
-#include "type_id.h"
-#include "entity.h"
+#include <assert.h>
+#include "../../types/macro_utils.h"
+#include "../containers/tagged_union.h"
+#include "../containers/list.h"
+#include "../containers/bitset.h"
+#include "../containers/arena.h"
+#include "../type_id.h"
+#include "entity/entity.h"
+#include "component_storage.h"
 
-typedef uint32_t component_id;
+typedef uint64_t component_id;
 static component_id component_id_count = 0;
 
-#define COMPONENT(type) _PASTE(type, _component)
-#define COMPONENT_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type##_component, component_id_count)
-#define COMPONENT_DEFINE(layout, type) \
-    COMPONENT_IMPLEMENT(type) \
-    typedef layout type
-
-#define COMPONENT_ID(type) ((component_id)TYPE_ID(COMPONENT(type)))
-#define COMPONENT_ID_ARRAY(...) (component_id[]){ MAP_LIST(COMPONENT_ID, __VA_ARGS__) }
-
-#define COMPONENT_MASK(type) (1 << COMPONENT_ID(type))
-
-#define _COMPONENT_MASK_OR(type) COMPONENT_MASK(type) |
-#define COMPONENTS_MASK(...) (MAP(_COMPONENT_MASK_OR, __VA_ARGS__) 0)
-
-
-#define COMPONENT_TYPE_COUNT (8 * sizeof(component_mask))
-#define DEFAULT_COMPONENT_SIZE 64
-
-typedef ptrdiff_t ssize_t;
-
+typedef OPTION_STRUCT(size_t, size_t) component_size;
 typedef struct world_components {
-    list components[COMPONENT_TYPE_COUNT];
-    ssize_t component_sizes[COMPONENT_TYPE_COUNT];
+    arena components_arena;
+    list component_storages;
+    list component_sizes;
 } world_components;
 
-world_components world_components_create(arena *components_arena, size_t entity_count) {
-    world_components wc;
-    for (size_t i = 0; i < COMPONENT_TYPE_COUNT; i++) {
-        wc.components[i] = list_create(components_arena, DEFAULT_COMPONENT_SIZE * entity_count);
-        wc.component_sizes[i] = -1;
-    }
-    return wc;
+world_components world_components_create(arena *world_components_arena, size_t component_capacity) {
+    return (world_components) {
+        .components_arena = arena_create(),
+        .component_storages = LIST_CREATE(component_storage, world_components_arena, 1),
+        .component_sizes = LIST_CREATE(component_size, world_components_arena, 1),
+    };
 }
 
-void *world_components_add_component(world_components *wc, arena *components_arena, size_t entity_count, component_id component_id, void *component, size_t size) {
-    assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
-    if (wc->component_sizes[component_id] == -1) {
-        if (wc->components[component_id].count != 0) {
-            assert(0 && "unreachable: component_sizes and components are out of sync");
-            exit(EXIT_FAILURE);
-        }
-        wc->component_sizes[component_id] = size;
-        
-        void *last_added = NULL;
-        for (size_t i = 0; i < entity_count; i++) {
-            last_added = list_add(&wc->components[component_id], components_arena, component, size);
-        }
-        return last_added;
+void *world_components_set_component(world_components *wc, entity_id entity_id, component_id component_id, void *component, size_t size) {
+    component_size *stored_size = NULL;
+    component_storage *storage = NULL;
+    bool missing_sizes = component_id >= LIST_COUNT(component_size, &wc->component_sizes);
+    bool missing_storages = component_id >= LIST_COUNT(component_storage, &wc->component_storages);
+    if (missing_sizes != missing_storages) {
+        assert(0 && "unreachable: component_sizes and component_storages are out of sync");
+        exit(EXIT_FAILURE);
+    }
+
+    if (missing_sizes) {
+        size_t missing = component_id - LIST_COUNT(component_size, &wc->component_sizes);
+        stored_size = LIST_APPEND_EMPTY(component_size, &wc->component_sizes, &wc->components_arena, missing);
+        *stored_size = OPTION_CREATE_SOME_STRUCT(size_t, size);
     } else {
-        assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
-        return list_add(&wc->components[component_id], components_arena, component, size);
+        stored_size = LIST_GET(component_size, &wc->component_sizes, component_id);
+        if (OPTION_IS_SOME(*stored_size)) {
+            assert((OPTION_GET(size_t, *stored_size) == size) && "Component size mismatch");
+        } else {
+            *stored_size = OPTION_CREATE_SOME_STRUCT(size_t, size);
+        }
+    }
+
+    if (missing_storages) {
+        size_t missing = component_id - LIST_COUNT(component_storage, &wc->component_storages);
+        stored_size = LIST_APPEND_EMPTY(component_storage, &wc->component_storages, &wc->components_arena, missing);
+    } else {
+        stored_size = LIST_GET(component_storage, &wc->component_storages, component_id);
+    }
+
+    return component_storage_set(storage, &wc->components_arena, entity_id, component, size);
+}
+
+optional_component world_components_get_component(const world_components *wc, entity_id entity_id, component_id component_id) {
+    bool missing_sizes = component_id >= LIST_COUNT(component_size, &wc->component_sizes);
+    bool missing_storages = component_id >= LIST_COUNT(component_storage, &wc->component_storages);
+    if (missing_sizes != missing_storages) {
+        assert(0 && "unreachable: component_sizes and component_storages are out of sync");
+        exit(EXIT_FAILURE);
+    }
+    assert((!missing_sizes && !missing_storages) && "Component ID out of bounds");
+
+    component_size stored_size = *LIST_GET(component_size, &wc->component_sizes, component_id);
+    component_storage *storage = LIST_GET(component_storage, &wc->component_storages, component_id);
+    if (!OPTION_IS_SOME(stored_size)) {
+        return OPTION_CREATE_NONE_STRUCT(component);
+    } else if (component_storage_has(storage, entity_id)) {
+        return OPTION_CREATE_SOME_STRUCT(component, component_storage_get(storage, entity_id, OPTION_GET(size_t, stored_size)));
+    } else {
+        return OPTION_CREATE_NONE_STRUCT(component);
     }
 }
 
-void *world_components_set_component(world_components *wc, component_id component_id, entity_id entity_id, void *component, size_t size) {
-    assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
-    assert((entity_id < list_count_of_size(&wc->components[component_id], size)) && "Entity ID out of bounds");
-    assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
-    return list_set(&wc->components[component_id], entity_id, component, size);
-}
+optional_component world_components_remove_component(world_components *wc, entity_id entity_id, component_id component_id) {
+    bool missing_sizes = component_id >= LIST_COUNT(component_size, &wc->component_sizes);
+    bool missing_storages = component_id >= LIST_COUNT(component_storage, &wc->component_storages);
+    if (missing_sizes != missing_storages) {
+        assert(0 && "unreachable: component_sizes and component_storages are out of sync");
+        exit(EXIT_FAILURE);
+    }
+    assert((!missing_sizes && !missing_storages) && "Component ID out of bounds");
 
-void *world_components_get_component(const world_components *wc, component_id component_id, entity_id entity_id, size_t size) {
-    assert((component_id < COMPONENT_TYPE_COUNT) && "Component ID out of bounds");
-    assert((entity_id < list_count_of_size(&wc->components[component_id], size)) && "Entity ID out of bounds");
-    assert((wc->component_sizes[component_id] == (ssize_t)size) && "Component size mismatch");
-    return list_get(&wc->components[component_id], entity_id, size);
-}
-
-void world_components_grow_all(world_components *wc, arena *components_arena, size_t entity_count) {
-    for (size_t i = 0; i < COMPONENT_TYPE_COUNT; i++) {
-        ssize_t size = wc->component_sizes[i];
-        if (size != -1) {
-            if (list_count_of_size(&wc->components[i], size) <= 0) {
-                assert(0 && "unreachable: component_sizes and components are out of sync");
-                exit(EXIT_FAILURE);
-            }     
-            world_components_add_component(wc, components_arena, entity_count, i, list_get(&wc->components[i], 0, size), size);
-        }
+    component_size stored_size = *LIST_GET(component_size, &wc->component_sizes, component_id);
+    if (!OPTION_IS_SOME(stored_size)) {
+        return OPTION_CREATE_NONE_STRUCT(component);
+    } else {
+        return component_storage_remove(
+            LIST_GET(component_storage, &wc->component_storages, component_id),
+            &wc->components_arena,
+            entity_id,
+            OPTION_GET(size_t, stored_size)
+        );
     }
 }
 

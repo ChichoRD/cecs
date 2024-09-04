@@ -61,9 +61,6 @@
 #define DEFER3(f) f EMPTY EMPTY EMPTY()()()
 #define DEFER4(f) f EMPTY EMPTY EMPTY EMPTY()()()()
 
-#define CAT2_DEFERRED(x, ...) DEFER1(CAT2)(x, __VA_ARGS__)
-#define CAT3_DEFERRED(x, y, ...) DEFER1(CAT3)(x, y, __VA_ARGS__)
-
 #define _END_OF_ARGUMENTS(...) BOOL(FIRST(__VA_ARGS__))
 #define HAS_ARGUMENTS(...) BOOL(FIRST(_END_OF_ARGUMENTS __VA_ARGS__)(0))
 

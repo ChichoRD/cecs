@@ -90,7 +90,11 @@ static block *arena_add_block_exact(arena *a, size_t capacity) {
 }
 
 static block *arena_add_block(arena *a, size_t size) {
-    return arena_add_block_exact(a, size > DEFAULT_BLOCK_CAPACITY ? size : DEFAULT_BLOCK_CAPACITY);
+    if (a->last_block == NULL) {
+        return arena_add_block_exact(a, size > DEFAULT_BLOCK_CAPACITY ? size : DEFAULT_BLOCK_CAPACITY);
+    } else {
+        return arena_add_block_exact(a, size > a->last_block->b.capacity ? size : a->last_block->b.capacity);
+    }
 }
 
 arena arena_create_with_capacity(size_t capacity) {
