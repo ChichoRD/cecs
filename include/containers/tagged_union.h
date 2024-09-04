@@ -29,14 +29,15 @@
 #define TAGGED_UNION_VALUE(identifier) _PREPEND_VALUE(identifier)
 #define TAGGED_UNION_VARIANT(identifier) _PREPEND_VARIANT(identifier)
 #define TAGGED_UNION_CREATE(identifier, value) \
-    { .TAGGED_UNION_VALUE(identifier) = { (value) }, .variant = TAGGED_UNION_VARIANT(identifier) }
+    { .TAGGED_UNION_VALUE(identifier) = (value), .variant = TAGGED_UNION_VARIANT(identifier) }
 #define TAGGED_UNION_STRUCT_CREATE(identifier, value, ...) \
     (TAGGED_UNION_STRUCT(__VA_ARGS__)) TAGGED_UNION_CREATE(identifier, (value))
 
 #define TAGGED_UNION_IS(identifier, union) ((union).variant == TAGGED_UNION_VARIANT(identifier))
 #define TAGGED_UNION_IS_ASSERT(identifier, union) (assert(TAGGED_UNION_IS(identifier, (union)) && "Invalid union access"))
+#define TAGGED_UNION_GET_UNCHECKED(identifier, union) ((union).TAGGED_UNION_VALUE(identifier))
 #define TAGGED_UNION_GET(identifier, union) \
-    (TAGGED_UNION_IS_ASSERT(identifier, (union)), (union).TAGGED_UNION_VALUE(identifier))
+    (TAGGED_UNION_IS_ASSERT(identifier, (union)), TAGGED_UNION_GET_UNCHECKED(identifier, (union)))
 
 #define MATCH(union) switch ((union).variant)
 
@@ -52,9 +53,11 @@ typedef uint8_t none;
 #define OPTION_CREATE_SOME_STRUCT(identifier, value) ((struct OPTION(identifier))OPTION_CREATE_SOME(identifier, value))
 #define OPTION_CREATE_NONE_STRUCT(identifier) ((struct OPTION(identifier))OPTION_CREATE_NONE())
 
-#define OPTION_HAS(option) ((option).variant != TAGGED_UNION_VARIANT(none))
-#define OPTION_HAS_ASSERT(option) (assert(OPTION_HAS(option) && "Invalid option access"))
+#define OPTION_IS_SOME(option) ((option).variant != TAGGED_UNION_VARIANT(none))
+#define OPTION_IS_SOME_ASSERT(option) (assert(OPTION_IS_SOME(option) && "Invalid option access"))
+#define OPTION_IS_NONE_ASSERT(option) (assert(!OPTION_IS_SOME(option) && "Invalid option access"))
 #define OPTION_GET_UNCHECKED(identifier, option) ((option).TAGGED_UNION_VALUE(identifier))
-#define OPTION_GET(identifier, option) (OPTION_HAS_ASSERT(option), OPTION_GET_UNCHECKED(identifier, option))
+#define OPTION_GET(identifier, option) (OPTION_IS_SOME_ASSERT(option), OPTION_GET_UNCHECKED(identifier, option))
+
 
 #endif
