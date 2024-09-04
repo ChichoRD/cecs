@@ -28,7 +28,7 @@ query_context query_context_create() {
     query_context qc;
     qc.query_arena = arena_create();
     for (size_t i = 0; i < QUERY_VARIANTS_COUNT; i++) {
-        qc.queries_operations[i] = LIST_CREATE(query_operation, &qc.query_arena, 1);
+        qc.queries_operations[i] = LIST_CREATE_WITH_CAPACITY(query_operation, &qc.query_arena, 1);
     }
     return qc;
 }
@@ -179,7 +179,7 @@ static void *query_context_run_query_on_operation(query_context *qc, const query
         sizeof(entity_id) + padding_between(entity_id, void *)
         + sizeof(void *) * (q.component_count)
         + padding_between(void *, size_t) + sizeof(size_t);
-    list views_result =  list_create(&qc->query_arena, size_of_partial_view);
+    list views_result =  list_create_with_capacity(&qc->query_arena, size_of_partial_view);
 
     size_t total_count = 0;
     size_t contiguous_count = 0;

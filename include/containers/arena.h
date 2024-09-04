@@ -121,6 +121,10 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         return data_block;
     }
 
+    if (data_block == NULL) {
+        return arena_alloc(a, new_size);
+    }
+
     linked_block *best_fit = NULL;
     size_t best_fit_remaining = SIZE_MAX;
     size_t expansion = new_size - current_size;

@@ -9,10 +9,10 @@
 #include "arena.h"
 #include "list.h"
 
-typedef OPTION_STRUCT(size_t, size_t) dense_index;
+typedef OPTION_STRUCT(size_t, dense_index) dense_index;
 typedef OPTION_STRUCT(void *, optional_element) optional_element;
 typedef struct sparse_set {
-    list data;
+    list elements;
     list indices;
     list keys;
     exclusive_range key_range;
@@ -20,16 +20,20 @@ typedef struct sparse_set {
 
 sparse_set sparse_set_create(arena *a, size_t element_capacity, size_t element_size) {
     return (sparse_set) {
-        .data = list_create(a, element_capacity * element_size),
-        .indices = list_create(a, sizeof(dense_index) * element_capacity),
-        .keys = list_create(a, sizeof(size_t) * element_capacity),
+        .elements = list_create_with_capacity(a, element_capacity * element_size),
+        .indices = list_create_with_capacity(a, sizeof(dense_index) * element_capacity),
+        .keys = list_create_with_capacity(a, sizeof(size_t) * element_capacity),
         .key_range = (exclusive_range) { 0, 0 }
     };
 }
 
-bool sparse_set_contains(const sparse_set *s, size_t key) {
+inline size_t sparse_set_count(const sparse_set *s) {
+    return LIST_COUNT(size_t, &s->keys);
+}
+
+inline bool sparse_set_contains(const sparse_set *s, size_t key) {
     return exclusive_range_contains(s->key_range, key)
-        && OPTION_IS_SOME(*LIST_GET(dense_index, &s->indices, key - s->key_range.start));
+        && OPTION_IS_SOME(dense_index, *LIST_GET(dense_index, &s->indices, key - s->key_range.start));
 }
 
 optional_element sparse_set_get(const sparse_set *s, size_t key, size_t element_size) {
@@ -39,15 +43,23 @@ optional_element sparse_set_get(const sparse_set *s, size_t key, size_t element_
 
     size_t list_index = key - s->key_range.start;
     dense_index index = *LIST_GET(dense_index, &s->indices, list_index);
-    if (OPTION_IS_SOME(index)) {
+    if (OPTION_IS_SOME(dense_index, index)) {
         return OPTION_CREATE_SOME_STRUCT(
             optional_element, 
-            list_get(&s->data, OPTION_GET(size_t, index), element_size)
+            list_get(&s->elements, OPTION_GET(dense_index, index), element_size)
         );
     } else {
         return OPTION_CREATE_NONE_STRUCT(optional_element);
     }
 }
+#define SPARSE_SET_GET(type, sparse_set_ref, key) \
+    sparse_set_get(sparse_set_ref, key, sizeof(type))
+
+void *sparse_set_get_unchecked(const sparse_set *s, size_t key, size_t element_size) {
+    return OPTION_GET(optional_element, sparse_set_get(s, key, element_size));
+}
+#define SPARSE_SET_GET_UNCHECKED(type, sparse_set_ref, key) \
+    ((type *)sparse_set_get_unchecked(sparse_set_ref, key, sizeof(type)))
 
 bool sparse_set_is_empty(const sparse_set *s) {
     return exclusive_range_is_empty(s->key_range);
@@ -90,48 +102,58 @@ dense_index *sparse_set_expand(sparse_set *s, arena *a, size_t key) {
 void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t element_size) {
     if (exclusive_range_contains(s->key_range, key)) {
         dense_index *index = LIST_GET(dense_index, &s->indices, key - s->key_range.start);
-        if (OPTION_IS_SOME(*index)) {
-            size_t element_index = OPTION_GET(size_t, *index);
-            LIST_SET(size_t, &s->keys, element_index, key);
-            return list_set(&s->data, element_index, element, element_size);
+        if (OPTION_IS_SOME(dense_index, *index)) {
+            size_t element_index = OPTION_GET(dense_index, *index);
+            LIST_SET(size_t, &s->keys, element_index, &key);
+            return list_set(&s->elements, element_index, element, element_size);
         } else {
-            *index = OPTION_CREATE_SOME_STRUCT(size_t, list_count_of_size(&s->data, element_size));
-            LIST_ADD(size_t, a, &s->keys, key);
-            return list_add(&s->data, a, element, element_size);
+            *index = OPTION_CREATE_SOME_STRUCT(dense_index, list_count_of_size(&s->elements, element_size));
+            LIST_ADD(dense_index, &s->keys, a, &key);
+            return list_add(&s->elements, a, element, element_size);
         }
     } else {
         dense_index *index = sparse_set_expand(s, a, key);
-        OPTION_IS_NONE_ASSERT(*index);
-        *index = OPTION_CREATE_SOME_STRUCT(size_t, list_count_of_size(&s->data, element_size));
-        LIST_ADD(size_t, a, &s->keys, key);
-        return list_add(&s->data, a, element, element_size);
+        OPTION_IS_NONE_ASSERT(dense_index, *index);
+        *index = OPTION_CREATE_SOME_STRUCT(dense_index, list_count_of_size(&s->elements, element_size));
+        LIST_ADD(size_t, &s->keys, a, &key);
+        return list_add(&s->elements, a, element, element_size);
     }
 }
+#define SPARSE_SET_SET(type, sparse_set_ref, arena_ref, key, element_ref) \
+    sparse_set_set(sparse_set_ref, arena_ref, key, element_ref, sizeof(type))
 
 void sparse_set_remove(sparse_set *s, arena *a, size_t key, optional_element *out_removed_element, size_t element_size) {
     if (!exclusive_range_contains(s->key_range, key)
-        || list_count_of_size(&s->data, element_size) == 0) {
+        || list_count_of_size(&s->elements, element_size) == 0) {
         *out_removed_element = OPTION_CREATE_NONE_STRUCT(optional_element);
         return;
     }
     
     dense_index *index = LIST_GET(dense_index, &s->indices, key - s->key_range.start);
-    if (OPTION_IS_SOME(*index)) {
-        if (OPTION_IS_SOME(*out_removed_element)) {
-            memcpy(OPTION_GET(optional_element, *out_removed_element), list_last(&s->data, element_size), element_size);
+    if (OPTION_IS_SOME(dense_index, *index)) {
+        if (OPTION_IS_SOME(optional_element, *out_removed_element)) {
+            memcpy(OPTION_GET(optional_element, *out_removed_element), list_last(&s->elements, element_size), element_size);
         }
-        size_t removed_index = OPTION_GET(size_t, *index);
+        size_t removed_index = OPTION_GET(dense_index, *index);
         LIST_SET(
             dense_index,
             &s->indices,
             *LIST_REMOVE_SWAP_LAST(size_t, &s->keys, a, removed_index),
-            &OPTION_CREATE_SOME_STRUCT(size_t, removed_index)
+            &OPTION_CREATE_SOME_STRUCT(dense_index, removed_index)
         );
-        list_remove_swap_last(&s->data, a, removed_index, element_size);
-        *index = OPTION_CREATE_NONE_STRUCT(size_t);
+        list_remove_swap_last(&s->elements, a, removed_index, element_size);
+        *index = OPTION_CREATE_NONE_STRUCT(dense_index);
     } else {
         *out_removed_element = OPTION_CREATE_NONE_STRUCT(optional_element);
     }
 }
+#define SPARSE_SET_REMOVE(type, sparse_set_ref, arena_ref, key, out_removed_element_ref) \
+    sparse_set_remove(sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
+
+void sparse_set_remove_unchecked(sparse_set *s, arena *a, size_t key, void *out_removed_element, size_t element_size) {
+    sparse_set_remove(s, a, key, &OPTION_CREATE_SOME_STRUCT(optional_element, out_removed_element), element_size);
+}
+#define SPARSE_SET_REMOVE_UNCHECKED(type, sparse_set_ref, arena_ref, key, out_removed_element_ref) \
+    sparse_set_remove_unchecked(sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
 
 #endif

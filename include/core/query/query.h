@@ -82,7 +82,7 @@ void *query_run(const query q, const world *w, arena *query_arena) {
         sizeof(entity_id) + padding_between(entity_id, void *)
         + sizeof(void *) * (q.component_count)
         + padding_between(void *, size_t) + sizeof(size_t);
-    list views_result = list_create(query_arena, size_of_partial_view);
+    list views_result = list_create_with_capacity(query_arena, size_of_partial_view);
 
     size_t total_count = 0;
     size_t contiguous_count = 0;

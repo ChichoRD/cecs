@@ -29,8 +29,8 @@ typedef struct world_resources {
 
 world_resources world_resources_create(arena *resources_arena) {
     world_resources wr;
-    wr.resources = list_create(resources_arena, (DEFAULT_RESOURCE_SIZE * DEFAULT_RESOURCE_CAPACITY));
-    wr.resource_offsets = list_create(resources_arena, sizeof(resource_offset) * DEFAULT_RESOURCE_CAPACITY);
+    wr.resources = list_create_with_capacity(resources_arena, (DEFAULT_RESOURCE_SIZE * DEFAULT_RESOURCE_CAPACITY));
+    wr.resource_offsets = list_create_with_capacity(resources_arena, sizeof(resource_offset) * DEFAULT_RESOURCE_CAPACITY);
     return wr;
 }
 

@@ -75,6 +75,17 @@
         EVAL(_MAP(f, separator, __VA_ARGS__)) \
     )
 
+#define _MAP_CONST_() _MAP_CONST
+#define _MAP_CONST(f, constant_arg, separator, first, ...) \
+    f(constant_arg, first) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        separator() DEFER2(_MAP_CONST_)()(f, constant_arg, separator, __VA_ARGS__) \
+    )
+#define MAP_CONST(f, constant_arg, separator, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        EVAL(_MAP_CONST(f, constant_arg, separator, __VA_ARGS__)) \
+    )
+
 #define _MAP_PAIRS_() _MAP_PAIRS
 #define _MAP_PAIRS(f, separator, first, second, ...) \
     f(first, second) \

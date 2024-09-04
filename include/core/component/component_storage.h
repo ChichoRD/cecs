@@ -106,12 +106,13 @@ sparse_component_storage sparse_component_storage_create(arena *a, size_t compon
             .set = sparse_component_storage_set,
             .remove = sparse_component_storage_remove,
         },
-        .components = list_create(a, component_capacity * component_size),
+        .components = list_create_with_capacity(a, component_capacity * component_size),
         .entity_id_range = { 0, 0 },
     };
 }
 
 typedef TAGGED_UNION_STRUCT(
+    component_storage_union,
     sparse_component_storage,
     sparse_component_storage,
 ) component_storage_union;
@@ -128,6 +129,7 @@ component_storage component_storage_create_sparse(arena *a, size_t component_cap
         .header = storage.header,
         .storage = TAGGED_UNION_CREATE(
             sparse_component_storage,
+            component_storage_union,
             storage
         ),
         .entity_bitset = hibitset_create(a),
@@ -135,12 +137,12 @@ component_storage component_storage_create_sparse(arena *a, size_t component_cap
 }
 
 bool component_storage_has(const component_storage *self, entity_id id) {
-    return hibitset_has(&self->entity_bitset, id);
+    return hibitset_is_set(&self->entity_bitset, id);
 }
 
 const list *component_storage_components(const component_storage *self) {
     switch (self->storage.variant) {
-        case TAGGED_UNION_VARIANT(sparse_component_storage):
+        case TAGGED_UNION_VARIANT(sparse_component_storage, component_storage_union):
             return &TAGGED_UNION_GET_UNCHECKED(sparse_component_storage, self->storage).components;
         default:
             {

@@ -30,7 +30,15 @@ inline size_t list_capacity_of_size(const list *l, size_t size)
 #define LIST_FOREACH(type, list_ref, element) \
     for (type *element = (type *)(list_ref)->elements; element < (type *)(list_ref)->elements + (list_ref).count; element++)
 
-list list_create(arena *a, size_t capacity)
+list list_create() {
+    list l;
+    l.count = 0;
+    l.capacity = 0;
+    l.elements = NULL;
+    return l;
+}
+
+list list_create_with_capacity(arena *a, size_t capacity)
 {
     list l;
     l.count = 0;
@@ -38,7 +46,7 @@ list list_create(arena *a, size_t capacity)
     l.elements = arena_alloc(a, capacity);
     return l;
 }
-#define LIST_CREATE(type, arena_ref, capacity) list_create(arena_ref, (capacity) * sizeof(type))
+#define LIST_CREATE_WITH_CAPACITY(type, arena_ref, capacity) list_create(arena_ref, (capacity) * sizeof(type))
 
 static void list_grow(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity > l->capacity && "Attempted to grow list to smaller capacity");
@@ -60,7 +68,6 @@ static void list_shrink(list *l, arena *a, size_t new_capacity) {
 
 void *list_add(list *l, arena *a, const void *element, size_t size)
 {
-    assert(l->elements != NULL && "Attempted to add element to list without initializing it first");
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);

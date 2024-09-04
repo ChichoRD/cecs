@@ -56,7 +56,7 @@ typedef struct bitset {
 
 bitset bitset_create(arena *a, size_t capacity) {
     bitset b = (bitset){
-        .bit_words = LIST_CREATE(bit_word, a, capacity),
+        .bit_words = LIST_CREATE_WITH_CAPACITY(bit_word, a, capacity),
         .word_range = {0, 0},
     };
     //bit_word *buffer = calloc(capacity, sizeof(bit_word));

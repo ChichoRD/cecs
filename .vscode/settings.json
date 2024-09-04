@@ -12,6 +12,8 @@
         "xmemory": "c",
         "xstring": "c",
         "xtr1common": "c",
-        "functional": "c"
+        "functional": "c",
+        "system_error": "c",
+        "xlocmon": "c"
     }
 }

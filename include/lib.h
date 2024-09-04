@@ -3,15 +3,15 @@
 
 #include <time.h>
 #include <stdint.h>
+#include "../include/core/component/entity/entity.h"
 #include "../include/containers/arena.h"
 #include "../include/containers/list.h"
 #include "../include/core/world.h"
-#include "../include/core/component/entity/entity.h"
-#include "../include/core/query.h"
-#include "../include/core/resource.h"
-#include "../include/core/query_context.h"
+// #include "../include/core/query.h"
+// #include "../include/core/resource.h"
+// #include "../include/core/query_context.h"
 
-RESOURCE_DEFINE(struct, game_time) {
+typedef struct game_time {
     struct timespec game_start;
     struct timespec frame_start;
     struct timespec frame_end;
