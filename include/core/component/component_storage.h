@@ -10,6 +10,9 @@
 #include "../../containers/tagged_union.h"
 #include "entity/entity.h"
 
+typedef uint64_t component_id;
+static component_id component_id_count = 0;
+
 #define COMPONENT(type) CAT2(type, _component)
 #define _COMPONENT_IMPLEMENT(component) TYPE_ID_IMPLEMENT_COUNTER(component, component_id_count)
 #define COMPONENT_IMPLEMENT(type) _COMPONENT_IMPLEMENT(COMPONENT(type))
@@ -22,6 +25,25 @@
 
 #define _COMPONENT_MASK_OR(mask, next_mask) (mask | next_mask)
 #define COMPONENTS_MASK(...) (FOLD_L1(_COMPONENT_MASK_OR, ((component_mask)0), MAP(COMPONENT_MASK, COMMA, __VA_ARGS__)))
+
+typedef struct components_type_info {
+    const component_id *const component_ids;
+    const size_t component_count;
+} components_type_info;
+
+#define COMPONENTS_TYPE_INFO_CREATE(...) \
+    ((components_type_info){ \
+        .component_ids = COMPONENT_ID_ARRAY(__VA_ARGS__), \
+        .component_count = COMPONENT_COUNT(__VA_ARGS__) \
+    })
+
+typedef union {
+    struct {
+        const component_id *const component_ids;
+        const size_t component_count;
+    };
+    components_type_info components_type_info;
+} components_type_info_deconstruct;
 
 
 typedef OPTION_STRUCT(void *, component) optional_component;

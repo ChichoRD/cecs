@@ -16,6 +16,7 @@
         "system_error": "c",
         "xlocmon": "c",
         "memory": "c",
-        "format": "c"
+        "format": "c",
+        "ratio": "c"
     }
 }

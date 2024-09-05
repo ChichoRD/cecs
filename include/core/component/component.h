@@ -14,9 +14,6 @@
 #include "entity/entity.h"
 #include "component_storage.h"
 
-typedef uint64_t component_id;
-static component_id component_id_count = 0;
-
 typedef OPTION_STRUCT(size_t, component_size) component_size;
 typedef struct world_components {
     arena storages_arena;
