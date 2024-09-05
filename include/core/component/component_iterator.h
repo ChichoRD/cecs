@@ -81,6 +81,14 @@ bool component_iterator_done(const component_iterator *it) {
         MAP(_COMPONENT_ITERATION_HANDLE_FIELD, SEMICOLON, __VA_ARGS__); \
     }
 
+
+
+inline size_t component_iteration_handle_size(components_type_info components_type_info) {
+    return sizeof(entity_id)
+        + padding_between(entity_id, raw_component_reference)
+        + sizeof(raw_component_reference) * components_type_info.component_count;
+}
+
 typedef void *raw_iteration_handle_reference;
 entity_id component_iterator_current(const component_iterator *it, raw_iteration_handle_reference out_iteration_handle) {
     entity_id *handle = (entity_id *)out_iteration_handle;

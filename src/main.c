@@ -48,6 +48,13 @@ bool init(world *w) {
     return EXIT_SUCCESS;
 }
 
+void print_movables(COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) *handle) {
+    printf("entity: %d\n", handle->entity_id);
+    printf("x: %d, y: %d\n", handle->position_component->x, handle->position_component->y);
+    printf("x: %d, y: %d\n", handle->velocity_component->x, handle->velocity_component->y);
+    printf("\n");
+}
+
 void main(void) {
     world w = world_create(512, 64);
     
@@ -56,21 +63,10 @@ void main(void) {
         assert(false && "init failed");
         exit(EXIT_FAILURE);
     }
-     arena iteration_arena = arena_create();
-     for (
-         component_iterator it =
-             component_iterator_create(component_iterator_descriptor_create( &w.components, &iteration_arena, ((components_type_info){ .component_ids = (component_id[]){ ((component_id)position_component_type_id()) , ((component_id)velocity_component_type_id()) }, .component_count = (sizeof((component_id[]){ ((component_id)position_component_type_id()) , ((component_id)velocity_component_type_id()) }) / sizeof(component_id)) }) ));
-         !component_iterator_done(&it);
-         component_iterator_next(&it)
-     ) {
-         COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) handle;
-         component_iterator_current(&it, &handle);
-         printf("current entity: %d\n", handle.entity_id);
-         printf("current position: %d, %d\n", handle.position_component->x, handle.position_component->y);
-         printf("current velocity: %d, %d\n", handle.velocity_component->x, handle.velocity_component->y);
-     }
-     arena_free(&iteration_arena);
-
+    arena iteration_arena = arena_create();
+    arena_free(&iteration_arena);
+    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
+    world_system_iter_final(&movables_system, &w.components, &iteration_arena, print_movables);
     world_free(&w);
     printf("freed world");
 }

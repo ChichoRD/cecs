@@ -4,7 +4,7 @@
 #include <time.h>
 #include <stdint.h>
 #include "core/component/entity/entity.h"
-#include "core/component/component_iterator.h"
+#include "core/system.h"
 #include "containers/arena.h"
 #include "containers/list.h"
 #include "core/world.h"

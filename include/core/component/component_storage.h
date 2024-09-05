@@ -31,11 +31,18 @@ typedef struct components_type_info {
     const size_t component_count;
 } components_type_info;
 
+inline components_type_info components_type_info_create(const component_id *component_ids, size_t component_count) {
+    return (components_type_info) {
+        .component_ids = component_ids,
+        .component_count = component_count
+    };
+}
+
 #define COMPONENTS_TYPE_INFO_CREATE(...) \
-    ((components_type_info){ \
-        .component_ids = COMPONENT_ID_ARRAY(__VA_ARGS__), \
-        .component_count = COMPONENT_COUNT(__VA_ARGS__) \
-    })
+    components_type_info_create( \
+        COMPONENT_ID_ARRAY(__VA_ARGS__), \
+        COMPONENT_COUNT(__VA_ARGS__) \
+    )
 
 typedef union {
     struct {
