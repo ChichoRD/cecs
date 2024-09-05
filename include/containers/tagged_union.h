@@ -60,6 +60,22 @@ typedef uint8_t none;
 #define OPTION_GET_UNCHECKED(identifier, option) ((option).TAGGED_UNION_VALUE(identifier))
 #define OPTION_GET(identifier, option) (OPTION_IS_SOME_ASSERT(identifier, option), OPTION_GET_UNCHECKED(identifier, option))
 
+#define OPTION_MAP(identifier, option, some_predicate, none_predicate) \
+    (OPTION_IS_SOME(identifier, option) ? (some_predicate) : (none_predicate))
+#define OPTION_MAP_REFERENCE(identifier, option, other_identifier) \
+    OPTION_MAP( \
+        identifier, \
+        option, \
+        OPTION_CREATE_SOME(other_identifier, OPTION_GET_UNCHECKED(identifier, option)), \
+        OPTION_CREATE_NONE(other_identifier) \
+    )
+#define OPTION_MAP_REFERENCE_STRUCT(identifier, option, other_identifier) \
+    OPTION_MAP( \
+        identifier, \
+        option, \
+        OPTION_CREATE_SOME_STRUCT(other_identifier, OPTION_GET_UNCHECKED(identifier, option)), \
+        OPTION_CREATE_NONE_STRUCT(other_identifier) \
+    )
 
 #define BORROWED(identifier) borrowed_##identifier
 #define OWNED(identifier) owned_##identifier

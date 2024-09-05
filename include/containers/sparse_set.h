@@ -22,7 +22,27 @@ typedef struct sparse_set {
     exclusive_range key_range;
 } sparse_set;
 
-sparse_set sparse_set_create(arena *a, size_t element_capacity, size_t element_size) {
+sparse_set sparse_set_create() {
+    return (sparse_set) {
+        .elements =
+            TAGGED_UNION_CREATE(any_elements, sparse_set_elements, list_create()),
+        .indices = list_create(),
+        .keys = list_create(),
+        .key_range = (exclusive_range) { 0, 0 }
+    };
+}
+
+sparse_set sparse_set_create_of_integers() {
+    return (sparse_set) {
+        .elements =
+            TAGGED_UNION_CREATE(integer_elements, sparse_set_elements, list_create()),
+        .indices = list_create(),
+        .keys = list_create(),
+        .key_range = (exclusive_range) { 0, 0 }
+    };
+}
+
+sparse_set sparse_set_create_with_capacity(arena *a, size_t element_capacity, size_t element_size) {
     return (sparse_set) {
         .elements =
             TAGGED_UNION_CREATE(any_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
@@ -32,7 +52,7 @@ sparse_set sparse_set_create(arena *a, size_t element_capacity, size_t element_s
     };
 }
 
-sparse_set sparse_set_create_of_integers(arena *a, size_t element_capacity, size_t element_size) {
+sparse_set sparse_set_create_of_integers_with_capacity(arena *a, size_t element_capacity, size_t element_size) {
     return (sparse_set) {
         .elements =
             TAGGED_UNION_CREATE(integer_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
