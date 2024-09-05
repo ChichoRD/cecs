@@ -56,7 +56,7 @@ void world_entities_free(world_entities *we) {
 }
 
 inline size_t world_entities_count(const world_entities *we) {
-    return sparse_set_count(&we->entities);
+    return sparse_set_count_of_size(&we->entities, sizeof(entity));
 }
 
 inline entity *world_entities_get(const world_entities *we, entity_id id) {
