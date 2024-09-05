@@ -51,6 +51,9 @@ list list_create_with_capacity(arena *a, size_t capacity)
 static void list_grow(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity > l->capacity && "Attempted to grow list to smaller capacity");
     size_t current_capacity = l->capacity;
+    if (l->capacity == 0)
+        l->capacity = 1;
+
     while (new_capacity > l->capacity)
         l->capacity *= 2;
 

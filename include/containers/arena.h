@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <limits.h>
+#include <string.h>
 
 #define DEFAULT_BLOCK_CAPACITY (8 * 1024)
 
@@ -121,7 +122,7 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         return data_block;
     }
 
-    if (data_block == NULL) {
+    if (data_block == NULL || current_size == 0) {
         return arena_alloc(a, new_size);
     }
 

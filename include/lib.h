@@ -3,10 +3,11 @@
 
 #include <time.h>
 #include <stdint.h>
-#include "../include/core/component/entity/entity.h"
-#include "../include/containers/arena.h"
-#include "../include/containers/list.h"
-#include "../include/core/world.h"
+#include "core/component/entity/entity.h"
+#include "core/component/component_iterator.h"
+#include "containers/arena.h"
+#include "containers/list.h"
+#include "core/world.h"
 // #include "../include/core/query.h"
 // #include "../include/core/resource.h"
 // #include "../include/core/query_context.h"

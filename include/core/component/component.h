@@ -7,10 +7,10 @@
 #include <assert.h>
 #include "../../types/macro_utils.h"
 #include "../../types/type_id.h"
-#include "../containers/tagged_union.h"
-#include "../containers/list.h"
-#include "../containers/bitset.h"
-#include "../containers/arena.h"
+#include "../../containers/tagged_union.h"
+#include "../../containers/list.h"
+#include "../../containers/bitset.h"
+#include "../../containers/arena.h"
 #include "entity/entity.h"
 #include "component_storage.h"
 
@@ -41,6 +41,13 @@ void world_components_free(world_components *wc) {
     wc->component_sizes = (list){0};
 }
 
+component_size *world_components_get_component_size(world_components *wc, component_id component_id) {
+    return LIST_GET(component_size, &wc->component_sizes, component_id);
+}
+size_t world_components_get_component_size_unchecked(const world_components *wc, component_id component_id) {
+    return OPTION_GET(component_size, *world_components_get_component_size(wc, component_id));
+}
+
 void *world_components_set_component(world_components *wc, entity_id entity_id, component_id component_id, void *component, size_t size) {
     component_size *stored_size = NULL;
     component_storage *storage = NULL;
@@ -52,11 +59,11 @@ void *world_components_set_component(world_components *wc, entity_id entity_id, 
     }
 
     if (missing_sizes) {
-        size_t missing = component_id - LIST_COUNT(component_size, &wc->component_sizes);
+        size_t missing = component_id - LIST_COUNT(component_size, &wc->component_sizes) + 1;
         stored_size = LIST_APPEND_EMPTY(component_size, &wc->component_sizes, &wc->storages_arena, missing);
         *stored_size = OPTION_CREATE_SOME_STRUCT(component_size, size);
     } else {
-        stored_size = LIST_GET(component_size, &wc->component_sizes, component_id);
+        stored_size = world_components_get_component_size(wc, component_id);
         if (OPTION_IS_SOME(component_size, *stored_size)) {
             assert((OPTION_GET(component_size, *stored_size) == size) && "Component size mismatch");
         } else {
@@ -65,7 +72,7 @@ void *world_components_set_component(world_components *wc, entity_id entity_id, 
     }
 
     if (missing_storages) {
-        size_t missing = component_id - LIST_COUNT(component_storage, &wc->component_storages);
+        size_t missing = component_id - LIST_COUNT(component_storage, &wc->component_storages) + 1;
         // TODO: choosing
         component_storage s = component_storage_create_sparse(&wc->components_arena, 1, OPTION_GET(component_size, *stored_size));
         storage = memcpy(
@@ -113,7 +120,7 @@ optional_component world_components_remove_component(world_components *wc, entit
     }
     assert((!missing_sizes && !missing_storages) && "Component ID out of bounds");
 
-    component_size stored_size = *LIST_GET(component_size, &wc->component_sizes, component_id);
+    component_size stored_size = *world_components_get_component_size(wc, component_id);
     if (!OPTION_IS_SOME(component_size, stored_size)) {
         return OPTION_CREATE_NONE_STRUCT(component);
     } else {

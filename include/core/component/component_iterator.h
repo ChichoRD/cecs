@@ -95,10 +95,10 @@ void *component_iterator_current(const component_iterator *it) {
             it->descriptor.component_ids[i]
         );
         
-        ((raw_component_handle *)(it+ 1))[i] = storage->header.get(
-            &storage->storage,
-            hibitset_iterator_current(&it->current_entity_id),
-            LIST_GET(size_t, &it->descriptor.world_components->component_sizes, it->descriptor.component_ids[i])
+        ((raw_component_handle *)(it+ 1))[i] = component_storage_get(
+            storage,
+            it->current_entity_id,
+            world_components_get_component_size_unchecked(it->descriptor.world_components, it->descriptor.component_ids[i])
         );
     }
     return it;

@@ -66,16 +66,16 @@ const void *world_remove_component(world *w, entity_id entity_id, component_id c
     entity *e = world_get_entity(w, entity_id);
     uint32_t mask = 1 << component_id;
     e->components &= ~mask;
-    return world_components_remove_component_unchecked(&w->components, component_id, entity_id);
+    return world_components_remove_component_unchecked(&w->components, entity_id, component_id);
 }
 #define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0) \
     (*(type *)world_remove_component(world_ref, entity_id0, COMPONENT_ID(type)))
 
-void *world_get_component(const world *w, component_id component_id, entity_id entity_id) {
-    return world_components_get_component_unchecked(&w->components, component_id, entity_id);
+void *world_get_component(const world *w, entity_id entity_id, component_id component_id) {
+    return world_components_get_component_unchecked(&w->components, entity_id, component_id);
 }
 #define WORLD_GET_COMPONENT(type, world_ref, entity_id0) \
-    ((type *)world_get_component(world_ref, COMPONENT_ID(type), entity_id0))
+    ((type *)world_get_component(world_ref, entity_id0, COMPONENT_ID(type)))
 
 tag_mask world_add_tag(world *w, entity_id entity_id, tag_id tag_id) {
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");

@@ -60,7 +60,7 @@ inline size_t world_entities_count(const world_entities *we) {
 }
 
 inline entity *world_entities_get(const world_entities *we, entity_id id) {
-    return SPARSE_SET_GET_UNCHECKED(entity, &we->entities, id)->id;
+    return SPARSE_SET_GET_UNCHECKED(entity, &we->entities, id);
 }
 
 entity *world_entities_add_entity(world_entities *we, component_mask components, tag_mask tags) {
