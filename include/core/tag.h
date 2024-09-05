@@ -7,7 +7,7 @@
 #include "../types/type_id.h"
 #include "component/entity/entity.h"
 
-typedef uint32_t tag_id;
+typedef uint64_t tag_id;
 static tag_id tag_id_count = 0;
 
 #define TAG(type) CAT2(type, _tag)

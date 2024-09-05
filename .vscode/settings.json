@@ -17,6 +17,7 @@
         "xlocmon": "c",
         "memory": "c",
         "format": "c",
-        "ratio": "c"
+        "ratio": "c",
+        "xiosbase": "c"
     }
 }

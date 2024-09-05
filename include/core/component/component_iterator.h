@@ -44,18 +44,17 @@ component_iterator_descriptor component_iterator_descriptor_create(
 typedef void *raw_component_reference;       
 typedef struct component_iterator {
     component_iterator_descriptor descriptor;
-    entity_id current_entity_id;
+    hibitset_iterator entities_iterator;
 } component_iterator;
 
 component_iterator component_iterator_create(component_iterator_descriptor descriptor) {
-    size_t first_entity_id = 0;
-    hibitset_iterator iterator = hibitset_iterator_create_at_first(&descriptor.entities_bitset);
+    hibitset_iterator iterator = hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
     if (!hibitset_iterator_current_is_set(&iterator)) {
-        first_entity_id = hibitset_iterator_next_set(&iterator);
+        hibitset_iterator_next_set(&iterator);
     }
     return (component_iterator) {
         .descriptor = descriptor,
-        .current_entity_id = first_entity_id
+        .entities_iterator = iterator
     };
 }
 #define COMPONENT_ITERATOR_CREATE(world_components_ref, arena_ref, ...) \
@@ -66,8 +65,7 @@ component_iterator component_iterator_create(component_iterator_descriptor descr
     ))
 
 bool component_iterator_done(const component_iterator *it) {
-    hibitset_iterator iterator = hibitset_iterator_create_at(&it->descriptor.entities_bitset, it->current_entity_id);
-    return hibitset_iterator_done(&iterator);
+    return hibitset_iterator_done(&it->entities_iterator);
 }
 
 #define _PREPEND_UNDERSCORE(x) _##x
@@ -92,7 +90,7 @@ inline size_t component_iteration_handle_size(components_type_info components_ty
 typedef void *raw_iteration_handle_reference;
 entity_id component_iterator_current(const component_iterator *it, raw_iteration_handle_reference out_iteration_handle) {
     entity_id *handle = (entity_id *)out_iteration_handle;
-    *handle = it->current_entity_id;
+    *handle = it->entities_iterator.current_bit_index;
 
     for (size_t i = 0; i < it->descriptor.component_count; i++) {
         component_storage *storage = LIST_GET(
@@ -103,16 +101,15 @@ entity_id component_iterator_current(const component_iterator *it, raw_iteration
 
         ((raw_component_reference *)(handle + 1))[i] = component_storage_get(
             storage,
-            it->current_entity_id,
+            it->entities_iterator.current_bit_index,
             world_components_get_component_size_unchecked(it->descriptor.world_components, it->descriptor.component_ids[i])
         );
     }
-    return it->current_entity_id;
+    return it->entities_iterator.current_bit_index;
 }
 
 size_t component_iterator_next(component_iterator *it) {
-    hibitset_iterator iterator = hibitset_iterator_create_at(&it->descriptor.entities_bitset, it->current_entity_id);
-    return (it->current_entity_id = hibitset_iterator_next_set(&iterator));
+    return hibitset_iterator_next_set(&it->entities_iterator);
 }
 
 

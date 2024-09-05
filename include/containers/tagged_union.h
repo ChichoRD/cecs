@@ -61,4 +61,31 @@ typedef uint8_t none;
 #define OPTION_GET(identifier, option) (OPTION_IS_SOME_ASSERT(identifier, option), OPTION_GET_UNCHECKED(identifier, option))
 
 
+#define BORROWED(identifier) borrowed_##identifier
+#define OWNED(identifier) owned_##identifier
+#define COW(identifier) cow_##identifier
+#define COW_STRUCT(type, identifier) \
+    _TAGGED_UNION_STRUCT(COW(identifier), identifier, type *, BORROWED(identifier), type, OWNED(identifier))
+
+#define COW_CREATE_OWNED(identifier, value) TAGGED_UNION_CREATE(OWNED(identifier), identifier, value)
+#define COW_CREATE_OWNED_STRUCT(identifier, value) ((struct COW(identifier))COW_CREATE_OWNED(identifier, value))
+
+#define COW_CREATE_BORROWED(identifier, value) TAGGED_UNION_CREATE(BORROWED(identifier), identifier, value)
+#define COW_CREATE_BORROWED_STRUCT(identifier, value) ((struct COW(identifier))COW_CREATE_BORROWED(identifier, value))
+
+#define COW_IS_OWNED(identifier, cow) ((cow).variant == TAGGED_UNION_VARIANT(OWNED(identifier), identifier))
+#define COW_IS_BORROWED(identifier, cow) ((cow).variant == TAGGED_UNION_VARIANT(BORROWED(identifier), identifier))
+#define COW_IS_OWNED_ASSERT(identifier, cow) (assert(COW_IS_OWNED(identifier, cow) && "Invalid cow access"))
+#define COW_IS_BORROWED_ASSERT(identifier, cow) (assert(COW_IS_BORROWED(identifier, cow) && "Invalid cow access"))
+
+#define COW_GET_OWNED_UNCHECKED(identifier, cow) ((cow).TAGGED_UNION_VALUE(OWNED(identifier)))
+#define COW_GET_BORROWED_UNCHECKED(identifier, cow) ((cow).TAGGED_UNION_VALUE(BORROWED(identifier)))
+#define COW_GET_OWNED(identifier, cow) (COW_IS_OWNED_ASSERT(identifier, cow), COW_GET_OWNED_UNCHECKED(identifier, cow))
+#define COW_GET_BORROWED(identifier, cow) (COW_IS_BORROWED_ASSERT(identifier, cow), COW_GET_BORROWED_UNCHECKED(identifier, cow))
+
+#define COW_GET_REFERENCE(identifier, cow) \
+    (COW_IS_OWNED(identifier, cow) \
+        ? &COW_GET_OWNED_UNCHECKED(identifier, cow) \
+        : COW_GET_BORROWED_UNCHECKED(identifier, cow))
+
 #endif

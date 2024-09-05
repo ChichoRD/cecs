@@ -311,39 +311,56 @@ bool hibitset_bit_in_range(const hibitset *b, size_t bit_index) {
     return exclusive_range_contains(b->bitsets[0].word_range, layer_word_index(bit_index, 0));
 }
 
-
+#include "tagged_union.h"
 typedef struct hibitset_iterator {
-    const hibitset *const hibitset;
+    const COW_STRUCT(const hibitset, hibitset) hibitset;
     size_t current_bit_index;
 } hibitset_iterator;
 
-hibitset_iterator hibitset_iterator_create_at(const hibitset *b, size_t bit_index) {
+hibitset_iterator hibitset_iterator_create_borrowed_at(const hibitset *b, size_t bit_index) {
     return (hibitset_iterator){
-        .hibitset = b,
+        .hibitset = COW_CREATE_BORROWED(hibitset, b),
         .current_bit_index = bit_index,
     };
 }
 
-hibitset_iterator hibitset_iterator_create_at_first(const hibitset *b) {
+hibitset_iterator hibitset_iterator_create_borrowed_at_first(const hibitset *b) {
     return (hibitset_iterator){
-        .hibitset = b,
+        .hibitset = COW_CREATE_BORROWED(hibitset, b),
         .current_bit_index = hibitset_bit_range(b).start,
     };
-};
+}
 
-hibitset_iterator hibitset_iterator_create_at_last(const hibitset *b) {
+hibitset_iterator hibitset_iterator_create_borrowed_at_last(const hibitset *b) {
     return (hibitset_iterator){
-        .hibitset = b,
+        .hibitset = COW_CREATE_BORROWED(hibitset, b),
         .current_bit_index = hibitset_bit_range(b).end - 1,
     };
-};
+}
 
+hibitset_iterator hibitset_iterator_create_owned_at(const hibitset b, size_t bit_index) {
+    return (hibitset_iterator){
+        .hibitset = COW_CREATE_OWNED(hibitset, b),
+        .current_bit_index = bit_index,
+    };
+}
+
+hibitset_iterator hibitset_iterator_create_owned_at_first(const hibitset b) {
+    return (hibitset_iterator){
+        .hibitset = COW_CREATE_OWNED(hibitset, b),
+        .current_bit_index = hibitset_bit_range(&b).start,
+    };
+}
+
+hibitset_iterator hibitset_iterator_create_owned_at_last(const hibitset b) {
+    return (hibitset_iterator){
+        .hibitset = COW_CREATE_OWNED(hibitset, b),
+        .current_bit_index = hibitset_bit_range(&b).end - 1,
+    };
+}
 
 inline bool hibitset_iterator_done(const hibitset_iterator *it) {
-    return (
-        (ssize_t)layer_word_index(it->current_bit_index, 0) < it->hibitset->bitsets[0].word_range.start
-        || (ssize_t)layer_word_index(it->current_bit_index, 0) >= it->hibitset->bitsets[0].word_range.end
-    );
+    return !hibitset_bit_in_range(COW_GET_REFERENCE(hibitset, it->hibitset), it->current_bit_index);
 }
 
 inline size_t hibitset_iterator_next(hibitset_iterator *it) {
@@ -359,7 +376,7 @@ size_t hibitset_iterator_next_set(hibitset_iterator *it) {
     do {
         it->current_bit_index += unset_bit_skip_count;
     } while (!hibitset_iterator_done(it)
-        && !hibitset_is_set_skip_unset(it->hibitset, it->current_bit_index, &unset_bit_skip_count));
+        && !hibitset_is_set_skip_unset(COW_GET_REFERENCE(hibitset, it->hibitset), it->current_bit_index, &unset_bit_skip_count));
     return it->current_bit_index;
 }
 
@@ -368,7 +385,7 @@ size_t hibitset_iterator_previous_set(hibitset_iterator *it) {
     do {
         it->current_bit_index -= unset_bit_skip_count;
     } while (!hibitset_iterator_done(it)
-        && !hibitset_is_set_skip_unset_reverse(it->hibitset, it->current_bit_index, &unset_bit_skip_count)
+        && !hibitset_is_set_skip_unset_reverse(COW_GET_REFERENCE(hibitset, it->hibitset), it->current_bit_index, &unset_bit_skip_count)
         && it->current_bit_index >= unset_bit_skip_count);
     return it->current_bit_index;
 }
@@ -378,7 +395,7 @@ inline size_t hibitset_iterator_current(const hibitset_iterator *it) {
 }
 
 inline bool hibitset_iterator_current_is_set(const hibitset_iterator *it) {
-    return hibitset_is_set(it->hibitset, hibitset_iterator_current(it));
+    return hibitset_is_set(COW_GET_REFERENCE(hibitset, it->hibitset), hibitset_iterator_current(it));
 }
 
 
@@ -392,7 +409,7 @@ hibitset hibitset_intersection(hibitset *bitsets, size_t count, arena *a) {
         bool all_set = true;
 
         for (size_t i = 0; i < count; i++) {
-            hibitset_iterator j = hibitset_iterator_create_at(&bitsets[i], current_bit);
+            hibitset_iterator j = hibitset_iterator_create_borrowed_at(&bitsets[i], current_bit);
             size_t next_bit = hibitset_iterator_next_set(&j);
             max_next_bit = max(max_next_bit, next_bit);
 
@@ -419,7 +436,7 @@ hibitset hibitset_union(hibitset *bitsets, size_t count, arena *a) {
         bool all_done_at_current = true;
 
         for (size_t i = 0; i < count; i++) {
-            hibitset_iterator j = hibitset_iterator_create_at(&bitsets[i], current_bit);
+            hibitset_iterator j = hibitset_iterator_create_borrowed_at(&bitsets[i], current_bit);
             size_t next_bit = hibitset_iterator_next_set(&j);
             min_next_bit = min(min_next_bit, next_bit);
 

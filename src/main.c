@@ -48,6 +48,13 @@ bool init(world *w) {
     return EXIT_SUCCESS;
 }
 
+void move_movables(COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) *handle) {
+    position *p = handle->position_component;
+    velocity *v = handle->velocity_component;
+    p->x += v->x;
+    p->y += v->y;
+}
+
 void print_movables(COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) *handle) {
     printf("entity: %d\n", handle->entity_id);
     printf("x: %d, y: %d\n", handle->position_component->x, handle->position_component->y);
@@ -64,9 +71,9 @@ void main(void) {
         exit(EXIT_FAILURE);
     }
     arena iteration_arena = arena_create();
-    arena_free(&iteration_arena);
     world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
-    world_system_iter_final(&movables_system, &w.components, &iteration_arena, print_movables);
+    WORLD_SYSTEM_ITER_ALL(&movables_system, &w.components, &iteration_arena, move_movables, print_movables);
+    arena_free(&iteration_arena);
     world_free(&w);
     printf("freed world");
 }
