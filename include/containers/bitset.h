@@ -141,6 +141,10 @@ bool bitset_is_set(bitset *b, size_t bit_index) {
         & ((bit_word)1 << layer_word_bit_index(bit_index, 0))) != 0;
 }
 
+bool bitset_bit_in_range(bitset *b, size_t bit_index) {
+    return exclusive_range_contains(b->word_range, layer_word_index(bit_index, 0));
+}
+
 
 
 typedef struct bitset_iterator {
@@ -156,7 +160,7 @@ bitset_iterator bitset_iterator_create(const bitset *b) {
 };
 
 inline bool bitset_iterator_done(const bitset_iterator *it) {
-    return (ssize_t)layer_word_index(it->current_bit_index, 0) >= it->bitset->word_range.end;
+    return !bitset_bit_in_range(it->bitset, it->current_bit_index);
 }
 
 inline size_t bitset_iterator_next(bitset_iterator *it) {
@@ -189,6 +193,10 @@ inline bool bitset_iterator_current_is_set(const bitset_iterator *it) {
 typedef struct hibitset {
     bitset bitsets[BIT_LAYER_COUNT];
 } hibitset;
+
+const hibitset hibitset_empty() {
+    return (hibitset){0};
+}
 
 inline size_t layer_complement(size_t layer) {
     return BIT_LAYER_COUNT - layer - 1;
@@ -308,7 +316,7 @@ exclusive_range hibitset_bit_range(const hibitset *b) {
 }
 
 bool hibitset_bit_in_range(const hibitset *b, size_t bit_index) {
-    return exclusive_range_contains(b->bitsets[0].word_range, layer_word_index(bit_index, 0));
+    return bitset_bit_in_range(&b->bitsets[0], bit_index);
 }
 
 #include "tagged_union.h"

@@ -11,6 +11,9 @@ COMPONENT_IMPLEMENT(position);
 typedef v2_i16 velocity;
 COMPONENT_IMPLEMENT(velocity);
 
+typedef void my_tag;
+TAG_IMPLEMENT(my_tag);
+
 bool init(world *w) {
     for (size_t i = 0; i < 10; i++) {
         entity_id e = world_add_entity(w);
@@ -31,6 +34,9 @@ bool init(world *w) {
             WORLD_REMOVE_COMPONENT(velocity, w, e);
         }
 
+        if (i == 5) {
+            WORLD_ADD_TAG(my_tag, w, e);
+        }
         // printf("x: %d, y: %d\n", p->x, p->y);
         // printf("x: %d, y: %d\n", v->x, v->y);
         // printf("\n");
@@ -65,13 +71,14 @@ void print_movables(COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) *handl
 void main(void) {
     world w = world_create(512, 64);
     
+    //sizeof(NULL);
     printf("created world\n");
     if (init(&w) == EXIT_FAILURE) {
         assert(false && "init failed");
         exit(EXIT_FAILURE);
     }
     arena iteration_arena = arena_create();
-    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
+    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity, my_tag);
     WORLD_SYSTEM_ITER_ALL(&movables_system, &w.components, &iteration_arena, move_movables, print_movables);
     arena_free(&iteration_arena);
     world_free(&w);

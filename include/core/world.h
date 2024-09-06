@@ -56,7 +56,7 @@ void *world_set_component(world *w, entity_id entity_id, component_id component_
     uint32_t mask = 1 << component_id;
     e->components |= mask;
     
-    return world_components_set_component(&w->components, entity_id, component_id, component, size);
+    return world_components_set_component_unchecked(&w->components, entity_id, component_id, component, size);
 }
 #define WORLD_SET_COMPONENT(type, world_ref, entity_id0, component_ref) \
     ((type *)world_set_component(world_ref, entity_id0, COMPONENT_ID(type), component_ref, sizeof(type)))
@@ -82,6 +82,7 @@ tag_mask world_add_tag(world *w, entity_id entity_id, tag_id tag_id) {
     entity *e = world_get_entity(w, entity_id);
     tag_mask mask = 1 << tag_id;
     e->tags |= mask;
+    world_components_set_component(&w->components, entity_id, tag_id, &mask, 0);
     return e->tags;
 }
 #define WORLD_ADD_TAG(type, world_ref, entity_id0) \
@@ -92,37 +93,38 @@ tag_mask world_remove_tag(world *w, entity_id entity_id, tag_id tag_id) {
     entity *e = world_get_entity(w, entity_id);
     tag_mask mask = 1 << tag_id;
     e->tags &= ~mask;
+    world_components_remove_component(&w->components, entity_id, tag_id);
     return e->tags;
 }
 #define WORLD_REMOVE_TAG(type, world_ref, entity_id0) \
     world_remove_tag(world_ref, entity_id0, TAG_ID(type))
 
-tag_mask world_set_tags(world *w, entity_id entity_id, tag_mask tags) {
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
-    entity *e = world_get_entity(w, entity_id);
-    e->tags = tags;
-    return e->tags;
-}
-#define WORLD_SET_TAGS(world_ref, entity_id0, ...) \
-    world_set_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
+// tag_mask world_set_tags(world *w, entity_id entity_id, tag_mask tags) {
+//     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+//     entity *e = world_get_entity(w, entity_id);
+//     e->tags = tags;
+//     return e->tags;
+// }
+// #define WORLD_SET_TAGS(world_ref, entity_id0, ...) \
+//     world_set_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
 
-tag_mask world_add_tags(world *w, entity_id entity_id, tag_mask tags) {
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
-    entity *e = world_get_entity(w, entity_id);
-    e->tags |= tags;
-    return e->tags;
-}
-#define WORLD_ADD_TAGS(world_ref, entity_id0, ...) \
-    world_add_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
+// tag_mask world_add_tags(world *w, entity_id entity_id, tag_mask tags) {
+//     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+//     entity *e = world_get_entity(w, entity_id);
+//     e->tags |= tags;
+//     return e->tags;
+// }
+// #define WORLD_ADD_TAGS(world_ref, entity_id0, ...) \
+//     world_add_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
 
-tag_mask world_remove_tags(world *w, entity_id entity_id, tag_mask tags) {
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
-    entity *e = world_get_entity(w, entity_id);
-    e->tags &= ~tags;
-    return e->tags;
-}
-#define WORLD_REMOVE_TAGS(world_ref, entity_id0, ...) \
-    world_remove_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
+// tag_mask world_remove_tags(world *w, entity_id entity_id, tag_mask tags) {
+//     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+//     entity *e = world_get_entity(w, entity_id);
+//     e->tags &= ~tags;
+//     return e->tags;
+// }
+// #define WORLD_REMOVE_TAGS(world_ref, entity_id0, ...) \
+//     world_remove_tags(world_ref, entity_id0, TAGS_MASK(__VA_ARGS__))
 
 // void *world_set_or_add_resource(world *w, resource_id id, void *resource, size_t size) {
 //     if (id < world_resources_count(&w->resources)) {

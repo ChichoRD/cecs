@@ -21,16 +21,10 @@ typedef size_t entity_count;
 typedef void system_predicate(raw_iteration_handle_reference handle);
 entity_count world_system_iter(const world_system *s, world_components *wc, arena *iteration_arena, system_predicate *const predicate) {
     entity_count count = 0;
-    raw_iteration_handle_reference handle = malloc(component_iteration_handle_size(s->components_type_info));
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s->components_type_info);
+    raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
     for (
-         component_iterator it =
-            component_iterator_create(
-                component_iterator_descriptor_create(
-                    wc,
-                    iteration_arena,
-                    s->components_type_info
-                )
-            );
+         component_iterator it = component_iterator_create(descriptor);
          !component_iterator_done(&it);
          component_iterator_next(&it)
      ) {
@@ -68,16 +62,10 @@ typedef union {
 
 entity_count world_system_iter_all(const world_system *s, world_components *wc, arena *iteration_arena, system_predicates predicates) {
     entity_count count = 0;
-    raw_iteration_handle_reference handle = malloc(component_iteration_handle_size(s->components_type_info));
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s->components_type_info);
+    raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
     for (
-         component_iterator it =
-            component_iterator_create(
-                component_iterator_descriptor_create(
-                    wc,
-                    iteration_arena,
-                    s->components_type_info
-                )
-            );
+         component_iterator it = component_iterator_create(descriptor);
          !component_iterator_done(&it);
          component_iterator_next(&it)
      ) {
