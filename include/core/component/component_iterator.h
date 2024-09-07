@@ -10,8 +10,8 @@
 #include "component.h"
 
 
-// TODO: make it more persistent, not invalidable when the world changes, so move some processing to iterator_create
 typedef struct component_iterator_descriptor {
+    const world_components_checksum checksum;
     const world_components *const world_components;
     components_type_info_deconstruct;
     hibitset entities_bitset; 
@@ -45,6 +45,7 @@ component_iterator_descriptor component_iterator_descriptor_create(
     }
 
     component_iterator_descriptor descriptor = {
+        .checksum = world_components->checksum,
         .world_components = world_components,
         .entities_bitset = intersection_empty
             ? hibitset_empty()
@@ -96,6 +97,8 @@ typedef struct component_iterator {
 } component_iterator;
 
 component_iterator component_iterator_create(component_iterator_descriptor descriptor) {
+    assert(descriptor.checksum == descriptor.world_components->checksum
+        && "Component iterator descriptor is invalid or outdated, please create a new one");
     hibitset_iterator iterator = hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
     if (!hibitset_iterator_current_is_set(&iterator)) {
         hibitset_iterator_next_set(&iterator);

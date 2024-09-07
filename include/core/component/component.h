@@ -14,11 +14,26 @@
 #include "entity/entity.h"
 #include "component_storage.h"
 
+typedef uint32_t world_components_checksum;
+world_components_checksum world_components_checksum_hash(world_components_checksum current) {
+    const uint32_t fnv32_prime = 0x01000193;
+    const uint32_t fnv32_basis = 0x811C9DC5;
+    return (fnv32_basis ^ current) * fnv32_prime;
+}
+inline world_components_checksum world_components_checksum_add(world_components_checksum current, component_id component_id) {
+    return world_components_checksum_hash(current + component_id);
+}
+
+inline world_components_checksum world_components_checksum_remove(world_components_checksum current, component_id component_id) {
+    return world_components_checksum_hash(current - component_id);
+}
+
 typedef struct world_components {
     arena storages_arena;
     arena components_arena;
     sparse_set component_storages;
     sparse_set component_sizes;
+    world_components_checksum checksum;
 } world_components;
 
 world_components world_components_create(size_t component_type_capacity) {
@@ -27,6 +42,7 @@ world_components world_components_create(size_t component_type_capacity) {
         .components_arena = arena_create(),
         .component_storages = sparse_set_create(),
         .component_sizes = sparse_set_create(),
+        .checksum = 0
     };
 }
 
@@ -35,6 +51,10 @@ void world_components_free(world_components *wc) {
     arena_free(&wc->storages_arena);
     wc->component_storages = (sparse_set){0};
     wc->component_sizes = (sparse_set){0};
+}
+
+size_t world_components_get_component_storage_count(const world_components *wc) {
+    return sparse_set_count_of_size(&wc->component_storages, sizeof(component_storage));
 }
 
 typedef OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
@@ -57,7 +77,6 @@ optional_component_storage world_components_get_component_storage(world_componen
         optional_component_storage
     );
 }
-
 component_storage *world_components_get_component_storage_unchecked(const world_components *wc, component_id component_id) {
     return OPTION_GET(optional_component_storage, world_components_get_component_storage(wc, component_id));
 }
@@ -67,6 +86,7 @@ bool world_components_has_storage(const world_components *wc, component_id compo
 }
 
 optional_component world_components_set_component(world_components *wc, entity_id entity_id, component_id component_id, void *component, size_t size) {
+    wc->checksum = world_components_checksum_add(wc->checksum, component_id);
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
     if (OPTION_IS_SOME(optional_component_size, stored_size)) {
         assert((*OPTION_GET(optional_component_size, stored_size) == size) && "Component size mismatch");
@@ -134,6 +154,7 @@ void *world_components_get_component_unchecked(const world_components *wc, entit
 }
 
 optional_component world_components_remove_component(world_components *wc, entity_id entity_id, component_id component_id) {
+    wc->checksum = world_components_checksum_remove(wc->checksum, component_id);
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
     if (!OPTION_IS_SOME(optional_component_size, stored_size)) {
         return OPTION_CREATE_NONE_STRUCT(optional_component);

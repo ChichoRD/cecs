@@ -50,6 +50,7 @@ bool init(world *w) {
         // printf("x: %d, y: %d\n", stored_velocity->x, stored_velocity->y);
         // printf("\n");
     }
+    world_remove_entity(w, 5);
 
     return EXIT_SUCCESS;
 }

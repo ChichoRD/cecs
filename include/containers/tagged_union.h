@@ -21,7 +21,7 @@
             MAP_PAIRS(_TAGGED_UNION_FIELD, EMPTY, __VA_ARGS__) \
         }; \
         enum { \
-            MAP_CONST(_TAGGED_UNION_VARIANT_FIELD, suffix, COMMA, MAP_PAIRS(_PREPEND_VARIANT_SELECT, COMMA, __VA_ARGS__)), \
+            MAP_CONST1(_TAGGED_UNION_VARIANT_FIELD, suffix, COMMA, MAP_PAIRS(_PREPEND_VARIANT_SELECT, COMMA, __VA_ARGS__)), \
         } variant; \
     }
 

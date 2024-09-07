@@ -5,9 +5,36 @@
 #include <stdbool.h>
 #include <assert.h>
 #include "tagged_union.h"
+#include "../types/macro_utils.h"
 #include "range.h"
 #include "arena.h"
 #include "list.h"
+
+
+#define DEREFERENCE_EQUALS(type, element_ref, value) (*((type *)(element_ref)) == (type)(value))
+#define ASSERT_DEREFERENCE_EQUALS(type, element_ref, value) \
+    assert(DEREFERENCE_EQUALS(type, element_ref, value) && "Dereferenced element value does not match the provided value")
+#define ASSERT_DEREFERENCE_EQUALS_SIZE_CASE(type, element_ref, value) \
+    case sizeof(type): \
+        ASSERT_DEREFERENCE_EQUALS(type, element_ref, value); \
+        break
+
+#define _ASSERT_DEREFERENCE_EQUALS_SIZE_CASE_SELECT(element_ref, value, type) \
+    ASSERT_DEREFERENCE_EQUALS_SIZE_CASE(type, element_ref, value)
+#define ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element_ref, value) \
+    switch (element_size) { \
+        MAP_CONST2( \
+            _ASSERT_DEREFERENCE_EQUALS_SIZE_CASE_SELECT, \
+            element_ref, \
+            value, \
+            SEMICOLON, \
+            uint8_t, uint16_t, uint32_t, uint64_t \
+        ); \
+        default: \
+            assert(false && "Invalid element size for an integer element"); \
+            break; \
+    }
+    
 
 typedef OPTION_STRUCT(size_t, dense_index) dense_index;
 typedef OPTION_STRUCT(void *, optional_element) optional_element;
@@ -60,6 +87,14 @@ sparse_set sparse_set_create_of_integers_with_capacity(arena *a, size_t element_
         .keys = list_create(),
         .key_range = (exclusive_range) { 0, 0 }
     };
+}
+
+inline void *sparse_set_data(const sparse_set *s) {
+    return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).elements;
+}
+
+inline size_t *sparse_set_keys(const sparse_set *s) {
+    return s->keys.elements;
 }
 
 inline size_t sparse_set_count_of_size(const sparse_set *s, size_t element_size) {
@@ -135,6 +170,10 @@ dense_index *sparse_set_expand(sparse_set *s, arena *a, size_t key) {
 }
 
 void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t element_size) {
+    if (TAGGED_UNION_IS(integer_elements, sparse_set_elements, s->elements)) {
+        ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element, key);
+    }
+
     if (exclusive_range_contains(s->key_range, key)) {
         dense_index *index = LIST_GET(dense_index, &s->indices, key - s->key_range.start);
         if (OPTION_IS_SOME(dense_index, *index)) {
@@ -161,7 +200,7 @@ void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t 
     }
 }
 #define SPARSE_SET_SET(type, sparse_set_ref, arena_ref, key, element_ref) \
-    sparse_set_set(sparse_set_ref, arena_ref, key, element_ref, sizeof(type))
+    ((type *)sparse_set_set(sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
 
 void sparse_set_remove(sparse_set *s, arena *a, size_t key, optional_element *out_removed_element, size_t element_size) {
     if (!exclusive_range_contains(s->key_range, key)

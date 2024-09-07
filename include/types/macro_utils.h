@@ -75,15 +75,26 @@
         EVAL(_MAP(f, separator, __VA_ARGS__)) \
     )
 
-#define _MAP_CONST_() _MAP_CONST
-#define _MAP_CONST(f, constant_arg, separator, first, ...) \
+#define _MAP_CONST1_() _MAP_CONST1
+#define _MAP_CONST1(f, constant_arg, separator, first, ...) \
     f(constant_arg, first) \
     IF(HAS_ARGUMENTS(__VA_ARGS__))( \
-        separator() DEFER2(_MAP_CONST_)()(f, constant_arg, separator, __VA_ARGS__) \
+        separator() DEFER2(_MAP_CONST1_)()(f, constant_arg, separator, __VA_ARGS__) \
     )
-#define MAP_CONST(f, constant_arg, separator, ...) \
+#define MAP_CONST1(f, constant_arg, separator, ...) \
     IF(HAS_ARGUMENTS(__VA_ARGS__))( \
-        EVAL(_MAP_CONST(f, constant_arg, separator, __VA_ARGS__)) \
+        EVAL(_MAP_CONST1(f, constant_arg, separator, __VA_ARGS__)) \
+    )
+
+#define _MAP_CONST2_() _MAP_CONST2
+#define _MAP_CONST2(f, constant_arg0, constant_arg1, separator, first, ...) \
+    f(constant_arg0, constant_arg1, first) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        separator() DEFER2(_MAP_CONST2_)()(f, constant_arg0, constant_arg1, separator, __VA_ARGS__) \
+    )
+#define MAP_CONST2(f, constant_arg0, constant_arg1, separator, ...) \
+    IF(HAS_ARGUMENTS(__VA_ARGS__))( \
+        EVAL(_MAP_CONST2(f, constant_arg0, constant_arg1, separator, __VA_ARGS__)) \
     )
 
 #define _MAP_PAIRS_() _MAP_PAIRS
