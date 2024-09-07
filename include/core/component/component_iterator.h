@@ -10,6 +10,7 @@
 #include "component.h"
 
 
+// TODO: make it more persistent, not invalidable when the world changes, so move some processing to iterator_create
 typedef struct component_iterator_descriptor {
     const world_components *const world_components;
     components_type_info_deconstruct;

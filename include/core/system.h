@@ -16,6 +16,7 @@ world_system world_system_create(components_type_info components_type_info) {
     };
 }
 #define WORLD_SYSTEM_CREATE(...) world_system_create(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define WORLD_SYSTEM_CREATE_FROM_IDS(...) world_system_create(COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__))
 
 typedef size_t entity_count;
 typedef void system_predicate(raw_iteration_handle_reference handle);

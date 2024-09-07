@@ -43,6 +43,11 @@ inline components_type_info components_type_info_create(const component_id *comp
         COMPONENT_ID_ARRAY(__VA_ARGS__), \
         COMPONENT_COUNT(__VA_ARGS__) \
     )
+#define COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(...) \
+    components_type_info_create( \
+        ((component_id[]){ __VA_ARGS__ }), \
+        sizeof((component_id[]){ __VA_ARGS__ }) / sizeof(component_id) \
+    )
 
 typedef union {
     struct {
