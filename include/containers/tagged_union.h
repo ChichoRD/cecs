@@ -54,9 +54,10 @@ typedef uint8_t none;
 #define OPTION_CREATE_SOME_STRUCT(identifier, value) ((struct OPTION(identifier))OPTION_CREATE_SOME(identifier, value))
 #define OPTION_CREATE_NONE_STRUCT(identifier) ((struct OPTION(identifier))OPTION_CREATE_NONE(identifier))
 
+#define OPTION_IS_NONE(identifier, option) ((option).variant == TAGGED_UNION_VARIANT(none, identifier))
 #define OPTION_IS_SOME(identifier, option) ((option).variant != TAGGED_UNION_VARIANT(none, identifier))
+#define OPTION_IS_NONE_ASSERT(identifier, option) (assert(OPTION_IS_NONE(identifier, option) && "Invalid option access"))
 #define OPTION_IS_SOME_ASSERT(identifier, option) (assert(OPTION_IS_SOME(identifier, option) && "Invalid option access"))
-#define OPTION_IS_NONE_ASSERT(identifier, option) (assert(!OPTION_IS_SOME(identifier, option) && "Invalid option access"))
 #define OPTION_GET_UNCHECKED(identifier, option) ((option).TAGGED_UNION_VALUE(identifier))
 #define OPTION_GET(identifier, option) (OPTION_IS_SOME_ASSERT(identifier, option), OPTION_GET_UNCHECKED(identifier, option))
 

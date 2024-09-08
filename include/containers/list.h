@@ -40,11 +40,15 @@ list list_create() {
 
 list list_create_with_capacity(arena *a, size_t capacity)
 {
-    list l;
-    l.count = 0;
-    l.capacity = capacity;
-    l.elements = arena_alloc(a, capacity);
-    return l;
+    if (capacity == 0)
+        return list_create();
+    else {
+        list l;
+        l.count = 0;
+        l.capacity = capacity;
+        l.elements = arena_alloc(a, capacity);
+        return l;
+    }
 }
 #define LIST_CREATE_WITH_CAPACITY(type, arena_ref, capacity) list_create(arena_ref, (capacity) * sizeof(type))
 

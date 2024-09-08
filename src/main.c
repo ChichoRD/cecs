@@ -15,42 +15,74 @@ typedef void my_tag;
 TAG_IMPLEMENT(my_tag);
 
 bool init(world *w) {
-    for (size_t i = 0; i < 10; i++) {
-        entity_id e = world_add_entity(w);
-        // printf("e: %d\n", e);
-        position* p = WORLD_SET_COMPONENT(
-            position,
-            w,
-            e,
-            &((position) { .x = 0, .y = 0 })
-        );
-        velocity* v = WORLD_SET_COMPONENT(
-            velocity,
-            w,
-            e,
-            &((velocity) { .x = 1, .y = 1 })
-        );
-        if (i == 0) {
-            WORLD_REMOVE_COMPONENT(velocity, w, e);
-        }
+    // for (size_t i = 0; i < 10; i++) {
+    //     entity_id e = world_add_entity(w);
+    //     // printf("e: %d\n", e);
+    //     position* p = WORLD_SET_COMPONENT(
+    //         position,
+    //         w,
+    //         e,
+    //         &((position) { .x = 0, .y = 0 })
+    //     );
+    //     velocity* v = WORLD_SET_COMPONENT(
+    //         velocity,
+    //         w,
+    //         e,
+    //         &((velocity) { .x = 1, .y = 1 })
+    //     );
+    //     if (i == 0) {
+    //         WORLD_REMOVE_COMPONENT(velocity, w, e, NULL);
+    //     }
 
-        if (i == 5) {
-            WORLD_ADD_TAG(my_tag, w, e);
-        }
-        // printf("x: %d, y: %d\n", p->x, p->y);
-        // printf("x: %d, y: %d\n", v->x, v->y);
-        // printf("\n");
+    //     if (i == 5) {
+    //         WORLD_ADD_TAG(my_tag, w, e);
+    //     }
+    //     // printf("x: %d, y: %d\n", p->x, p->y);
+    //     // printf("x: %d, y: %d\n", v->x, v->y);
+    //     // printf("\n");
 
-        position* stored_position = WORLD_GET_COMPONENT(position, w, e);
-        if (i != 0) {
-            velocity *stored_velocity = WORLD_GET_COMPONENT(velocity, w, e);
-        }
+    //     position* stored_position = WORLD_GET_COMPONENT(position, w, e);
+    //     if (i != 0) {
+    //         velocity *stored_velocity = WORLD_GET_COMPONENT(velocity, w, e);
+    //     }
 
-        // printf("x: %d, y: %d\n", stored_position->x, stored_position->y);
-        // printf("x: %d, y: %d\n", stored_velocity->x, stored_velocity->y);
-        // printf("\n");
-    }
-    world_remove_entity(w, 5);
+    //     // printf("x: %d, y: %d\n", stored_position->x, stored_position->y);
+    //     // printf("x: %d, y: %d\n", stored_velocity->x, stored_velocity->y);
+    //     // printf("\n");
+    // }
+    // world_remove_entity(w, 4);
+    //WORLD_SET_COMPONENT(
+    //    position,
+    //    w,
+    //    world_add_entity(w),
+    //    (&(position) { .x = 9, .y = 6 })
+    //);
+
+
+    entity_id e = world_add_entity(w);
+    world_set_component_relation(
+        w,
+        e,
+        COMPONENT_ID(position),
+        &(position){ .x = 0, .y = 0 },
+        sizeof(position),
+        TAG_ID(my_tag)
+    );
+    world_set_component_relation(
+        w,
+        e,
+        COMPONENT_ID(velocity),
+        &(velocity){ .x = 1, .y = 2 },
+        sizeof(velocity),
+        TAG_ID(my_tag)
+    );
+    world_remove_component_relation(
+        w,
+        e,
+        COMPONENT_ID(velocity),
+        NULL,
+        TAG_ID(my_tag)
+    );
 
     return EXIT_SUCCESS;
 }
@@ -79,9 +111,10 @@ void main(void) {
         exit(EXIT_FAILURE);
     }
     arena iteration_arena = arena_create();
-    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity, my_tag);
+    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
     WORLD_SYSTEM_ITER_ALL(&movables_system, &w.components, &iteration_arena, move_movables, print_movables);
     arena_free(&iteration_arena);
+
     world_free(&w);
     printf("freed world");
 }

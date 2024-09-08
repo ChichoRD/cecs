@@ -4,58 +4,13 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "../../containers/list.h"
+#include "../../containers/displaced_set.h"
 #include "../../containers/bitset.h"
 #include "../../containers/range.h"
 #include "../../containers/arena.h"
 #include "../../containers/tagged_union.h"
+#include "component_type.h"
 #include "entity/entity.h"
-
-typedef uint64_t component_id;
-static component_id component_id_count = 0;
-
-#define COMPONENT(type) CAT2(type, _component)
-#define _COMPONENT_IMPLEMENT(component) TYPE_ID_IMPLEMENT_COUNTER(component, component_id_count)
-#define COMPONENT_IMPLEMENT(type) _COMPONENT_IMPLEMENT(COMPONENT(type))
-
-#define COMPONENT_ID(type) ((component_id)TYPE_ID(COMPONENT(type)))
-#define COMPONENT_ID_ARRAY(...) (component_id[]){ MAP(COMPONENT_ID, COMMA, __VA_ARGS__) }
-#define COMPONENT_COUNT(...) (sizeof(COMPONENT_ID_ARRAY(__VA_ARGS__)) / sizeof(component_id))
-
-#define COMPONENT_MASK(type) ((component_mask)(1 << COMPONENT_ID(type)))
-
-#define _COMPONENT_MASK_OR(mask, next_mask) (mask | next_mask)
-#define COMPONENTS_MASK(...) (FOLD_L1(_COMPONENT_MASK_OR, ((component_mask)0), MAP(COMPONENT_MASK, COMMA, __VA_ARGS__)))
-
-typedef struct components_type_info {
-    const component_id *const component_ids;
-    const size_t component_count;
-} components_type_info;
-
-inline components_type_info components_type_info_create(const component_id *component_ids, size_t component_count) {
-    return (components_type_info) {
-        .component_ids = component_ids,
-        .component_count = component_count
-    };
-}
-
-#define COMPONENTS_TYPE_INFO_CREATE(...) \
-    components_type_info_create( \
-        COMPONENT_ID_ARRAY(__VA_ARGS__), \
-        COMPONENT_COUNT(__VA_ARGS__) \
-    )
-#define COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(...) \
-    components_type_info_create( \
-        ((component_id[]){ __VA_ARGS__ }), \
-        sizeof((component_id[]){ __VA_ARGS__ }) / sizeof(component_id) \
-    )
-
-typedef union {
-    struct {
-        const component_id *const component_ids;
-        const size_t component_count;
-    };
-    components_type_info components_type_info;
-} components_type_info_deconstruct;
 
 
 typedef struct storage_info {
@@ -67,10 +22,10 @@ typedef struct storage_info {
 
 typedef OPTION_STRUCT(void *, optional_component) optional_component;
 
-typedef storage_info info();
+typedef storage_info info(const void *self);
 typedef optional_component get_component(const void *self, entity_id id, size_t size);
 typedef optional_component set_component(const void *self, arena *a, entity_id id, void *component, size_t size);
-typedef optional_component remove_component(const void *self, arena *a, entity_id id, size_t size);
+typedef bool remove_component(const void *self, arena *a, entity_id id, optional_component *out_removed_component, size_t size);
 typedef struct component_storage_header {
     info *const info;
     get_component *const get;
@@ -82,7 +37,7 @@ typedef struct unit_component_storage {
     component_storage_header header;
 } unit_component_storage;
 
-const storage_info unit_component_storage_info() {
+const storage_info unit_component_storage_info(const unit_component_storage *self) {
     return (storage_info) {
         .is_index_stable = true,
         .is_dense = true,
@@ -98,8 +53,9 @@ optional_component unit_component_storage_set(const unit_component_storage *self
     return OPTION_CREATE_NONE_STRUCT(optional_component);
 }
 
-optional_component unit_component_storage_remove(const unit_component_storage *self, arena *a, entity_id id, size_t size) {
-    return OPTION_CREATE_NONE_STRUCT(optional_component);
+bool unit_component_storage_remove(const unit_component_storage *self, arena *a, entity_id id, optional_component *out_removed_component, size_t size) {
+    *out_removed_component = OPTION_CREATE_NONE_STRUCT(optional_component);
+    return false;
 }
 
 unit_component_storage unit_component_storage_create() {
@@ -114,17 +70,75 @@ unit_component_storage unit_component_storage_create() {
 }
 
 
-typedef struct sparse_component_storage {
+typedef struct indirect_component_storgage {
     component_storage_header header;
-    list components;
-    exclusive_range entity_id_range;
-} sparse_component_storage;
+    displaced_set component_references;
+} indirect_component_storage;
 
-bool sparse_component_storage_is_empty(const sparse_component_storage *self) {
-    return exclusive_range_is_empty(self->entity_id_range);
+const storage_info indirect_component_storage_info(const indirect_component_storage *self) {
+    return (storage_info){
+        .is_dense = false,
+        .is_index_stable = true,
+        .is_unit_type_storage = false
+    };
 }
 
-const storage_info sparse_component_storage_info() {
+optional_component indirect_component_storage_get(const indirect_component_storage *self, entity_id id, size_t size) {
+    if (!displaced_set_contains(&self->component_references, id)) {
+        return OPTION_CREATE_NONE_STRUCT(optional_component);
+    } else {
+        return OPTION_CREATE_SOME_STRUCT(optional_component, *DISPLACED_SET_GET(void *, &self->component_references, id));
+    }
+}
+
+optional_component indirect_component_storage_set(const indirect_component_storage *self, arena *a, entity_id id, void *component, size_t size) {
+    return OPTION_CREATE_SOME_STRUCT(
+        optional_component,
+        displaced_set_set(
+            &self->component_references,
+            a,
+            id,
+            component,
+            sizeof(void *)
+        )
+    );
+}
+
+bool indirect_component_storage_remove(const indirect_component_storage *self, arena *a, entity_id id, optional_component *out_removed_component, size_t size) {
+    void *removed_component = OPTION_GET_UNCHECKED(optional_component, *out_removed_component);
+    if (displaced_set_remove(
+            &self->component_references,
+            id,
+            removed_component,
+            sizeof(void *)
+    )) {
+        *out_removed_component = OPTION_CREATE_SOME_STRUCT(optional_component, removed_component);
+        return true;
+    } else {
+        *out_removed_component = OPTION_CREATE_NONE_STRUCT(optional_component);
+        return false;
+    }
+}
+
+indirect_component_storage indirect_component_storage_create() {
+    return (indirect_component_storage) {
+        .header = {
+            .info = indirect_component_storage_info,
+            .get = indirect_component_storage_get,
+            .set = indirect_component_storage_set,
+            .remove = indirect_component_storage_remove
+        },
+        .component_references = displaced_set_create()
+    };
+}
+
+
+typedef struct sparse_component_storage {
+    component_storage_header header;
+    displaced_set components;
+} sparse_component_storage;
+
+const storage_info sparse_component_storage_info(const sparse_component_storage *self) {
     return (storage_info) {
         .is_index_stable = true,
         .is_dense = false,
@@ -133,64 +147,28 @@ const storage_info sparse_component_storage_info() {
 }
 
 optional_component sparse_component_storage_get(const sparse_component_storage *self, entity_id id, size_t size) {
-    if(!exclusive_range_contains(self->entity_id_range, id)) {
+    if(!displaced_set_contains(&self->components, id)) {
         return OPTION_CREATE_NONE_STRUCT(optional_component);
     } else {
-        size_t list_index = (entity_id)id - self->entity_id_range.start;
-        return OPTION_CREATE_SOME_STRUCT(optional_component, list_get(&self->components, list_index, size));
-    }
-}
-
-
-void *sparse_component_storage_expand(sparse_component_storage *self, arena *a, entity_id id, size_t size) {
-    if (sparse_component_storage_is_empty(self)) {
-        self->entity_id_range = exclusive_range_singleton(id);
-        return list_append_empty(&self->components, a, 1, size);
-    } else {
-        exclusive_range expanded_range = exclusive_range_from(
-            range_union(self->entity_id_range.range, exclusive_range_singleton(id).range)
-        );
-
-        range_splitting expansion_ranges = exclusive_range_difference(
-            expanded_range,
-            self->entity_id_range
-        );
-
-        exclusive_range range0 = exclusive_range_from(expansion_ranges.ranges[0]);
-        exclusive_range range1 = exclusive_range_from(expansion_ranges.ranges[1]);
-        self->entity_id_range = expanded_range;
-        if (!exclusive_range_is_empty(range0)) {
-            size_t missing_count = exclusive_range_length(range0);
-            return list_prepend_empty(&self->components, a, missing_count, size);
-        } else if (!exclusive_range_is_empty(range1)) {
-            size_t missing_count = exclusive_range_length(range1);
-            return list_append_empty(&self->components, a, missing_count, size);
-        } else {
-            assert(false && "unreachable: should not have called expand with an id within bounds");
-            return list_get(&self->components, id - self->entity_id_range.start, size);
-        }
+        return OPTION_CREATE_SOME_STRUCT(optional_component, displaced_set_get(&self->components, id, size));
     }
 }
 
 optional_component sparse_component_storage_set(sparse_component_storage *self, arena *a, entity_id id, void *component, size_t size) {
-    if (exclusive_range_contains(self->entity_id_range, id)) {
-        return OPTION_CREATE_SOME_STRUCT(
-            optional_component,
-            list_set(&self->components, (id - self->entity_id_range.start), component, size)
-        );
-    } else {
-        return OPTION_CREATE_SOME_STRUCT(
-            optional_component,
-            memcpy(sparse_component_storage_expand(self, a, id, size), component, size)
-        );
-    }
+    return OPTION_CREATE_SOME_STRUCT(
+        optional_component,
+        displaced_set_set(&self->components, a, id, component, size)
+    );
 }
 
-optional_component sparse_component_storage_remove(sparse_component_storage *self, arena *a, entity_id id, size_t size) {
-    if (exclusive_range_contains(self->entity_id_range, id)) {
-        return OPTION_CREATE_SOME_STRUCT(optional_component, list_get(&self->components, (id - self->entity_id_range.start), size));
+bool sparse_component_storage_remove(sparse_component_storage *self, arena *a, entity_id id, optional_component *out_removed_component, size_t size) {
+    void *removed_component = OPTION_GET_UNCHECKED(optional_component, *out_removed_component);
+    if (displaced_set_remove(&self->components, id, removed_component, size)) {
+        *out_removed_component = OPTION_CREATE_SOME_STRUCT(optional_component, removed_component);
+        return true;
     } else {
-        return OPTION_CREATE_NONE_STRUCT(optional_component);
+        *out_removed_component = OPTION_CREATE_NONE_STRUCT(optional_component);
+        return false;
     }
 }
 
@@ -202,8 +180,7 @@ sparse_component_storage sparse_component_storage_create(arena *a, size_t compon
             .set = sparse_component_storage_set,
             .remove = sparse_component_storage_remove,
         },
-        .components = list_create_with_capacity(a, component_capacity * component_size),
-        .entity_id_range = { 0, 0 },
+        .components = displaced_set_create_with_capacity(a, component_capacity * component_size),
     };
 }
 
@@ -212,7 +189,9 @@ typedef TAGGED_UNION_STRUCT(
     sparse_component_storage,
     sparse_component_storage,
     unit_component_storage,
-    unit_component_storage
+    unit_component_storage,
+    indirect_component_storage,
+    indirect_component_storage
 ) component_storage_union;
 
 typedef struct component_storage {
@@ -247,6 +226,19 @@ component_storage component_storage_create_unit(arena *a) {
     };
 }
 
+component_storage component_storage_create_indirect(arena *a, component_storage *other_storage) {
+    indirect_component_storage storage = indirect_component_storage_create(&other_storage->storage);
+    return (component_storage) {
+        .header = storage.header,
+        .storage = TAGGED_UNION_CREATE(
+            indirect_component_storage,
+            component_storage_union,
+            storage
+        ),
+        .entity_bitset = hibitset_create(a),
+    };
+}
+
 bool component_storage_has(const component_storage *self, entity_id id) {
     return hibitset_is_set(&self->entity_bitset, id);
 }
@@ -265,7 +257,7 @@ const list *component_storage_components(const component_storage *self) {
 }
 
 const storage_info component_storage_info(const component_storage *self) {
-    return (self->header.info)();
+    return (self->header.info)(&self->storage);
 }
 
 optional_component component_storage_get(const component_storage *self, entity_id id, size_t size) {
@@ -285,9 +277,9 @@ optional_component component_storage_set(component_storage *self, arena *a, enti
 #define COMPONENT_STORAGE_SET(type, component_storage_ref, arena_ref, entity_id, component_ref) \
     ((type *)component_storage_set(component_storage_ref, arena_ref, entity_id, component_ref, sizeof(type)))
 
-optional_component component_storage_remove(component_storage *self, arena *a, entity_id id, size_t size) {
+bool component_storage_remove(component_storage *self, arena *a, entity_id id, optional_component *out_removed_component, size_t size) {
     hibitset_unset(&self->entity_bitset, a, id);
-    return (self->header.remove)(&self->storage, a, id, size);
+    return (self->header.remove)(&self->storage, a, id, out_removed_component, size);
 }
 #define COMPONENT_STORAGE_REMOVE(type, component_storage_ref, arena_ref, entity_id) \
     ((type *)component_storage_remove(component_storage_ref, arena_ref, entity_id, sizeof(type)))

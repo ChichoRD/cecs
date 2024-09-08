@@ -28,6 +28,7 @@ inline world_components_checksum world_components_checksum_remove(world_componen
     return world_components_checksum_hash(current - component_id);
 }
 
+
 typedef struct world_components {
     arena storages_arena;
     arena components_arena;
@@ -85,7 +86,56 @@ bool world_components_has_storage(const world_components *wc, component_id compo
     return sparse_set_contains(&wc->component_storages, component_id);
 }
 
-optional_component world_components_set_component(world_components *wc, entity_id entity_id, component_id component_id, void *component, size_t size) {
+typedef component_id indirect_component_id;
+typedef struct component_storage_descriptor {
+    bool is_size_known;
+    size_t capacity;
+    OPTION_STRUCT(component_id, indirect_component_id) indirect_component_id;
+} component_storage_descriptor;
+
+component_storage component_storage_descriptor_build(
+    component_storage_descriptor descriptor,
+    world_components *wc,
+    size_t component_size
+) {
+    if (component_size == 0 && descriptor.is_size_known) {
+        return component_storage_create_unit(&wc->components_arena);
+    }
+
+    if (!descriptor.is_size_known)
+        assert(component_size == 0 && "component_size must be zero if is_size_known is false");
+
+    if (OPTION_IS_SOME(indirect_component_id, descriptor.indirect_component_id)) {
+        component_id other_id = OPTION_GET(indirect_component_id, descriptor.indirect_component_id);
+        if (world_components_has_storage(wc, other_id)) {
+            return component_storage_create_indirect(
+                &wc->components_arena,
+                world_components_get_component_storage_unchecked(wc, other_id)
+            );
+        } else {
+            component_storage other_storage = component_storage_descriptor_build((component_storage_descriptor){
+                .is_size_known = false,
+                .capacity = descriptor.capacity,
+                .indirect_component_id = OPTION_CREATE_NONE(indirect_component_id)
+            }, wc, &wc->components_arena, 0);
+            return component_storage_create_indirect(
+                &wc->components_arena,
+                SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, other_id, &other_storage)
+            );
+        }
+    } else {
+        return component_storage_create_sparse(&wc->components_arena, descriptor.capacity, component_size);
+    }
+}
+
+optional_component world_components_set_component(
+    world_components *wc,
+    entity_id entity_id,
+    component_id component_id,
+    void *component,
+    size_t size,
+    component_storage_descriptor additional_storage_descriptor
+) {
     wc->checksum = world_components_checksum_add(wc->checksum, component_id);
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
     if (OPTION_IS_SOME(optional_component_size, stored_size)) {
@@ -107,20 +157,9 @@ optional_component world_components_set_component(world_components *wc, entity_i
             size
         );
     } else {
-        // TODO: more choosing
-        component_storage *storage;
-        switch (size) {
-            case ((size_t)0): {
-                component_storage s = component_storage_create_unit(&wc->components_arena);
-                storage = SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &s);
-            } break;            
-            default: {
-                component_storage s = component_storage_create_sparse(&wc->components_arena, 1, size);
-                storage = SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &s);
-            } break;
-        }
+        component_storage storage = component_storage_descriptor_build(additional_storage_descriptor, wc, size);
         return component_storage_set(
-            storage,
+            SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &storage),
             &wc->components_arena,
             entity_id,
             component,
@@ -129,8 +168,15 @@ optional_component world_components_set_component(world_components *wc, entity_i
     }
 }
 
-void *world_components_set_component_unchecked(world_components *wc, entity_id entity_id, component_id component_id, void *component, size_t size) {
-    return OPTION_GET(optional_component, world_components_set_component(wc, entity_id, component_id, component, size));
+void *world_components_set_component_unchecked(
+    world_components *wc,
+    entity_id entity_id,
+    component_id component_id,
+    void *component,
+    size_t size,
+    component_storage_descriptor additional_storage_descriptor
+) {
+    return OPTION_GET(optional_component, world_components_set_component(wc, entity_id, component_id, component, size, additional_storage_descriptor));
 }
 
 optional_component world_components_get_component(const world_components *wc, entity_id entity_id, component_id component_id) {
@@ -153,23 +199,31 @@ void *world_components_get_component_unchecked(const world_components *wc, entit
     return OPTION_GET(optional_component, world_components_get_component(wc, entity_id, component_id));
 }
 
-optional_component world_components_remove_component(world_components *wc, entity_id entity_id, component_id component_id) {
+bool world_components_remove_component(
+    world_components *wc,
+    entity_id entity_id,
+    component_id component_id,
+    optional_component *out_removed_component
+) {
     wc->checksum = world_components_checksum_remove(wc->checksum, component_id);
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
-    if (!OPTION_IS_SOME(optional_component_size, stored_size)) {
-        return OPTION_CREATE_NONE_STRUCT(optional_component);
+    if (OPTION_IS_NONE(optional_component_size, stored_size)) {
+        *out_removed_component = OPTION_CREATE_NONE_STRUCT(optional_component);
+        return false;
     } else {
         return component_storage_remove(
             OPTION_GET(optional_component_storage, world_components_get_component_storage(wc, component_id)),
             &wc->components_arena,
             entity_id,
+            out_removed_component,
             *OPTION_GET(optional_component_size, stored_size)
         );
     }
 }
 
-void *world_components_remove_component_unchecked(world_components *wc, entity_id entity_id, component_id component_id) {
-    return OPTION_GET(optional_component, world_components_remove_component(wc, entity_id, component_id));
+bool world_components_remove_component_unchecked(world_components *wc, entity_id entity_id, component_id component_id, void *out_removed_component) {
+    optional_component removed_component = OPTION_CREATE_SOME_STRUCT(optional_component, out_removed_component);
+    return world_components_remove_component(wc, entity_id, component_id, &removed_component);
 }
 
 #endif

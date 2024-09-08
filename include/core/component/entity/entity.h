@@ -11,7 +11,8 @@ typedef COMPONENT_MASK_TYPE component_mask;
 #define TAG_MASK_TYPE uint64_t
 typedef TAG_MASK_TYPE tag_mask;
 
-typedef uint64_t entity_id;
+#define ENTITY_ID_TYPE uint64_t
+typedef ENTITY_ID_TYPE entity_id;
 
 typedef struct world_entities {
     arena entity_ids_arena;

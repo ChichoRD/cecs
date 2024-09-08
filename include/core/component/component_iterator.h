@@ -124,12 +124,11 @@ entity_id component_iterator_current(const component_iterator *it, raw_iteration
     *handle = it->entities_iterator.current_bit_index;
 
     for (size_t i = 0; i < it->descriptor.component_count; i++) {
-        component_storage *storage = LIST_GET(
-            component_storage,
-            &it->descriptor.world_components->component_storages,
+        component_storage *storage = world_components_get_component_storage_unchecked(
+            it->descriptor.world_components,
             it->descriptor.component_ids[i]
         );
-
+        
         ((raw_component_reference *)(handle + 1))[i] = component_storage_get_unchecked(
             storage,
             it->entities_iterator.current_bit_index,
