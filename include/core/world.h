@@ -50,6 +50,7 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
     for (size_t i = 0; i < world_components_get_component_storage_count(&w->components); i++) {
         component_id key = sparse_set_keys(&w->components.component_storages)[i];
         world_components_remove_component(&w->components, entity_id, key, &(optional_component){0});
+        //component_storage_has()
     }
     return world_entities_remove_entity(&w->entities, entity_id);
 }
@@ -75,7 +76,7 @@ void *world_set_component(world *w, entity_id entity_id, component_id component_
 
 const bool world_remove_component(world *w, entity_id entity_id, component_id component_id, void *out_removed_component) {
     assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
-    return world_components_remove_component_unchecked(&w->components, entity_id, component_id, out_removed_component);
+    return world_components_remove_component(&w->components, entity_id, component_id, out_removed_component);
 }
 #define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0, out_removed_component_ref) \
     (world_remove_component(world_ref, entity_id0, COMPONENT_ID(type), out_removed_component_ref))
@@ -117,38 +118,35 @@ tag_id world_remove_tag(world *w, entity_id entity_id, tag_id tag_id) {
 
 void *world_set_component_relation(world *w, entity_id id, component_id component_id, void *component, size_t size, tag_id tag_id) {
     assert((id < world_entity_count(w)) && "Entity ID out of bounds");
-    entity_id associated_id;
-    if (world_relations_entity_has_associated_id(&w->relations, id, (relation_target){tag_id})) {
-        associated_id = world_relations_get_associated_id(&w->relations, id, (relation_target){tag_id});
-    } else {
-        associated_id = world_relations_set_associated_id(
-            &w->relations,
-            id,
-            (relation_target){tag_id},
-            world_add_entity(w)
-        );
+    entity_id extra_id = world_add_entity(w);
+    entity_id associated_id = world_relations_increment_associated_id_or_set(
+        &w->relations,
+        id,
+        (relation_target){tag_id},
+        extra_id
+    );
+    if (associated_id != extra_id) {
+        world_entities_remove_entity(&w->entities, extra_id);
     }
 
-    void *added_component = world_set_component(
-        w,
-        associated_id,
-        component_id,
-        component,
-        size
-    );
-    world_components_set_component_unchecked(
+    return world_components_set_component_unchecked(
         &w->components,
         id,
         relation_id_create(relation_id_descriptor_create_with_tag_target(component_id, tag_id)),
-        &added_component,
+        world_set_component(
+            w,
+            associated_id,
+            component_id,
+            component,
+            size
+        ),
         size,
         (component_storage_descriptor) {
             .capacity = 1,
-            .indirect_component_id = component_id,
+            .indirect_component_id = OPTION_CREATE_SOME(indirect_component_id, component_id),
             .is_size_known = true,
         }
     );
-    return added_component;
 }
 
 void *world_get_component_relation(const world *w, entity_id id, component_id component_id, tag_id tag_id) {
@@ -163,13 +161,12 @@ bool world_remove_component_relation(world *w, entity_id id, component_id compon
         return false;
     }
 
-    world_remove_component(
+    return world_remove_component(
         w,
         id,
         relation_id_create(relation_id_descriptor_create_with_tag_target(component_id, tag_id)),
-        NULL
-    );
-    return world_remove_component(
+        out_removed_component
+    ) && world_remove_component(
         w,
         associated_id,
         component_id,

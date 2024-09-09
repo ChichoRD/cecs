@@ -99,12 +99,12 @@ inline size_t sparse_set_count_of_size(const sparse_set *s, size_t element_size)
 }
 
 inline bool sparse_set_contains(const sparse_set *s, size_t key) {
-    return displaced_set_contains(&s->indices, key)
+    return displaced_set_contains_index(&s->indices, key)
         && OPTION_IS_SOME(dense_index, *DISPLACED_SET_GET(dense_index, &s->indices, key));
 }
 
 optional_element sparse_set_get(const sparse_set *s, size_t key, size_t element_size) {
-    if (!displaced_set_contains(&s->indices, key)) {
+    if (!displaced_set_contains_index(&s->indices, key)) {
         return OPTION_CREATE_NONE_STRUCT(optional_element);
     }
 
@@ -136,7 +136,7 @@ void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t 
         ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element, key);
     }
 
-    if (displaced_set_contains(&s->indices, key)) {
+    if (displaced_set_contains_index(&s->indices, key)) {
         dense_index *index = DISPLACED_SET_GET(dense_index, &s->indices, key);
         if (OPTION_IS_SOME(dense_index, *index)) {
             size_t element_index = OPTION_GET(dense_index, *index);
@@ -163,7 +163,7 @@ void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t 
     ((type *)sparse_set_set(sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
 
 bool sparse_set_remove(sparse_set *s, arena *a, size_t key, optional_element *out_removed_element, size_t element_size) {
-    if (!displaced_set_contains(&s->indices, key)
+    if (!displaced_set_contains_index(&s->indices, key)
         || sparse_set_is_empty(s)) {
         *out_removed_element = OPTION_CREATE_NONE_STRUCT(optional_element);
         return false;

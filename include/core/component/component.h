@@ -203,12 +203,12 @@ bool world_components_remove_component(
     world_components *wc,
     entity_id entity_id,
     component_id component_id,
-    optional_component *out_removed_component
+    void *out_removed_component
 ) {
     wc->checksum = world_components_checksum_remove(wc->checksum, component_id);
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
     if (OPTION_IS_NONE(optional_component_size, stored_size)) {
-        *out_removed_component = OPTION_CREATE_NONE_STRUCT(optional_component);
+        assert(out_removed_component == NULL && "out_removed_component must be NULL if component size is unknown");
         return false;
     } else {
         return component_storage_remove(
@@ -219,11 +219,6 @@ bool world_components_remove_component(
             *OPTION_GET(optional_component_size, stored_size)
         );
     }
-}
-
-bool world_components_remove_component_unchecked(world_components *wc, entity_id entity_id, component_id component_id, void *out_removed_component) {
-    optional_component removed_component = OPTION_CREATE_SOME_STRUCT(optional_component, out_removed_component);
-    return world_components_remove_component(wc, entity_id, component_id, &removed_component);
 }
 
 #endif

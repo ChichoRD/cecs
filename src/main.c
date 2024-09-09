@@ -64,11 +64,11 @@ bool init(world *w) {
         w,
         e,
         COMPONENT_ID(position),
-        &(position){ .x = 0, .y = 0 },
+        &(position){ .x = -1, .y = 6 },
         sizeof(position),
         TAG_ID(my_tag)
     );
-    world_set_component_relation(
+    velocity *v = world_set_component_relation(
         w,
         e,
         COMPONENT_ID(velocity),
@@ -76,14 +76,22 @@ bool init(world *w) {
         sizeof(velocity),
         TAG_ID(my_tag)
     );
-    world_remove_component_relation(
-        w,
-        e,
-        COMPONENT_ID(velocity),
-        NULL,
-        TAG_ID(my_tag)
-    );
+    printf("x: %d, y: %d\n", v->x, v->y);
+    printf("\n");
 
+    // velocity rv;
+    // world_remove_component_relation(
+    //     w,
+    //     e,
+    //     COMPONENT_ID(velocity),
+    //     &rv,
+    //     TAG_ID(my_tag)
+    // );
+    
+    position p = (position){ .x = 8, .y = 8 };
+    //position *p = world_get_component_relation(w, e, COMPONENT_ID(position), TAG_ID(my_tag));
+    world_remove_component_relation(w, e, COMPONENT_ID(position), &p, TAG_ID(my_tag));
+    printf("x: %d, y: %d\n", p.x, p.y);
     return EXIT_SUCCESS;
 }
 
