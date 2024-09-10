@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include "core/component/entity/entity.h"
 #include "core/system.h"
+#include "core/world.h"
 #include "containers/arena.h"
 #include "containers/list.h"
-#include "core/world.h"
 // #include "../include/core/query.h"
 // #include "../include/core/resource.h"
 // #include "../include/core/query_context.h"
@@ -20,6 +20,7 @@ typedef struct game_time {
     double averaged_delta_time_seconds;
     double time_since_start_seconds;
 } game_time;
+RESOURCE_IMPLEMENT(game_time);
 
 double game_time_update_delta_time(game_time *t) {
     t->delta_time_seconds =

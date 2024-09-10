@@ -18,27 +18,45 @@ static resource_id resource_id_count = 0;
 #define RESOURCE_ID(type) ((resource_id)TYPE_ID(RESOURCE(type)))
 #define RESOURCE_ID_ARRAY(...) ((resource_id[]){ MAP(RESOURCE_ID, COMMA, __VA_ARGS__) })
 
-
 typedef void *resource_handle;
+typedef struct resource_discard {
+    resource_handle handle;
+    size_t size;
+} resource_discard;
+
 typedef struct world_resources {
     arena resources_arena;
     displaced_set resource_handles;
+    resource_discard discard;
 } world_resources;
 
 world_resources world_resources_create(size_t resource_capactity, size_t resource_default_size) {
     world_resources wr;
     wr.resources_arena = arena_create_with_capacity(resource_capactity * (resource_default_size + sizeof(resource_handle)));
     wr.resource_handles = displaced_set_create_with_capacity(&wr.resources_arena, sizeof(resource_handle) * resource_capactity);
+    wr.discard = (resource_discard){0};
     return wr;
 }
 
 void world_resources_free(world_resources *wr) {
     arena_free(&wr->resources_arena);
     wr->resource_handles = (displaced_set){0};
+    wr->discard = (resource_discard){0};
+}
+
+bool world_resources_has_resource(const world_resources* wr, resource_id id) {
+    return displaced_set_contains(&wr->resource_handles, id, &(resource_handle){0}, sizeof(resource_handle));
 }
 
 resource_handle world_resources_set_resource(world_resources *wr, resource_id id, void *resource, size_t size) {
-    resource_handle handle = arena_alloc(&wr->resources_arena, size);
+    if (size > wr->discard.handle) {
+        wr->discard.handle = arena_realloc(&wr->resources_arena, wr->discard.handle, wr->discard.size, size);
+        wr->discard.size = size;
+    }
+
+    resource_handle handle = world_resources_has_resource(wr, id)
+        ? *DISPLACED_SET_GET(resource_handle, &wr->resource_handles, id)
+        : arena_alloc(&wr->resources_arena, size);
     memcpy(handle, resource, size);
     return *DISPLACED_SET_SET(
         resource_handle,

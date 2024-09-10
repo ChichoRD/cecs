@@ -29,6 +29,11 @@ inline world_components_checksum world_components_checksum_remove(world_componen
 }
 
 
+typedef struct component_discard {
+    void *handle;
+    size_t size;
+} component_discard;
+
 typedef OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
 typedef struct world_components {
     arena storages_arena;
@@ -36,6 +41,7 @@ typedef struct world_components {
     paged_sparse_set component_storages;
     paged_sparse_set component_sizes;
     world_components_checksum checksum;
+    component_discard discard;
 } world_components;
 
 world_components world_components_create(size_t component_type_capacity) {
@@ -46,7 +52,8 @@ world_components world_components_create(size_t component_type_capacity) {
         .components_arena = arena_create(),
         .component_storages = paged_sparse_set_create(),
         .component_sizes = paged_sparse_set_create(),
-        .checksum = 0
+        .checksum = 0,
+        .discard = (component_discard){0}
     };
 }
 
@@ -55,6 +62,7 @@ void world_components_free(world_components *wc) {
     arena_free(&wc->storages_arena);
     wc->component_storages = (paged_sparse_set){0};
     wc->component_sizes = (paged_sparse_set){0};
+    wc->discard = (component_discard){0};
 }
 
 size_t world_components_get_component_storage_count(const world_components *wc) {
@@ -138,6 +146,10 @@ optional_component world_components_set_component(
     size_t size,
     component_storage_descriptor additional_storage_descriptor
 ) {
+    if (size > wc->discard.size) {
+        wc->discard.handle = arena_realloc(&wc->components_arena, wc->discard.handle, wc->discard.size, size);
+        wc->discard.size = size;
+    }
     wc->checksum = world_components_checksum_add(wc->checksum, component_id);
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
     if (OPTION_IS_SOME(optional_component_size, stored_size)) {

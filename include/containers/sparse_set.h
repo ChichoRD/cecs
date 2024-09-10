@@ -371,7 +371,6 @@ void *paged_sparse_set_set(paged_sparse_set *s, arena *a, size_t key, void *elem
     uint8_t page_index = paged_sparse_set_page_index(key);
     displaced_set *indices = &s->indices[page_index];
     size_t page_key = paged_sparse_set_page_key(key, page_index);
-    printf("key: %d, page_index: %d, page_key: %d\n", key, page_index, page_key);
     if (TAGGED_UNION_IS(integer_elements, sparse_set_elements, s->elements)) {
         ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element, key);
     }

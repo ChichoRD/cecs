@@ -51,9 +51,10 @@ entity_id world_add_entity(world *w) {
 }
 
 entity_id world_remove_entity(world *w, entity_id entity_id) {
+    printf("%d", world_components_get_component_storage_count(&w->components));
     for (size_t i = 0; i < world_components_get_component_storage_count(&w->components); i++) {
-        component_id key = sparse_set_keys(&w->components.component_storages)[i];
-        world_components_remove_component(&w->components, entity_id, key, &(optional_component){0});
+        component_id key = ((size_t *)paged_sparse_set_keys(&w->components.component_storages))[i];
+        world_components_remove_component(&w->components, entity_id, key, w->components.discard.handle);
         //component_storage_has()
     }
     return world_entities_remove_entity(&w->entities, entity_id);

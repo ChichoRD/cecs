@@ -20,17 +20,16 @@ world_system world_system_create(components_type_info components_type_info) {
 #define WORLD_SYSTEM_CREATE(...) world_system_create(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
 #define WORLD_SYSTEM_CREATE_FROM_IDS(...) world_system_create(COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__))
 
-// TODO: cows
 typedef size_t entity_count;
 typedef void system_predicate(raw_iteration_handle_reference handle);
-entity_count world_system_iter(const world_system *s, world_components *wc, arena *iteration_arena, system_predicate *const predicate) {
+entity_count world_system_iter(const world_system s, world_components *wc, arena *iteration_arena, system_predicate *const predicate) {
     entity_count count = 0;
-    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s->components_type_info);
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.components_type_info);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
     for (
-         component_iterator it = component_iterator_create(descriptor);
-         !component_iterator_done(&it);
-         component_iterator_next(&it)
+        component_iterator it = component_iterator_create(descriptor);
+        !component_iterator_done(&it);
+        component_iterator_next(&it)
     ) {
         ++count;
         component_iterator_current(&it, handle);
@@ -64,15 +63,15 @@ typedef union {
     system_predicates system_predicates;
 } system_predicates_deconstruct;
 
-entity_count world_system_iter_all(const world_system *s, world_components *wc, arena *iteration_arena, system_predicates predicates) {
+entity_count world_system_iter_all(const world_system s, world_components *wc, arena *iteration_arena, system_predicates predicates) {
     entity_count count = 0;
-    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s->components_type_info);
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.components_type_info);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
     for (
-         component_iterator it = component_iterator_create(descriptor);
-         !component_iterator_done(&it);
-         component_iterator_next(&it)
-     ) {
+        component_iterator it = component_iterator_create(descriptor);
+        !component_iterator_done(&it);
+        component_iterator_next(&it)
+    ) {
         ++count;
         component_iterator_current(&it, handle);
         for (size_t i = 0; i < predicates.predicate_count; i++) {
@@ -82,8 +81,8 @@ entity_count world_system_iter_all(const world_system *s, world_components *wc, 
     free(handle);
     return count;
 }
-#define WORLD_SYSTEM_ITER_ALL(world_system_ref, world_components_ref, iteration_arena_ref, ...) \
-    world_system_iter_all(world_system_ref, world_components_ref, iteration_arena_ref, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
+#define WORLD_SYSTEM_ITER_ALL(world_system0, world_components_ref, iteration_arena_ref, ...) \
+    world_system_iter_all(world_system0, world_components_ref, iteration_arena_ref, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
 
 
 typedef void world_system_predicate(raw_iteration_handle_reference handle, world *world);
@@ -115,7 +114,7 @@ typedef TAGGED_UNION_STRUCT(
     } while (0)
 
 entity_count world_system_iter_generic(
-    const world_system *s,
+    const world_system s,
     world *world,
     double delta_time_seconds,
     arena *iteration_arena,
@@ -125,7 +124,7 @@ entity_count world_system_iter_generic(
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(
         &world->components,
         iteration_arena,
-        s->components_type_info
+        s.components_type_info
     );
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
 
@@ -166,6 +165,14 @@ entity_count world_system_iter_generic(
     free(handle);
     return count;
 }
+#define WORLD_SYSTEM_ITER_GENERIC(predicate_type, world_system0, world_ref, delta_time_seconds_ref, iteration_arena_ref, predicate) \
+    world_system_iter_generic( \
+        (world_system0), \
+        (world_ref), \
+        (delta_time_seconds_ref), \
+        (iteration_arena_ref), \
+        (generic_system_predicate)TAGGED_UNION_CREATE(predicate_type, generic_system_predicate, predicate) \
+    )
 
 typedef void raw_system_predicate();
 #define _GENERIC_PREDICATES(predicate) CAT2(predicate, s)
@@ -209,7 +216,7 @@ generic_system_predicates generic_system_predicates_create(
     )
 
 entity_count world_system_iter_generic_all(
-    const world_system *s,
+    const world_system s,
     world *world,
     double delta_time_seconds,
     arena *iteration_arena,
@@ -219,7 +226,7 @@ entity_count world_system_iter_generic_all(
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(
         &world->components,
         iteration_arena,
-        s->components_type_info
+        s.components_type_info
     );
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
 
@@ -268,9 +275,9 @@ entity_count world_system_iter_generic_all(
     free(handle);
     return count;
 }
-#define WORLD_SYSTEM_ITER_GENERIC_ALL(predicate_type, world_system_ref, world_ref, delta_time, iteration_arena_ref, ...) \
+#define WORLD_SYSTEM_ITER_GENERIC_ALL(predicate_type, world_system0, world_ref, delta_time, iteration_arena_ref, ...) \
     world_system_iter_generic_all( \
-        (world_system_ref), \
+        (world_system0), \
         (world_ref), \
         (delta_time), \
         (iteration_arena_ref), \
