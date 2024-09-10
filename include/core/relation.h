@@ -50,7 +50,7 @@ inline relation_id_descriptor relation_id_descriptor_create_with_tag_target(comp
 #elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
     #define COMPONENT_ID_RELATION_SHIFT COMPONENT_ID_TYPE_HALF_BITS
 #else
-  #error TBD code SIZE_T_BITS
+    #error TBD code SIZE_T_BITS
 #endif
 
 typedef component_id relation_id;

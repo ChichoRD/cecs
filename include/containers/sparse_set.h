@@ -218,12 +218,29 @@ bool sparse_set_remove_unchecked(sparse_set *s, arena *a, size_t key, void *out_
 
 #define PAGED_SPARSE_SET_PAGE_COUNT_LOG2 3
 #define PAGED_SPARSE_SET_PAGE_COUNT (1 << PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
-#define PAGED_SPARSE_SET_KEY_BIT_COUNT (sizeof(size_t) * 8)
-#define PAGED_SPARSE_SET_PAGE_SIZE (PAGED_SPARSE_SET_KEY_BIT_COUNT >> PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
+
+#if (SIZE_MAX == 0xFFFF)
+    #define PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 4
+
+#elif (SIZE_MAX == 0xFFFFFFFF)
+    #define PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 5
+
+#elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
+    #define PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 6
+
+#else
+    #error TBD code SIZE_T_BITS
+
+#endif
+#define PAGED_SPARSE_SET_KEY_BIT_COUNT (1 << PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2)
+static_assert(PAGED_SPARSE_SET_KEY_BIT_COUNT == (sizeof(size_t) * 8), "PAGED_SPARSE_SET_KEY_BIT_COUNT != sizeof(size_t) * 8");
+
+#define PAGED_SPARSE_SET_PAGE_SIZE_LOG2 (PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 - PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
+#define PAGED_SPARSE_SET_PAGE_SIZE (1 << PAGED_SPARSE_SET_PAGE_SIZE_LOG2)
 typedef struct paged_sparse_set {
     sparse_set_elements elements;
-    displaced_set indices[PAGED_SPARSE_SET_PAGE_COUNT];
     list keys;
+    displaced_set indices[PAGED_SPARSE_SET_PAGE_COUNT];
 } paged_sparse_set;
 
 inline uint8_t paged_sparse_set_log2(size_t n) {
@@ -244,7 +261,11 @@ inline uint8_t paged_sparse_set_log2(size_t n) {
 }
 
 inline uint8_t paged_sparse_set_page_index(size_t key) {
-    return paged_sparse_set_log2(key) >> PAGED_SPARSE_SET_PAGE_COUNT_LOG2;
+    return paged_sparse_set_log2(key) >> PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
+}
+
+inline size_t paged_sparse_set_page_key(size_t key, uint8_t page_index) {
+    return key >> (PAGED_SPARSE_SET_PAGE_SIZE * page_index);
 }
 
 paged_sparse_set paged_sparse_set_create() {
@@ -308,18 +329,22 @@ inline size_t paged_sparse_set_count_of_size(const paged_sparse_set *s, size_t e
 }
 
 inline bool paged_sparse_set_contains(const paged_sparse_set *s, size_t key) {
-    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
-    return displaced_set_contains_index(indices, key)
-        && OPTION_IS_SOME(dense_index, *DISPLACED_SET_GET(dense_index, indices, key));
+    uint8_t page_index = paged_sparse_set_page_index(key);
+    displaced_set *indices = &s->indices[page_index];
+    size_t page_key = paged_sparse_set_page_key(key, page_index);
+    return displaced_set_contains_index(indices, page_key)
+        && OPTION_IS_SOME(dense_index, *DISPLACED_SET_GET(dense_index, indices, page_key));
 }
 
 optional_element paged_sparse_set_get(const paged_sparse_set *s, size_t key, size_t element_size) {
-    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
-    if (!displaced_set_contains_index(indices, key)) {
+    uint8_t page_index = paged_sparse_set_page_index(key);
+    displaced_set *indices = &s->indices[page_index];
+    size_t page_key = paged_sparse_set_page_key(key, page_index);
+    if (!displaced_set_contains_index(indices, page_key)) {
         return OPTION_CREATE_NONE_STRUCT(optional_element);
     }
 
-    dense_index index = *DISPLACED_SET_GET(dense_index, indices, key);
+    dense_index index = *DISPLACED_SET_GET(dense_index, indices, page_key);
     if (OPTION_IS_SOME(dense_index, index)) {
         return OPTION_CREATE_SOME_STRUCT(
             optional_element, 
@@ -343,13 +368,16 @@ bool paged_sparse_set_is_empty(const paged_sparse_set *s) {
 }
 
 void *paged_sparse_set_set(paged_sparse_set *s, arena *a, size_t key, void *element, size_t element_size) {
-    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
+    uint8_t page_index = paged_sparse_set_page_index(key);
+    displaced_set *indices = &s->indices[page_index];
+    size_t page_key = paged_sparse_set_page_key(key, page_index);
+    printf("key: %d, page_index: %d, page_key: %d\n", key, page_index, page_key);
     if (TAGGED_UNION_IS(integer_elements, sparse_set_elements, s->elements)) {
         ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element, key);
     }
 
-    if (displaced_set_contains_index(indices, key)) {
-        dense_index *index = DISPLACED_SET_GET(dense_index, indices, key);
+    if (displaced_set_contains_index(indices, page_key)) {
+        dense_index *index = DISPLACED_SET_GET(dense_index, indices, page_key);
         if (OPTION_IS_SOME(dense_index, *index)) {
             size_t element_index = OPTION_GET(dense_index, *index);
             if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements))
@@ -362,7 +390,7 @@ void *paged_sparse_set_set(paged_sparse_set *s, arena *a, size_t key, void *elem
             return list_add(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), a, element, element_size);
         }
     } else {
-        DISPLACED_SET_SET(dense_index, indices, a, key, &OPTION_CREATE_SOME_STRUCT(
+        DISPLACED_SET_SET(dense_index, indices, a, page_key, &OPTION_CREATE_SOME_STRUCT(
             dense_index,
             list_count_of_size(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_size)
         ));
@@ -375,14 +403,16 @@ void *paged_sparse_set_set(paged_sparse_set *s, arena *a, size_t key, void *elem
     ((type *)paged_sparse_set_set(paged_sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
 
 bool paged_sparse_set_remove(paged_sparse_set *s, arena *a, size_t key, optional_element *out_removed_element, size_t element_size) {
-    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
-    if (!displaced_set_contains_index(indices, key)
+    uint8_t page_index = paged_sparse_set_page_index(key);
+    displaced_set *indices = &s->indices[page_index];
+    size_t page_key = paged_sparse_set_page_key(key, page_index);
+    if (!displaced_set_contains_index(indices, page_key)
         || paged_sparse_set_is_empty(s)) {
         *out_removed_element = OPTION_CREATE_NONE_STRUCT(optional_element);
         return false;
     }
     
-    dense_index *index = DISPLACED_SET_GET(dense_index, indices, key);
+    dense_index *index = DISPLACED_SET_GET(dense_index, indices, page_key);
     if (OPTION_IS_SOME(dense_index, *index)) {
         if (OPTION_IS_SOME(optional_element, *out_removed_element)) {
             memcpy(
