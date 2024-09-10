@@ -29,20 +29,23 @@ inline world_components_checksum world_components_checksum_remove(world_componen
 }
 
 
+typedef OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
 typedef struct world_components {
     arena storages_arena;
     arena components_arena;
-    sparse_set component_storages;
-    sparse_set component_sizes;
+    paged_sparse_set component_storages;
+    paged_sparse_set component_sizes;
     world_components_checksum checksum;
 } world_components;
 
 world_components world_components_create(size_t component_type_capacity) {
     return (world_components) {
-        .storages_arena = arena_create_with_capacity(sizeof(component_storage) * component_type_capacity),
+        .storages_arena = arena_create_with_capacity(
+            (sizeof(component_storage) + sizeof(optional_component_size)) * component_type_capacity
+        ),
         .components_arena = arena_create(),
-        .component_storages = sparse_set_create(),
-        .component_sizes = sparse_set_create(),
+        .component_storages = paged_sparse_set_create(),
+        .component_sizes = paged_sparse_set_create(),
         .checksum = 0
     };
 }
@@ -50,19 +53,18 @@ world_components world_components_create(size_t component_type_capacity) {
 void world_components_free(world_components *wc) {
     arena_free(&wc->components_arena);
     arena_free(&wc->storages_arena);
-    wc->component_storages = (sparse_set){0};
-    wc->component_sizes = (sparse_set){0};
+    wc->component_storages = (paged_sparse_set){0};
+    wc->component_sizes = (paged_sparse_set){0};
 }
 
 size_t world_components_get_component_storage_count(const world_components *wc) {
-    return sparse_set_count_of_size(&wc->component_storages, sizeof(component_storage));
+    return paged_sparse_set_count_of_size(&wc->component_storages, sizeof(component_storage));
 }
 
-typedef OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
 optional_component_size world_components_get_component_size(world_components *wc, component_id component_id) {
     return OPTION_MAP_REFERENCE_STRUCT(
         optional_element,
-        SPARSE_SET_GET(size_t, &wc->component_sizes, component_id),
+        PAGED_SPARSE_SET_GET(size_t, &wc->component_sizes, component_id),
         optional_component_size
     );
 }
@@ -74,7 +76,7 @@ typedef OPTION_STRUCT(component_storage *, optional_component_storage) optional_
 optional_component_storage world_components_get_component_storage(world_components *wc, component_id component_id) {
     return OPTION_MAP_REFERENCE_STRUCT(
         optional_element,
-        SPARSE_SET_GET(component_storage, &wc->component_storages, component_id),
+        PAGED_SPARSE_SET_GET(component_storage, &wc->component_storages, component_id),
         optional_component_storage
     );
 }
@@ -83,7 +85,7 @@ component_storage *world_components_get_component_storage_unchecked(const world_
 }
 
 bool world_components_has_storage(const world_components *wc, component_id component_id) {
-    return sparse_set_contains(&wc->component_storages, component_id);
+    return paged_sparse_set_contains(&wc->component_storages, component_id);
 }
 
 typedef component_id indirect_component_id;
@@ -120,7 +122,7 @@ component_storage component_storage_descriptor_build(
             }, wc, &wc->components_arena, 0);
             return component_storage_create_indirect(
                 &wc->components_arena,
-                SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, other_id, &other_storage)
+                PAGED_SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, other_id, &other_storage)
             );
         }
     } else {
@@ -143,7 +145,7 @@ optional_component world_components_set_component(
     } else {
         stored_size = OPTION_CREATE_SOME_STRUCT(
             optional_component_size,
-            SPARSE_SET_SET(size_t, &wc->component_sizes, &wc->storages_arena, component_id, &size)
+            PAGED_SPARSE_SET_SET(size_t, &wc->component_sizes, &wc->storages_arena, component_id, &size)
         );
     }
 
@@ -159,7 +161,7 @@ optional_component world_components_set_component(
     } else {
         component_storage storage = component_storage_descriptor_build(additional_storage_descriptor, wc, size);
         return component_storage_set(
-            SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &storage),
+            PAGED_SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &storage),
             &wc->components_arena,
             entity_id,
             component,

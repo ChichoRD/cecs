@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <intrin.h>
 #include "tagged_union.h"
 #include "../types/macro_utils.h"
 #include "range.h"
@@ -212,6 +213,218 @@ bool sparse_set_remove_unchecked(sparse_set *s, arena *a, size_t key, void *out_
 }
 #define SPARSE_SET_REMOVE_UNCHECKED(type, sparse_set_ref, arena_ref, key, out_removed_element_ref) \
     sparse_set_remove_unchecked(sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
+
+
+
+#define PAGED_SPARSE_SET_PAGE_COUNT_LOG2 3
+#define PAGED_SPARSE_SET_PAGE_COUNT (1 << PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
+#define PAGED_SPARSE_SET_KEY_BIT_COUNT (sizeof(size_t) * 8)
+#define PAGED_SPARSE_SET_PAGE_SIZE (PAGED_SPARSE_SET_KEY_BIT_COUNT >> PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
+typedef struct paged_sparse_set {
+    sparse_set_elements elements;
+    displaced_set indices[PAGED_SPARSE_SET_PAGE_COUNT];
+    list keys;
+} paged_sparse_set;
+
+inline uint8_t paged_sparse_set_log2(size_t n) {
+#if (SIZE_MAX == 0xFFFF)
+    return PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n);
+
+#elif (SIZE_MAX == 0xFFFFFFFF)
+    return PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt((uint32_t)n);
+
+#elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
+    return PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt64((uint64_t)n);
+
+#else
+    #error TBD code SIZE_T_BITS
+    return 0;
+
+#endif
+}
+
+inline uint8_t paged_sparse_set_page_index(size_t key) {
+    return paged_sparse_set_log2(key) >> PAGED_SPARSE_SET_PAGE_COUNT_LOG2;
+}
+
+paged_sparse_set paged_sparse_set_create() {
+    paged_sparse_set set = (paged_sparse_set) {
+        .elements =
+            TAGGED_UNION_CREATE(any_elements, sparse_set_elements, list_create()),
+        .keys = list_create(),
+    };
+    for (size_t i = 0; i < PAGED_SPARSE_SET_PAGE_COUNT; i++) {
+        set.indices[i] = displaced_set_create();
+    }
+    return set;
+}
+
+paged_sparse_set paged_sparse_set_create_of_integers() {
+    paged_sparse_set set = (paged_sparse_set) {
+        .elements =
+            TAGGED_UNION_CREATE(integer_elements, sparse_set_elements, list_create()),
+        .keys = list_create(),
+    };
+    for (size_t i = 0; i < PAGED_SPARSE_SET_PAGE_COUNT; i++) {
+        set.indices[i] = displaced_set_create();
+    }
+    return set;
+}
+
+paged_sparse_set paged_sparse_set_create_with_capacity(arena *a, size_t element_capacity, size_t element_size) {
+    paged_sparse_set set = (paged_sparse_set) {
+        .elements =
+            TAGGED_UNION_CREATE(any_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
+        .keys = list_create_with_capacity(a, sizeof(size_t) * element_capacity),
+    };
+    for (size_t i = 0; i < PAGED_SPARSE_SET_PAGE_COUNT; i++) {
+        set.indices[i] = displaced_set_create_with_capacity(a, (sizeof(dense_index) * element_capacity) >> PAGED_SPARSE_SET_PAGE_COUNT_LOG2);
+    }
+    return set;
+}
+
+paged_sparse_set paged_sparse_set_create_of_integers_with_capacity(arena *a, size_t element_capacity, size_t element_size) {
+    paged_sparse_set set = (paged_sparse_set) {
+        .elements =
+            TAGGED_UNION_CREATE(integer_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
+        .keys = list_create(),
+    };
+    for (size_t i = 0; i < PAGED_SPARSE_SET_PAGE_COUNT; i++) {
+        set.indices[i] = displaced_set_create_with_capacity(a, (sizeof(dense_index) * element_capacity) >> PAGED_SPARSE_SET_PAGE_COUNT_LOG2);
+    }
+    return set;
+}
+
+inline void *paged_sparse_set_data(const paged_sparse_set *s) {
+    return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).elements;
+}
+
+inline size_t *paged_sparse_set_keys(const paged_sparse_set *s) {
+    return s->keys.elements;
+}
+
+inline size_t paged_sparse_set_count_of_size(const paged_sparse_set *s, size_t element_size) {
+    return list_count_of_size(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_size);
+}
+
+inline bool paged_sparse_set_contains(const paged_sparse_set *s, size_t key) {
+    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
+    return displaced_set_contains_index(indices, key)
+        && OPTION_IS_SOME(dense_index, *DISPLACED_SET_GET(dense_index, indices, key));
+}
+
+optional_element paged_sparse_set_get(const paged_sparse_set *s, size_t key, size_t element_size) {
+    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
+    if (!displaced_set_contains_index(indices, key)) {
+        return OPTION_CREATE_NONE_STRUCT(optional_element);
+    }
+
+    dense_index index = *DISPLACED_SET_GET(dense_index, indices, key);
+    if (OPTION_IS_SOME(dense_index, index)) {
+        return OPTION_CREATE_SOME_STRUCT(
+            optional_element, 
+            list_get(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), OPTION_GET(dense_index, index), element_size)
+        );
+    } else {
+        return OPTION_CREATE_NONE_STRUCT(optional_element);
+    }
+}
+#define PAGED_SPARSE_SET_GET(type, paged_sparse_set_ref, key) \
+    paged_sparse_set_get(paged_sparse_set_ref, key, sizeof(type))
+
+void *paged_sparse_set_get_unchecked(const paged_sparse_set *s, size_t key, size_t element_size) {
+    return OPTION_GET(optional_element, paged_sparse_set_get(s, key, element_size));
+}
+#define PAGED_SPARSE_SET_GET_UNCHECKED(type, paged_sparse_set_ref, key) \
+    ((type *)paged_sparse_set_get_unchecked(paged_sparse_set_ref, key, sizeof(type)))
+
+bool paged_sparse_set_is_empty(const paged_sparse_set *s) {
+    return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).count == 0;
+}
+
+void *paged_sparse_set_set(paged_sparse_set *s, arena *a, size_t key, void *element, size_t element_size) {
+    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
+    if (TAGGED_UNION_IS(integer_elements, sparse_set_elements, s->elements)) {
+        ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element, key);
+    }
+
+    if (displaced_set_contains_index(indices, key)) {
+        dense_index *index = DISPLACED_SET_GET(dense_index, indices, key);
+        if (OPTION_IS_SOME(dense_index, *index)) {
+            size_t element_index = OPTION_GET(dense_index, *index);
+            if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements))
+                LIST_SET(size_t, &s->keys, element_index, &key);
+            return list_set(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_index, element, element_size);
+        } else {
+            *index = OPTION_CREATE_SOME_STRUCT(dense_index, list_count_of_size(&s->elements, element_size));
+            if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements))
+                LIST_ADD(dense_index, &s->keys, a, &key);
+            return list_add(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), a, element, element_size);
+        }
+    } else {
+        DISPLACED_SET_SET(dense_index, indices, a, key, &OPTION_CREATE_SOME_STRUCT(
+            dense_index,
+            list_count_of_size(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_size)
+        ));
+        if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements))
+            LIST_ADD(size_t, &s->keys, a, &key);
+        return list_add(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), a, element, element_size);
+    }
+}
+#define PAGED_SPARSE_SET_SET(type, paged_sparse_set_ref, arena_ref, key, element_ref) \
+    ((type *)paged_sparse_set_set(paged_sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
+
+bool paged_sparse_set_remove(paged_sparse_set *s, arena *a, size_t key, optional_element *out_removed_element, size_t element_size) {
+    displaced_set *indices = &s->indices[paged_sparse_set_page_index(key)];
+    if (!displaced_set_contains_index(indices, key)
+        || paged_sparse_set_is_empty(s)) {
+        *out_removed_element = OPTION_CREATE_NONE_STRUCT(optional_element);
+        return false;
+    }
+    
+    dense_index *index = DISPLACED_SET_GET(dense_index, indices, key);
+    if (OPTION_IS_SOME(dense_index, *index)) {
+        if (OPTION_IS_SOME(optional_element, *out_removed_element)) {
+            memcpy(
+                OPTION_GET(optional_element, *out_removed_element),
+                list_last(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_size),
+                element_size
+            );
+        }
+        size_t removed_index = OPTION_GET(dense_index, *index);
+        void *swapped_last = list_remove_swap_last(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), a, removed_index, element_size);
+        if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements)) {
+            DISPLACED_SET_SET(
+                dense_index,
+                indices,
+                a,
+                *LIST_REMOVE_SWAP_LAST(size_t, &s->keys, a, removed_index),
+                &OPTION_CREATE_SOME_STRUCT(dense_index, removed_index)
+            );
+        } else {
+            DISPLACED_SET_SET(
+                dense_index,
+                indices,
+                a,
+                *((size_t *)swapped_last),
+                &OPTION_CREATE_SOME_STRUCT(dense_index, removed_index)
+            );
+        }
+        *index = OPTION_CREATE_NONE_STRUCT(dense_index);
+        return true;
+    } else {
+        *out_removed_element = OPTION_CREATE_NONE_STRUCT(optional_element);
+        return false;
+    }
+}
+#define PAGED_SPARSE_SET_REMOVE(type, paged_sparse_set_ref, arena_ref, key, out_removed_element_ref) \
+    paged_sparse_set_remove(paged_sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
+
+bool paged_sparse_set_remove_unchecked(paged_sparse_set *s, arena *a, size_t key, void *out_removed_element, size_t element_size) {
+    return paged_sparse_set_remove(s, a, key, &OPTION_CREATE_SOME_STRUCT(optional_element, out_removed_element), element_size);
+}
+#define PAGED_SPARSE_SET_REMOVE_UNCHECKED(type, paged_sparse_set_ref, arena_ref, key, out_removed_element_ref) \
+    paged_sparse_set_remove_unchecked(paged_sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
 
 
 #endif

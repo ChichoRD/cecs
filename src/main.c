@@ -111,7 +111,7 @@ void print_movables(COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) *handl
 
 void main(void) {
     world w = world_create(512, 64);
-    
+
     //sizeof(NULL);
     printf("created world\n");
     if (init(&w) == EXIT_FAILURE) {
@@ -121,6 +121,7 @@ void main(void) {
     arena iteration_arena = arena_create();
     world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
     WORLD_SYSTEM_ITER_ALL(&movables_system, &w.components, &iteration_arena, move_movables, print_movables);
+    scanf("%d", NULL);
     arena_free(&iteration_arena);
 
     world_free(&w);
