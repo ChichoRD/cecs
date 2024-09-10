@@ -149,12 +149,12 @@ static renderable renderable_create_duck(arena *a, char *color) {
 typedef struct console_buffer {
     char *buffer[BOARD_WIDTH][BOARD_HEIGHT];
 } console_buffer;
-// TODO: resources
+RESOURCE_IMPLEMENT(console_buffer);
 
 typedef struct strings_arena {
     arena a;
 } strings_arena;
-// TODO: resources
+RESOURCE_IMPLEMENT(strings_arena);
 
 bool create_duck(arena *a, world *w, v2_i16 initial_position) {
     entity_id e = world_add_entity(w);
@@ -280,7 +280,7 @@ bool create_map(arena *a, world *w) {
 }
 
 bool init(world *w) {
-    game_time *t = WORLD_SET_OR_ADD_RESOURCE(
+    game_time *t = WORLD_SET_RESOURCE(
         game_time,
         w,
         &((game_time) {
@@ -293,7 +293,7 @@ bool init(world *w) {
     );
     srand(timespec_get(&t->game_start, TIME_UTC));
     arena a = arena_create();
-    strings_arena *sa = WORLD_SET_OR_ADD_RESOURCE(strings_arena, w, &a);
+    strings_arena *sa = WORLD_SET_RESOURCE(strings_arena, w, &a);
 
     console_buffer cb;
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
@@ -309,7 +309,7 @@ bool init(world *w) {
     }
     create_slime(&sa->a, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2});
 
-    WORLD_SET_OR_ADD_RESOURCE(console_buffer, w, &cb);
+    WORLD_SET_RESOURCE(console_buffer, w, &cb);
     return EXIT_SUCCESS;
 }
 
@@ -343,174 +343,119 @@ bool create_shockwave(world *w, position *p, velocity *v) {
     return EXIT_SUCCESS;
 }
 
-bool update_controllables(world *w, query_context *qc, double delta_time_seconds) {
-    query q = QUERY_CREATE(WITH_COMPONENTS(velocity, controllable), WITHOUT_TAGS);
-    struct QUERY_RESULT(velocity, controllable) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, velocity, controllable);
-
-    for (size_t i = 0; i < qr->view_count; i++)
-    {
-        struct QUERY_VIEW(velocity, controllable) view = qr->query_views[i];
-        for (size_t j = 0; j < view.count; j++)
-        {
-            velocity *v = &view.query_elements.velocity_elements[j];
-            controllable c = view.query_elements.controllable_elements[j];
-            if (c.buffer_count <= 0) {
-                *v = (velocity){0, 0};
-            } else {
-                for (size_t k = 0; k < c.buffer_count; k++) {
-                    switch (c.buffer[k]) {
-                        case 'w':
-                            *v = (velocity){0, -1};
-                            break;
-                        case 'a':
-                            *v = (velocity){-1, 0};
-                            break;
-                        case 's':
-                            *v = (velocity){0, 1};
-                            break;
-                        case 'd':
-                            *v = (velocity){1, 0};
-                            break;
-                    }
-                }
+void update_controllables(COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle, world *w, double delta_time_seconds) {
+    velocity *v = handle->velocity_component;
+    controllable c = *handle->controllable_component;
+    if (c.buffer_count <= 0) {
+        *v = (velocity){0, 0};
+    } else {
+        for (size_t k = 0; k < c.buffer_count; k++) {
+            switch (c.buffer[k]) {
+                case 'w':
+                    *v = (velocity){0, -1};
+                    break;
+                case 'a':
+                    *v = (velocity){-1, 0};
+                    break;
+                case 's':
+                    *v = (velocity){0, 1};
+                    break;
+                case 'd':
+                    *v = (velocity){1, 0};
+                    break;
             }
         }
     }
-        return EXIT_SUCCESS;
 }
 
-bool update_lonk(world *w, query_context *qc, double delta_time_seconds) {
-    query q = QUERY_CREATE(WITH_COMPONENTS(position, velocity, renderable, velocity_register, controllable), WITHOUT_TAGS);
 
-    // for (size_t i = 0; i < qr->view_count; i++) {
-    //     struct QUERY_VIEW(position, velocity, renderable, velocity_register, controllable) view =
-    //         qr->query_views[i];
-    //     for (size_t j = 0; j < view.count; j++)
-    //     {
-    //         position *p = &view.query_elements.position_elements[j];
-    //         velocity v = view.query_elements.velocity_elements[j];
-    //         p->x += v.x;
-    //         p->y += v.y;
-
-    //         velocity_register *vr = &view.query_elements.velocity_register_elements[j];
-    //         if (v.x != 0 || v.y != 0) {
-    //             vr->velocity = v;
-    //         }
-    //         controllable c = view.query_elements.controllable_elements[j];
-
-    //         for (size_t k = 0; k < c.buffer_count; k++) {
-    //             switch (c.buffer[j]) {
-    //                 case 'x':
-    //                     create_shockwave(w, qc, p, &vr->velocity);
-    //                     break;
-    //             }
-    //         }
-
-    //     }
-        
-    // }
-    for (
-        query_iterator qi = QUERY_CONTEXT_RUN_QUERY_INTO_ITER(qc, q, w, position, velocity, renderable, velocity_register, controllable);
-        !query_iterator_done(&qi);
-        query_iterator_next(&qi)
-        ) {
-        struct QUERY_VIEW_ELEMENTS *view = QUERY_ITERATOR_CURRENT(&qi, position, velocity, renderable, velocity_register, controllable);
-            position *p = &view->position_elements[qi.current_view_index];
-            velocity v = view->velocity_elements[qi.current_view_index];
-            p->x += v.x;
-            p->y += v.y;
-
-            velocity_register *vr = &view->velocity_register_elements[qi.current_view_index];
-            if (v.x != 0 || v.y != 0) {
-                vr->velocity = v;
-            }
-            controllable c = view->controllable_elements[qi.current_view_index];
-
-            for (size_t k = 0; k < c.buffer_count; k++) {
-                switch (c.buffer[k]) {
-                    case 'x':
-                        create_shockwave(w, qc, p, &vr->velocity);
-                        break;
-                }
-            }
+void update_lonk(
+    COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
+    world *w,
+    double delta_time_seconds
+) {
+    position *p = handle->position_component;
+    velocity v = *handle->velocity_component;
+    p->x += v.x;
+    p->y += v.y;
+    velocity_register *vr = handle->velocity_register_component;
+    if (v.x != 0 || v.y != 0) {
+        vr->velocity = v;
     }
-    return EXIT_SUCCESS;
+    controllable c = *handle->controllable_component;
+    for (size_t k = 0; k < c.buffer_count; k++) {
+        switch (c.buffer[k]) {
+            case 'x':
+                create_shockwave(w, p, &vr->velocity);
+                break;
+        }
+    }
 }
 
-bool update_ducks(world *w, query_context *qc, double delta_time_seconds) {
-    query q = QUERY_CREATE(WITH_COMPONENTS(position), WITH_TAGS(is_duck));
-    struct QUERY_RESULT(position) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, position);
-
-    for (size_t i = 0; i < qr->view_count; i++) {
-        struct QUERY_VIEW(position) view = qr->query_views[i];
-        for (size_t j = 0; j < view.count; j++) {
-            position *p = &view.query_elements.position_elements[j];
-            if (rand() % 2 == 0) {
-                switch (rand() % 4) {
-                    case 0:
-                        p->y--;
-                        break;
-                    case 1:
-                        p->x--;
-                        break;
-                    case 2:
-                        p->y++;
-                        break;
-                    case 3:
-                        p->x++;
-                        break;
-                }
-            }
+void update_ducks(
+    COMPONENT_ITERATION_HANDLE_STRUCT(position) *handle,
+    world *w,
+    double delta_time_seconds
+) {
+    position *p = handle->position_component;
+    if (rand() % 2 == 0) {
+        switch (rand() % 4) {
+            case 0:
+                p->y--;
+                break;
+            case 1:
+                p->x--;
+                break;
+            case 2:
+                p->y++;
+                break;
+            case 3:
+                p->x++;
+                break;
         }
     }
     return EXIT_SUCCESS;
 }
 
-bool update_shockwaves(world *w, query_context *qc, double delta_time_seconds) {
-    query q = QUERY_CREATE(WITH_COMPONENTS(position, velocity, renderable), WITH_TAGS(is_shockwave));
-    struct QUERY_RESULT(position, velocity, renderable) *qr = QUERY_CONTEXT_RUN_QUERY(qc, q, w, position, velocity, renderable);
-
+void update_shockwaves(
+    COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable) *handle,
+    world *w,
+    double delta_time_seconds
+) {
     strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
-    for (size_t i = 0; i < qr->view_count; i++) {
-        struct QUERY_VIEW(position, velocity, renderable) view = qr->query_views[i];
-        for (size_t j = 0; j < view.count; j++) {
-            position *p = &view.query_elements.position_elements[j];
-            velocity *v = &view.query_elements.velocity_elements[j];
-            p->x += v->x;
-            p->y += v->y;
-
-            renderable new_r = renderable_create_shockwave(&sa->a, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
-            WORLD_SET_COMPONENT(
-                renderable,
-                w,
-                view.query_elements.entity_id_view_start + j,
-                &new_r
-            );
-
-            if (p->x < 0 || p->x >= BOARD_WIDTH
-                || p->y < 0 || p->y >= BOARD_HEIGHT
-                || v->x == 0 && v->y == 0) {
-                world_remove_entity(w, view.query_elements.entity_id_view_start + j);
-                query_context_clear(qc);
-            }
-
-            if (abs(v->x) > 0) {
-                v->x -= v->x / abs(v->x);
-            }
-            if (abs(v->y) > 0) {
-                v->y -= v->y / abs(v->y);
-            }
-
-        }
+    position *p = handle->position_component;
+    velocity *v = handle->velocity_component;
+    p->x += v->x;
+    p->y += v->y;
+    renderable new_r = renderable_create_shockwave(&sa->a, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
+    *handle->renderable_component = new_r;
+    if (p->x < 0 || p->x >= BOARD_WIDTH
+        || p->y < 0 || p->y >= BOARD_HEIGHT
+        || v->x == 0 && v->y == 0) {
+        world_remove_entity(w, handle->entity_id);
     }
-    return EXIT_SUCCESS;
+    if (abs(v->x) > 0) {
+        v->x -= v->x / abs(v->x);
+    }
+    if (abs(v->y) > 0) {
+        v->y -= v->y / abs(v->y);
+    }
 }
 
-bool update_entities(world *w, query_context *qc, double delta_time_seconds) {
-    return update_controllables(w, qc, delta_time_seconds)
-        || update_lonk(w, qc, delta_time_seconds)
-        || update_shockwaves(w, qc, delta_time_seconds)
-        || update_ducks(w, qc, delta_time_seconds);
+bool update_entities(world *w, double delta_time_seconds) {
+    world_system controllables_system = WORLD_SYSTEM_CREATE(velocity, controllable);
+    world_system lonk_system = WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable);
+    world_system shockwaves_system = WORLD_SYSTEM_CREATE(position, velocity, renderable);
+    world_system ducks_system = WORLD_SYSTEM_CREATE(position);
+    WORLD_SYSTEM_ITER_GENERIC_ALL(
+        w,
+        controllables_system,
+        lonk_system,
+        shockwaves_system,
+        ducks_system
+    )
+    
+    return EXIT_SUCCESS;
 }
 
 bool render(const world *w, query_context *qc) {
@@ -560,7 +505,7 @@ bool render(const world *w, query_context *qc) {
     arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
 
-    WORLD_SET_OR_ADD_RESOURCE(console_buffer, w, &new_console_buffer);
+    WORLD_SET_RESOURCE(console_buffer, w, &new_console_buffer);
     return EXIT_SUCCESS;
 }
 
@@ -596,10 +541,10 @@ bool process_input(world *w, query_context *qc) {
     return EXIT_SUCCESS;
 }
 
-bool update(world *w, query_context *qc, double delta_time_seconds) {
-    bool result = update_entities(w, qc, delta_time_seconds)
-        || render(w, qc)
-        || process_input(w, qc);
+bool update(world *w, double delta_time_seconds) {
+    bool result = update_entities(w, delta_time_seconds)
+        || render(w)
+        || process_input(w);
     return result;
 }
 
@@ -610,7 +555,7 @@ bool update(world *w, query_context *qc, double delta_time_seconds) {
 
 void main(void) {
     {
-        world w = world_create(1024, 32);
+        world w = world_create(1024, 32, 4);
 
         bool quitting = false;
         bool app_error = false;
@@ -627,7 +572,7 @@ void main(void) {
             timespec_get(&t->frame_end, TIME_UTC);
 
             game_time_update_time_since_start(t);
-            if (update(&w, &qc, game_time_update_delta_time(t))) {
+            if (update(&w, game_time_update_delta_time(t))) {
                 app_error = true;
             }
 

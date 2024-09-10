@@ -21,8 +21,12 @@ static component_id component_id_count = 0;
 #define COMPONENT_IMPLEMENT(type) _COMPONENT_IMPLEMENT(COMPONENT(type))
 
 #define COMPONENT_ID(type) ((component_id)TYPE_ID(COMPONENT(type)))
-#define COMPONENT_ID_ARRAY(...) (component_id[]){ MAP(COMPONENT_ID, COMMA, __VA_ARGS__) }
+#define COMPONENT_ID_ARRAY(...) ((component_id[]){ MAP(COMPONENT_ID, COMMA, __VA_ARGS__) })
 #define COMPONENT_COUNT(...) (sizeof(COMPONENT_ID_ARRAY(__VA_ARGS__)) / sizeof(component_id))
+
+
+#define COMPONENT_MASK_TYPE uint64_t
+typedef COMPONENT_MASK_TYPE component_mask;
 
 #define COMPONENT_MASK(type) ((component_mask)(1 << COMPONENT_ID(type)))
 

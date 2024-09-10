@@ -34,6 +34,11 @@
 #define TAGGED_UNION_STRUCT_CREATE(identifier, suffix, value, ...) \
     (TAGGED_UNION_STRUCT(__VA_ARGS__)) TAGGED_UNION_CREATE(identifier, suffix, (value))
 
+#define TAGGED_UNION_CREATE_VARIANT(identifier, variant_value, value) \
+    { .TAGGED_UNION_VALUE(identifier) = (value), .variant = (variant_value) }
+#define TAGGED_UNION_STRUCT_CREATE_VARIANT(identifier, variant_value, value, ...) \
+    (TAGGED_UNION_STRUCT(__VA_ARGS__)) TAGGED_UNION_CREATE_VARIANT(identifier, (variant_value), (value))
+
 #define TAGGED_UNION_IS(identifier, suffix, union) ((union).variant == TAGGED_UNION_VARIANT(identifier, suffix))
 #define TAGGED_UNION_IS_ASSERT(identifier, suffix, union) (assert(TAGGED_UNION_IS(identifier, suffix, (union)) && "Invalid union access"))
 #define TAGGED_UNION_GET_UNCHECKED(identifier, union) ((union).TAGGED_UNION_VALUE(identifier))

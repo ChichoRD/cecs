@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../types/macro_utils.h"
-#include "component/entity/entity.h"
 #include "component/component_storage.h"
 
 typedef component_id tag_id;
@@ -13,7 +12,11 @@ typedef component_id tag_id;
 #define TAG_IMPLEMENT(type) COMPONENT_IMPLEMENT(type)
 
 #define TAG_ID(type) ((tag_id)COMPONENT_ID(type))
-#define TAG_ID_ARRAY(...) (tag_id[]){ MAP(TAG_ID, COMMA, __VA_ARGS__) }
+#define TAG_ID_ARRAY(...) ((tag_id[]){ MAP(TAG_ID, COMMA, __VA_ARGS__) })
+
+
+#define TAG_MASK_TYPE uint64_t
+typedef TAG_MASK_TYPE tag_mask;
 
 #define TAG_MASK(type) ((tag_mask)(1 << TAG_ID(type)))
 

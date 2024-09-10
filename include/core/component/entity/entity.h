@@ -5,11 +5,6 @@
 #include <stdbool.h>
 #include "../../../containers/sparse_set.h"
 
-#define COMPONENT_MASK_TYPE uint64_t
-typedef COMPONENT_MASK_TYPE component_mask;
-
-#define TAG_MASK_TYPE uint64_t
-typedef TAG_MASK_TYPE tag_mask;
 
 #define ENTITY_ID_TYPE uint64_t
 typedef ENTITY_ID_TYPE entity_id;

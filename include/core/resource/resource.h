@@ -2,87 +2,75 @@
 #define RESOURCE_H
 
 #include <stdint.h>
-#include "map.h"
-#include "type_id.h"
+#include <string.h>
+#include "../../containers/arena.h"
+#include "../../containers/displaced_set.h"
+#include "../../types/type_id.h"
+#include "../../types/macro_utils.h"
 
-typedef uint32_t resource_id;
+typedef uint64_t resource_id;
 static resource_id resource_id_count = 0;
 
 #define RESOURCE(type) type##_resource
-#define RESOURCE_IMPLEMENT(type) TYPE_ID_IMPLEMENT_COUNTER(type##_resource, resource_id_count)
-#define RESOURCE_DEFINE(layout, type) \
-    RESOURCE_IMPLEMENT(type) \
-    typedef layout type
+#define _RESOURCE_IMPLEMENT(resource) TYPE_ID_IMPLEMENT_COUNTER(resource, resource_id_count)
+#define RESOURCE_IMPLEMENT(type) _RESOURCE_IMPLEMENT(RESOURCE(type))
 
-#define RESOURCE_ID(type) ((resource_id)TYPE_ID(type##_resource))
-#define RESOURCE_ID_ARRAY(...) (resource_id[]){ MAP_LIST(RESOURCE_ID, __VA_ARGS__) }
+#define RESOURCE_ID(type) ((resource_id)TYPE_ID(RESOURCE(type)))
+#define RESOURCE_ID_ARRAY(...) ((resource_id[]){ MAP(RESOURCE_ID, COMMA, __VA_ARGS__) })
 
 
-#define DEFAULT_RESOURCE_CAPACITY 64
-#define DEFAULT_RESOURCE_SIZE 64
-
-typedef ssize_t resource_offset;
+typedef void *resource_handle;
 typedef struct world_resources {
-    list resources;
-    list resource_offsets;
+    arena resources_arena;
+    displaced_set resource_handles;
 } world_resources;
 
-world_resources world_resources_create(arena *resources_arena) {
+world_resources world_resources_create(size_t resource_capactity, size_t resource_default_size) {
     world_resources wr;
-    wr.resources = list_create_with_capacity(resources_arena, (DEFAULT_RESOURCE_SIZE * DEFAULT_RESOURCE_CAPACITY));
-    wr.resource_offsets = list_create_with_capacity(resources_arena, sizeof(resource_offset) * DEFAULT_RESOURCE_CAPACITY);
+    wr.resources_arena = arena_create_with_capacity(resource_capactity * (resource_default_size + sizeof(resource_handle)));
+    wr.resource_handles = displaced_set_create_with_capacity(&wr.resources_arena, sizeof(resource_handle) * resource_capactity);
     return wr;
 }
 
-inline size_t world_resources_count(const world_resources *wr) {
-    return list_count_of_size(&wr->resource_offsets, sizeof(resource_offset));
+void world_resources_free(world_resources *wr) {
+    arena_free(&wr->resources_arena);
+    wr->resource_handles = (displaced_set){0};
 }
 
-void *world_resources_add_resource(world_resources *wr, arena *resources_arena, resource_id id, void *resource, size_t size) {
-    resource_offset offset = (id < world_resources_count(wr))
-        ? *LIST_GET(resource_offset, &wr->resource_offsets, id)
-        : wr->resources.count;
-    if (offset >= 0) {
-        assert((id == world_resources_count(wr)) && "Resource ID out of bounds");
-        LIST_ADD(resource_offset, &wr->resource_offsets, resources_arena, &offset);
-        return list_add_range(&wr->resources, resources_arena, resource, size, sizeof(uint8_t));
+resource_handle world_resources_set_resource(world_resources *wr, resource_id id, void *resource, size_t size) {
+    resource_handle handle = arena_alloc(&wr->resources_arena, size);
+    memcpy(handle, resource, size);
+    return *DISPLACED_SET_SET(
+        resource_handle,
+        &wr->resource_handles,
+        &wr->resources_arena,
+        id,
+        &handle
+    );
+}
+
+resource_handle world_resources_get_resource(const world_resources *wr, resource_id id) {
+    assert(
+        displaced_set_contains(&wr->resource_handles, id, &(resource_handle){0}, sizeof(resource_handle))
+        && "Resource ID does not correspond to an existing resource"
+    );
+    return *DISPLACED_SET_GET(resource_handle, &wr->resource_handles, id);
+}
+
+bool world_resources_remove_resource(world_resources *wr, resource_id id) {
+    return displaced_set_remove(&wr->resource_handles, id, sizeof(resource_handle), &(resource_handle){0});
+}
+
+bool world_resources_remove_resource_out(world_resources *wr, resource_id id, resource_handle out_resource, size_t size) {
+    assert(out_resource != NULL && "out_resource must not be NULL, use: world_resources_remove_resource");
+    resource_handle removed_handle;
+    if (displaced_set_remove_out(&wr->resource_handles, id, &removed_handle, size, &(resource_handle){0})) {
+        memcpy(out_resource, removed_handle, size);
+        return true;
     } else {
-        if (id >= world_resources_count(wr)) {
-            assert(0 && "unreachable: resource_offsets and resources are out of sync");
-            exit(EXIT_FAILURE);
-        }
-        resource_offset removed_offset = -offset - 1;
-        LIST_SET(resource_offset, &wr->resource_offsets, id, &removed_offset);
-        return (uint8_t *)wr->resources.elements + removed_offset;
+        memset(out_resource, 0, size);
+        return false;
     }
-}
-
-void *world_resources_get_resource(const world_resources *wr, resource_id id, size_t size) {
-    assert((id < world_resources_count(wr)) && "Resource ID out of bounds");
-    resource_offset offset = *LIST_GET(resource_offset, &wr->resource_offsets, id);
-    assert((offset >= 0) && "Resource has been removed");
-
-    void *resource = (uint8_t *)wr->resources.elements + offset;
-    assert(((uint8_t *)resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count) && "Resource out of bounds");
-    return resource;
-}
-
-void *world_resources_set_resource(world_resources *wr, resource_id id, void *resource, size_t size) {
-    assert((id < world_resources_count(wr)) && "Resource ID out of bounds");
-    resource_offset offset = *LIST_GET(resource_offset, &wr->resource_offsets, id);
-    assert((offset >= 0) && "Resource has been removed");
-
-    void *old_resource = (uint8_t *)wr->resources.elements + offset;
-    assert(((uint8_t *)old_resource + size <= (uint8_t *)wr->resources.elements + wr->resources.count) && "Resource out of bounds");
-    return list_set_range(&wr->resources, offset, resource, size, sizeof(uint8_t));
-}
-
-void *world_resources_remove_resource(world_resources *wr, resource_id id, size_t size) {
-    void *resource = world_resources_get_resource(wr, id, size);
-
-    resource_offset removed_offset = (uint8_t *)wr->resources.elements - (uint8_t *)resource - 1;
-    LIST_SET(resource_offset, &wr->resource_offsets, id, &removed_offset);
-    return resource;
 }
 
 #endif

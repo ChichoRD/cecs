@@ -15,6 +15,27 @@ typedef void my_tag;
 TAG_IMPLEMENT(my_tag);
 
 bool init(world *w) {
+    for (size_t i = 0; i < 15; i++) {
+        entity_id e = world_add_entity(w);
+        if (i & 1) {
+            WORLD_SET_COMPONENT(
+                position,
+                w,
+                e,
+                &((position) {
+                    i, i
+                })
+            );
+            WORLD_SET_COMPONENT(
+                velocity,
+                w,
+                e,
+                &((velocity) {
+                    i, i
+                })
+            );
+        }
+    }
     return EXIT_SUCCESS;
 }
 
@@ -33,9 +54,8 @@ void print_movables(COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity) *handl
 }
 
 void main(void) {
-    world w = world_create(512, 64);
+    world w = world_create(512, 32, 4);
 
-    //sizeof(NULL);
     printf("created world\n");
     if (init(&w) == EXIT_FAILURE) {
         assert(false && "init failed");
@@ -43,12 +63,15 @@ void main(void) {
     }
     arena iteration_arena = arena_create();
     world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
-    WORLD_SYSTEM_ITER_ALL(&movables_system, &w.components, &iteration_arena, move_movables, print_movables);
+    WORLD_SYSTEM_ITER_GENERIC_ALL(
+        system_predicate,
+        &movables_system,
+        &w,
+        0.0, &iteration_arena, move_movables, print_movables);
     
     for (size_t i = 0; i < paged_sparse_set_count_of_size(&w.components.component_storages, sizeof(component_storage)); i++) {
         printf("key %d: %x\n", i, paged_sparse_set_keys(&w.components.component_storages)[i]);
     }
-    scanf("%d", NULL);
     arena_free(&iteration_arena);
 
     world_free(&w);

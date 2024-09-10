@@ -4,28 +4,29 @@
 #include <assert.h>
 #include <memory.h>
 #include <stdbool.h>
-#include "component/entity/entity.h"
-#include "component/component.h"
-#include "tag.h"
-#include "relation.h"
 #include "../containers/arena.h"
 #include "../containers/list.h"
+#include "component/entity/entity.h"
+#include "component/component.h"
+#include "resource/resource.h"
+#include "tag.h"
+#include "relation.h"
 
 typedef struct world {
     world_entities entities;
     world_components components;
     world_relations relations;
-
-    // world_resources resources;
+    world_resources resources;
 } world;
 
-world world_create(size_t entity_capacity, size_t component_type_capacity) {
+world world_create(size_t entity_capacity, size_t component_type_capacity, size_t resource_capacity) {
     world w;
     w.entities = world_entities_create(entity_capacity);
     w.components = world_components_create(component_type_capacity);
     w.relations = world_relations_create(entity_capacity);
 
-    // w.resources = world_resources_create(&w.resources_arena);
+    const resource_default_size = sizeof(intptr_t) * 4;
+    w.resources = world_resources_create(resource_capacity, resource_default_size);
     return w;
 }
 
@@ -33,10 +34,13 @@ void world_free(world *w) {
     world_entities_free(&w->entities);
     world_components_free(&w->components);
     world_relations_free(&w->relations);
+    world_resources_free(&w->resources);
+    w->resources = (world_resources){0};
     w->relations = (world_relations){0};
     w->components = (world_components){0};
     w->entities = (world_entities){0};
 }
+
 
 inline size_t world_entity_count(const world *w) {
     return world_entities_count(&w->entities);
@@ -173,5 +177,31 @@ bool world_remove_component_relation(world *w, entity_id id, component_id compon
         out_removed_component
     );
 }
+// TODO: tag-tag relations
+
+
+resource_handle world_set_resource(world *w, resource_id id, void *resource, size_t size) {
+    return world_resources_set_resource(&w->resources, id, resource, size);
+}
+#define WORLD_SET_RESOURCE(type, world_ref, resource_ref) \
+    ((type *)world_set_resource(world_ref, RESOURCE_ID(type), resource_ref, sizeof(type)))
+
+resource_handle world_get_resource(const world *w, resource_id id) {
+    return world_resources_get_resource(&w->resources, id);
+}
+#define WORLD_GET_RESOURCE(type, world_ref) \
+    ((type *)world_get_resource(world_ref, RESOURCE_ID(type)))
+
+bool world_remove_resource(world *w, resource_id id) {
+    return world_resources_remove_resource(&w->resources, id);
+}
+#define WORLD_REMOVE_RESOURCE(type, world_ref) \
+    world_remove_resource(world_ref, RESOURCE_ID(type))
+
+bool world_remove_resource_out(world *w, resource_id id, resource_handle out_resource, size_t size) {
+    return world_resources_remove_resource_out(&w->resources, id, out_resource, size);
+}
+#define WORLD_REMOVE_RESOURCE_OUT(type, world_ref, out_resource_ref) \
+    world_remove_resource_out(world_ref, RESOURCE_ID(type), out_resource_ref, sizeof(type))
 
 #endif
