@@ -35,6 +35,9 @@ bool init(world *w) {
                 })
             );
         }
+        if (i == 3) {
+            WORLD_ADD_TAG(my_tag, w, e);
+        }
     }
     return EXIT_SUCCESS;
 }
@@ -62,16 +65,13 @@ void main(void) {
         exit(EXIT_FAILURE);
     }
     arena iteration_arena = arena_create();
-    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity);
+    world_system movables_system = WORLD_SYSTEM_CREATE(position, velocity, my_tag);
     WORLD_SYSTEM_ITER_GENERIC_ALL(
         system_predicate,
         movables_system,
         &w,
-        0.0, &iteration_arena, move_movables, print_movables);
-    
-    for (size_t i = 0; i < paged_sparse_set_count_of_size(&w.components.component_storages, sizeof(component_storage)); i++) {
-        printf("key %d: %x\n", i, paged_sparse_set_keys(&w.components.component_storages)[i]);
-    }
+        0.0, &iteration_arena, move_movables, print_movables
+    );
     arena_free(&iteration_arena);
 
     world_free(&w);

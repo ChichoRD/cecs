@@ -49,7 +49,9 @@ component_iterator_descriptor component_iterator_descriptor_create(
         .world_components = world_components,
         .entities_bitset = intersection_empty
             ? hibitset_empty()
-            : hibitset_intersection(bitsets, component_count, iterator_temporary_arena),
+            : (component_count == 1)
+                ? bitsets[0]
+                : hibitset_intersection(bitsets, component_count, iterator_temporary_arena),
         .components_type_info = (struct components_type_info) {
             .component_ids = sized_component_ids.elements,
             .component_count = LIST_COUNT(component_id, &sized_component_ids)

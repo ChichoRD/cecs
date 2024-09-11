@@ -304,9 +304,9 @@ bool init(world *w) {
     SetConsoleOutputCP(65001);
     create_lonk(&sa->a, w);
     create_map(&sa->a, w);
-    // for (size_t i = 0; i < 100; i++) {
-    //     create_duck(&sa->a, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
-    // }
+    for (size_t i = 0; i < 10; i++) {
+        create_duck(&sa->a, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
+    }
     create_slime(&sa->a, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2});
 
     WORLD_SET_RESOURCE(console_buffer, w, &cb);
@@ -414,7 +414,6 @@ void update_ducks(
                 break;
         }
     }
-    return EXIT_SUCCESS;
 }
 
 void update_shockwaves(
