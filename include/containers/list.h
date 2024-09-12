@@ -73,8 +73,7 @@ static void list_shrink(list *l, arena *a, size_t new_capacity) {
     l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
 }
 
-void *list_add(list *l, arena *a, const void *element, size_t size)
-{
+void *list_add(list *l, arena *a, const void *element, size_t size) {
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);
@@ -86,8 +85,7 @@ void *list_add(list *l, arena *a, const void *element, size_t size)
 #define LIST_ADD(type, list_ref, arena_ref, element_ref) \
     ((type *)list_add(list_ref, arena_ref, element_ref, sizeof(type)))
 
-void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t size)
-{
+void *list_add_range(list *l, arena *a, void *elements, size_t count, size_t size) {
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);
@@ -186,8 +184,7 @@ void *list_set_range(list *l, size_t index, void *elements, size_t count, size_t
 #define LIST_SET_RANGE(type, lis_ref, index, elements_ref, count) \
     list_set_range(lis_ref, index, elements_ref, count, sizeof(type))
 
-void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
-{
+void *list_insert(list *l, arena *a, size_t index, void *element, size_t size) {
     assert((index * size <= l->count) && "Attempted to insert element with index out of bounds");
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
@@ -196,7 +193,8 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
     memmove(
         (uint8_t *)l->elements + (index + 1) * size,
         (uint8_t *)l->elements + index * size,
-        (l->count - index * size));
+        (l->count - index * size)
+    );
     void *ptr = memcpy((uint8_t *)l->elements + index * size, element, size);
     l->count = new_count;
     return ptr;
@@ -204,8 +202,7 @@ void *list_insert(list *l, arena *a, size_t index, void *element, size_t size)
 #define LIST_INSERT(type, lis_ref, arena_ref, index, element_ref) \
     ((type *)list_insert(lis_ref, arena_ref, index, element_ref, sizeof(type)))
 
-void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t count, size_t size)
-{
+void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t count, size_t size) {
     assert((index * size <= l->count) && "Attempted to insert elements with starting index out of bounds");
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
@@ -214,7 +211,8 @@ void *list_insert_range(list *l, arena *a, size_t index, void *elements, size_t 
     memmove(
         (uint8_t *)l->elements + (index + count) * size,
         (uint8_t *)l->elements + index * size,
-        (l->count - index * size));
+        (l->count - index * size)
+    );
     void *ptr = memcpy((uint8_t *)l->elements + index * size, elements, count * size);
     l->count = new_count;
     return ptr;
@@ -233,7 +231,13 @@ void *list_append_empty(list *l, arena *a, size_t count, size_t size) {
     ((type *)list_append_empty(lis_ref, arena_ref, count, sizeof(type)))
 
 void *list_prepend_empty(list *l, arena *a, size_t count, size_t size) {
-    list_insert_range(l, a, count, l->elements, l->count, size);
+    size_t list_count = l->count;
+    list_append_empty(l, a, count, size);
+    memmove(
+        (uint8_t *)l->elements + count * size,
+        (uint8_t *)l->elements,
+        list_count
+    );
     return l->elements;
 }
 #define LIST_PREPEND_EMPTY(type, lis_ref, arena_ref, count) \

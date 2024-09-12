@@ -40,7 +40,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <EnableASAN>true</EnableASAN>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -84,7 +84,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;/Zc:preprocessor /W4;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
-      <AdditionalOptions>/Zi %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zi /EHsc /D_DEBUG /MDd %(AdditionalOptions)</AdditionalOptions>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
@@ -97,9 +97,10 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
-      <AdditionalOptions>/fsanitize=address /Zi %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zi /EHsc /D_DEBUG /MDd %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>5045; 4115; 4255; 4668</DisableSpecificWarnings>
       <TreatSpecificWarningsAsErrors>4022</TreatSpecificWarningsAsErrors>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

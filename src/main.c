@@ -9,6 +9,7 @@
 #include "../include/color.h"
 #include "../include/core/relation.h"
 
+
 #define TARGET_FPS 240.0
 
 #define BOARD_WIDTH 48
@@ -151,9 +152,7 @@ typedef struct console_buffer {
 } console_buffer;
 RESOURCE_IMPLEMENT(console_buffer);
 
-typedef struct strings_arena {
-    arena a;
-} strings_arena;
+typedef arena strings_arena;
 RESOURCE_IMPLEMENT(strings_arena);
 
 bool create_duck(arena *a, world *w, v2_i16 initial_position) {
@@ -302,12 +301,12 @@ bool init(world *w) {
         }
     }
     SetConsoleOutputCP(65001);
-    create_lonk(&sa->a, w);
-    create_map(&sa->a, w);
+    create_lonk(sa, w);
+    create_map(sa, w);
     for (size_t i = 0; i < 10; i++) {
-        create_duck(&sa->a, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
+        create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
     }
-    create_slime(&sa->a, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2});
+    create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2});
 
     WORLD_SET_RESOURCE(console_buffer, w, &cb);
     return EXIT_SUCCESS;
@@ -316,6 +315,7 @@ bool init(world *w) {
 bool create_shockwave(world *w, position *p, velocity *v) {
     strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
     entity_id e = world_add_entity(w);
+
     WORLD_SET_COMPONENT(
         position,
         w,
@@ -324,7 +324,7 @@ bool create_shockwave(world *w, position *p, velocity *v) {
     );
     const int16_t SPEED_MULTIPLIER = 3;
     const int16_t RADIUS = SPEED_MULTIPLIER;
-    renderable r = renderable_create_shockwave(&sa->a, RADIUS);
+    renderable r = renderable_create_shockwave(sa, RADIUS);
     WORLD_SET_COMPONENT(
         renderable,
         w,
@@ -426,7 +426,7 @@ void update_shockwaves(
     velocity *v = handle->velocity_component;
     p->x += v->x;
     p->y += v->y;
-    renderable new_r = renderable_create_shockwave(&sa->a, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
+    renderable new_r = renderable_create_shockwave(sa, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
     *handle->renderable_component = new_r;
     if (p->x < 0 || p->x >= BOARD_WIDTH
         || p->y < 0 || p->y >= BOARD_HEIGHT
@@ -579,38 +579,40 @@ bool update(world *w, double delta_time_seconds) {
     return result;
 }
 
-#include "../include/containers/bitset.h"
-//#include "../include/containers/tagged_union.h"
-#include "../include/types/macro_utils.h"
-#include "../include/core/component/component_storage.h"
+bool finalize(world *w) {
+    arena_free(WORLD_GET_RESOURCE(strings_arena, w));
+    return EXIT_SUCCESS;
+}
 
 void main(void) {
+    world w = world_create(1024, 32, 4);
+
+    bool quitting = false;
+    bool app_error = false;
+    if (init(&w)) {
+        app_error = true;
+    }
+
+    game_time* t = WORLD_GET_RESOURCE(game_time, &w);
+    timespec_get(&t->frame_start, TIME_UTC);
+    const DWORD sleep_milliseconds = 1000 / TARGET_FPS;
+    Sleep(sleep_milliseconds);
+    while (!quitting && !app_error)
     {
-        world w = world_create(1024, 32, 4);
+        timespec_get(&t->frame_end, TIME_UTC);
+        game_time_update_time_since_start(t);
 
-        bool quitting = false;
-        bool app_error = false;
-
-        if (init(&w)) {
+        if (update(&w, game_time_update_delta_time(t))) {
             app_error = true;
         }
 
-        game_time* t = WORLD_GET_RESOURCE(game_time, &w);
         timespec_get(&t->frame_start, TIME_UTC);
-        Sleep(1000.0 / TARGET_FPS);
-        while (!quitting && !app_error)
-        {
-            timespec_get(&t->frame_end, TIME_UTC);
-
-            game_time_update_time_since_start(t);
-            if (update(&w, game_time_update_delta_time(t))) {
-                app_error = true;
-            }
-
-            timespec_get(&t->frame_start, TIME_UTC);
-            Sleep(1000.0 / TARGET_FPS);
-        }
-
-        world_free(&w);
+        Sleep(sleep_milliseconds);
     }
+
+    if (finalize(&w)) {
+        app_error = true;
+    }
+
+    world_free(&w);
 }

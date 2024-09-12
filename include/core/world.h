@@ -47,21 +47,20 @@ inline size_t world_entity_count(const world *w) {
 }
 
 entity_id world_add_entity(world *w) {
-    return world_entities_add_entity(&w->entities, 0, 0);
+    return world_entities_add_entity(&w->entities);
 }
 
 entity_id world_remove_entity(world *w, entity_id entity_id) {
     for (size_t i = 0; i < world_components_get_component_storage_count(&w->components); i++) {
         component_id key = ((size_t *)paged_sparse_set_keys(&w->components.component_storages))[i];
         world_components_remove_component(&w->components, entity_id, key, w->components.discard.handle);
-        //component_storage_has()
     }
     return world_entities_remove_entity(&w->entities, entity_id);
 }
 
 
-void *world_set_component(world *w, entity_id entity_id, component_id component_id, void *component, size_t size) {  
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");    
+void *world_set_component(world *w, entity_id entity_id, component_id component_id, void *component, size_t size) {
+    assert(world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");
     return world_components_set_component_unchecked(
         &w->components,
         entity_id,
@@ -79,7 +78,7 @@ void *world_set_component(world *w, entity_id entity_id, component_id component_
     ((type *)world_set_component(world_ref, entity_id0, COMPONENT_ID(type), component_ref, sizeof(type)))
 
 const bool world_remove_component(world *w, entity_id entity_id, component_id component_id, void *out_removed_component) {
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    assert(world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");
     return world_components_remove_component(&w->components, entity_id, component_id, out_removed_component);
 }
 #define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0, out_removed_component_ref) \
@@ -93,7 +92,7 @@ void *world_get_component(const world *w, entity_id entity_id, component_id comp
 
 
 tag_id world_add_tag(world *w, entity_id entity_id, tag_id tag_id) {
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    assert(world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");
     world_components_set_component(
         &w->components,
         entity_id,
@@ -112,7 +111,7 @@ tag_id world_add_tag(world *w, entity_id entity_id, tag_id tag_id) {
     world_add_tag(world_ref, entity_id0, TAG_ID(type))
 
 tag_id world_remove_tag(world *w, entity_id entity_id, tag_id tag_id) {
-    assert((entity_id < world_entity_count(w)) && "Entity ID out of bounds");
+    assert(world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");
     world_components_remove_component(&w->components, entity_id, tag_id, &(optional_component){0});
     return tag_id;
 }
@@ -121,7 +120,7 @@ tag_id world_remove_tag(world *w, entity_id entity_id, tag_id tag_id) {
 
 
 void *world_set_component_relation(world *w, entity_id id, component_id component_id, void *component, size_t size, tag_id tag_id) {
-    assert((id < world_entity_count(w)) && "Entity ID out of bounds");
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     entity_id extra_id = world_add_entity(w);
     entity_id associated_id = world_relations_increment_associated_id_or_set(
         &w->relations,
@@ -154,12 +153,12 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
 }
 
 void *world_get_component_relation(const world *w, entity_id id, component_id component_id, tag_id tag_id) {
-    assert((id < world_entity_count(w)) && "Entity ID out of bounds");
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     return world_get_component(w, id, relation_id_create(relation_id_descriptor_create_with_tag_target(component_id, tag_id)));
 }
 
 bool world_remove_component_relation(world *w, entity_id id, component_id component_id, void *out_removed_component, tag_id tag_id) {
-    assert((id < world_entity_count(w)) && "Entity ID out of bounds");
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     entity_id associated_id;
     if (!world_relations_remove_associated_id(&w->relations, id, (relation_target){tag_id}, &associated_id)) {
         return false;

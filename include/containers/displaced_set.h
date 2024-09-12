@@ -25,6 +25,11 @@ bool displaced_set_contains_index(displaced_set *s, size_t index) {
     return exclusive_range_contains(s->index_range, index);
 }
 
+inline size_t displaced_set_list_index(displaced_set *s, size_t index) {
+    assert(displaced_set_contains_index(s, index) && "index out of bounds");
+    return index - s->index_range.start;
+}
+
 bool displaced_set_contains(displaced_set *s, size_t index, void *null_bit_pattern, size_t size) {
     return displaced_set_contains_index(s, index)
         && (memcmp(list_get(&s->elements, displaced_set_list_index(s, index), size), null_bit_pattern, size) != 0);
@@ -32,11 +37,6 @@ bool displaced_set_contains(displaced_set *s, size_t index, void *null_bit_patte
 
 bool displaced_set_is_empty(displaced_set *s) {
     return exclusive_range_is_empty(s->index_range);
-}
-
-inline size_t displaced_set_list_index(displaced_set *s, size_t index) {
-    assert(displaced_set_contains_index(s, index) && "index out of bounds");
-    return index - s->index_range.start;
 }
 
 void *displaced_set_expand(displaced_set *s, arena *a, size_t index, size_t size) {
