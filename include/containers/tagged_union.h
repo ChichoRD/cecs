@@ -45,7 +45,7 @@
 #define TAGGED_UNION_GET(identifier, suffix, union) \
     (TAGGED_UNION_IS_ASSERT(identifier, suffix, (union)), TAGGED_UNION_GET_UNCHECKED(identifier, (union)))
 
-#define MATCH(union) switch ((union).variant)
+#define TAGGED_UNION_MATCH(union) switch ((union).variant)
 
 
 typedef uint8_t none;

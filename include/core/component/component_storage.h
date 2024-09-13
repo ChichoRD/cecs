@@ -24,8 +24,8 @@ typedef OPTION_STRUCT(void *, optional_component) optional_component;
 
 typedef storage_info info(const void *self);
 typedef optional_component get_component(const void *self, entity_id id, size_t size);
-typedef optional_component set_component(const void *self, arena *a, entity_id id, void *component, size_t size);
-typedef bool remove_component(const void *self, arena *a, entity_id id, void *out_removed_component, size_t size);
+typedef optional_component set_component(void *self, arena *a, entity_id id, void *component, size_t size);
+typedef bool remove_component(void *self, arena *a, entity_id id, void *out_removed_component, size_t size);
 typedef struct component_storage_header {
     info *const info;
     get_component *const get;
@@ -246,7 +246,9 @@ bool component_storage_has(const component_storage *self, entity_id id) {
 const list *component_storage_components(const component_storage *self) {
     switch (self->storage.variant) {
         case TAGGED_UNION_VARIANT(sparse_component_storage, component_storage_union):
-            return &TAGGED_UNION_GET_UNCHECKED(sparse_component_storage, self->storage).components;
+            return &TAGGED_UNION_GET_UNCHECKED(sparse_component_storage, self->storage).components.elements;
+        case TAGGED_UNION_VARIANT(indirect_component_storage, component_storage_union):
+            return &TAGGED_UNION_GET_UNCHECKED(indirect_component_storage, self->storage).component_references.elements;
         default:
             {
                 assert(false && "unreachable: invalid component storage variant");

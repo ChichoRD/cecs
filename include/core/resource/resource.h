@@ -49,7 +49,7 @@ bool world_resources_has_resource(const world_resources* wr, resource_id id) {
 }
 
 resource_handle world_resources_set_resource(world_resources *wr, resource_id id, void *resource, size_t size) {
-    if (size > wr->discard.handle) {
+    if (size > wr->discard.size) {
         wr->discard.handle = arena_realloc(&wr->resources_arena, wr->discard.handle, wr->discard.size, size);
         wr->discard.size = size;
     }

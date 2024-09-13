@@ -5,7 +5,17 @@
             "label": "C/C++: cl.exe build active file",
             "command": "cl.exe",
             "args": [
+                "/Zc:preprocessor",
+                "/we\"4022\"",
+                "/GS",
+                "/Wall",
+                "/wd\"5045\"",
+                "/wd\"4115\"",
+                "/wd\"4255\"",
+                "/wd\"4668\"",
+                "/Zc:wchar_t",
                 "/Zi",
+
                 "/EHsc",
                 "/nologo",
                 "/Fe${fileDirname}\\${fileBasenameNoExtension}.exe",

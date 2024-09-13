@@ -21,7 +21,7 @@ displaced_set displaced_set_create_with_capacity(arena *a, size_t capacity) {
     return (displaced_set){ .elements = list_create_with_capacity(a, capacity), .index_range = {0, 0} };
 }
 
-bool displaced_set_contains_index(displaced_set *s, size_t index) {
+bool displaced_set_contains_index(const displaced_set *s, size_t index) {
     return exclusive_range_contains(s->index_range, index);
 }
 
@@ -30,7 +30,7 @@ inline size_t displaced_set_list_index(displaced_set *s, size_t index) {
     return index - s->index_range.start;
 }
 
-bool displaced_set_contains(displaced_set *s, size_t index, void *null_bit_pattern, size_t size) {
+bool displaced_set_contains(const displaced_set *s, size_t index, void *null_bit_pattern, size_t size) {
     return displaced_set_contains_index(s, index)
         && (memcmp(list_get(&s->elements, displaced_set_list_index(s, index), size), null_bit_pattern, size) != 0);
 }
@@ -79,7 +79,7 @@ void *displaced_set_set(displaced_set *s, arena *a, size_t index, void *element,
 #define DISPLACED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
     ((type *)displaced_set_set(set_ref, arena_ref, index, element_ref, sizeof(type)))
 
-void *displaced_set_get(displaced_set *s, size_t index, size_t size) {
+void *displaced_set_get(const displaced_set *s, size_t index, size_t size) {
     assert(displaced_set_contains_index(s, index) && "index out of bounds");
     return list_get(&s->elements, displaced_set_list_index(s, index), size);
 }
@@ -190,7 +190,7 @@ void *counted_set_increment_or_set(counted_set *s, arena *a, size_t index, void 
 #define COUNTED_SET_INCREMENT_OR_SET(type, set_ref, arena_ref, index, otherwise_element_ref) \
     ((type *)counted_set_increment_or_set(set_ref, arena_ref, index, otherwise_element_ref, sizeof(type)))
 
-counted_set_counter counted_set_remove(counted_set *s, size_t index, size_t size) {
+counted_set_counter counted_set_remove(counted_set *s, size_t index) {
     counted_set_counter count;
     if (!displaced_set_contains_index(&s->counts, index)
         || ((count = counted_set_count_of(s, index)) == 0)) {

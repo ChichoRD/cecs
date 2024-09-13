@@ -69,7 +69,7 @@ size_t world_components_get_component_storage_count(const world_components *wc) 
     return paged_sparse_set_count_of_size(&wc->component_storages, sizeof(component_storage));
 }
 
-optional_component_size world_components_get_component_size(world_components *wc, component_id component_id) {
+optional_component_size world_components_get_component_size(const world_components *wc, component_id component_id) {
     return OPTION_MAP_REFERENCE_STRUCT(
         optional_element,
         PAGED_SPARSE_SET_GET(size_t, &wc->component_sizes, component_id),
@@ -81,7 +81,7 @@ size_t world_components_get_component_size_unchecked(const world_components *wc,
 }
 
 typedef OPTION_STRUCT(component_storage *, optional_component_storage) optional_component_storage;
-optional_component_storage world_components_get_component_storage(world_components *wc, component_id component_id) {
+optional_component_storage world_components_get_component_storage(const world_components *wc, component_id component_id) {
     return OPTION_MAP_REFERENCE_STRUCT(
         optional_element,
         PAGED_SPARSE_SET_GET(component_storage, &wc->component_storages, component_id),
@@ -127,7 +127,7 @@ component_storage component_storage_descriptor_build(
                 .is_size_known = false,
                 .capacity = descriptor.capacity,
                 .indirect_component_id = OPTION_CREATE_NONE(indirect_component_id)
-            }, wc, &wc->components_arena, 0);
+            }, wc, 0);
             return component_storage_create_indirect(
                 &wc->components_arena,
                 PAGED_SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, other_id, &other_storage)
@@ -171,9 +171,9 @@ optional_component world_components_set_component(
             size
         );
     } else {
-        component_storage storage = component_storage_descriptor_build(additional_storage_descriptor, wc, size);
+        component_storage new_storage = component_storage_descriptor_build(additional_storage_descriptor, wc, size);
         return component_storage_set(
-            PAGED_SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &storage),
+            PAGED_SPARSE_SET_SET(component_storage, &wc->component_storages, &wc->storages_arena, component_id, &new_storage),
             &wc->components_arena,
             entity_id,
             component,

@@ -321,7 +321,7 @@ inline size_t paged_sparse_set_count_of_size(const paged_sparse_set *s, size_t e
 
 inline bool paged_sparse_set_contains(const paged_sparse_set *s, size_t key) {
     uint8_t page_index = paged_sparse_set_page_index(key);
-    displaced_set *indices = &s->indices[page_index];
+    const displaced_set *indices = &s->indices[page_index];
     size_t page_key = paged_sparse_set_page_key(key, page_index);
     return displaced_set_contains_index(indices, page_key)
         && OPTION_IS_SOME(dense_index, *DISPLACED_SET_GET(dense_index, indices, page_key));
@@ -329,7 +329,7 @@ inline bool paged_sparse_set_contains(const paged_sparse_set *s, size_t key) {
 
 optional_element paged_sparse_set_get(const paged_sparse_set *s, size_t key, size_t element_size) {
     uint8_t page_index = paged_sparse_set_page_index(key);
-    displaced_set *indices = &s->indices[page_index];
+    const displaced_set *indices = &s->indices[page_index];
     size_t page_key = paged_sparse_set_page_key(key, page_index);
     if (!displaced_set_contains_index(indices, page_key)) {
         return OPTION_CREATE_NONE_STRUCT(optional_element);

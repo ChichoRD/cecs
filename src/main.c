@@ -541,6 +541,9 @@ bool process_input(world *w, arena *iteration_arena) {
     };
     while (_kbhit()) {
         char input = getch();
+        if (input == '\x1b')
+            return EXIT_FAILURE;
+
         if (c.buffer_count >= CONTROLLABLE_BUFFER_SIZE) {
             for (size_t j = 0; j < CONTROLLABLE_BUFFER_SIZE - 1; j++) {
                 c.buffer[j] = c.buffer[j + 1];

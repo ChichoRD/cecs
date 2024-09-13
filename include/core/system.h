@@ -128,7 +128,7 @@ entity_count world_system_iter_generic(
     );
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
 
-    MATCH(predicate) {
+    TAGGED_UNION_MATCH(predicate) {
         case TAGGED_UNION_VARIANT(system_predicate, generic_system_predicate): {
             _WORLD_SYTEM_ITER_FOR(it, descriptor) {
                 _WORLD_SYSTEM_ITER_FOR_BODY(count, it, handle);
@@ -158,6 +158,12 @@ entity_count world_system_iter_generic(
                 _WORLD_SYSTEM_ITER_FOR_BODY(count, it, handle);
                 TAGGED_UNION_GET_UNCHECKED(world_dt_system_predicate, predicate)(handle, world, delta_time_seconds);
             }
+            break;
+        }
+
+        default: {
+            assert(false && "invalid predicate variant");
+            exit(EXIT_FAILURE);
             break;
         }
     }
@@ -198,7 +204,6 @@ generic_system_predicates generic_system_predicates_create(
     size_t predicate_count,
     int predicate_variant
 ) {
-    generic_system_predicates g;
     return (generic_system_predicates) {
         .predicate_count = predicate_count,
         .predicates = TAGGED_UNION_CREATE_VARIANT(
@@ -230,8 +235,8 @@ entity_count world_system_iter_generic_all(
     );
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
 
-    MATCH(predicates.predicates) {
-        case TAGGED_UNION_VARIANT(system_predicate, generic_system_predicate): {
+    TAGGED_UNION_MATCH(predicates.predicates) {
+        case TAGGED_UNION_VARIANT(_GENERIC_PREDICATES(system_predicate), generic_system_predicates): {
             _WORLD_SYTEM_ITER_FOR(it, descriptor) {
                 _WORLD_SYSTEM_ITER_FOR_BODY(count, it, handle);
                 for (size_t i = 0; i < predicates.predicate_count; i++) {
@@ -241,7 +246,7 @@ entity_count world_system_iter_generic_all(
             break;
         }
 
-        case TAGGED_UNION_VARIANT(world_system_predicate, generic_system_predicate): {
+        case TAGGED_UNION_VARIANT(_GENERIC_PREDICATES(world_system_predicate), generic_system_predicates): {
             _WORLD_SYTEM_ITER_FOR(it, descriptor) {
                 _WORLD_SYSTEM_ITER_FOR_BODY(count, it, handle);
                 for (size_t i = 0; i < predicates.predicate_count; i++) {
@@ -251,7 +256,7 @@ entity_count world_system_iter_generic_all(
             break;
         }
 
-        case TAGGED_UNION_VARIANT(dt_system_predicate, generic_system_predicate): {
+        case TAGGED_UNION_VARIANT(_GENERIC_PREDICATES(dt_system_predicate), generic_system_predicates): {
             _WORLD_SYTEM_ITER_FOR(it, descriptor) {
                 _WORLD_SYSTEM_ITER_FOR_BODY(count, it, handle);
                 for (size_t i = 0; i < predicates.predicate_count; i++) {
@@ -261,13 +266,19 @@ entity_count world_system_iter_generic_all(
             break;
         }
 
-        case TAGGED_UNION_VARIANT(world_dt_system_predicate, generic_system_predicate): {
+        case TAGGED_UNION_VARIANT(_GENERIC_PREDICATES(world_dt_system_predicate), generic_system_predicates): {
             _WORLD_SYTEM_ITER_FOR(it, descriptor) {
                 _WORLD_SYSTEM_ITER_FOR_BODY(count, it, handle);
                 for (size_t i = 0; i < predicates.predicate_count; i++) {
                     TAGGED_UNION_GET_UNCHECKED(_GENERIC_PREDICATES(world_dt_system_predicate), predicates.predicates)[i](handle, world, delta_time_seconds);
                 }
             }
+            break;
+        }
+
+        default: {
+            assert(false && "invalid predicate variant");
+            exit(EXIT_FAILURE);
             break;
         }
     }

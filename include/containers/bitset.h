@@ -126,7 +126,7 @@ bit_word bitset_unset(bitset *b, arena *a, size_t bit_index) {
     return (*w &= ~((bit_word)1 << layer_word_bit_index(bit_index, 0)));
 }
 
-bit_word bitset_get_word(bitset *b, size_t bit_index) {
+bit_word bitset_get_word(const bitset *b, size_t bit_index) {
     size_t word_index = layer_word_index(bit_index, 0);
     if (!exclusive_range_contains(b->word_range, word_index)) {
         return (bit_word)0;
@@ -141,7 +141,7 @@ bool bitset_is_set(bitset *b, size_t bit_index) {
         & ((bit_word)1 << layer_word_bit_index(bit_index, 0))) != 0;
 }
 
-bool bitset_bit_in_range(bitset *b, size_t bit_index) {
+bool bitset_bit_in_range(const bitset *b, size_t bit_index) {
     return exclusive_range_contains(b->word_range, layer_word_index(bit_index, 0));
 }
 
@@ -245,8 +245,8 @@ bool hibitset_is_set_skip_unset(const hibitset *b, size_t bit_index, ssize_t *ou
         bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
 
         if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
-            size_t unset_low = 1;
-            size_t unset_high = 0;
+            DWORD unset_low = 1;
+            DWORD unset_high = 0;
             uint32_t word_low = (uint32_t)word_shifted_to_bit;
             uint32_t word_high = (uint32_t)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
 
@@ -394,7 +394,7 @@ size_t hibitset_iterator_previous_set(hibitset_iterator *it) {
         it->current_bit_index -= unset_bit_skip_count;
     } while (!hibitset_iterator_done(it)
         && !hibitset_is_set_skip_unset_reverse(COW_GET_REFERENCE(hibitset, it->hibitset), it->current_bit_index, &unset_bit_skip_count)
-        && it->current_bit_index >= unset_bit_skip_count);
+        && (ssize_t)it->current_bit_index >= unset_bit_skip_count);
     return it->current_bit_index;
 }
 

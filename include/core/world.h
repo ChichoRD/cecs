@@ -25,7 +25,7 @@ world world_create(size_t entity_capacity, size_t component_type_capacity, size_
     w.components = world_components_create(component_type_capacity);
     w.relations = world_relations_create(entity_capacity);
 
-    const resource_default_size = sizeof(intptr_t) * 4;
+    const size_t resource_default_size = sizeof(intptr_t) * 4;
     w.resources = world_resources_create(resource_capacity, resource_default_size);
     return w;
 }
