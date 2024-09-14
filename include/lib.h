@@ -37,8 +37,34 @@ double game_time_update_time_since_start(game_time *t) {
 }
 
 
-// COMPONENT_DEFINE(struct, entity_reference) {
-//     const entity_id id;
-// } entity_reference;
+typedef struct is_child_of {
+    entity_id parent;
+} is_child_of;
+COMPONENT_IMPLEMENT(is_child_of);
+
+
+bool world_get_entity_with(const world *w, entity_id *out_entity_id, components_type_info components_type_info) {
+    arena temporary_arena = arena_create();
+    component_iterator it = component_iterator_create(component_iterator_descriptor_create(
+        &w->components,
+        &temporary_arena,
+        components_type_info
+    ));
+
+    if (!component_iterator_done(&it)) {
+        *out_entity_id = component_iterator_current(&it, w->components.discard.handle);
+        arena_free(&temporary_arena);
+        return true;
+    } else {
+        arena_free(&temporary_arena);
+        return false;
+    }
+}
+#define WORLD_GET_ENTITY_WITH(world_ref, out_entity_id_ref, ...) \
+    (world_get_entity_with(world_ref, out_entity_id_ref, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__)))
+
+#define WORLD_GET_ENTITY_WITH_IDS(world_ref, out_entity_id_ref, ...) \
+    (world_get_entity_with(world_ref, out_entity_id_ref, COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__)))
+
 
 #endif

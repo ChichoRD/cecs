@@ -16,19 +16,19 @@ typedef struct relation_id_descriptor {
     relation_target target;
 } relation_id_descriptor;
 
-inline relation_id_descriptor relation_id_descriptor_create_with_entity_target(component_id component_id, entity_id entity_id) {
+inline relation_id_descriptor relation_id_descriptor_create_entity(component_id component_id, entity_id entity_target) {
     return (relation_id_descriptor) {
         .component_id = component_id,
         .target = (relation_target) {
-            .entity_id = entity_id
+            .entity_id = entity_target
         }
     };
 }
-inline relation_id_descriptor relation_id_descriptor_create_with_tag_target(component_id component_id, tag_id tag_id) {
+inline relation_id_descriptor relation_id_descriptor_create_tag(component_id component_id, tag_id tag_target) {
     return (relation_id_descriptor) {
         .component_id = component_id,
         .target = (relation_target) {
-            .tag_id = tag_id
+            .tag_id = tag_target
         }
     };
 }
@@ -55,8 +55,10 @@ inline relation_id_descriptor relation_id_descriptor_create_with_tag_target(comp
 
 typedef component_id relation_id;
 relation_id relation_id_create(relation_id_descriptor descriptor) {
-    return (descriptor.component_id << COMPONENT_ID_RELATION_SHIFT) + descriptor.target.tag_id;
+    return ((descriptor.component_id + 1) << COMPONENT_ID_RELATION_SHIFT) + descriptor.target.tag_id;
 }
+#define RELATION_ID(component_type, target_id) \
+    relation_id_create(relation_id_descriptor_create_tag(COMPONENT_ID(component_type), target_id))
 
 
 typedef counted_set associated_entity_ids;
@@ -109,6 +111,12 @@ entity_id world_relations_set_associated_id(world_relations *wr, entity_id id, r
 entity_id world_relations_get_associated_id(world_relations *wr, entity_id id, relation_target target) {
     associated_entity_ids *ids = sparse_set_get_unchecked(&wr->entity_associated_ids, id, sizeof(associated_entity_ids));
     return *COUNTED_SET_GET(entity_id, ids, target.tag_id);
+}
+
+typedef counted_set_iterator associated_entity_ids_iterator;
+associated_entity_ids_iterator world_relations_get_associated_ids(world_relations *wr, entity_id id) {
+    associated_entity_ids *ids = sparse_set_get_unchecked(&wr->entity_associated_ids, id, sizeof(associated_entity_ids));
+    return counted_set_iterator_create(ids);
 }
 
 entity_id world_relations_increment_associated_id_or_set(

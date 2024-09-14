@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef uint32_t type_id;
+typedef uint64_t type_id;
 static type_id type_id_count = 0;
 
 #define _PASTE(x, y) x##y

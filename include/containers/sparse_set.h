@@ -256,7 +256,8 @@ inline uint8_t paged_sparse_set_page_index(size_t key) {
 }
 
 inline size_t paged_sparse_set_page_key(size_t key, uint8_t page_index) {
-    return key >> (PAGED_SPARSE_SET_PAGE_SIZE * page_index);
+    const size_t mask_size = PAGED_SPARSE_SET_PAGE_SIZE * (size_t)page_index;
+    return (key >> mask_size) + (key & (((size_t)1 << mask_size) - 1));
 }
 
 paged_sparse_set paged_sparse_set_create() {

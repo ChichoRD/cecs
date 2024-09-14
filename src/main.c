@@ -177,7 +177,7 @@ bool create_duck(arena *a, world *w, v2_i16 initial_position) {
     return EXIT_SUCCESS;
 }
 
-bool create_slime(arena *a, world *w, v2_i16 initial_position) {
+bool create_slime(arena *a, world *w, v2_i16 initial_position, entity_id parent) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -192,10 +192,11 @@ bool create_slime(arena *a, world *w, v2_i16 initial_position) {
         e,
         &r
     );
+    WORLD_SET_COMPONENT_RELATION(is_child_of, w, e, &(is_child_of){parent}, parent);
     return EXIT_SUCCESS;
 }
 
-bool create_lonk(arena *a, world *w) {
+entity_id create_lonk(arena *a, world *w) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -238,7 +239,7 @@ bool create_lonk(arena *a, world *w) {
             .buffer = {0}
         })
     );
-    return EXIT_SUCCESS;
+    return e;
 }
 
 bool create_map(arena *a, world *w) {
@@ -301,12 +302,13 @@ bool init(world *w) {
         }
     }
     SetConsoleOutputCP(65001);
-    create_lonk(sa, w);
+    entity_id lonk = create_lonk(sa, w);
     create_map(sa, w);
     for (size_t i = 0; i < 10; i++) {
         create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
     }
-    create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2});
+    create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
+    create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, world_add_entity(w));
 
     WORLD_SET_RESOURCE(console_buffer, w, &cb);
     return EXIT_SUCCESS;
@@ -441,6 +443,15 @@ void update_shockwaves(
     }
 }
 
+void update_children_position(
+    COMPONENT_ITERATION_HANDLE_STRUCT(renderable, is_child_of) *handle,
+    world *w,
+    double delta_time_seconds
+) {
+    position parent_position = *WORLD_GET_COMPONENT(position, w, handle->is_child_of_component->parent);
+    handle->renderable_component->offset = (v2_i16){ parent_position.x, parent_position.y };
+}
+
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
     WORLD_SYSTEM_ITER_GENERIC(
         world_dt_system_predicate,
@@ -473,7 +484,19 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
         delta_time_seconds,
         iteration_arena,
         update_ducks
-    );    
+    );
+
+    entity_id lonk;
+    WORLD_GET_ENTITY_WITH(w, &lonk, position, velocity, renderable, velocity_register, controllable);
+    
+    WORLD_SYSTEM_ITER_GENERIC(
+        world_dt_system_predicate,
+        WORLD_SYSTEM_CREATE_FROM_IDS(COMPONENT_ID(renderable), (RELATION_ID(is_child_of, lonk))),
+        w,
+        delta_time_seconds,
+        iteration_arena,
+        update_children_position
+    );
     return EXIT_SUCCESS;
 }
 
@@ -525,7 +548,7 @@ bool render(const world *w, arena *iteration_arena) {
         }
         list_add(&screen, &screen_arena, "\n", sizeof(char));
     }
-    printf("%s", screen.elements);
+    printf("%s", (char *)screen.elements);
     arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
 
@@ -587,7 +610,7 @@ bool finalize(world *w) {
     return EXIT_SUCCESS;
 }
 
-void main(void) {
+int main(void) {
     world w = world_create(1024, 32, 4);
 
     bool quitting = false;
@@ -618,4 +641,5 @@ void main(void) {
     }
 
     world_free(&w);
+    return app_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }

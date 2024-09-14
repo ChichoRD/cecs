@@ -135,7 +135,7 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
     return world_components_set_component_unchecked(
         &w->components,
         id,
-        relation_id_create(relation_id_descriptor_create_with_tag_target(component_id, tag_id)),
+        relation_id_create(relation_id_descriptor_create_tag(component_id, tag_id)),
         world_set_component(
             w,
             associated_id,
@@ -151,11 +151,15 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
         }
     );
 }
+#define WORLD_SET_COMPONENT_RELATION(component_type, world_ref, entity_id0, component_ref, target_id) \
+    world_set_component_relation(world_ref, entity_id0, COMPONENT_ID(component_type), component_ref, sizeof(component_type), target_id)
 
 void *world_get_component_relation(const world *w, entity_id id, component_id component_id, tag_id tag_id) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    return world_get_component(w, id, relation_id_create(relation_id_descriptor_create_with_tag_target(component_id, tag_id)));
+    return world_get_component(w, id, relation_id_create(relation_id_descriptor_create_tag(component_id, tag_id)));
 }
+#define WORLD_GET_COMPONENT_RELATION(component_type, world_ref, entity_id0, target_id) \
+    ((component_type *)world_get_component_relation(world_ref, entity_id0, COMPONENT_ID(component_type), target_id))
 
 bool world_remove_component_relation(world *w, entity_id id, component_id component_id, void *out_removed_component, tag_id tag_id) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
@@ -167,7 +171,7 @@ bool world_remove_component_relation(world *w, entity_id id, component_id compon
     return world_remove_component(
         w,
         id,
-        relation_id_create(relation_id_descriptor_create_with_tag_target(component_id, tag_id)),
+        relation_id_create(relation_id_descriptor_create_tag(component_id, tag_id)),
         out_removed_component
     ) && world_remove_component(
         w,
@@ -176,7 +180,57 @@ bool world_remove_component_relation(world *w, entity_id id, component_id compon
         out_removed_component
     );
 }
-// TODO: tag-tag relations
+#define WORLD_REMOVE_COMPONENT_RELATION(component_type, world_ref, entity_id0, out_removed_component_ref, target_id) \
+    world_remove_component_relation(world_ref, entity_id0, COMPONENT_ID(component_type), out_removed_component_ref, target_id)
+
+
+tag_id world_add_tag_relation(world *w, entity_id id, tag_id tag, tag_id target_tag_id) {
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
+    entity_id extra_id = world_add_entity(w);
+    entity_id associated_id = world_relations_increment_associated_id_or_set(
+        &w->relations,
+        id,
+        (relation_target){target_tag_id},
+        extra_id
+    );
+    if (associated_id != extra_id) {
+        world_entities_remove_entity(&w->entities, extra_id);
+    }
+    return world_add_tag(
+        w,
+        id,
+        relation_id_create(relation_id_descriptor_create_tag(
+            world_add_tag(w, associated_id, tag),
+            target_tag_id
+        ))
+    );
+}
+#define WORLD_ADD_TAG_RELATION(tag_type, world_ref, entity_id0, target_id) \
+    world_add_tag_relation(world_ref, entity_id0, TAG_ID(tag_type), target_id)
+
+bool world_remove_tag_relation(world *w, entity_id id, tag_id tag, tag_id target_tag_id) {
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
+    entity_id associated_id;
+    if (!world_relations_remove_associated_id(&w->relations, id, (relation_target){target_tag_id}, &associated_id)) {
+        return false;
+    }
+    return world_remove_tag(
+        w,
+        id,
+        relation_id_create(relation_id_descriptor_create_tag(tag, target_tag_id))
+    ) && world_remove_tag(
+        w,
+        associated_id,
+        tag
+    );
+}
+#define WORLD_REMOVE_TAG_RELATION(tag_type, world_ref, entity_id0, target_id) \
+    world_remove_tag_relation(world_ref, entity_id0, TAG_ID(tag_type), target_id)
+
+associated_entity_ids_iterator world_get_associated_ids(world *w, entity_id id) {
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
+    return world_relations_get_associated_ids(&w->relations, id);
+}
 
 
 resource_handle world_set_resource(world *w, resource_id id, void *resource, size_t size) {

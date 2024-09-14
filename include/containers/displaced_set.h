@@ -21,7 +21,7 @@ displaced_set displaced_set_create_with_capacity(arena *a, size_t capacity) {
     return (displaced_set){ .elements = list_create_with_capacity(a, capacity), .index_range = {0, 0} };
 }
 
-bool displaced_set_contains_index(const displaced_set *s, size_t index) {
+inline bool displaced_set_contains_index(const displaced_set *s, size_t index) {
     return exclusive_range_contains(s->index_range, index);
 }
 
@@ -214,5 +214,51 @@ counted_set_counter counted_set_remove_out(counted_set *s, size_t index, void *o
     }
 }
 
+
+typedef struct counted_set_iterator {
+    const counted_set *const set;
+    size_t current_index;
+} counted_set_iterator;
+
+counted_set_iterator counted_set_iterator_create(const counted_set *set) {
+    return (counted_set_iterator){
+        .set = set,
+        .current_index = set->elements.index_range.start
+    };
+}
+
+bool counted_set_iterator_done(const counted_set_iterator *it) {
+    return displaced_set_contains_index(&it->set->elements, it->current_index);
+}
+
+size_t counted_set_iterator_next(counted_set_iterator *it) {
+    do {
+        ++it->current_index;
+    } while (!counted_set_contains(it->set, it->current_index));
+    return it->current_index;
+}
+
+void *counted_set_iterator_current(const counted_set_iterator *it, size_t size) {
+    return counted_set_get(it->set, it->current_index, size);
+}
+#define COUNTED_SET_ITERATOR_CURRENT(type, iterator_ref) ((type *)counted_set_iterator_current(iterator_ref, sizeof(type)))
+
+void *counted_set_iterator_first(counted_set_iterator *it, size_t size) {
+    it->current_index = it->set->elements.index_range.start;
+    if (!counted_set_contains(it->set, it->current_index))
+        counted_set_iterator_next(it);
+    return counted_set_iterator_current(it, size);
+}
+
+inline size_t counted_set_iterator_current_index(const counted_set_iterator *it) {
+    return it->current_index;
+}
+
+size_t counted_set_iterator_first_index(counted_set_iterator *it) {
+    it->current_index = it->set->elements.index_range.start;
+    if (!counted_set_contains(it->set, it->current_index))
+        counted_set_iterator_next(it);
+    return counted_set_iterator_current_index(it);
+}
 
 #endif
