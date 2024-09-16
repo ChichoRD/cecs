@@ -265,10 +265,7 @@ size_t world_components_iterator_next(world_components_iterator *it) {
 sized_component_storage world_components_iterator_current(const world_components_iterator *it) {
     return (sized_component_storage){
         .storage = ((component_storage *)paged_sparse_set_data(&it->components->component_storages)) + it->storage_raw_index,
-        .component_size = OPTION_GET(
-            optional_component_size,
-            ((optional_component_size *)paged_sparse_set_data(&it->components->component_sizes))[it->storage_raw_index]
-        ),
+        .component_size = ((size_t *)paged_sparse_set_data(&it->components->component_sizes))[it->storage_raw_index],
         .component_id = ((size_t *)paged_sparse_set_keys(&it->components->component_storages))[it->storage_raw_index]
     };
 }
