@@ -61,6 +61,10 @@ typedef struct renderable {
 } renderable;
 COMPONENT_IMPLEMENT(renderable);
 
+typedef struct dies_by {
+    entity_id cause;
+} dies_by;
+COMPONENT_IMPLEMENT(dies_by);
 
 static renderable renderable_create(arena *a, char **sprite, v2_i16 offset, v2_i16 size) {
 	renderable r = (renderable) {
@@ -155,7 +159,7 @@ RESOURCE_IMPLEMENT(console_buffer);
 typedef arena strings_arena;
 RESOURCE_IMPLEMENT(strings_arena);
 
-bool create_duck(arena *a, world *w, v2_i16 initial_position) {
+bool create_duck(arena *a, world *w, v2_i16 initial_position, const entity_id *const threats, size_t threats_count) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -174,6 +178,9 @@ bool create_duck(arena *a, world *w, v2_i16 initial_position) {
         &r
     );
     WORLD_ADD_TAG(is_duck, w, e);
+    for (size_t i = 0; i < threats_count; i++) {
+        WORLD_SET_COMPONENT_RELATION(dies_by, w, e, &(dies_by){ threats[i] }, threats[i]);
+    }
     return EXIT_SUCCESS;
 }
 
@@ -305,7 +312,7 @@ bool init(world *w) {
     entity_id lonk = create_lonk(sa, w);
     create_map(sa, w);
     for (size_t i = 0; i < 10; i++) {
-        create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2});
+        create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (entity_id[]){lonk}, 1);
     }
     create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
     create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, world_add_entity(w));
@@ -444,12 +451,26 @@ void update_shockwaves(
 }
 
 void update_children_position(
-    COMPONENT_ITERATION_HANDLE_STRUCT(renderable, is_child_of) *handle,
+    COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, is_child_of) *handle,
     world *w,
     double delta_time_seconds
 ) {
+    position p = *handle->position_component;
     position parent_position = *WORLD_GET_COMPONENT(position, w, handle->is_child_of_component->parent);
-    handle->renderable_component->offset = (v2_i16){ parent_position.x, parent_position.y };
+    handle->renderable_component->offset = (v2_i16){ parent_position.x - p.x, parent_position.y - p.y };
+}
+
+void update_threatened(
+    COMPONENT_ITERATION_HANDLE_STRUCT(position, dies_by) *handle,
+    world *w,
+    double delta_time_seconds
+) {
+    position p = *handle->position_component;
+    position *threat_position = NULL;
+    if (WORLD_TRY_GET_COMPONENT(position, w, handle->dies_by_component->cause, &threat_position)
+        && p.x == threat_position->x && p.y == threat_position->y) {
+        world_remove_entity(w, handle->entity_id);
+    }
 }
 
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
@@ -485,18 +506,25 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
         iteration_arena,
         update_ducks
     );
-
-    entity_id lonk;
-    WORLD_GET_ENTITY_WITH(w, &lonk, position, velocity, renderable, velocity_register, controllable);
-    
     WORLD_SYSTEM_ITER_GENERIC(
         world_dt_system_predicate,
-        WORLD_SYSTEM_CREATE_FROM_IDS(COMPONENT_ID(renderable), (RELATION_ID(is_child_of, lonk))),
+        WORLD_SYSTEM_CREATE(position, dies_by),
         w,
         delta_time_seconds,
         iteration_arena,
-        update_children_position
+        update_threatened
     );
+    // entity_id lonk;
+    // WORLD_GET_ENTITY_WITH(w, &lonk, position, velocity, renderable, velocity_register, controllable);
+    
+    // WORLD_SYSTEM_ITER_GENERIC(
+    //     world_dt_system_predicate,
+    //     WORLD_SYSTEM_CREATE_FROM_IDS(COMPONENT_ID(position), COMPONENT_ID(renderable), (RELATION_ID(is_child_of, lonk))),
+    //     w,
+    //     delta_time_seconds,
+    //     iteration_arena,
+    //     update_children_position
+    // );
     return EXIT_SUCCESS;
 }
 

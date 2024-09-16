@@ -50,12 +50,55 @@ entity_id world_add_entity(world *w) {
     return world_entities_add_entity(&w->entities);
 }
 
-entity_id world_remove_entity(world *w, entity_id entity_id) {
-    for (size_t i = 0; i < world_components_get_component_storage_count(&w->components); i++) {
-        component_id key = ((size_t *)paged_sparse_set_keys(&w->components.component_storages))[i];
-        world_components_remove_component(&w->components, entity_id, key, w->components.discard.handle);
+entity_id world_clear_entity(world *w, entity_id entity_id) {
+    for (
+        world_components_iterator it = world_components_iterator_create(&w->components);
+        !world_components_iterator_done(&it);
+        world_components_iterator_next(&it)
+    ) {
+        sized_component_storage storage = world_components_iterator_current(&it);
+        component_storage_remove(
+            storage.storage,
+            &w->components.components_arena,
+            entity_id,
+            w->components.discard.handle,
+            storage.component_size
+        );
     }
+    return entity_id;
+}
+
+entity_id world_remove_entity(world *w, entity_id entity_id) {
+    world_clear_entity(w, entity_id);
     return world_entities_remove_entity(&w->entities, entity_id);
+}
+
+entity_id world_copy_entity_onto(world *w, entity_id destination, entity_id source) {
+    for (
+        world_components_entity_iterator it = world_components_entity_iterator_create(&w->components, source);
+        !world_components_entity_iterator_done(&it);
+        world_components_entity_iterator_next(&it)
+    ) {
+        sized_component_storage storage = world_components_entity_iterator_current(&it);
+        component_storage_set(
+            storage.storage,
+            &w->components.components_arena,
+            destination,
+            OPTION_GET(optional_component, component_storage_get(
+                storage.storage,
+                source,
+                storage.component_size
+            )),
+            storage.component_size
+        );
+    }
+
+    return destination;
+}
+
+entity_id world_copy_entity(world *w, entity_id destination, entity_id source) {
+    world_clear_entity(w, destination);
+    return world_copy_entity_onto(w, destination, source);
 }
 
 
@@ -90,6 +133,18 @@ void *world_get_component(const world *w, entity_id entity_id, component_id comp
 #define WORLD_GET_COMPONENT(type, world_ref, entity_id0) \
     ((type *)world_get_component(world_ref, entity_id0, COMPONENT_ID(type)))
 
+bool world_try_get_component(const world *w, entity_id entity_id, component_id component_id, void **out_component) {
+    optional_component component = world_components_get_component(&w->components, entity_id, component_id);
+    if (OPTION_IS_SOME(optional_component, component)) {
+        *out_component = OPTION_GET(optional_component, component);
+        return true;
+    } else {
+        *out_component = NULL;
+        return false;
+    }
+}
+#define WORLD_TRY_GET_COMPONENT(type, world_ref, entity_id0, out_component_ref) \
+    (world_try_get_component(world_ref, entity_id0, COMPONENT_ID(type), out_component_ref))
 
 tag_id world_add_tag(world *w, entity_id entity_id, tag_id tag_id) {
     assert(world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");

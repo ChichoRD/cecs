@@ -235,4 +235,75 @@ bool world_components_remove_component(
     }
 }
 
+
+typedef struct sized_component_storage {
+    component_storage *storage;
+    size_t component_size;
+    component_id component_id;
+} sized_component_storage;
+
+typedef struct world_components_iterator {
+    const world_components *const components;
+    size_t storage_raw_index;
+} world_components_iterator;
+
+world_components_iterator world_components_iterator_create(const world_components *components) {
+    return (world_components_iterator){
+        .components = components,
+        .storage_raw_index = 0
+    };
+}
+
+bool world_components_iterator_done(const world_components_iterator *it) {
+    return it->storage_raw_index >= world_components_get_component_storage_count(it->components);
+}
+
+size_t world_components_iterator_next(world_components_iterator *it) {
+    return ++it->storage_raw_index;
+}
+
+sized_component_storage world_components_iterator_current(const world_components_iterator *it) {
+    return (sized_component_storage){
+        .storage = ((component_storage *)paged_sparse_set_data(&it->components->component_storages)) + it->storage_raw_index,
+        .component_size = OPTION_GET(
+            optional_component_size,
+            ((optional_component_size *)paged_sparse_set_data(&it->components->component_sizes))[it->storage_raw_index]
+        ),
+        .component_id = ((size_t *)paged_sparse_set_keys(&it->components->component_storages))[it->storage_raw_index]
+    };
+}
+
+
+typedef struct world_components_entity_iterator {
+    world_components_iterator it;
+    const entity_id entity_id;
+} world_components_entity_iterator;
+
+
+world_components_entity_iterator world_components_entity_iterator_create(const world_components *components, entity_id entity_id) {
+    return (world_components_entity_iterator){
+        .it = world_components_iterator_create(components),
+        .entity_id = entity_id
+    };
+}
+
+bool world_components_entity_iterator_done(const world_components_entity_iterator *it) {
+    return world_components_iterator_done(&it->it);
+}
+
+size_t world_components_entity_iterator_next(world_components_entity_iterator *it) {
+    do {
+        world_components_iterator_next(&it->it);
+    } while (component_storage_has(
+        ((component_storage *)paged_sparse_set_data(&it->it.components->component_storages)) + it->it.storage_raw_index,
+        it->entity_id
+    ));
+
+    return it->it.storage_raw_index;
+}
+
+sized_component_storage world_components_entity_iterator_current(const world_components_entity_iterator *it) {
+    return world_components_iterator_current(&it->it);
+}
+
 #endif
