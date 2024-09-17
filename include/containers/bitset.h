@@ -194,7 +194,7 @@ typedef struct hibitset {
     bitset bitsets[BIT_LAYER_COUNT];
 } hibitset;
 
-const hibitset hibitset_empty() {
+inline const hibitset hibitset_empty() {
     return (hibitset){0};
 }
 

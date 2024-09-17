@@ -9,6 +9,7 @@
 #include "../../containers/range.h"
 #include "../../containers/arena.h"
 #include "../../containers/tagged_union.h"
+#include "../../types/wide_ptr.h"
 #include "component_type.h"
 #include "entity/entity.h"
 
@@ -26,15 +27,24 @@ typedef storage_info info(const void *self);
 typedef optional_component get_component(const void *self, entity_id id, size_t size);
 typedef optional_component set_component(void *self, arena *a, entity_id id, void *component, size_t size);
 typedef bool remove_component(void *self, arena *a, entity_id id, void *out_removed_component, size_t size);
-typedef struct component_storage_header {
+typedef struct component_storage_functions {
     info *const info;
     get_component *const get;
     set_component *const set;
     remove_component *const remove;
-} component_storage_header;
+} component_storage_functions;
+
+typedef union component_storage_ptr {
+    wide_ptr raw_storage;
+    struct {
+        void *storage;
+        component_storage_functions *functions;
+    };
+} component_storage_ptr;
+
 
 typedef struct unit_component_storage {
-    component_storage_header header;
+    uint_least8_t phantom_data;
 } unit_component_storage;
 
 const storage_info unit_component_storage_info(const unit_component_storage *self) {
@@ -58,20 +68,28 @@ bool unit_component_storage_remove(const unit_component_storage *self, arena *a,
     return false;
 }
 
+const component_storage_functions unit_component_storage_functions = {
+    .info = unit_component_storage_info,
+    .get = unit_component_storage_get,
+    .set = unit_component_storage_set,
+    .remove = unit_component_storage_remove
+};
+
+inline component_storage_ptr unit_component_storage_ptr(const unit_component_storage *self) {
+    return (component_storage_ptr) {
+        .storage = self,
+        .functions = &unit_component_storage_functions
+    };
+}
+
 unit_component_storage unit_component_storage_create() {
     return (unit_component_storage) {
-        .header = {
-            .info = unit_component_storage_info,
-            .get = unit_component_storage_get,
-            .set = unit_component_storage_set,
-            .remove = unit_component_storage_remove
-        }
+        .phantom_data = 0
     };
 }
 
 
 typedef struct indirect_component_storgage {
-    component_storage_header header;
     displaced_set component_references;
 } indirect_component_storage;
 
@@ -123,19 +141,26 @@ bool indirect_component_storage_remove(const indirect_component_storage *self, a
 
 indirect_component_storage indirect_component_storage_create() {
     return (indirect_component_storage) {
-        .header = {
-            .info = indirect_component_storage_info,
-            .get = indirect_component_storage_get,
-            .set = indirect_component_storage_set,
-            .remove = indirect_component_storage_remove
-        },
         .component_references = displaced_set_create()
+    };
+}
+
+const component_storage_functions indirect_component_storage_functions = {
+    .info = indirect_component_storage_info,
+    .get = indirect_component_storage_get,
+    .set = indirect_component_storage_set,
+    .remove = indirect_component_storage_remove
+};
+
+inline component_storage_ptr indirect_component_storage_ptr(const indirect_component_storage *self) {
+    return (component_storage_ptr) {
+        .storage = self,
+        .functions = &indirect_component_storage_functions
     };
 }
 
 
 typedef struct sparse_component_storage {
-    component_storage_header header;
     displaced_set components;
 } sparse_component_storage;
 
@@ -174,15 +199,24 @@ bool sparse_component_storage_remove(sparse_component_storage *self, arena *a, e
 
 sparse_component_storage sparse_component_storage_create(arena *a, size_t component_capacity, size_t component_size) {
     return (sparse_component_storage) {
-        .header = {
-            .info = sparse_component_storage_info,
-            .get = sparse_component_storage_get,
-            .set = sparse_component_storage_set,
-            .remove = sparse_component_storage_remove,
-        },
         .components = displaced_set_create_with_capacity(a, component_capacity * component_size),
     };
 }
+
+const component_storage_functions sparse_component_storage_functions = {
+    .info = sparse_component_storage_info,
+    .get = sparse_component_storage_get,
+    .set = sparse_component_storage_set,
+    .remove = sparse_component_storage_remove
+};
+
+inline component_storage_ptr sparse_component_storage_ptr(const sparse_component_storage *self) {
+    return (component_storage_ptr) {
+        .storage = self,
+        .functions = &sparse_component_storage_functions
+    };
+}
+
 
 typedef TAGGED_UNION_STRUCT(
     component_storage_union,
@@ -195,7 +229,6 @@ typedef TAGGED_UNION_STRUCT(
 ) component_storage_union;
 
 typedef struct component_storage {
-    component_storage_header header;
     component_storage_union storage;
     hibitset entity_bitset;
 } component_storage;
@@ -203,7 +236,6 @@ typedef struct component_storage {
 component_storage component_storage_create_sparse(arena *a, size_t component_capacity, size_t component_size) {
     sparse_component_storage storage = sparse_component_storage_create(a, component_capacity, component_size);
     return (component_storage) {
-        .header = storage.header,
         .storage = TAGGED_UNION_CREATE(
             sparse_component_storage,
             component_storage_union,
@@ -216,7 +248,6 @@ component_storage component_storage_create_sparse(arena *a, size_t component_cap
 component_storage component_storage_create_unit(arena *a) {
     unit_component_storage storage = unit_component_storage_create();
     return (component_storage) {
-        .header = storage.header,
         .storage = TAGGED_UNION_CREATE(
             unit_component_storage,
             component_storage_union,
@@ -229,7 +260,6 @@ component_storage component_storage_create_unit(arena *a) {
 component_storage component_storage_create_indirect(arena *a, component_storage *other_storage) {
     indirect_component_storage storage = indirect_component_storage_create(&other_storage->storage);
     return (component_storage) {
-        .header = storage.header,
         .storage = TAGGED_UNION_CREATE(
             indirect_component_storage,
             component_storage_union,
@@ -244,7 +274,7 @@ bool component_storage_has(const component_storage *self, entity_id id) {
 }
 
 const list *component_storage_components(const component_storage *self) {
-    switch (self->storage.variant) {
+    TAGGED_UNION_MATCH(self->storage) {
         case TAGGED_UNION_VARIANT(sparse_component_storage, component_storage_union):
             return &TAGGED_UNION_GET_UNCHECKED(sparse_component_storage, self->storage).components.elements;
         case TAGGED_UNION_VARIANT(indirect_component_storage, component_storage_union):
@@ -258,12 +288,31 @@ const list *component_storage_components(const component_storage *self) {
     }
 }
 
+inline component_storage_ptr component_storage_get_ptr(const component_storage *self) {
+    TAGGED_UNION_MATCH(self->storage) {
+        case TAGGED_UNION_VARIANT(sparse_component_storage, component_storage_union):
+            return sparse_component_storage_ptr(&TAGGED_UNION_GET_UNCHECKED(sparse_component_storage, self->storage));
+        case TAGGED_UNION_VARIANT(unit_component_storage, component_storage_union):
+            return unit_component_storage_ptr(&TAGGED_UNION_GET_UNCHECKED(unit_component_storage, self->storage));
+        case TAGGED_UNION_VARIANT(indirect_component_storage, component_storage_union):
+            return indirect_component_storage_ptr(&TAGGED_UNION_GET_UNCHECKED(indirect_component_storage, self->storage));
+        default:
+            {
+                assert(false && "unreachable: invalid component storage variant");
+                exit(EXIT_FAILURE);
+                return (component_storage_ptr){0};
+            }
+    }
+}
+
 const storage_info component_storage_info(const component_storage *self) {
-    return (self->header.info)(&self->storage);
+    component_storage_ptr storage = component_storage_get_ptr(self);
+    return storage.functions->info(storage.storage);
 }
 
 optional_component component_storage_get(const component_storage *self, entity_id id, size_t size) {
-    return (self->header.get)(&self->storage, id, size);
+    component_storage_ptr storage = component_storage_get_ptr(self);
+    return storage.functions->get(storage.storage, id, size);
 }
 #define COMPONENT_STORAGE_GET(type, component_storage_ref, entity_id) \
     ((type *)component_storage_get(component_storage_ref, entity_id, sizeof(type)))
@@ -274,14 +323,16 @@ void *component_storage_get_unchecked(const component_storage *self, entity_id i
 
 optional_component component_storage_set(component_storage *self, arena *a, entity_id id, void *component, size_t size) {
     hibitset_set(&self->entity_bitset, a, id);
-    return (self->header.set)(&self->storage, a, id, component, size);
+    component_storage_ptr storage = component_storage_get_ptr(self);
+    return storage.functions->set(storage.storage, a, id, component, size);
 }
 #define COMPONENT_STORAGE_SET(type, component_storage_ref, arena_ref, entity_id, component_ref) \
     ((type *)component_storage_set(component_storage_ref, arena_ref, entity_id, component_ref, sizeof(type)))
 
 bool component_storage_remove(component_storage *self, arena *a, entity_id id, void *out_removed_component, size_t size) {
     hibitset_unset(&self->entity_bitset, a, id);
-    return (self->header.remove)(&self->storage, a, id, out_removed_component, size);
+    component_storage_ptr storage = component_storage_get_ptr(self);
+    return storage.functions->remove(storage.storage, a, id, out_removed_component, size);
 }
 #define COMPONENT_STORAGE_REMOVE(type, component_storage_ref, arena_ref, entity_id) \
     ((type *)component_storage_remove(component_storage_ref, arena_ref, entity_id, sizeof(type)))

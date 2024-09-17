@@ -311,7 +311,7 @@ bool init(world *w) {
     SetConsoleOutputCP(65001);
     entity_id lonk = create_lonk(sa, w);
     create_map(sa, w);
-    for (size_t i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 2; i++) {
         create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (entity_id[]){lonk}, 1);
     }
     create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
@@ -498,7 +498,7 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
         iteration_arena,
         update_shockwaves
     );
-    WORLD_SYSTEM_ITER_GENERIC(
+    entity_count duck_count = WORLD_SYSTEM_ITER_GENERIC(
         world_dt_system_predicate,
         WORLD_SYSTEM_CREATE(position, is_duck),
         w,

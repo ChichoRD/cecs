@@ -115,8 +115,12 @@ entity_id world_relations_get_associated_id(world_relations *wr, entity_id id, r
 
 typedef counted_set_iterator associated_entity_ids_iterator;
 associated_entity_ids_iterator world_relations_get_associated_ids(world_relations *wr, entity_id id) {
-    associated_entity_ids *ids = sparse_set_get_unchecked(&wr->entity_associated_ids, id, sizeof(associated_entity_ids));
-    return counted_set_iterator_create(ids);
+    if (sparse_set_contains(&wr->entity_associated_ids, id)) {
+        associated_entity_ids *ids = sparse_set_get_unchecked(&wr->entity_associated_ids, id, sizeof(associated_entity_ids));
+        return counted_set_iterator_create_borrowed(ids);
+    } else {
+        return counted_set_iterator_create_owned(counted_set_empty());
+    }
 }
 
 entity_id world_relations_increment_associated_id_or_set(
@@ -146,10 +150,13 @@ bool world_relations_remove_associated_id(world_relations *wr, entity_id id, rel
         return false;
     } else {
         associated_entity_ids *ids = sparse_set_get_unchecked(&wr->entity_associated_ids, id, sizeof(associated_entity_ids));   
-        return (out_associated_entity_id == NULL)
-            ? counted_set_remove(ids, target.tag_id, sizeof(entity_id))
-            : counted_set_remove_out(ids, target.tag_id, out_associated_entity_id, sizeof(entity_id));
+        return counted_set_remove_out(ids, target.tag_id, out_associated_entity_id, sizeof(entity_id));
     }
 }
+
+typedef entity_id relation_entity_reference;
+COMPONENT_IMPLEMENT(relation_entity_reference);
+
+
 
 #endif

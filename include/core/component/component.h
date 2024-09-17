@@ -291,10 +291,13 @@ bool world_components_entity_iterator_done(const world_components_entity_iterato
 size_t world_components_entity_iterator_next(world_components_entity_iterator *it) {
     do {
         world_components_iterator_next(&it->it);
-    } while (component_storage_has(
-        ((component_storage *)paged_sparse_set_data(&it->it.components->component_storages)) + it->it.storage_raw_index,
-        it->entity_id
-    ));
+    } while (
+        !world_components_iterator_done(&it->it)
+        && !component_storage_has(
+            ((component_storage *)paged_sparse_set_data(&it->it.components->component_storages)) + it->it.storage_raw_index,
+            it->entity_id
+        )
+    );
 
     return it->it.storage_raw_index;
 }

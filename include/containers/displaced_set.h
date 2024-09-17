@@ -122,6 +122,10 @@ typedef struct counted_set {
     displaced_set counts;
 } counted_set;
 
+inline counted_set counted_set_empty() {
+    return (counted_set){0};
+}
+
 counted_set counted_set_create() {
     return (counted_set){ .elements = displaced_set_create(), .counts = displaced_set_create() };
 }
@@ -216,36 +220,33 @@ counted_set_counter counted_set_remove_out(counted_set *s, size_t index, void *o
 
 
 typedef struct counted_set_iterator {
-    const counted_set *const set;
+    const COW_STRUCT(const counted_set, counted_set) set;
     size_t current_index;
 } counted_set_iterator;
 
-counted_set_iterator counted_set_iterator_create(const counted_set *set) {
-    return (counted_set_iterator){
-        .set = set,
-        .current_index = set->elements.index_range.start
-    };
-}
-
 bool counted_set_iterator_done(const counted_set_iterator *it) {
-    return displaced_set_contains_index(&it->set->elements, it->current_index);
+    return !displaced_set_contains_index(&COW_GET_REFERENCE(counted_set, it->set)->elements, it->current_index);
 }
 
 size_t counted_set_iterator_next(counted_set_iterator *it) {
     do {
         ++it->current_index;
-    } while (!counted_set_contains(it->set, it->current_index));
+    } while (
+        !counted_set_iterator_done(it)
+        && !counted_set_contains(COW_GET_REFERENCE(counted_set, it->set), it->current_index)
+    );
     return it->current_index;
 }
 
 void *counted_set_iterator_current(const counted_set_iterator *it, size_t size) {
-    return counted_set_get(it->set, it->current_index, size);
+    return counted_set_get(COW_GET_REFERENCE(counted_set, it->set), it->current_index, size);
 }
 #define COUNTED_SET_ITERATOR_CURRENT(type, iterator_ref) ((type *)counted_set_iterator_current(iterator_ref, sizeof(type)))
 
 void *counted_set_iterator_first(counted_set_iterator *it, size_t size) {
-    it->current_index = it->set->elements.index_range.start;
-    if (!counted_set_contains(it->set, it->current_index))
+    counted_set *set = COW_GET_REFERENCE(counted_set, it->set);
+    it->current_index = set->elements.index_range.start;
+    if (!counted_set_contains(set, it->current_index))
         counted_set_iterator_next(it);
     return counted_set_iterator_current(it, size);
 }
@@ -255,10 +256,29 @@ inline size_t counted_set_iterator_current_index(const counted_set_iterator *it)
 }
 
 size_t counted_set_iterator_first_index(counted_set_iterator *it) {
-    it->current_index = it->set->elements.index_range.start;
-    if (!counted_set_contains(it->set, it->current_index))
+    counted_set *set = COW_GET_REFERENCE(counted_set, it->set);
+    it->current_index = set->elements.index_range.start;
+    if (!counted_set_contains(set, it->current_index))
         counted_set_iterator_next(it);
     return counted_set_iterator_current_index(it);
+}
+
+counted_set_iterator counted_set_iterator_create_borrowed(const counted_set *set) {
+    counted_set_iterator it = (counted_set_iterator){
+        .set = COW_CREATE_BORROWED(counted_set, set),
+        .current_index = set->elements.index_range.start
+    };
+    counted_set_iterator_first_index(&it);
+    return it;
+}
+
+counted_set_iterator counted_set_iterator_create_owned(const counted_set set) {
+    counted_set_iterator it = (counted_set_iterator){
+        .set = COW_CREATE_OWNED(counted_set, set),
+        .current_index = set.elements.index_range.start
+    };
+    counted_set_iterator_first_index(&it);
+    return it;
 }
 
 #endif
