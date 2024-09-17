@@ -52,7 +52,7 @@ size_t component_iterator_descriptor_append_sized_component_ids(
                 components_type_info.component_ids[i]
             )).is_unit_type_storage
         ) {
-            LIST_ADD(component_id, &sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
+            LIST_ADD(component_id, sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
         }
     }
 

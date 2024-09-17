@@ -199,7 +199,7 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
         //     &(RELATION_ENTITY_REFERENCE){id},
         //     sizeof(RELATION_ENTITY_REFERENCE)
         // );
-        world_copy_entity_onto(w, associated_id, id);
+        // world_copy_entity_onto(w, associated_id, id);
     }
 
     return world_components_set_component_unchecked(
@@ -281,7 +281,7 @@ tag_id world_add_tag_relation(world *w, entity_id id, tag_id tag, tag_id target_
         //     &(RELATION_ENTITY_REFERENCE){id},
         //     sizeof(RELATION_ENTITY_REFERENCE)
         // );
-        world_copy_entity_onto(w, associated_id, id);
+        // world_copy_entity_onto(w, associated_id, id);
     }
     
     return world_add_tag(

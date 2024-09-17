@@ -407,7 +407,7 @@ inline bool hibitset_iterator_current_is_set(const hibitset_iterator *it) {
 }
 
 
-hibitset hibitset_intersection(hibitset *bitsets, size_t count, arena *a) {
+hibitset hibitset_intersection(const hibitset *bitsets, size_t count, arena *a) {
     assert(count >= 2 && "attempted to compute intersection of less than 2 bitsets");
     exclusive_range intersection_range = hibitset_bit_range(&bitsets[0]);
     for (size_t i = 1; i < count; i++) {
@@ -441,7 +441,7 @@ hibitset hibitset_intersection(hibitset *bitsets, size_t count, arena *a) {
     return b;
 }
 
-hibitset hibitset_union(hibitset *bitsets, size_t count, arena *a) {
+hibitset hibitset_union(const hibitset *bitsets, size_t count, arena *a) {
     assert(count >= 2 && "attempted to compute union of less than 2 bitsets");
     exclusive_range union_range = hibitset_bit_range(&bitsets[0]);
     for (size_t i = 1; i < count; i++) {
@@ -473,6 +473,29 @@ hibitset hibitset_union(hibitset *bitsets, size_t count, arena *a) {
 
         current_bit = min_next_bit;
         all_done = all_done_at_current;
+    }
+    return b;
+}
+
+hibitset hibitsert_difference(const hibitset *bitset, const hibitset *subtracted_bitsets, size_t count, arena *a) {
+    assert(count >= 2 && "attempted to compute difference of less than 2 bitsets");
+    hibitset b = hibitset_create(a);
+
+    hibitset_iterator it = hibitset_iterator_create_borrowed_at_first(bitset);
+    if (!hibitset_iterator_current_is_set(&it)) {
+        hibitset_iterator_next_set(&it);
+    }
+    
+    while (!hibitset_iterator_done(&it)) {
+        bool any_set = false;
+        for (size_t i = 0; i < count; i++) {
+            any_set |= hibitset_is_set(&subtracted_bitsets[i], it.current_bit_index);
+        }
+
+        if (!any_set) {
+            hibitset_set(&b, a, it.current_bit_index);
+        }
+        hibitset_iterator_next_set(&it);
     }
     return b;
 }
