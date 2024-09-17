@@ -154,9 +154,4 @@ bool world_relations_remove_associated_id(world_relations *wr, entity_id id, rel
     }
 }
 
-typedef entity_id relation_entity_reference;
-COMPONENT_IMPLEMENT(relation_entity_reference);
-
-
-
 #endif

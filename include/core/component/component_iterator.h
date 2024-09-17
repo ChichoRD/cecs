@@ -17,6 +17,48 @@ typedef struct component_iterator_descriptor {
     hibitset entities_bitset; 
 } component_iterator_descriptor;
 
+bool component_iterator_descriptor_copy_component_bitsets(
+    const world_components *world_components,
+    components_type_info components_type_info,
+    hibitset bitsets_destination[]
+) {
+    bool intersection_empty = false;
+    for (size_t i = 0; i < components_type_info.component_count; i++) {
+        if (!world_components_has_storage(world_components, components_type_info.component_ids[i])) {
+            intersection_empty = true;
+            bitsets_destination[i] = hibitset_empty();
+        } else {
+            component_storage *storage = world_components_get_component_storage_unchecked(
+                world_components,
+                components_type_info.component_ids[i]
+            );
+            bitsets_destination[i] = storage->entity_bitset;
+        }
+    }
+    return !intersection_empty;
+}
+
+size_t component_iterator_descriptor_append_sized_component_ids(
+    const world_components *world_components,
+    arena *iterator_temporary_arena,
+    components_type_info components_type_info,
+    list *sized_component_ids
+) {
+    for (size_t i = 0; i < components_type_info.component_count; i++) {
+        if (
+            world_components_has_storage(world_components, components_type_info.component_ids[i])
+            && !component_storage_info(world_components_get_component_storage_unchecked(
+                world_components,
+                components_type_info.component_ids[i]
+            )).is_unit_type_storage
+        ) {
+            LIST_ADD(component_id, &sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
+        }
+    }
+
+    return LIST_COUNT(component_id, sized_component_ids);
+}
+
 component_iterator_descriptor component_iterator_descriptor_create(
     const world_components *world_components,
     arena *iterator_temporary_arena,
@@ -24,37 +66,33 @@ component_iterator_descriptor component_iterator_descriptor_create(
 ) {
     size_t component_count = components_type_info.component_count;
     list sized_component_ids = LIST_CREATE_WITH_CAPACITY(component_id, iterator_temporary_arena, component_count);
-
+    size_t sized_component_count = component_iterator_descriptor_append_sized_component_ids(
+        world_components,
+        iterator_temporary_arena,
+        components_type_info,
+        &sized_component_ids
+    );
+    
     hibitset *bitsets = calloc(component_count, sizeof(hibitset));
-    bool intersection_empty = false;
-    for (size_t i = 0; i < component_count; i++) {
-        if (!world_components_has_storage(world_components, components_type_info.component_ids[i])) {
-            intersection_empty = true;
-            bitsets[i] = hibitset_empty();
-        } else {
-            component_storage *storage = world_components_get_component_storage_unchecked(
-                world_components,
-                components_type_info.component_ids[i]
-            );
-            bitsets[i] = storage->entity_bitset;
-            if (!component_storage_info(storage).is_unit_type_storage) {
-                LIST_ADD(component_id, &sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
-            }
-        }
-        
+    hibitset entities_bitset;
+    if (component_iterator_descriptor_copy_component_bitsets(
+        world_components,
+        components_type_info,
+        bitsets
+    )) {
+        entities_bitset = (component_count == 1)
+            ? bitsets[0]
+            : hibitset_intersection(bitsets, component_count, iterator_temporary_arena);
+    } else {
+        entities_bitset = hibitset_empty();
     }
-
     component_iterator_descriptor descriptor = {
         .checksum = world_components->checksum,
         .world_components = world_components,
-        .entities_bitset = intersection_empty
-            ? hibitset_empty()
-            : (component_count == 1)
-                ? bitsets[0]
-                : hibitset_intersection(bitsets, component_count, iterator_temporary_arena),
+        .entities_bitset = entities_bitset,
         .components_type_info = (struct components_type_info) {
             .component_ids = sized_component_ids.elements,
-            .component_count = LIST_COUNT(component_id, &sized_component_ids)
+            .component_count = sized_component_count
         }
     };
 
@@ -143,6 +181,5 @@ entity_id component_iterator_current(const component_iterator *it, raw_iteration
 size_t component_iterator_next(component_iterator *it) {
     return hibitset_iterator_next_set(&it->entities_iterator);
 }
-
 
 #endif

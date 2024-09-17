@@ -110,14 +110,6 @@ entity_id world_create_copy(world *w, entity_id source) {
 
 void *world_set_component(world *w, entity_id id, component_id component_id, void *component, size_t size) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    for (
-        associated_entity_ids_iterator it = world_relations_get_associated_ids(&w->relations, id);
-        !counted_set_iterator_done(&it);
-        counted_set_iterator_next(&it)
-    ) {
-        world_set_component(w, *COUNTED_SET_ITERATOR_CURRENT(entity_id, &it), component_id, component, size);
-    }
-
     return world_components_set_component_unchecked(
         &w->components,
         id,
@@ -136,14 +128,6 @@ void *world_set_component(world *w, entity_id id, component_id component_id, voi
 
 const bool world_remove_component(world *w, entity_id id, component_id component_id, void *out_removed_component) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    for (
-        associated_entity_ids_iterator it = world_relations_get_associated_ids(&w->relations, id);
-        !counted_set_iterator_done(&it);
-        counted_set_iterator_next(&it)
-    ) {
-        world_remove_component(w, *COUNTED_SET_ITERATOR_CURRENT(entity_id, &it), component_id, w->components.discard.handle);
-    }
-
     return world_components_remove_component(&w->components, id, component_id, out_removed_component);
 }
 #define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0, out_removed_component_ref) \
@@ -170,14 +154,6 @@ bool world_try_get_component(const world *w, entity_id entity_id, component_id c
 
 tag_id world_add_tag(world *w, entity_id id, tag_id tag_id) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    for (
-        associated_entity_ids_iterator it = world_relations_get_associated_ids(&w->relations, id);
-        !counted_set_iterator_done(&it);
-        counted_set_iterator_next(&it)
-    ) {
-        world_add_tag(w, *COUNTED_SET_ITERATOR_CURRENT(entity_id, &it), tag_id);
-    }
-
     world_components_set_component(
         &w->components,
         id,
@@ -197,14 +173,6 @@ tag_id world_add_tag(world *w, entity_id id, tag_id tag_id) {
 
 tag_id world_remove_tag(world *w, entity_id id, tag_id tag_id) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    for (
-        associated_entity_ids_iterator it = world_relations_get_associated_ids(&w->relations, id);
-        !counted_set_iterator_done(&it);
-        counted_set_iterator_next(&it)
-    ) {
-        world_remove_tag(w, *COUNTED_SET_ITERATOR_CURRENT(entity_id, &it), tag_id);
-    }
-
     world_components_remove_component(&w->components, id, tag_id, &(optional_component){0});
     return tag_id;
 }
@@ -224,13 +192,14 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
     if (associated_id != extra_id) {
         world_entities_remove_entity(&w->entities, extra_id);
     } else {
-        world_set_component(
-            w,
-            world_copy_entity_onto(w, associated_id, id),
-            TYPE_ID(COMPONENT(relation_entity_reference)),
-            &(relation_entity_reference){id},
-            sizeof(relation_entity_reference)
-        );
+        // world_set_component(
+        //     w,
+        //     world_copy_entity_onto(w, associated_id, id),
+        //     TYPE_ID(COMPONENT(RELATION_ENTITY_REFERENCE)),
+        //     &(RELATION_ENTITY_REFERENCE){id},
+        //     sizeof(RELATION_ENTITY_REFERENCE)
+        // );
+        world_copy_entity_onto(w, associated_id, id);
     }
 
     return world_components_set_component_unchecked(
@@ -268,12 +237,13 @@ bool world_remove_component_relation(world *w, entity_id id, component_id compon
     if (!world_relations_remove_associated_id(&w->relations, id, (relation_target){tag_id}, &associated_id)) {
         return false;
     } else if (!world_relations_entity_has_associated_id(&w->relations, id, (relation_target){tag_id})) {
-        world_remove_component(
-            w,
-            world_clear_entity(w, associated_id),
-            TYPE_ID(COMPONENT(relation_entity_reference)),
-            w->components.discard.handle
-        );
+        // world_remove_component(
+        //     w,
+        //     world_clear_entity(w, associated_id),
+        //     TYPE_ID(COMPONENT(RELATION_ENTITY_REFERENCE)),
+        //     w->components.discard.handle
+        // );
+        world_clear_entity(w, associated_id);
     }
 
     return world_remove_component(
@@ -304,13 +274,14 @@ tag_id world_add_tag_relation(world *w, entity_id id, tag_id tag, tag_id target_
     if (associated_id != extra_id) {
         world_entities_remove_entity(&w->entities, extra_id);
     } else {
-        world_set_component(
-            w,
-            world_copy_entity_onto(w, associated_id, id),
-            TYPE_ID(COMPONENT(relation_entity_reference)),
-            &(relation_entity_reference){id},
-            sizeof(relation_entity_reference)
-        );
+        // world_set_component(
+        //     w,
+        //     world_copy_entity_onto(w, associated_id, id),
+        //     TYPE_ID(COMPONENT(RELATION_ENTITY_REFERENCE)),
+        //     &(RELATION_ENTITY_REFERENCE){id},
+        //     sizeof(RELATION_ENTITY_REFERENCE)
+        // );
+        world_copy_entity_onto(w, associated_id, id);
     }
     
     return world_add_tag(
@@ -331,14 +302,15 @@ bool world_remove_tag_relation(world *w, entity_id id, tag_id tag, tag_id target
     if (!world_relations_remove_associated_id(&w->relations, id, (relation_target){target_tag_id}, &associated_id)) {
         return false;
     } else if (!world_relations_entity_has_associated_id(&w->relations, id, (relation_target){target_tag_id})) {
-        world_remove_component(
-            w,
-            world_clear_entity(w, associated_id),
-            TYPE_ID(COMPONENT(relation_entity_reference)),
-            w->components.discard.handle
-        );
+        // world_remove_component(
+        //     w,
+        //     world_clear_entity(w, associated_id),
+        //     TYPE_ID(COMPONENT(RELATION_ENTITY_REFERENCE)),
+        //     w->components.discard.handle
+        // );
+        world_clear_entity(w, associated_id);
     }
-    
+
     return world_remove_tag(
         w,
         id,
