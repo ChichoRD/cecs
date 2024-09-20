@@ -514,8 +514,8 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
         iteration_arena,
         update_threatened
     );
-    // entity_id lonk;
-    // WORLD_GET_ENTITY_WITH(w, &lonk, position, velocity, renderable, velocity_register, controllable);
+    //  entity_id lonk;
+    // WORLD_GET_ENTITY_WITH(w, &lonk, COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
     
     // WORLD_SYSTEM_ITER_GENERIC(
     //     world_dt_system_predicate,

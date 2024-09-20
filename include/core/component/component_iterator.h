@@ -23,9 +23,17 @@ typedef TAGGED_UNION_STRUCT(
     COMPONENTS_NONE_ID
 ) components_search_group;
 
-#define COMPONENTS_ALL(...) TAGGED_UNION_CREATE(COMPONENTS_ALL_ID, components_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
-#define COMPONENTS_ANY(...) TAGGED_UNION_CREATE(COMPONENTS_ANY_ID, components_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
-#define COMPONENTS_NONE(...) TAGGED_UNION_CREATE(COMPONENTS_NONE_ID, components_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define COMPONENTS_SEARCH_GROUP_CREATE(components_type_info, variant) \
+    TAGGED_UNION_CREATE(variant, components_search_group, components_type_info)
+
+#define COMPONENTS_ALL(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), COMPONENTS_ALL_ID)
+#define COMPONENTS_ANY(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), COMPONENTS_ANY_ID)
+#define COMPONENTS_NONE(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), COMPONENTS_NONE_ID)
+
+#define COMPONENTS_ALL_IDS(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), COMPONENTS_ALL_ID)
+#define COMPONENTS_ANY_IDS(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), COMPONENTS_ANY_ID)
+#define COMPONENTS_NONE_IDS(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), COMPONENTS_NONE_ID)
+
 
 typedef struct components_search_groups {
     const components_search_group *const groups;
@@ -116,14 +124,16 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
             info,
             bitsets
         );
-        bool enties_bitset_empty = hibitset_is_empty(&entities_bitset);
+        bool enties_bitset_empty = exclusive_range_is_empty(hibitset_bit_range(&entities_bitset));
 
         TAGGED_UNION_MATCH(search_groups.groups[i]) {
             case TAGGED_UNION_VARIANT(COMPONENTS_ALL_ID, components_search_group): {
                 if (component_bitsets_empty) {
-                    hibitset_unset_all(component_bitsets_empty);
+                    hibitset_unset_all(&entities_bitset);
                 } else if (enties_bitset_empty) {
-                    entities_bitset = hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
+                    entities_bitset = info.component_count == 1
+                        ? bitsets[0]
+                        : hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
                 } else {
                     bitsets[info.component_count] = entities_bitset;
                     entities_bitset = hibitset_intersection(bitsets, info.component_count + 1, iterator_temporary_arena);
@@ -136,7 +146,9 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                     break;
 
                 if (enties_bitset_empty) {
-                    entities_bitset = hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
+                    entities_bitset = info.component_count == 1
+                        ? bitsets[0]
+                        : hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
                 } else {
                     bitsets[info.component_count] = entities_bitset;
                     entities_bitset = hibitset_union(bitsets, info.component_count + 1, iterator_temporary_arena);

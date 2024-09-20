@@ -330,6 +330,7 @@ bool hibitset_bit_in_range(const hibitset *b, size_t bit_index) {
     return bitset_bit_in_range(&b->bitsets[0], bit_index);
 }
 
+
 #include "tagged_union.h"
 typedef struct hibitset_iterator {
     const COW_STRUCT(const hibitset, hibitset) hibitset;
@@ -418,6 +419,7 @@ inline bool hibitset_iterator_current_is_set(const hibitset_iterator *it) {
 }
 
 
+// TODO: hibitset operations onto, result mutates parameter
 hibitset hibitset_intersection(const hibitset *bitsets, size_t count, arena *a) {
     assert(count >= 2 && "attempted to compute intersection of less than 2 bitsets");
     exclusive_range intersection_range = hibitset_bit_range(&bitsets[0]);
@@ -489,7 +491,7 @@ hibitset hibitset_union(const hibitset *bitsets, size_t count, arena *a) {
 }
 
 hibitset hibitset_difference(const hibitset *bitset, const hibitset *subtracted_bitsets, size_t count, arena *a) {
-    assert(count >= 2 && "attempted to compute difference of less than 2 bitsets");
+    assert(count >= 1 && "attempted to compute difference of less than 2 bitsets");
     hibitset b = hibitset_create(a);
 
     hibitset_iterator it = hibitset_iterator_create_borrowed_at_first(bitset);

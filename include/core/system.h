@@ -8,23 +8,26 @@
 #include "world.h"
 
 typedef struct world_system {
-    components_type_info components_type_info;
+    components_search_groups search_groups;
     //list subsystems;
 } world_system;
 
-world_system world_system_create(components_type_info components_type_info) {
+world_system world_system_create(components_search_groups search_groups) {
     return (world_system){ 
-        .components_type_info = components_type_info
+        .search_groups = search_groups
     };
 }
-#define WORLD_SYSTEM_CREATE(...) world_system_create(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
-#define WORLD_SYSTEM_CREATE_FROM_IDS(...) world_system_create(COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__))
+#define WORLD_SYSTEM_CREATE_GROUPED(...) world_system_create(COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__))
+#define WORLD_SYSTEM_CREATE_GROUPED_FROM_IDS(...) world_system_create(COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__))
+
+#define WORLD_SYSTEM_CREATE(...) WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL(__VA_ARGS__))
+#define WORLD_SYSTEM_CREATE_FROM_IDS(...) WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL_IDS(__VA_ARGS__))
 
 typedef size_t entity_count;
 typedef void system_predicate(raw_iteration_handle_reference handle);
 entity_count world_system_iter(const world_system s, world_components *wc, arena *iteration_arena, system_predicate *const predicate) {
     entity_count count = 0;
-    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.components_type_info);
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.search_groups);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
     for (
         component_iterator it = component_iterator_create(descriptor);
@@ -65,7 +68,7 @@ typedef union {
 
 entity_count world_system_iter_all(const world_system s, world_components *wc, arena *iteration_arena, system_predicates predicates) {
     entity_count count = 0;
-    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.components_type_info);
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.search_groups);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
     for (
         component_iterator it = component_iterator_create(descriptor);
@@ -124,7 +127,7 @@ entity_count world_system_iter_generic(
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(
         &world->components,
         iteration_arena,
-        s.components_type_info
+        s.search_groups
     );
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
 
@@ -231,7 +234,7 @@ entity_count world_system_iter_generic_all(
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(
         &world->components,
         iteration_arena,
-        s.components_type_info
+        s.search_groups
     );
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
 
