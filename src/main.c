@@ -543,8 +543,7 @@ bool render(const world *w, arena *iteration_arena) {
         component_iterator it = COMPONENT_ITERATOR_CREATE(
             &w->components,
             iteration_arena,
-            position,
-            renderable
+            position, renderable
         );
         !component_iterator_done(&it);
         component_iterator_next(&it)

@@ -65,6 +65,11 @@ bitset bitset_create(arena *a, size_t capacity) {
     return b;
 }
 
+void bitset_unset_all(bitset *b) {
+    list_clear(&b->bit_words);
+    b->word_range = (exclusive_range){0, 0};
+}
+
 word_range bitset_expand(bitset *b, arena *a, size_t word_index) {
     if (exclusive_range_is_empty(b->word_range)) {
         assert(LIST_COUNT(bit_word, &b->bit_words) == 0);
@@ -208,6 +213,12 @@ hibitset hibitset_create(arena *a) {
         b.bitsets[layer] = bitset_create(a, (size_t)1 << (BIT_PAGE_SIZE_LOG2 * layer_complement(layer)));
     }
     return b;
+}
+
+void hibitset_unset_all(hibitset *b) {
+    for (size_t layer = 0; layer < BIT_LAYER_COUNT; layer++) {
+        bitset_unset_all(&b->bitsets[layer]);
+    }
 }
 
 void hibitset_set(hibitset *b, arena *a, size_t bit_index) {
@@ -477,7 +488,7 @@ hibitset hibitset_union(const hibitset *bitsets, size_t count, arena *a) {
     return b;
 }
 
-hibitset hibitsert_difference(const hibitset *bitset, const hibitset *subtracted_bitsets, size_t count, arena *a) {
+hibitset hibitset_difference(const hibitset *bitset, const hibitset *subtracted_bitsets, size_t count, arena *a) {
     assert(count >= 2 && "attempted to compute difference of less than 2 bitsets");
     hibitset b = hibitset_create(a);
 

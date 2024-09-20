@@ -9,6 +9,46 @@
 #include "../../containers/arena.h"
 #include "component.h"
 
+#define COMPONENTS_ALL_ID components_all
+#define COMPONENTS_ANY_ID components_any
+#define COMPONENTS_NONE_ID components_none
+
+typedef TAGGED_UNION_STRUCT(
+    component_search_group,
+    components_type_info,
+    COMPONENTS_ALL_ID,
+    components_type_info,
+    COMPONENTS_ANY_ID,
+    components_type_info,
+    COMPONENTS_NONE_ID
+) component_search_group;
+
+#define COMPONENTS_ALL(...) TAGGED_UNION_CREATE(COMPONENTS_ALL_ID, component_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define COMPONENTS_ANY(...) TAGGED_UNION_CREATE(COMPONENTS_ANY_ID, component_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define COMPONENTS_NONE(...) TAGGED_UNION_CREATE(COMPONENTS_NONE_ID, component_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+
+typedef struct components_search_groups {
+    const component_search_group *const groups;
+    const size_t group_count;
+} components_search_groups;
+
+inline components_search_groups components_search_groups_create(
+    const component_search_group *groups,
+    size_t group_count
+) {
+    return (components_search_groups) {
+        .groups = groups,
+        .group_count = group_count
+    };
+}
+
+#define COMPONENTS_SEARCH_GROUPS_CREATE(...) \
+    components_search_groups_create( \
+        ((component_search_group[]){ __VA_ARGS__ }), \
+        sizeof((component_search_group[]){ __VA_ARGS__ }) / sizeof(component_search_group) \
+    )
+
+
 
 typedef struct component_iterator_descriptor {
     const world_components_checksum checksum;
@@ -59,33 +99,100 @@ size_t component_iterator_descriptor_append_sized_component_ids(
     return LIST_COUNT(component_id, sized_component_ids);
 }
 
+hibitset component_iterator_descriptor_get_search_groups_bitset(
+    const world_components *world_components,
+    arena *iterator_temporary_arena,
+    components_search_groups search_groups,
+    size_t max_component_count
+) {
+    hibitset *bitsets = calloc(max_component_count + 1, sizeof(hibitset));
+    hibitset entities_bitset = hibitset_create(iterator_temporary_arena);
+    for (size_t i = 0; i < search_groups.group_count; i++) {
+        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
+        assert(max_component_count >= info.component_count && "component count is larger than max component count");
+        
+        bool component_bitsets_empty = !component_iterator_descriptor_copy_component_bitsets(
+            world_components,
+            info,
+            bitsets
+        );
+        bool enties_bitset_empty = hibitset_is_empty(&entities_bitset);
+
+        TAGGED_UNION_MATCH(search_groups.groups[i]) {
+            case TAGGED_UNION_VARIANT(COMPONENTS_ALL_ID, component_search_group): {
+                if (component_bitsets_empty) {
+                    hibitset_unset_all(component_bitsets_empty);
+                } else if (enties_bitset_empty) {
+                    entities_bitset = hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
+                } else {
+                    bitsets[info.component_count] = entities_bitset;
+                    entities_bitset = hibitset_intersection(bitsets, info.component_count + 1, iterator_temporary_arena);
+                }
+                break;
+            }
+
+            case TAGGED_UNION_VARIANT(COMPONENTS_ANY_ID, component_search_group): {
+                if (component_bitsets_empty)
+                    break;
+
+                if (enties_bitset_empty) {
+                    entities_bitset = hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
+                } else {
+                    bitsets[info.component_count] = entities_bitset;
+                    entities_bitset = hibitset_union(bitsets, info.component_count + 1, iterator_temporary_arena);
+                }
+                break;
+            }
+
+            case TAGGED_UNION_VARIANT(COMPONENTS_NONE_ID, component_search_group): {
+                if (component_bitsets_empty || enties_bitset_empty) {
+                    break;
+                }
+                entities_bitset = hibitset_difference(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
+                break;
+            }
+
+            default: {
+                assert(false && "unreachable: invalid component search group variant");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+    free(bitsets);
+
+    return entities_bitset;
+}
+
 component_iterator_descriptor component_iterator_descriptor_create(
     const world_components *world_components,
     arena *iterator_temporary_arena,
-    components_type_info components_type_info
+    components_search_groups search_groups
 ) {
-    size_t component_count = components_type_info.component_count;
-    list sized_component_ids = LIST_CREATE_WITH_CAPACITY(component_id, iterator_temporary_arena, component_count);
-    size_t sized_component_count = component_iterator_descriptor_append_sized_component_ids(
+    list sized_component_ids = LIST_CREATE_WITH_CAPACITY(component_id, iterator_temporary_arena, search_groups.group_count);
+    size_t sized_component_count = 0;
+    size_t component_count = 0;
+    size_t max_component_count = 0;
+    for (size_t i = 0; i < search_groups.group_count; i++) {
+        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
+        component_count += info.component_count;
+        max_component_count = max(max_component_count, info.component_count);
+
+        if (!TAGGED_UNION_IS(COMPONENTS_NONE_ID, component_search_group, search_groups.groups[i])) {        
+            sized_component_count += component_iterator_descriptor_append_sized_component_ids(
+                world_components,
+                iterator_temporary_arena,
+                info,
+                &sized_component_ids
+            );
+        }
+    }
+    
+    hibitset entities_bitset = component_iterator_descriptor_get_search_groups_bitset(
         world_components,
         iterator_temporary_arena,
-        components_type_info,
-        &sized_component_ids
+        search_groups,
+        max_component_count
     );
-    
-    hibitset *bitsets = calloc(component_count, sizeof(hibitset));
-    hibitset entities_bitset;
-    if (component_iterator_descriptor_copy_component_bitsets(
-        world_components,
-        components_type_info,
-        bitsets
-    )) {
-        entities_bitset = (component_count == 1)
-            ? bitsets[0]
-            : hibitset_intersection(bitsets, component_count, iterator_temporary_arena);
-    } else {
-        entities_bitset = hibitset_empty();
-    }
     component_iterator_descriptor descriptor = {
         .checksum = world_components->checksum,
         .world_components = world_components,
@@ -96,7 +203,6 @@ component_iterator_descriptor component_iterator_descriptor_create(
         }
     };
 
-    free(bitsets);
     return descriptor;
 }
 
@@ -152,7 +258,14 @@ component_iterator component_iterator_create(component_iterator_descriptor descr
     component_iterator_create(component_iterator_descriptor_create( \
         world_components_ref, \
         arena_ref, \
-        COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__) \
+        COMPONENTS_SEARCH_GROUPS_CREATE(COMPONENTS_ALL(__VA_ARGS__)) \
+    ))
+
+#define COMPONENT_ITERATOR_CREATE_GROUPED(world_components_ref, arena_ref, ...) \
+    component_iterator_create(component_iterator_descriptor_create( \
+        world_components_ref, \
+        arena_ref, \
+        COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__) \
     ))
 
 bool component_iterator_done(const component_iterator *it) {
