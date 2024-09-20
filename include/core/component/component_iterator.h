@@ -14,26 +14,26 @@
 #define COMPONENTS_NONE_ID components_none
 
 typedef TAGGED_UNION_STRUCT(
-    component_search_group,
+    components_search_group,
     components_type_info,
     COMPONENTS_ALL_ID,
     components_type_info,
     COMPONENTS_ANY_ID,
     components_type_info,
     COMPONENTS_NONE_ID
-) component_search_group;
+) components_search_group;
 
-#define COMPONENTS_ALL(...) TAGGED_UNION_CREATE(COMPONENTS_ALL_ID, component_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
-#define COMPONENTS_ANY(...) TAGGED_UNION_CREATE(COMPONENTS_ANY_ID, component_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
-#define COMPONENTS_NONE(...) TAGGED_UNION_CREATE(COMPONENTS_NONE_ID, component_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define COMPONENTS_ALL(...) TAGGED_UNION_CREATE(COMPONENTS_ALL_ID, components_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define COMPONENTS_ANY(...) TAGGED_UNION_CREATE(COMPONENTS_ANY_ID, components_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
+#define COMPONENTS_NONE(...) TAGGED_UNION_CREATE(COMPONENTS_NONE_ID, components_search_group, COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__))
 
 typedef struct components_search_groups {
-    const component_search_group *const groups;
+    const components_search_group *const groups;
     const size_t group_count;
 } components_search_groups;
 
 inline components_search_groups components_search_groups_create(
-    const component_search_group *groups,
+    const components_search_group *groups,
     size_t group_count
 ) {
     return (components_search_groups) {
@@ -44,8 +44,8 @@ inline components_search_groups components_search_groups_create(
 
 #define COMPONENTS_SEARCH_GROUPS_CREATE(...) \
     components_search_groups_create( \
-        ((component_search_group[]){ __VA_ARGS__ }), \
-        sizeof((component_search_group[]){ __VA_ARGS__ }) / sizeof(component_search_group) \
+        ((components_search_group[]){ __VA_ARGS__ }), \
+        sizeof((components_search_group[]){ __VA_ARGS__ }) / sizeof(components_search_group) \
     )
 
 
@@ -119,7 +119,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
         bool enties_bitset_empty = hibitset_is_empty(&entities_bitset);
 
         TAGGED_UNION_MATCH(search_groups.groups[i]) {
-            case TAGGED_UNION_VARIANT(COMPONENTS_ALL_ID, component_search_group): {
+            case TAGGED_UNION_VARIANT(COMPONENTS_ALL_ID, components_search_group): {
                 if (component_bitsets_empty) {
                     hibitset_unset_all(component_bitsets_empty);
                 } else if (enties_bitset_empty) {
@@ -131,7 +131,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                 break;
             }
 
-            case TAGGED_UNION_VARIANT(COMPONENTS_ANY_ID, component_search_group): {
+            case TAGGED_UNION_VARIANT(COMPONENTS_ANY_ID, components_search_group): {
                 if (component_bitsets_empty)
                     break;
 
@@ -144,7 +144,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                 break;
             }
 
-            case TAGGED_UNION_VARIANT(COMPONENTS_NONE_ID, component_search_group): {
+            case TAGGED_UNION_VARIANT(COMPONENTS_NONE_ID, components_search_group): {
                 if (component_bitsets_empty || enties_bitset_empty) {
                     break;
                 }
@@ -177,7 +177,7 @@ component_iterator_descriptor component_iterator_descriptor_create(
         component_count += info.component_count;
         max_component_count = max(max_component_count, info.component_count);
 
-        if (!TAGGED_UNION_IS(COMPONENTS_NONE_ID, component_search_group, search_groups.groups[i])) {        
+        if (!TAGGED_UNION_IS(COMPONENTS_NONE_ID, components_search_group, search_groups.groups[i])) {        
             sized_component_count += component_iterator_descriptor_append_sized_component_ids(
                 world_components,
                 iterator_temporary_arena,
