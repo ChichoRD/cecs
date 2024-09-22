@@ -46,22 +46,31 @@ size_t block_alignment_padding_from_size(uint8_t *ptr, size_t structure_size) {
         }
         case ALIGNMENT_2:
         case 3: {
-            return ALIGNMENT_2 - ((uintptr_t)ptr & (ALIGNMENT_2 - 1));
+            return (ALIGNMENT_2 - ((uintptr_t)ptr & (ALIGNMENT_2 - 1))) & (ALIGNMENT_2 - 1);
         }
         case ALIGNMENT_4:
         case 5:
         case 6:
         case 7: {
-            return ALIGNMENT_4 - ((uintptr_t)ptr & (ALIGNMENT_4 - 1));
+            return (ALIGNMENT_4 - ((uintptr_t)ptr & (ALIGNMENT_4 - 1))) & (ALIGNMENT_4 - 1);
         }
         case ALIGNMENT_8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+        case 14:
+        case 15: {
+            return (ALIGNMENT_8 - ((uintptr_t)ptr & (ALIGNMENT_8 - 1))) & (ALIGNMENT_8 - 1);
+        }
         default: {
             uint_fast16_t closest_alignment = ALIGNMENT_8;
             while (closest_alignment << 1 <= alignment) {
                 closest_alignment <<= 1;
             }
 
-            return closest_alignment - ((uintptr_t)ptr & (closest_alignment - 1));
+            return (closest_alignment - ((uintptr_t)ptr & (closest_alignment - 1))) & (closest_alignment - 1);
         }
     }
     #undef ALIGNMENT_2
@@ -220,7 +229,9 @@ void arena_free(arena *a) {
     linked_block *current = a->first_block;
     while (current != NULL) {
         linked_block *next = current->next;
+        if (current == NULL) assert(false && "current must not be NULL");
         linked_block_free(current);
+        if (current == NULL) assert(false && "current must not be NULL");
         free(current);
         current = next;
     }
