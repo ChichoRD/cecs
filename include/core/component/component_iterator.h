@@ -294,7 +294,7 @@ entity_id component_iterator_current(const component_iterator *it, raw_iteration
             it->descriptor.component_ids[i]
         );
         
-        ((raw_component_reference *)(handle + 1))[i] = component_storage_get_unchecked(
+        ((raw_component_reference *)(handle + 1))[i] = component_storage_get_or_null(
             storage,
             it->entities_iterator.current_bit_index,
             world_components_get_component_size_unchecked(it->descriptor.world_components, it->descriptor.component_ids[i])

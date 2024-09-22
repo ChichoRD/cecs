@@ -321,6 +321,11 @@ void *component_storage_get_unchecked(const component_storage *self, entity_id i
     return OPTION_GET(optional_component, component_storage_get(self, id, size));
 }
 
+void *component_storage_get_or_null(const component_storage *self, entity_id id, size_t size) {
+    optional_component component = component_storage_get(self, id, size);
+    return OPTION_GET_OR_NULL(optional_component, component);
+}
+
 optional_component component_storage_set(component_storage *self, arena *a, entity_id id, void *component, size_t size) {
     hibitset_set(&self->entity_bitset, a, id);
     component_storage_ptr storage = component_storage_get_ptr(self);

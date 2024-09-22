@@ -68,6 +68,9 @@ typedef uint8_t none;
 
 #define OPTION_MAP(identifier, option, some_predicate, none_predicate) \
     (OPTION_IS_SOME(identifier, option) ? (some_predicate) : (none_predicate))
+#define OPTION_GET_OR_NULL(identifier, option) \
+    OPTION_MAP(identifier, option, OPTION_GET_UNCHECKED(identifier, option), NULL)
+    
 #define OPTION_MAP_REFERENCE(identifier, option, other_identifier) \
     OPTION_MAP( \
         identifier, \
