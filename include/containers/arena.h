@@ -25,13 +25,62 @@ block block_create(size_t capacity) {
     return b;
 }
 
+size_t block_alignment_padding_from_size(uint8_t *ptr, size_t structure_size) {
+    union max_alignment {
+        uintmax_t a;
+        uintptr_t b;
+        long double c;
+    };
+    uint_fast8_t alignment = min(structure_size, sizeof(union max_alignment));
+    
+    #define ALIGNMENT_2 2
+    #define ALIGNMENT_4 4
+    #define ALIGNMENT_8 8
+    switch (alignment) {
+        case 0: {
+            assert(false && "Alignment cannot be 0");
+            return 0;
+        }
+        case 1: {
+            return 0;
+        }
+        case ALIGNMENT_2:
+        case 3: {
+            return ALIGNMENT_2 - ((uintptr_t)ptr & (ALIGNMENT_2 - 1));
+        }
+        case ALIGNMENT_4:
+        case 5:
+        case 6:
+        case 7: {
+            return ALIGNMENT_4 - ((uintptr_t)ptr & (ALIGNMENT_4 - 1));
+        }
+        case ALIGNMENT_8:
+        default: {
+            uint_fast16_t closest_alignment = ALIGNMENT_8;
+            while (closest_alignment << 1 <= alignment) {
+                closest_alignment <<= 1;
+            }
+
+            return closest_alignment - ((uintptr_t)ptr & (closest_alignment - 1));
+        }
+    }
+    #undef ALIGNMENT_2
+    #undef ALIGNMENT_4
+    #undef ALIGNMENT_8
+}
+
+bool block_can_alloc(const block *b, size_t structure_size) {
+    return b->size + structure_size + block_alignment_padding_from_size(b->data + b->size, structure_size) <= b->capacity;
+}
+
 void *block_alloc(block *b, size_t size) {
     size_t remaining = b->capacity - b->size;
     assert((remaining >= size) && "Requested size exceeds block capacity");
 
     void *ptr = b->data + b->size;
-    b->size += size;
-    return ptr;
+    size_t padding = block_alignment_padding_from_size(ptr, size);
+    b->size += size + padding;
+    return (uint8_t *)ptr + padding;
 }
 
 void block_free(block *b) {
@@ -107,8 +156,7 @@ arena arena_create_with_capacity(size_t capacity) {
 void *arena_alloc(arena *a, size_t size) {
     linked_block *current = a->first_block;
     while(current != NULL) {
-        size_t remaining = current->b.capacity - current->b.size;
-        if (remaining >= size) {
+        if (block_can_alloc(&current->b, size)) {
             return block_alloc(&current->b, size);
         }
         current = current->next;
@@ -141,7 +189,7 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
             } else {
                 current->b.size -= current_size;
             }
-        } else if ((remaining >= new_size)
+        } else if (block_can_alloc(&current->b, new_size)
             && (best_fit == NULL || (remaining < best_fit_remaining))) {
             best_fit = current;
             best_fit_remaining = remaining;
