@@ -68,7 +68,7 @@ bool unit_component_storage_remove(const unit_component_storage *self, arena *a,
     return false;
 }
 
-const component_storage_functions unit_component_storage_functions = {
+static const component_storage_functions unit_component_storage_functions = {
     .info = unit_component_storage_info,
     .get = unit_component_storage_get,
     .set = unit_component_storage_set,
@@ -138,7 +138,7 @@ indirect_component_storage indirect_component_storage_create() {
     };
 }
 
-const component_storage_functions indirect_component_storage_functions = {
+static const component_storage_functions indirect_component_storage_functions = {
     .info = indirect_component_storage_info,
     .get = indirect_component_storage_get,
     .set = indirect_component_storage_set,
@@ -189,7 +189,7 @@ sparse_component_storage sparse_component_storage_create(arena *a, size_t compon
     };
 }
 
-const component_storage_functions sparse_component_storage_functions = {
+static const component_storage_functions sparse_component_storage_functions = {
     .info = sparse_component_storage_info,
     .get = sparse_component_storage_get,
     .set = sparse_component_storage_set,

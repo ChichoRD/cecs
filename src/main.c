@@ -451,13 +451,16 @@ void update_shockwaves(
 }
 
 void update_children_position(
-    COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, is_child_of) *handle,
+    const COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, is_child_of) *handle,
     world *w,
     double delta_time_seconds
 ) {
-    position p = *handle->position_component;
-    position parent_position = *WORLD_GET_COMPONENT(position, w, handle->is_child_of_component->parent);
-    handle->renderable_component->offset = (v2_i16){ parent_position.x - p.x, parent_position.y - p.y };
+    if (handle->is_child_of_component) {
+        //*handle = (is_child_of){0};
+    }
+    // position p = *handle->position_component;
+    // position parent_position = *WORLD_GET_COMPONENT(position, w, handle->is_child_of_component->parent);
+    // handle->renderable_component->offset = (v2_i16){ parent_position.x - p.x, parent_position.y - p.y };
 }
 
 void update_threatened(
@@ -517,14 +520,14 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
     //  entity_id lonk;
     // WORLD_GET_ENTITY_WITH(w, &lonk, COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
     
-    // WORLD_SYSTEM_ITER_GENERIC(
-    //     world_dt_system_predicate,
-    //     WORLD_SYSTEM_CREATE_FROM_IDS(COMPONENT_ID(position), COMPONENT_ID(renderable), (RELATION_ID(is_child_of, lonk))),
-    //     w,
-    //     delta_time_seconds,
-    //     iteration_arena,
-    //     update_children_position
-    // );
+    WORLD_SYSTEM_ITER_GENERIC(
+        world_dt_system_predicate,
+        WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL(position, renderable), COMPONENTS_OR_ALL(is_child_of)),
+        w,
+        delta_time_seconds,
+        iteration_arena,
+        update_children_position
+    );
     return EXIT_SUCCESS;
 }
 

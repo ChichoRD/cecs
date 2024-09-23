@@ -24,7 +24,7 @@ world_system world_system_create(components_search_groups search_groups) {
 #define WORLD_SYSTEM_CREATE_FROM_IDS(...) WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL_IDS(__VA_ARGS__))
 
 typedef size_t entity_count;
-typedef void system_predicate(raw_iteration_handle_reference handle);
+typedef void system_predicate(const raw_iteration_handle_reference handle);
 entity_count world_system_iter(const world_system s, world_components *wc, arena *iteration_arena, system_predicate *const predicate) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(wc, iteration_arena, s.search_groups);
@@ -88,9 +88,9 @@ entity_count world_system_iter_all(const world_system s, world_components *wc, a
     world_system_iter_all(world_system0, world_components_ref, iteration_arena_ref, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
 
 
-typedef void world_system_predicate(raw_iteration_handle_reference handle, world *world);
-typedef void dt_system_predicate(raw_iteration_handle_reference handle, double delta_time);
-typedef void world_dt_system_predicate(raw_iteration_handle_reference handle, world *world, double delta_time);
+typedef void world_system_predicate(const raw_iteration_handle_reference handle, world *world);
+typedef void dt_system_predicate(const raw_iteration_handle_reference handle, double delta_time);
+typedef void world_dt_system_predicate(const raw_iteration_handle_reference handle, world *world, double delta_time);
 typedef TAGGED_UNION_STRUCT(
     generic_system_predicate,
     system_predicate *const,

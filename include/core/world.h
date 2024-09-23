@@ -12,6 +12,9 @@
 #include "tag.h"
 #include "relation.h"
 
+
+#define WORLD_UNIQUE_RELATION_COMPONENTS 1
+
 typedef struct world {
     world_entities entities;
     world_components components;
@@ -202,6 +205,19 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
         // world_copy_entity_onto(w, associated_id, id);
     }
 
+    void *component_source =
+#if WORLD_UNIQUE_RELATION_COMPONENTS
+        world_set_component(
+            w,
+            id,
+            component_id,
+            component,
+            size
+        );
+#else
+        component;
+#endif
+
     return world_components_set_component_unchecked(
         &w->components,
         id,
@@ -210,7 +226,7 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
             w,
             associated_id,
             component_id,
-            component,
+            component_source,
             size
         ),
         size,
@@ -251,7 +267,11 @@ bool world_remove_component_relation(world *w, entity_id id, component_id compon
         id,
         relation_id_create(relation_id_descriptor_create_tag(component_id, tag_id)),
         out_removed_component
-    ) && world_remove_component(
+    )
+#if WORLD_UNIQUE_RELATION_COMPONENTS
+    && world_remove_component(w, id, component_id, out_removed_component)
+#endif
+    && world_remove_component(
         w,
         associated_id,
         component_id,
@@ -283,12 +303,27 @@ tag_id world_add_tag_relation(world *w, entity_id id, tag_id tag, tag_id target_
         // );
         // world_copy_entity_onto(w, associated_id, id);
     }
+
+    tag_id tag_source =
+#if WORLD_UNIQUE_RELATION_COMPONENTS
+        world_add_tag(
+            w,
+            id,
+            tag
+        );
+#else
+        tag;
+#endif
     
     return world_add_tag(
         w,
         id,
         relation_id_create(relation_id_descriptor_create_tag(
-            world_add_tag(w, associated_id, tag),
+            world_add_tag(
+                w,
+                associated_id,
+                tag_source
+            ),
             target_tag_id
         ))
     );
@@ -315,7 +350,11 @@ bool world_remove_tag_relation(world *w, entity_id id, tag_id tag, tag_id target
         w,
         id,
         relation_id_create(relation_id_descriptor_create_tag(tag, target_tag_id))
-    ) && world_remove_tag(
+    )
+#if WORLD_UNIQUE_RELATION_COMPONENTS
+    && world_remove_tag(w, id, tag)
+#endif
+    && world_remove_tag(
         w,
         associated_id,
         tag
