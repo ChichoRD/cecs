@@ -61,11 +61,17 @@ inline components_search_groups components_search_groups_create(
     };
 }
 
-#define COMPONENTS_SEARCH_GROUPS_CREATE(...) \
+#define COMPONENTS_SEARCH_GROUPS_CREATE_RAW(...) \
     components_search_groups_create( \
         ((components_search_group[]){ __VA_ARGS__ }), \
         sizeof((components_search_group[]){ __VA_ARGS__ }) / sizeof(components_search_group) \
     )
+
+#define COMPONENTS_SEARCH_GROUP_DEFAULT_IGNORED \
+    COMPONENTS_NONE(is_prefab)
+
+#define COMPONENTS_SEARCH_GROUPS_CREATE(...) \
+    COMPONENTS_SEARCH_GROUPS_CREATE_RAW(__VA_ARGS__, COMPONENTS_SEARCH_GROUP_DEFAULT_IGNORED)
 
 
 

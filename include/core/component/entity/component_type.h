@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
-#include "../../types/macro_utils.h"
-#include "../../types/type_id.h"
+#include "../../../types/macro_utils.h"
+#include "../../../types/type_id.h"
 
 #define COMPONENT_ID_TYPE uint64_t
 typedef COMPONENT_ID_TYPE component_id;

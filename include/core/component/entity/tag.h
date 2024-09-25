@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../types/macro_utils.h"
-#include "component/component_storage.h"
+#include "../../../types/macro_utils.h"
+#include "component_type.h"
 
 typedef component_id tag_id;
 

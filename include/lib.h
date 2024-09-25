@@ -8,9 +8,33 @@
 #include "core/world.h"
 #include "containers/arena.h"
 #include "containers/list.h"
-// #include "../include/core/query.h"
-// #include "../include/core/resource.h"
-// #include "../include/core/query_context.h"
+
+
+typedef entity_id prefab_id;
+prefab_id world_set_prefab(world *w, entity_id prefab) {
+    WORLD_ADD_TAG(is_prefab, w, prefab);
+    *world_get_or_set_default_entity_flags(w, prefab) = (entity_flags){ .is_prefab = true, .is_inmutable = true };
+    return prefab;
+}
+
+entity_id world_unset_prefab(world *w, prefab_id prefab) {
+    *world_get_or_set_default_entity_flags(w, prefab) = ENTITY_FLAGS_DEFAULT;
+    WORLD_REMOVE_TAG(is_prefab, w, prefab);
+    return prefab;
+}
+
+entity_id world_create_entity_from_prefab(world *w, prefab_id prefab) {
+    assert(
+        world_get_entity_flags(w, prefab).is_prefab
+        && "given entity is not a prefab"
+    );
+
+    return world_unset_prefab(
+        w,
+        world_create_copy(w, prefab)
+    );
+}
+
 
 typedef struct game_time {
     struct timespec game_start;

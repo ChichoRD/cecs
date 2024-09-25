@@ -10,7 +10,7 @@
 #include "../../containers/arena.h"
 #include "../../containers/tagged_union.h"
 #include "../../types/wide_ptr.h"
-#include "component_type.h"
+#include "entity/component_type.h"
 #include "entity/entity.h"
 
 

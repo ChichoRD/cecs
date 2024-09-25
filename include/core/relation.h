@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include "component/entity/entity.h"
+#include "component/entity/tag.h"
 #include "component/component.h"
-#include "tag.h"
 
 typedef union relation_target {
     entity_id entity_id;
