@@ -35,27 +35,38 @@ inline size_t world_entities_count(const world_entities *we) {
 }
 
 inline bool world_enities_has_entity(const world_entities *we, entity_id id) {
-    return sparse_set_contains(&we->entity_ids, id);
+    return sparse_set_contains(&we->entity_ids, (size_t)id);
 }
 
 entity_id world_entities_add_entity(world_entities *we) {
     entity_id id = world_entities_count(we);
     if (QUEUE_COUNT(entity_id, &we->free_entity_ids) > 0) {
         QUEUE_POP_FIRST(entity_id, &we->free_entity_ids, &we->entity_ids_arena, &id);
+
+        if (id == 0) {
+            int a;
+            a = 3;
+        }
     }
+    if (id == 0) {
+        int a;
+        a = 3;
+    }
+
     SPARSE_SET_SET(
         entity_id,
         &we->entity_ids,
         &we->entity_ids_arena,
-        id,
+        (size_t)id,
         &id
     );
+    
     return id;
 }
 
 entity_id world_entities_remove_entity(world_entities *we, entity_id id) {
     entity_id removed;
-    if (SPARSE_SET_REMOVE(entity_id, &we->entity_ids, &we->entity_ids_arena, id, &removed) ) {
+    if (SPARSE_SET_REMOVE(entity_id, &we->entity_ids, &we->entity_ids_arena, (size_t)id, &removed) ) {
         if (removed != id) {
             assert(false && "unreachable: removed entity_id != id, there is a mismatch in the integer-sparse-set indices");
             exit(EXIT_FAILURE);

@@ -141,7 +141,7 @@ bit_word bitset_get_word(const bitset *b, size_t bit_index) {
     return *w;
 }
 
-bool bitset_is_set(bitset *b, size_t bit_index) {
+bool bitset_is_set(const bitset *b, size_t bit_index) {
     return (bitset_get_word(b, bit_index)
         & ((bit_word)1 << layer_word_bit_index(bit_index, 0))) != 0;
 }

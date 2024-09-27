@@ -5,8 +5,11 @@
 #include "component_type.h"
 #include "tag.h"
 
+typedef entity_id entity_reference;
+COMPONENT_IMPLEMENT(entity_reference);
+
 typedef struct relation_entity_reference {
-    entity_id original_entity;
+    entity_reference original_entity;
 } relation_entity_reference;
 COMPONENT_IMPLEMENT(relation_entity_reference);
 

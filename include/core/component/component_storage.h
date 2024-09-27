@@ -28,10 +28,10 @@ typedef optional_component get_component(const void *self, entity_id id, size_t 
 typedef optional_component set_component(void *self, arena *a, entity_id id, void *component, size_t size);
 typedef bool remove_component(void *self, arena *a, entity_id id, void *out_removed_component, size_t size);
 typedef struct component_storage_functions {
-    info *const info;
-    get_component *const get;
-    set_component *const set;
-    remove_component *const remove;
+    const info *const info;
+    const get_component *const get;
+    const set_component *const set;
+    const remove_component *const remove;
 } component_storage_functions;
 
 typedef union component_storage_ptr {
@@ -95,31 +95,31 @@ const storage_info indirect_component_storage_info(const indirect_component_stor
 }
 
 optional_component indirect_component_storage_get(const indirect_component_storage *self, entity_id id, size_t size) {
-    if (!displaced_set_contains(&self->component_references, id, &(void *){0}, sizeof(void *))) {
+    if (!displaced_set_contains(&self->component_references, (size_t)id, &(void *){0}, sizeof(void *))) {
         return OPTION_CREATE_NONE_STRUCT(optional_component);
     } else {
-        return OPTION_CREATE_SOME_STRUCT(optional_component, *DISPLACED_SET_GET(void *, &self->component_references, id));
+        return OPTION_CREATE_SOME_STRUCT(optional_component, *DISPLACED_SET_GET(void *, &self->component_references, (size_t)id));
     }
 }
 
-optional_component indirect_component_storage_set(const indirect_component_storage *self, arena *a, entity_id id, void *component, size_t size) {
+optional_component indirect_component_storage_set(indirect_component_storage *self, arena *a, entity_id id, void *component, size_t size) {
     return OPTION_CREATE_SOME_STRUCT(
         optional_component,
         *DISPLACED_SET_SET(
             void *,
             &self->component_references,
             a,
-            id,
+            (size_t)id,
             &component
         )
     );
 }
 
-bool indirect_component_storage_remove(const indirect_component_storage *self, arena *a, entity_id id, void *out_removed_component, size_t size) {
+bool indirect_component_storage_remove(indirect_component_storage *self, arena *a, entity_id id, void *out_removed_component, size_t size) {
     void *removed_component = NULL;
     if (displaced_set_remove_out(
         &self->component_references,
-        id,
+        (size_t)id,
         &removed_component,
         sizeof(void *),
         &(void *){0}
@@ -159,23 +159,23 @@ const storage_info sparse_component_storage_info(const sparse_component_storage 
 }
 
 optional_component sparse_component_storage_get(const sparse_component_storage *self, entity_id id, size_t size) {
-    if(!displaced_set_contains_index(&self->components, id)) {
+    if(!displaced_set_contains_index(&self->components, (size_t)id)) {
         return OPTION_CREATE_NONE_STRUCT(optional_component);
     } else {
-        return OPTION_CREATE_SOME_STRUCT(optional_component, displaced_set_get(&self->components, id, size));
+        return OPTION_CREATE_SOME_STRUCT(optional_component, displaced_set_get(&self->components, (size_t)id, size));
     }
 }
 
 optional_component sparse_component_storage_set(sparse_component_storage *self, arena *a, entity_id id, void *component, size_t size) {
     return OPTION_CREATE_SOME_STRUCT(
         optional_component,
-        displaced_set_set(&self->components, a, id, component, size)
+        displaced_set_set(&self->components, a, (size_t)id, component, size)
     );
 }
 
 bool sparse_component_storage_remove(sparse_component_storage *self, arena *a, entity_id id, void *out_removed_component, size_t size) {
     if (displaced_set_contains_index(&self->components, id)) {
-        memcpy(out_removed_component, displaced_set_get(&self->components, id, size), size);
+        memcpy(out_removed_component, displaced_set_get(&self->components, (size_t)id, size), size);
         return true;
     } else {
         memset(out_removed_component, 0, size);
@@ -249,7 +249,7 @@ component_storage component_storage_create_indirect(arena *a, component_storage 
 }
 
 bool component_storage_has(const component_storage *self, entity_id id) {
-    return hibitset_is_set(&self->entity_bitset, id);
+    return hibitset_is_set(&self->entity_bitset, (size_t)id);
 }
 
 const list *component_storage_components(const component_storage *self) {
@@ -304,14 +304,14 @@ void *component_storage_get_or_null(const component_storage *self, entity_id id,
 }
 
 optional_component component_storage_set(component_storage *self, arena *a, entity_id id, void *component, size_t size) {
-    hibitset_set(&self->entity_bitset, a, id);
+    hibitset_set(&self->entity_bitset, a, (size_t)id);
     return component_storage_get_functions(self).set(&self->storage, a, id, component, size);
 }
 #define COMPONENT_STORAGE_SET(type, component_storage_ref, arena_ref, entity_id, component_ref) \
     ((type *)component_storage_set(component_storage_ref, arena_ref, entity_id, component_ref, sizeof(type)))
 
 bool component_storage_remove(component_storage *self, arena *a, entity_id id, void *out_removed_component, size_t size) {
-    hibitset_unset(&self->entity_bitset, a, id);
+    hibitset_unset(&self->entity_bitset, a, (size_t)id);
     return component_storage_get_functions(self).remove(&self->storage, a, id, out_removed_component, size);
 }
 #define COMPONENT_STORAGE_REMOVE(type, component_storage_ref, arena_ref, entity_id) \

@@ -145,6 +145,7 @@ void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t 
                 LIST_SET(size_t, &s->keys, element_index, &key);
             return list_set(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_index, element, element_size);
         } else {
+            // TODO: watch over (implicit first member cast)
             *index = OPTION_CREATE_SOME_STRUCT(dense_index, list_count_of_size(&s->elements, element_size));
             if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements))
                 LIST_ADD(dense_index, &s->keys, a, &key);

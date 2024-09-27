@@ -31,7 +31,7 @@ size_t block_alignment_padding_from_size(uint8_t *ptr, size_t structure_size) {
         uintptr_t b;
         long double c;
     };
-    uint_fast8_t alignment = min(structure_size, sizeof(union max_alignment));
+    uint_fast8_t alignment = min(structure_size, (uint_fast8_t)sizeof(union max_alignment));
     
     #define ALIGNMENT_2 2
     #define ALIGNMENT_4 4

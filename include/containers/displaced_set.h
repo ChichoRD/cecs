@@ -25,7 +25,7 @@ inline bool displaced_set_contains_index(const displaced_set *s, size_t index) {
     return exclusive_range_contains(s->index_range, index);
 }
 
-inline size_t displaced_set_list_index(displaced_set *s, size_t index) {
+inline size_t displaced_set_list_index(const displaced_set *s, size_t index) {
     assert(displaced_set_contains_index(s, index) && "index out of bounds");
     return index - s->index_range.start;
 }
@@ -141,7 +141,7 @@ inline counted_set_counter counted_set_count_of(counted_set *s, size_t index) {
     return *DISPLACED_SET_GET(counted_set_counter, &s->counts, index);
 }
 
-inline bool counted_set_contains(counted_set *s, size_t index) {
+inline bool counted_set_contains(const counted_set *s, size_t index) {
     return displaced_set_contains_index(&s->counts, index)
         && (counted_set_count_of(s, index) > 0);
 }
@@ -150,10 +150,10 @@ inline bool counted_set_contains(counted_set *s, size_t index) {
 void *counted_set_set_many(counted_set *s, arena *a, size_t index, void *element, size_t count, size_t size) {
     if (counted_set_contains(s, index)
         && (memcmp(displaced_set_get(&s->elements, index, size), element, size)) == 0) {
-        *DISPLACED_SET_GET(counted_set_counter, &s->counts, index) += count;
+        *DISPLACED_SET_GET(counted_set_counter, &s->counts, index) += (counted_set_counter)count;
         return element;
     } else {
-        displaced_set_set(&s->counts, a, index, &(counted_set_counter){count}, sizeof(counted_set_counter));
+        displaced_set_set(&s->counts, a, index, &(counted_set_counter){(counted_set_counter)count}, sizeof(counted_set_counter));
         return displaced_set_set(&s->elements, a, index, element, size);
     }
 }
@@ -164,7 +164,7 @@ void *counted_set_set(counted_set *s, arena *a, size_t index, void *element, siz
 #define COUNTED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
     ((type *)counted_set_set(set_ref, arena_ref, index, element_ref, sizeof(type)))
 
-void *counted_set_get(counted_set *s, size_t index, size_t size) {
+void *counted_set_get(const counted_set *s, size_t index, size_t size) {
     assert(counted_set_contains(s, index) && "set does not contain an element with such index");
     return displaced_set_get(&s->elements, index, size);
 }
@@ -244,7 +244,7 @@ void *counted_set_iterator_current(const counted_set_iterator *it, size_t size) 
 #define COUNTED_SET_ITERATOR_CURRENT(type, iterator_ref) ((type *)counted_set_iterator_current(iterator_ref, sizeof(type)))
 
 void *counted_set_iterator_first(counted_set_iterator *it, size_t size) {
-    counted_set *set = COW_GET_REFERENCE(counted_set, it->set);
+    const counted_set *set = COW_GET_REFERENCE(counted_set, it->set);
     it->current_index = set->elements.index_range.start;
     if (!counted_set_contains(set, it->current_index))
         counted_set_iterator_next(it);
@@ -256,7 +256,7 @@ inline size_t counted_set_iterator_current_index(const counted_set_iterator *it)
 }
 
 size_t counted_set_iterator_first_index(counted_set_iterator *it) {
-    counted_set *set = COW_GET_REFERENCE(counted_set, it->set);
+    const counted_set *set = COW_GET_REFERENCE(counted_set, it->set);
     it->current_index = set->elements.index_range.start;
     if (!counted_set_contains(set, it->current_index))
         counted_set_iterator_next(it);

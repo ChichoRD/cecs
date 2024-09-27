@@ -45,7 +45,7 @@ void world_resources_free(world_resources *wr) {
 }
 
 bool world_resources_has_resource(const world_resources* wr, resource_id id) {
-    return displaced_set_contains(&wr->resource_handles, id, &(resource_handle){0}, sizeof(resource_handle));
+    return displaced_set_contains(&wr->resource_handles, (size_t)id, &(resource_handle){0}, sizeof(resource_handle));
 }
 
 resource_handle world_resources_set_resource(world_resources *wr, resource_id id, void *resource, size_t size) {
@@ -55,34 +55,34 @@ resource_handle world_resources_set_resource(world_resources *wr, resource_id id
     }
 
     resource_handle handle = world_resources_has_resource(wr, id)
-        ? *DISPLACED_SET_GET(resource_handle, &wr->resource_handles, id)
+        ? *DISPLACED_SET_GET(resource_handle, &wr->resource_handles, (size_t)id)
         : arena_alloc(&wr->resources_arena, size);
     memcpy(handle, resource, size);
     return *DISPLACED_SET_SET(
         resource_handle,
         &wr->resource_handles,
         &wr->resources_arena,
-        id,
+        (size_t)id,
         &handle
     );
 }
 
 resource_handle world_resources_get_resource(const world_resources *wr, resource_id id) {
     assert(
-        displaced_set_contains(&wr->resource_handles, id, &(resource_handle){0}, sizeof(resource_handle))
+        displaced_set_contains(&wr->resource_handles, (size_t)id, &(resource_handle){0}, sizeof(resource_handle))
         && "Resource ID does not correspond to an existing resource"
     );
-    return *DISPLACED_SET_GET(resource_handle, &wr->resource_handles, id);
+    return *DISPLACED_SET_GET(resource_handle, &wr->resource_handles, (size_t)id);
 }
 
 bool world_resources_remove_resource(world_resources *wr, resource_id id) {
-    return displaced_set_remove(&wr->resource_handles, id, sizeof(resource_handle), &(resource_handle){0});
+    return displaced_set_remove(&wr->resource_handles, (size_t)id, sizeof(resource_handle), &(resource_handle){0});
 }
 
 bool world_resources_remove_resource_out(world_resources *wr, resource_id id, resource_handle out_resource, size_t size) {
     assert(out_resource != NULL && "out_resource must not be NULL, use: world_resources_remove_resource");
     resource_handle removed_handle;
-    if (displaced_set_remove_out(&wr->resource_handles, id, &removed_handle, size, &(resource_handle){0})) {
+    if (displaced_set_remove_out(&wr->resource_handles, (size_t)id, &removed_handle, size, &(resource_handle){0})) {
         memcpy(out_resource, removed_handle, size);
         return true;
     } else {

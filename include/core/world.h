@@ -221,7 +221,6 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
 }
 
 entity_id world_copy_entity_onto(world *w, entity_id destination, entity_id source) {
-    entity_flags flags = entity_flags_default();
     assert(
         !world_get_entity_flags(w, destination).is_inmutable
         && "entity with given ID is inmutable and components may not be copied onto it"
@@ -261,7 +260,6 @@ entity_id world_add_entity_copy(world *w, entity_id source) {
 }
 
 void *world_copy_entity_onto_and_grab(world *w, entity_id destination, entity_id source, component_id grab_component_id) {
-    entity_flags flags = entity_flags_default();
     assert(
         !world_get_entity_flags(w, destination).is_inmutable
         && "entity with given ID is inmutable and components may not be copied onto it"
