@@ -203,7 +203,7 @@ bool create_slime(arena *a, world *w, v2_i16 initial_position, entity_id parent)
     return EXIT_SUCCESS;
 }
 
-entity_id create_lonk(arena *a, world *w) {
+entity_id create_lonk_prefab(arena *a, world *w) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -246,40 +246,41 @@ entity_id create_lonk(arena *a, world *w) {
             .buffer = {0}
         })
     );
-    return e;
+    world_get_or_set_default_entity_flags(w, e)->is_permanent = true;
+    return world_set_prefab(w, e);
 }
 
-bool create_map(arena *a, world *w) {
+entity_id create_lonk(world *w, prefab_id prefab) {
+    return world_add_entity_from_prefab(w, prefab);
+}
+
+prefab_id create_wall_prefab(arena *a, world *w) {
+    entity_id e = world_add_entity(w);
+    WORLD_SET_COMPONENT(
+        position,
+        w,
+        e,
+        &((position) {
+            0, 0
+        })
+    );
+    renderable r = renderable_create_wall(a, BLU "\xe2\x96\x88" CRESET);
+    WORLD_SET_COMPONENT(
+        renderable,
+        w,
+        e,
+        &r
+    );
+    WORLD_ADD_TAG(is_solid, w, e);
+    return world_set_prefab(w, e);
+}
+
+bool create_map(world *w, prefab_id prefab) {
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
             entity_id e = world_add_entity(w);
-
             if (x == 0 || x == BOARD_WIDTH - 1 || y == 0 || y == BOARD_HEIGHT - 1) {
-                WORLD_SET_COMPONENT(
-                    position,
-                    w,
-                    e,
-                    &((position) {
-                        x, y
-                    })
-                );
-                WORLD_SET_COMPONENT(
-                    box,
-                    w,
-                    e,
-                    &((box) {
-                        .corner_position = {0, 0},
-                        .size = {1, 1}
-                    })
-                );
-                renderable r = renderable_create_wall(a, BLU "\xe2\x96\x88" CRESET);
-                renderable *wr = WORLD_SET_COMPONENT(
-                    renderable,
-                    w,
-                    e,
-                    &r
-                );
-                WORLD_ADD_TAG(is_solid, w, e);
+                WORLD_SET_COMPONENT(position, w, world_add_entity_from_prefab(w, prefab), (&(position){x, y}));
             }
         }
     } 
@@ -309,8 +310,11 @@ bool init(world *w) {
         }
     }
     SetConsoleOutputCP(65001);
-    entity_id lonk = create_lonk(sa, w);
-    create_map(sa, w);
+    entity_id lonk = create_lonk(w, create_lonk_prefab(sa, w));
+    entity_id lonk2 = world_add_entity(w);
+    WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk)->active = false;
+
+    create_map(w, create_wall_prefab(sa, w));
     for (size_t i = 0; i < 2; i++) {
         create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (entity_id[]){lonk}, 1);
     }
@@ -321,7 +325,7 @@ bool init(world *w) {
     return EXIT_SUCCESS;
 }
 
-bool create_shockwave(world *w, position *p, velocity *v) {
+bool create_shockwave(world *w, position p, velocity v) {
     strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
     entity_id e = world_add_entity(w);
 
@@ -329,7 +333,7 @@ bool create_shockwave(world *w, position *p, velocity *v) {
         position,
         w,
         e,
-        p
+        &p
     );
     const int16_t SPEED_MULTIPLIER = 3;
     const int16_t RADIUS = SPEED_MULTIPLIER;
@@ -345,7 +349,7 @@ bool create_shockwave(world *w, position *p, velocity *v) {
         w,
         e,
         &((velocity) {
-            v->x * SPEED_MULTIPLIER, v->y * SPEED_MULTIPLIER
+            v.x * SPEED_MULTIPLIER, v.y * SPEED_MULTIPLIER
         })
     );
     WORLD_ADD_TAG(is_shockwave, w, e);
@@ -395,7 +399,7 @@ void update_lonk(
     for (size_t k = 0; k < c.buffer_count; k++) {
         switch (c.buffer[k]) {
             case 'x':
-                create_shockwave(w, p, &vr->velocity);
+                create_shockwave(w, *p, vr->velocity);
                 break;
         }
     }
@@ -463,19 +467,6 @@ void update_children_position(
     // handle->renderable_component->offset = (v2_i16){ parent_position.x - p.x, parent_position.y - p.y };
 }
 
-void update_threatened(
-    COMPONENT_ITERATION_HANDLE_STRUCT(position, dies_by) *handle,
-    world *w,
-    double delta_time_seconds
-) {
-    position p = *handle->position_component;
-    position *threat_position = NULL;
-    if (WORLD_TRY_GET_COMPONENT(position, w, handle->dies_by_component->cause, &threat_position)
-        && p.x == threat_position->x && p.y == threat_position->y) {
-        world_remove_entity(w, handle->entity_id);
-    }
-}
-
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
     WORLD_SYSTEM_ITER_GENERIC(
         world_dt_system_predicate,
@@ -508,14 +499,6 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
         delta_time_seconds,
         iteration_arena,
         update_ducks
-    );
-    WORLD_SYSTEM_ITER_GENERIC(
-        world_dt_system_predicate,
-        WORLD_SYSTEM_CREATE(position, dies_by),
-        w,
-        delta_time_seconds,
-        iteration_arena,
-        update_threatened
     );
     //  entity_id lonk;
     // WORLD_GET_ENTITY_WITH(w, &lonk, COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));

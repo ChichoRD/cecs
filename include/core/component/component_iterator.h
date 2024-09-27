@@ -132,7 +132,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
     components_search_groups search_groups,
     size_t max_component_count
 ) {
-    hibitset *bitsets = calloc(max_component_count + 1, sizeof(hibitset));
+    hibitset *bitsets = calloc(max_component_count, sizeof(hibitset));
     hibitset entities_bitset = hibitset_create(iterator_temporary_arena);
     for (size_t i = 0; i < search_groups.group_count; i++) {
         components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
@@ -154,8 +154,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                         ? bitsets[0]
                         : hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
                 } else {
-                    bitsets[info.component_count] = entities_bitset;
-                    entities_bitset = hibitset_intersection(bitsets, info.component_count + 1, iterator_temporary_arena);
+                    hibitset_intersect(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 }
                 break;
             }
@@ -169,8 +168,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                         ? bitsets[0]
                         : hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
                 } else {
-                    bitsets[info.component_count] = entities_bitset;
-                    entities_bitset = hibitset_union(bitsets, info.component_count + 1, iterator_temporary_arena);
+                    hibitset_join(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 }
                 break;
             }
@@ -179,7 +177,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                 if (component_bitsets_empty || entities_bitset_empty) {
                     break;
                 }
-                entities_bitset = hibitset_difference(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
+                hibitset_subtract(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 break;
             }
 
@@ -195,9 +193,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                     hibitset intersection = info.component_count == 1
                         ? bitsets[0]
                         : hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
-                    bitsets[0] = entities_bitset;
-                    bitsets[1] = intersection;
-                    entities_bitset = hibitset_union(bitsets, 2, iterator_temporary_arena);
+                    hibitset_join(&entities_bitset, &intersection, 1, iterator_temporary_arena);
                 }
                 break;
             }
@@ -213,9 +209,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(
                     hibitset union_ = info.component_count == 1
                         ? bitsets[0]
                         : hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
-                    bitsets[0] = entities_bitset;
-                    bitsets[1] = union_;
-                    entities_bitset = hibitset_intersection(bitsets, 2, iterator_temporary_arena);
+                    hibitset_intersect(&entities_bitset, &union_, 1, iterator_temporary_arena);
                 }
                 break;
             }

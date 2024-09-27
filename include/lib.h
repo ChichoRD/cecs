@@ -13,7 +13,9 @@
 typedef entity_id prefab_id;
 prefab_id world_set_prefab(world *w, entity_id prefab) {
     WORLD_ADD_TAG(is_prefab, w, prefab);
-    *world_get_or_set_default_entity_flags(w, prefab) = (entity_flags){ .is_prefab = true, .is_inmutable = true };
+    entity_flags *flags = world_get_or_set_default_entity_flags(w, prefab);
+    flags->is_prefab = true;
+    flags->is_inmutable = true; 
     return prefab;
 }
 
@@ -23,17 +25,51 @@ entity_id world_unset_prefab(world *w, prefab_id prefab) {
     return prefab;
 }
 
-entity_id world_create_entity_from_prefab(world *w, prefab_id prefab) {
+entity_id world_add_entity_from_prefab(world *w, prefab_id prefab) {
+    if (world_get_entity_flags(w, prefab).is_prefab != WORLD_HAS_TAG(is_prefab, w, prefab)) {
+        assert(false && "unreachable: entity flags mismatch is_prefab tag");
+        exit(EXIT_FAILURE);
+        return 0;
+    }
     assert(
-        world_get_entity_flags(w, prefab).is_prefab
+        WORLD_HAS_TAG(is_prefab, w, prefab)
         && "given entity is not a prefab"
     );
 
     return world_unset_prefab(
         w,
-        world_create_copy(w, prefab)
+        world_add_entity_copy(w, prefab)
     );
 }
+
+entity_id world_set_components_from_prefab(world *w, entity_id destination, prefab_id prefab) {
+    if (world_get_entity_flags(w, prefab).is_prefab != WORLD_HAS_TAG(is_prefab, w, prefab)) {
+        assert(false && "unreachable: entity flags mismatch is_prefab tag");
+        exit(EXIT_FAILURE);
+        return 0;
+    }
+    assert(
+        WORLD_HAS_TAG(is_prefab, w, prefab)
+        && "given entity is not a prefab, use world_copy_entity_onto to have this behaviour copying from any kind of entity"
+    );
+    return world_copy_entity_onto(w, destination, prefab);
+}
+
+void *world_set_components_from_prefab_and_grab(world *w, entity_id destination, prefab_id prefab, component_id grab_component_id) {
+    if (world_get_entity_flags(w, prefab).is_prefab != WORLD_HAS_TAG(is_prefab, w, prefab)) {
+        assert(false && "unreachable: entity flags mismatch is_prefab tag");
+        exit(EXIT_FAILURE);
+        return 0;
+    }
+    assert(
+        WORLD_HAS_TAG(is_prefab, w, prefab)
+        && "given entity is not a prefab, use world_copy_entity_onto_and_grab to have this behaviour copying from any kind of entity"
+    );
+    return world_copy_entity_onto_and_grab(w, destination, prefab, grab_component_id);
+}
+#define WORLD_SET_COMPONENTS_FROM_PREFAB_AND_GRAB(type, world_ref, destination, prefab) \
+    ((type *)world_set_components_from_prefab_and_grab(world_ref, destination, prefab, COMPONENT_ID(type)))
+
 
 
 typedef struct game_time {

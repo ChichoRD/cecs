@@ -18,8 +18,6 @@
 #define WORLD_FLAG_ALL_ENTITIES true
 
 
-// TODO: move semantics, memset passed components to zero after copy (optional)
-// TODO: prefabs
 typedef struct world {
     world_entities entities;
     world_components components;
@@ -133,6 +131,15 @@ entity_flags *world_get_or_set_default_entity_flags(world *w, entity_id id) {
 }
 
 
+bool world_has_tag(const world *w, entity_id id, tag_id tag_id) {
+    if (!world_enities_has_entity(&w->entities, id))
+        return false;
+
+    return world_components_has_component(&w->components, id, tag_id);
+}
+#define WORLD_HAS_TAG(type, world_ref, entity_id0) \
+    world_has_tag(world_ref, entity_id0, TAG_ID(type))
+
 tag_id world_add_tag(world *w, entity_id id, tag_id tag_id) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     assert(
@@ -208,6 +215,7 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
         && "entity with given ID is permanent and cannot be removed"
     );
 
+    *world_get_or_set_default_entity_flags(w, entity_id) = entity_flags_default();
     world_clear_entity(w, entity_id);
     return world_entities_remove_entity(&w->entities, entity_id);
 }
@@ -215,7 +223,7 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
 entity_id world_copy_entity_onto(world *w, entity_id destination, entity_id source) {
     entity_flags flags = entity_flags_default();
     assert(
-        !world_get_entity_flags(w, source).is_inmutable
+        !world_get_entity_flags(w, destination).is_inmutable
         && "entity with given ID is inmutable and components may not be copied onto it"
     );
 
@@ -248,9 +256,54 @@ entity_id world_copy_entity(world *w, entity_id destination, entity_id source) {
     return world_copy_entity_onto(w, destination, source);
 }
 
-entity_id world_create_copy(world *w, entity_id source) {
+entity_id world_add_entity_copy(world *w, entity_id source) {
     return world_copy_entity_onto(w, world_add_entity(w), source);
 }
+
+void *world_copy_entity_onto_and_grab(world *w, entity_id destination, entity_id source, component_id grab_component_id) {
+    entity_flags flags = entity_flags_default();
+    assert(
+        !world_get_entity_flags(w, destination).is_inmutable
+        && "entity with given ID is inmutable and components may not be copied onto it"
+    );
+
+    void *grabbed = NULL;
+    for (
+        world_components_entity_iterator it = world_components_entity_iterator_create(&w->components, source);
+        !world_components_entity_iterator_done(&it);
+        world_components_entity_iterator_next(&it)
+    ) {
+        sized_component_storage storage = world_components_entity_iterator_current(&it);
+        optional_component copied_component = component_storage_set(
+            storage.storage,
+            &w->components.components_arena,
+            destination,
+            component_storage_info(storage.storage).is_unit_type_storage
+                ? NULL
+                : OPTION_GET(optional_component, component_storage_get(
+                    storage.storage,
+                    source,
+                    storage.component_size
+                )),
+            storage.component_size
+        );
+
+        if (OPTION_IS_SOME(optional_component, copied_component) && grab_component_id == storage.component_id) {
+            grabbed = OPTION_GET(optional_component, copied_component);
+        }
+    }
+
+    return grabbed;
+}
+#define WORLD_COPY_ENTITY_ONTO_AND_GRAB(type, world_ref, destination, source) \
+    ((type *)world_copy_entity_onto_and_grab(world_ref, destination, source, COMPONENT_ID(type)))
+
+void *world_copy_entity_and_grab(world *w, entity_id destination, entity_id source, component_id grab_component_id) {
+    world_clear_entity(w, destination);
+    return world_copy_entity_onto_and_grab(w, destination, source, grab_component_id);
+}
+#define WORLD_COPY_ENTITY_AND_GRAB(type, world_ref, destination, source) \
+    ((type *)world_copy_entity_and_grab(world_ref, destination, source, COMPONENT_ID(type)))
 
 
 void *world_set_component_relation(world *w, entity_id id, component_id component_id, void *component, size_t size, tag_id tag_id) {

@@ -193,6 +193,14 @@ void *world_components_set_component_unchecked(
     return OPTION_GET(optional_component, world_components_set_component(wc, entity_id, component_id, component, size, additional_storage_descriptor));
 }
 
+bool world_components_has_component(const world_components *wc, entity_id entity_id, component_id component_id) {
+    optional_component_size stored_size = world_components_get_component_size(wc, component_id);
+    optional_component_storage storage = world_components_get_component_storage(wc, component_id);
+
+    return OPTION_IS_SOME(optional_component_size, stored_size)
+        && component_storage_has(OPTION_GET(optional_component_storage, storage), entity_id);
+}
+
 optional_component world_components_get_component(const world_components *wc, entity_id entity_id, component_id component_id) {
     optional_component_size stored_size = world_components_get_component_size(wc, component_id);
     optional_component_storage storage = world_components_get_component_storage(wc, component_id);
