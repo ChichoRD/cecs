@@ -67,7 +67,7 @@ static void list_grow(list *l, arena *a, size_t new_capacity) {
 static void list_shrink(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity < l->capacity && "Attempted to shrink list to larger capacity");
     size_t current_capacity = l->capacity;
-    while (new_capacity < l->capacity)
+    while (new_capacity < l->capacity / 2)
         l->capacity /= 2;
 
     l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
@@ -179,6 +179,14 @@ void *list_get_range(const list *l, size_t index, size_t count, size_t size)
 void *list_set_range(list *l, size_t index, void *elements, size_t count, size_t size) {
     assert((index * size < l->count) && "Attempted to set elements with starting index out of bounds");
     assert(((index + count) * size <= l->count) && "Attempted to set elements with end out of bounds");
+    uint8_t *destination = (uint8_t *)l->elements + index * size;
+
+    printf("destination: %zu, elements: %zu, count: %d\n", destination, elements, count);
+    assert(
+        (((uint8_t *)elements + count * size <= destination)
+            || (destination + count * size <= (uint8_t *)elements))
+        && "Should not set range with elements overlapping said range"
+    ); 
     return memcpy((uint8_t *)l->elements + index * size, elements, count * size);
 }
 #define LIST_SET_RANGE(type, lis_ref, index, elements_ref, count) \

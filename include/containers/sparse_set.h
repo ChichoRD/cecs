@@ -179,10 +179,11 @@ bool sparse_set_remove(sparse_set *s, arena *a, size_t key, void *out_removed_el
             list_get(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), removed_index, element_size),
             element_size
         );
+        assert(*(size_t *)out_removed_element != 0);
 
         size_t last_element_index = list_count_of_size(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), element_size) - 1;
         void *swapped_last = list_remove_swap_last(&TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements), a, removed_index, element_size);
-        if (removed_index != last_element_index) {
+         {
             if (TAGGED_UNION_IS(any_elements, sparse_set_elements, s->elements)) {
                 *DISPLACED_SET_GET(
                     dense_index,

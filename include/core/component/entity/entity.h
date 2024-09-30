@@ -43,14 +43,10 @@ entity_id world_entities_add_entity(world_entities *we) {
     if (QUEUE_COUNT(entity_id, &we->free_entity_ids) > 0) {
         QUEUE_POP_FIRST(entity_id, &we->free_entity_ids, &we->entity_ids_arena, &id);
 
-        if (id == 0) {
-            int a;
-            a = 3;
+        if (sparse_set_contains(&we->entity_ids, (size_t)id)) {
+            assert(false && "unreachable: id already in entity_ids, there is a mismatch in the integer-sparse-set indices");
+            exit(EXIT_FAILURE);
         }
-    }
-    if (id == 0) {
-        int a;
-        a = 3;
     }
 
     SPARSE_SET_SET(

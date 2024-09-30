@@ -65,10 +65,9 @@ size_t queue_pop_first(queue *q, arena *a, void *out_pop_element, size_t size) {
             remaining_count,
             size
         );
-        list_remove_range(&q->elements, a, q->first, remaining_count, size);
+        list_remove_range(&q->elements, a, remaining_count, list_count - remaining_count, size);
         q->first = 0;
     }
-    
     return remaining_count;
 }
 #define QUEUE_POP_FIRST(type, queue_ref, arena_ref, out_pop_element) \
