@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "../../../containers/sparse_set.h"
 #include "../../../containers/queue.h"
+#include "../../../containers/range.h"
 
 
 #define ENTITY_ID_TYPE uint64_t
@@ -77,6 +78,33 @@ entity_id world_entities_remove_entity(world_entities *we, entity_id id) {
         QUEUE_PUSH_LAST(entity_id, &we->free_entity_ids, &we->entity_ids_arena, &id);
     }
     return id;
+}
+
+typedef exclusive_range entity_id_range;
+entity_id_range world_entities_add_entity_range(world_entities *we, size_t count) {
+    entity_id_range range = {
+        .start = world_entities_count(we) + QUEUE_COUNT(entity_id, &we->free_entity_ids),
+        .end = world_entities_count(we) + QUEUE_COUNT(entity_id, &we->free_entity_ids) + count
+    };
+
+    for (size_t i = range.start; i < range.end; i++) {
+        SPARSE_SET_SET(
+            entity_id,
+            &we->entity_ids,
+            &we->entity_ids_arena,
+            (size_t)range.start + i,
+            &(entity_id){i}
+        );
+    }
+
+    return range;
+}
+
+entity_id_range world_entities_remove_entity_range(world_entities *we, entity_id_range range) {
+    for (entity_id i = range.start; i < range.end; i++) {
+        world_entities_remove_entity(we, i);
+    }
+    return range;
 }
 
 #endif

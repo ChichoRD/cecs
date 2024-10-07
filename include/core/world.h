@@ -119,6 +119,10 @@ const bool world_remove_component(world *w, entity_id id, component_id component
 #define WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0, out_removed_component_ref) \
     (world_remove_component(world_ref, entity_id0, COMPONENT_ID(type), out_removed_component_ref))
 
+inline entity_flags *world_set_entity_flags(world *w, entity_id id, entity_flags flags) {
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
+    return WORLD_SET_COMPONENT(entity_flags, w, id, &flags);
+}
 
 entity_flags *world_get_or_set_default_entity_flags(world *w, entity_id id) {
     assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
@@ -126,7 +130,7 @@ entity_flags *world_get_or_set_default_entity_flags(world *w, entity_id id) {
     if (WORLD_TRY_GET_COMPONENT(entity_flags, w, id, &flags)) {
         return flags;
     } else {
-        return WORLD_SET_COMPONENT(entity_flags, w, id, &ENTITY_FLAGS_DEFAULT);
+        return world_set_entity_flags(w, id, entity_flags_default());
     }
 }
 
@@ -181,7 +185,7 @@ tag_id world_remove_tag(world *w, entity_id id, tag_id tag_id) {
 entity_id world_add_entity(world *w) {
     entity_id e = world_entities_add_entity(&w->entities);
 #if WORLD_FLAG_ALL_ENTITIES
-    WORLD_SET_COMPONENT(entity_flags, w, e, &ENTITY_FLAGS_DEFAULT);
+    world_set_entity_flags(w, e, entity_flags_default());
 #endif
     return e;
 }
@@ -215,7 +219,7 @@ entity_id world_remove_entity(world *w, entity_id entity_id) {
         && "entity with given ID is permanent and cannot be removed"
     );
 
-    *world_get_or_set_default_entity_flags(w, entity_id) = entity_flags_default();
+    world_set_entity_flags(w, entity_id, entity_flags_default());
     world_clear_entity(w, entity_id);
     return world_entities_remove_entity(&w->entities, entity_id);
 }

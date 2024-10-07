@@ -123,4 +123,8 @@ bool world_get_entity_with(const world *w, entity_id *out_entity_id, components_
 #define WORLD_GET_ENTITY_WITH(world_ref, out_entity_id_ref, ...) \
     (world_get_entity_with(world_ref, out_entity_id_ref, COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__)))
 
+
+// TODO: scene relation
+// TODO: configurable systems
+
 #endif
