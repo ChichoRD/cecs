@@ -14,36 +14,36 @@
 #define _TAGGED_UNION_FIELD(type, identifier) type _PREPEND_VALUE(identifier);
 #define _PREPEND_VARIANT(x) Variant_##x
 #define _PREPEND_VARIANT_SELECT(type, identifier) _PREPEND_VARIANT(identifier)
-#define _TAGGED_UNION_VARIANT_FIELD(suffix, identifier) CAT3(identifier, _, suffix)
-#define _TAGGED_UNION_STRUCT(identifier, suffix, ...) \
+#define _TAGGED_UNION_VARIANT_FIELD(prefix, identifier) CAT3(prefix, _, identifier)
+#define _TAGGED_UNION_STRUCT(identifier, prefix, ...) \
     struct identifier { \
         union { \
             MAP_PAIRS(_TAGGED_UNION_FIELD, EMPTY, __VA_ARGS__) \
         }; \
         enum { \
-            MAP_CONST1(_TAGGED_UNION_VARIANT_FIELD, suffix, COMMA, MAP_PAIRS(_PREPEND_VARIANT_SELECT, COMMA, __VA_ARGS__)), \
+            MAP_CONST1(_TAGGED_UNION_VARIANT_FIELD, prefix, COMMA, MAP_PAIRS(_PREPEND_VARIANT_SELECT, COMMA, __VA_ARGS__)), \
         } variant; \
     }
 
-#define TAGGED_UNION_STRUCT(suffix, ...) _TAGGED_UNION_STRUCT(TAGGED_UNION(__VA_ARGS__), suffix, __VA_ARGS__)
+#define TAGGED_UNION_STRUCT(prefix, ...) _TAGGED_UNION_STRUCT(TAGGED_UNION(__VA_ARGS__), prefix, __VA_ARGS__)
 
 #define TAGGED_UNION_VALUE(identifier) _PREPEND_VALUE(identifier)
-#define TAGGED_UNION_VARIANT(identifier, suffix) _TAGGED_UNION_VARIANT_FIELD(suffix, _PREPEND_VARIANT(identifier))
-#define TAGGED_UNION_CREATE(identifier, suffix, value) \
-    { .TAGGED_UNION_VALUE(identifier) = (value), .variant = TAGGED_UNION_VARIANT(identifier, suffix) }
-#define TAGGED_UNION_STRUCT_CREATE(identifier, suffix, value, ...) \
-    (TAGGED_UNION_STRUCT(__VA_ARGS__)) TAGGED_UNION_CREATE(identifier, suffix, (value))
+#define TAGGED_UNION_VARIANT(identifier, prefix) _TAGGED_UNION_VARIANT_FIELD(prefix, _PREPEND_VARIANT(identifier))
+#define TAGGED_UNION_CREATE(identifier, prefix, value) \
+    { .TAGGED_UNION_VALUE(identifier) = (value), .variant = TAGGED_UNION_VARIANT(identifier, prefix) }
+#define TAGGED_UNION_STRUCT_CREATE(identifier, prefix, value, ...) \
+    (TAGGED_UNION_STRUCT(__VA_ARGS__)) TAGGED_UNION_CREATE(identifier, prefix, (value))
 
 #define TAGGED_UNION_CREATE_VARIANT(identifier, variant_value, value) \
     { .TAGGED_UNION_VALUE(identifier) = (value), .variant = (variant_value) }
 #define TAGGED_UNION_STRUCT_CREATE_VARIANT(identifier, variant_value, value, ...) \
     (TAGGED_UNION_STRUCT(__VA_ARGS__)) TAGGED_UNION_CREATE_VARIANT(identifier, (variant_value), (value))
 
-#define TAGGED_UNION_IS(identifier, suffix, union) ((union).variant == TAGGED_UNION_VARIANT(identifier, suffix))
-#define TAGGED_UNION_IS_ASSERT(identifier, suffix, union) (assert(TAGGED_UNION_IS(identifier, suffix, (union)) && "Invalid union access"))
+#define TAGGED_UNION_IS(identifier, prefix, union) ((union).variant == TAGGED_UNION_VARIANT(identifier, prefix))
+#define TAGGED_UNION_IS_ASSERT(identifier, prefix, union) (assert(TAGGED_UNION_IS(identifier, prefix, (union)) && "Invalid union access"))
 #define TAGGED_UNION_GET_UNCHECKED(identifier, union) ((union).TAGGED_UNION_VALUE(identifier))
-#define TAGGED_UNION_GET(identifier, suffix, union) \
-    (TAGGED_UNION_IS_ASSERT(identifier, suffix, (union)), TAGGED_UNION_GET_UNCHECKED(identifier, (union)))
+#define TAGGED_UNION_GET(identifier, prefix, union) \
+    (TAGGED_UNION_IS_ASSERT(identifier, prefix, (union)), TAGGED_UNION_GET_UNCHECKED(identifier, (union)))
 
 #define TAGGED_UNION_MATCH(union) switch ((union).variant)
 

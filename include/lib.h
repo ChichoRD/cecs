@@ -125,6 +125,6 @@ bool world_get_entity_with(const world *w, entity_id *out_entity_id, components_
 
 
 // TODO: scene relation
-// TODO: configurable systems
+// TODO: configurable systems (1/2)
 
 #endif

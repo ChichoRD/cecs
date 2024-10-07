@@ -356,7 +356,11 @@ bool create_shockwave(world *w, position p, velocity v) {
     return EXIT_SUCCESS;
 }
 
-void update_controllables(COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle, world *w, double delta_time_seconds) {
+void update_controllables(
+    COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle,
+    world *w,
+    system_predicate_data delta_time_seconds
+) {
     velocity *v = handle->velocity_component;
     controllable c = *handle->controllable_component;
     if (c.buffer_count <= 0) {
@@ -385,7 +389,7 @@ void update_controllables(COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllab
 void update_lonk(
     COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
     world *w,
-    double delta_time_seconds
+    system_predicate_data delta_time_seconds
 ) {
     position *p = handle->position_component;
     velocity v = *handle->velocity_component;
@@ -408,7 +412,7 @@ void update_lonk(
 void update_ducks(
     COMPONENT_ITERATION_HANDLE_STRUCT(position) *handle,
     world *w,
-    double delta_time_seconds
+    system_predicate_data delta_time_seconds
 ) {
     position *p = handle->position_component;
     if (rand() % 2 == 0) {
@@ -432,7 +436,7 @@ void update_ducks(
 void update_shockwaves(
     COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable) *handle,
     world *w,
-    double delta_time_seconds
+    system_predicate_data delta_time_seconds
 ) {
     strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
     position *p = handle->position_component;
@@ -457,7 +461,7 @@ void update_shockwaves(
 void update_children_position(
     const COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, is_child_of) *handle,
     world *w,
-    double delta_time_seconds
+    system_predicate_data delta_time_seconds
 ) {
     if (handle->is_child_of_component) {
         //*handle = (is_child_of){0};
@@ -468,50 +472,65 @@ void update_children_position(
 }
 
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
-    WORLD_SYSTEM_ITER_GENERIC(
-        world_dt_system_predicate,
+    world_system_iter(
         WORLD_SYSTEM_CREATE(velocity, controllable),
         w,
-        delta_time_seconds,
         iteration_arena,
+        system_predicate_data_create_none(),
         update_controllables
     );
-    WORLD_SYSTEM_ITER_GENERIC(
-        world_dt_system_predicate,
+    world_system_iter(
         WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable),
         w,
-        delta_time_seconds,
         iteration_arena,
+        system_predicate_data_create_none(),
         update_lonk
     );
-    WORLD_SYSTEM_ITER_GENERIC(
-        world_dt_system_predicate,
+    world_system_iter(
         WORLD_SYSTEM_CREATE(position, velocity, renderable, is_shockwave),
         w,
-        delta_time_seconds,
         iteration_arena,
+        system_predicate_data_create_none(),
         update_shockwaves
     );
-    entity_count duck_count = WORLD_SYSTEM_ITER_GENERIC(
-        world_dt_system_predicate,
+    entity_count duck_count = world_system_iter(
         WORLD_SYSTEM_CREATE(position, is_duck),
         w,
-        delta_time_seconds,
         iteration_arena,
+        system_predicate_data_create_none(),
         update_ducks
     );
     //  entity_id lonk;
     // WORLD_GET_ENTITY_WITH(w, &lonk, COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
     
-    WORLD_SYSTEM_ITER_GENERIC(
-        world_dt_system_predicate,
+    world_system_iter(
         WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL(position, renderable), COMPONENTS_OR_ALL(is_child_of)),
         w,
-        delta_time_seconds,
         iteration_arena,
+        system_predicate_data_create_none(),
         update_children_position
     );
     return EXIT_SUCCESS;
+}
+
+
+void update_console_buffer(
+    COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable) *handle,
+    world *w,
+    system_predicate_data buffer_user_data
+) {
+    console_buffer *new_console_buffer = system_predicate_data_user_data(buffer_user_data);
+    position p = *handle->position_component;
+    renderable r = *handle->renderable_component;
+    for (int16_t x = 0; x < r.size.x; x++) {
+        for (int16_t y = 0; y < r.size.y; y++) {
+            int16_t cx = p.x + x + r.offset.x;
+            int16_t cy = p.y + y + r.offset.y;
+            if (cx >= 0 && cx < BOARD_WIDTH && cy >= 0 && cy < BOARD_HEIGHT) {
+                new_console_buffer->buffer[cx][cy] = r.sprite[x + r.size.x * y];
+            }
+        }
+    }
 }
 
 bool render(const world *w, arena *iteration_arena) {
@@ -524,29 +543,13 @@ bool render(const world *w, arena *iteration_arena) {
         }
     }
 
-    COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable) handle;
-    for (
-        component_iterator it = COMPONENT_ITERATOR_CREATE(
-            &w->components,
-            iteration_arena,
-            position, renderable
-        );
-        !component_iterator_done(&it);
-        component_iterator_next(&it)
-    ) {
-        component_iterator_current(&it, &handle);
-        position p = *handle.position_component;
-        renderable r = *handle.renderable_component;
-        for (int16_t x = 0; x < r.size.x; x++) {
-            for (int16_t y = 0; y < r.size.y; y++) {
-                int16_t cx = p.x + x + r.offset.x;
-                int16_t cy = p.y + y + r.offset.y;
-                if (cx >= 0 && cx < BOARD_WIDTH && cy >= 0 && cy < BOARD_HEIGHT) {
-                    new_console_buffer.buffer[cx][cy] = r.sprite[x + r.size.x * y];
-                }
-            }
-        }
-    }
+    world_system_iter(
+        WORLD_SYSTEM_CREATE(position, renderable),
+        w,
+        iteration_arena,
+        system_predicate_data_create_user_data(&new_console_buffer),
+        update_console_buffer
+    );
     
     printf("\x1b[%d;%dH\x1b[J", 0, 0);
     fflush(stdout);
@@ -569,6 +572,18 @@ bool render(const world *w, arena *iteration_arena) {
     return EXIT_SUCCESS;
 }
 
+
+void write_controllables(
+    COMPONENT_ITERATION_HANDLE_STRUCT(controllable) *handle,
+    world *w,
+    system_predicate_data controllable_user_data
+) {
+    controllable *c = system_predicate_data_user_data(controllable_user_data);
+    if (handle->controllable_component->active) {
+        *handle->controllable_component = *c;
+    }
+}
+
 bool process_input(world *w, arena *iteration_arena) {
     controllable c = (controllable) {
         .active = true,
@@ -589,22 +604,13 @@ bool process_input(world *w, arena *iteration_arena) {
         c.buffer[c.buffer_count++] = input;
     }
 
-    COMPONENT_ITERATION_HANDLE_STRUCT(controllable) handle;
-    for (
-        component_iterator it = COMPONENT_ITERATOR_CREATE(
-            &w->components,
-            iteration_arena,
-            controllable
-        );
-        !component_iterator_done(&it);
-        component_iterator_next(&it)
-    ) {
-        component_iterator_current(&it, &handle);
-        controllable *current = handle.controllable_component;
-        if (current->active) {
-            *current = c;
-        }
-    }
+    world_system_iter(
+        WORLD_SYSTEM_CREATE(controllable),
+        w,
+        iteration_arena,
+        system_predicate_data_create_user_data(&c),
+        write_controllables
+    );
 
     return EXIT_SUCCESS;
 }

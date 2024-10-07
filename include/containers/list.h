@@ -181,7 +181,6 @@ void *list_set_range(list *l, size_t index, void *elements, size_t count, size_t
     assert(((index + count) * size <= l->count) && "Attempted to set elements with end out of bounds");
     uint8_t *destination = (uint8_t *)l->elements + index * size;
 
-    printf("destination: %zu, elements: %zu, count: %d\n", destination, elements, count);
     assert(
         (((uint8_t *)elements + count * size <= destination)
             || (destination + count * size <= (uint8_t *)elements))
