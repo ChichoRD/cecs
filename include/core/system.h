@@ -131,4 +131,60 @@ entity_count world_system_iter_all(
 #define WORLD_SYSTEM_ITER_ALL(world_system0, world_ref, iteration_arena_ref, predicate_data, ...) \
     world_system_iter_all(world_system0, world_ref, iteration_arena_ref, predicate_data, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
 
+
+typedef struct dynamic_world_system {
+    list components_search_groups;
+} dynamic_world_system;
+
+dynamic_world_system dynamic_world_system_create() {
+    return (dynamic_world_system){
+        .components_search_groups = list_create(),
+    };
+}
+
+dynamic_world_system dynamic_world_system_create_from(components_search_groups s, arena *a) {
+    dynamic_world_system d = dynamic_world_system_create();
+    LIST_ADD_RANGE(components_search_group, &d.components_search_groups, a, &s.groups, s.group_count);
+    return d;
+}
+
+typedef exclusive_range components_search_group_range; 
+components_search_group_range dynamic_world_system_add(dynamic_world_system *d, arena *a, components_search_group s) {
+    LIST_ADD(components_search_group, &d->components_search_groups, a, &s);
+    return (components_search_group_range){ 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
+}
+
+components_search_group_range dynamic_world_system_add_range(dynamic_world_system *d, arena *a, components_search_groups s) {
+    LIST_ADD_RANGE(components_search_group, &d->components_search_groups, a, s.groups, s.group_count);
+    return (components_search_group_range){ 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
+}
+
+components_search_group_range dynamic_world_system_set(dynamic_world_system *d, components_search_group s, size_t index) {
+    LIST_SET(components_search_group, &d->components_search_groups, index, &s);
+    return (components_search_group_range){ 0, index + 1 };
+}
+
+components_search_group_range dynamic_world_system_set_range(dynamic_world_system *d, components_search_groups s, size_t index) {
+    LIST_SET_RANGE(components_search_group, &d->components_search_groups, index, s.groups, s.group_count);
+    return (components_search_group_range){ 0, index + s.group_count };
+}
+
+world_system dynamic_world_system_get(const dynamic_world_system *d) {
+    return world_system_create(components_search_groups_create(
+        d->components_search_groups.elements,
+        LIST_COUNT(components_search_group, &d->components_search_groups)
+    ));
+}
+
+world_system dynamic_world_system_get_range(const dynamic_world_system *d, components_search_group_range r) {
+    return world_system_create(components_search_groups_create(
+        (components_search_group *)d->components_search_groups.elements + r.start,
+        exclusive_range_length(r)
+    ));
+}
+
+dynamic_world_system dynamic_world_system_clone(const dynamic_world_system *d, arena *a) {
+    return dynamic_world_system_create_from(dynamic_world_system_get(d).search_groups, a);
+}
+
 #endif

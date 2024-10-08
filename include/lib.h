@@ -124,7 +124,62 @@ bool world_get_entity_with(const world *w, entity_id *out_entity_id, components_
     (world_get_entity_with(world_ref, out_entity_id_ref, COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__)))
 
 
-// TODO: scene relation
+typedef tag_id scene_id;
+
+typedef bool is_scene_member_of;
+TAG_IMPLEMENT(is_scene_member_of);
+
+scene_id world_add_entity_to_scene(world *w, entity_id id, scene_id scene) {
+    return WORLD_ADD_TAG_RELATION(
+        is_scene_member_of,
+        w,
+        id,
+        scene
+    );
+}
+
+scene_id world_remove_entity_from_scene(world *w, entity_id id, scene_id scene) {
+    return WORLD_REMOVE_TAG_RELATION(
+        is_scene_member_of,
+        w,
+        id,
+        scene
+    );
+}
+
+
+typedef struct scene_world_system {
+    scene_id scene;
+    dynamic_world_system world_system;
+} scene_world_system;
+
+scene_world_system scene_world_system_create(scene_id scene, arena *a) {
+    return (scene_world_system){
+        .scene = scene,
+        .world_system = dynamic_world_system_create_from(COMPONENTS_SEARCH_GROUPS_CREATE(
+            COMPONENTS_ALL_IDS(RELATION_ID(is_scene_member_of, scene))),
+            a
+        ),
+    };
+}
+
+scene_world_system scene_world_system_create_from(scene_id scene, arena *a, components_search_groups search_groups) {
+    scene_world_system s = scene_world_system_create(scene, a);
+    dynamic_world_system_add_range(&s.world_system, a, search_groups);
+    return s;
+}
+
+scene_world_system *scene_world_system_set_active_scene(scene_world_system *s, scene_id scene) {
+    s->scene = scene;
+    dynamic_world_system_set(
+        &s->world_system,
+        (components_search_group)COMPONENTS_ALL_IDS(RELATION_ID(is_scene_member_of, scene)),
+        0
+    );
+    return s;
+}
+
+// TODO: test scene_world_system
 // TODO: configurable systems (1/2)
 
 #endif
