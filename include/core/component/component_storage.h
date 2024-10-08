@@ -69,10 +69,10 @@ bool unit_component_storage_remove(const unit_component_storage *self, arena *a,
 }
 
 static const component_storage_functions unit_component_storage_functions = {
-    .info = unit_component_storage_info,
-    .get = unit_component_storage_get,
-    .set = unit_component_storage_set,
-    .remove = unit_component_storage_remove
+    .info = (info *const)unit_component_storage_info,
+    .get = (get_component *const)unit_component_storage_get,
+    .set = (set_component *const)unit_component_storage_set,
+    .remove = (remove_component *const)unit_component_storage_remove
 };
 
 unit_component_storage unit_component_storage_create() {
@@ -139,10 +139,10 @@ indirect_component_storage indirect_component_storage_create() {
 }
 
 static const component_storage_functions indirect_component_storage_functions = {
-    .info = indirect_component_storage_info,
-    .get = indirect_component_storage_get,
-    .set = indirect_component_storage_set,
-    .remove = indirect_component_storage_remove
+    .info = (info *const)indirect_component_storage_info,
+    .get = (get_component *const)indirect_component_storage_get,
+    .set = (set_component *const)indirect_component_storage_set,
+    .remove = (remove_component *const)indirect_component_storage_remove
 };
 
 
@@ -190,10 +190,10 @@ sparse_component_storage sparse_component_storage_create(arena *a, size_t compon
 }
 
 static const component_storage_functions sparse_component_storage_functions = {
-    .info = sparse_component_storage_info,
-    .get = sparse_component_storage_get,
-    .set = sparse_component_storage_set,
-    .remove = sparse_component_storage_remove
+    .info = (info *const)sparse_component_storage_info,
+    .get = (get_component *const)sparse_component_storage_get,
+    .set = (set_component *const)sparse_component_storage_set,
+    .remove = (remove_component *const)sparse_component_storage_remove
 };
 
 

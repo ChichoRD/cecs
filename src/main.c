@@ -472,28 +472,28 @@ void update_children_position(
 }
 
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
-    world_system_iter(
+    WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(velocity, controllable),
         w,
         iteration_arena,
         system_predicate_data_create_none(),
         update_controllables
     );
-    world_system_iter(
+    WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable),
         w,
         iteration_arena,
         system_predicate_data_create_none(),
         update_lonk
     );
-    world_system_iter(
+    WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(position, velocity, renderable, is_shockwave),
         w,
         iteration_arena,
         system_predicate_data_create_none(),
         update_shockwaves
     );
-    entity_count duck_count = world_system_iter(
+    entity_count duck_count = WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(position, is_duck),
         w,
         iteration_arena,
@@ -503,7 +503,7 @@ bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds
     //  entity_id lonk;
     // WORLD_GET_ENTITY_WITH(w, &lonk, COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
     
-    world_system_iter(
+    WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL(position, renderable), COMPONENTS_OR_ALL(is_child_of)),
         w,
         iteration_arena,
@@ -543,7 +543,7 @@ bool render(const world *w, arena *iteration_arena) {
         }
     }
 
-    world_system_iter(
+    WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(position, renderable),
         w,
         iteration_arena,
@@ -604,7 +604,7 @@ bool process_input(world *w, arena *iteration_arena) {
         c.buffer[c.buffer_count++] = input;
     }
 
-    world_system_iter(
+    WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(controllable),
         w,
         iteration_arena,
