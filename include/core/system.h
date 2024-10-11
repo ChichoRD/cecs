@@ -132,6 +132,7 @@ entity_count world_system_iter_all(
     world_system_iter_all(world_system0, world_ref, iteration_arena_ref, predicate_data, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
 
 
+// TODO: add list for storing component ids, otherwise they are volatile when just passing them inline
 typedef struct dynamic_world_system {
     list components_search_groups;
 } dynamic_world_system;
@@ -144,7 +145,7 @@ dynamic_world_system dynamic_world_system_create() {
 
 dynamic_world_system dynamic_world_system_create_from(components_search_groups s, arena *a) {
     dynamic_world_system d = dynamic_world_system_create();
-    LIST_ADD_RANGE(components_search_group, &d.components_search_groups, a, &s.groups, s.group_count);
+    LIST_ADD_RANGE(components_search_group, &d.components_search_groups, a, s.groups, s.group_count);
     return d;
 }
 
@@ -159,12 +160,23 @@ components_search_group_range dynamic_world_system_add_range(dynamic_world_syste
     return (components_search_group_range){ 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
 }
 
-components_search_group_range dynamic_world_system_set(dynamic_world_system *d, components_search_group s, size_t index) {
+components_search_group_range dynamic_world_system_set(dynamic_world_system *d, arena *a, components_search_group s, size_t index) {
+    assert(index <= LIST_COUNT(components_search_group, &d->components_search_groups) && "index out of bounds");
+    if (index == LIST_COUNT(components_search_group, &d->components_search_groups)) {
+        dynamic_world_system_add(d, a, s);
+        return (components_search_group_range){ 0, index + 1 };
+    }
+
     LIST_SET(components_search_group, &d->components_search_groups, index, &s);
     return (components_search_group_range){ 0, index + 1 };
 }
 
-components_search_group_range dynamic_world_system_set_range(dynamic_world_system *d, components_search_groups s, size_t index) {
+components_search_group_range dynamic_world_system_set_range(dynamic_world_system *d, arena *a, components_search_groups s, size_t index) {
+    assert(index <= LIST_COUNT(components_search_group, &d->components_search_groups) && "index out of bounds");
+    if (index + s.group_count >= LIST_COUNT(components_search_group, &d->components_search_groups) - 1) {
+        size_t missing = index + s.group_count - LIST_COUNT(components_search_group, &d->components_search_groups) - 1;
+        LIST_APPEND_EMPTY(components_search_group, &d->components_search_groups, a, missing);
+    }
     LIST_SET_RANGE(components_search_group, &d->components_search_groups, index, s.groups, s.group_count);
     return (components_search_group_range){ 0, index + s.group_count };
 }

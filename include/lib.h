@@ -149,18 +149,21 @@ scene_id world_remove_entity_from_scene(world *w, entity_id id, scene_id scene) 
 
 
 typedef struct scene_world_system {
-    scene_id scene;
     dynamic_world_system world_system;
+    scene_id scene;
+    size_t scene_group_index;
 } scene_world_system;
 
 scene_world_system scene_world_system_create(scene_id scene, arena *a) {
-    return (scene_world_system){
-        .scene = scene,
+    scene_world_system s = {
         .world_system = dynamic_world_system_create_from(COMPONENTS_SEARCH_GROUPS_CREATE(
             COMPONENTS_ALL_IDS(RELATION_ID(is_scene_member_of, scene))),
             a
         ),
+        .scene = scene,
     };
+    s.scene_group_index = LIST_COUNT(components_search_group, &s.world_system.components_search_groups) - 1;
+    return s;
 }
 
 scene_world_system scene_world_system_create_from(scene_id scene, arena *a, components_search_groups search_groups) {
@@ -169,14 +172,33 @@ scene_world_system scene_world_system_create_from(scene_id scene, arena *a, comp
     return s;
 }
 
-scene_world_system *scene_world_system_set_active_scene(scene_world_system *s, scene_id scene) {
+scene_world_system *scene_world_system_set_active_scene(scene_world_system *s, arena *a, scene_id scene) {
     s->scene = scene;
     dynamic_world_system_set(
         &s->world_system,
-        (components_search_group)COMPONENTS_ALL_IDS(RELATION_ID(is_scene_member_of, scene)),
+        a,
+        COMPONENTS_ALL_IDS(RELATION_ID(is_scene_member_of, scene)),
         0
     );
     return s;
+}
+
+world_system scene_world_system_get_with(scene_world_system *s, arena *a, components_search_group search_group) {
+    return dynamic_world_system_get_range(&s->world_system, dynamic_world_system_set(
+        &s->world_system,
+        a,
+        search_group,
+        s->scene_group_index + 1
+    ));
+}
+
+world_system scene_world_system_get_with_range(scene_world_system *s, arena *a, components_search_groups search_groups) {
+    return dynamic_world_system_get_range(&s->world_system, dynamic_world_system_set_range(
+        &s->world_system,
+        a,
+        search_groups,
+        s->scene_group_index + 1
+    ));
 }
 
 // TODO: test scene_world_system

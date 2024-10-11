@@ -174,6 +174,7 @@ void *arena_alloc(arena *a, size_t size) {
     return block_alloc(arena_add_block(a, size), size);
 }
 
+// TODO: add block splitting
 void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_size) {
     if (new_size <= current_size) {
         return data_block;
