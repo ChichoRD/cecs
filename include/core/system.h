@@ -132,31 +132,48 @@ entity_count world_system_iter_all(
     world_system_iter_all(world_system0, world_ref, iteration_arena_ref, predicate_data, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
 
 
-// TODO: add list for storing component ids, otherwise they are volatile when just passing them inline
 typedef struct dynamic_world_system {
+    list component_ids;
     list components_search_groups;
 } dynamic_world_system;
 
 dynamic_world_system dynamic_world_system_create() {
     return (dynamic_world_system){
+        .component_ids = list_create(),
         .components_search_groups = list_create(),
     };
 }
 
 dynamic_world_system dynamic_world_system_create_from(components_search_groups s, arena *a) {
     dynamic_world_system d = dynamic_world_system_create();
-    LIST_ADD_RANGE(components_search_group, &d.components_search_groups, a, s.groups, s.group_count);
+    for (size_t i = 0; i < s.group_count; ++i) {
+        components_search_group group = s.groups[i];
+        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group);
+        TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group).component_ids =
+            LIST_ADD_RANGE(component_id, &d.component_ids, a, info.component_ids, info.component_count);
+        LIST_ADD(components_search_group, &d.components_search_groups, a, &group);
+    }
     return d;
 }
 
 typedef exclusive_range components_search_group_range; 
 components_search_group_range dynamic_world_system_add(dynamic_world_system *d, arena *a, components_search_group s) {
+    components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s);
+    TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s).component_ids =
+        LIST_ADD_RANGE(component_id, &d->component_ids, a, info.component_ids, info.component_count);
+
     LIST_ADD(components_search_group, &d->components_search_groups, a, &s);
     return (components_search_group_range){ 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
 }
 
 components_search_group_range dynamic_world_system_add_range(dynamic_world_system *d, arena *a, components_search_groups s) {
-    LIST_ADD_RANGE(components_search_group, &d->components_search_groups, a, s.groups, s.group_count);
+    for (size_t i = 0; i < s.group_count; ++i) {
+        components_search_group group = s.groups[i];
+        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group);
+        TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group).component_ids =
+            LIST_ADD_RANGE(component_id, &d->component_ids, a, info.component_ids, info.component_count);
+        LIST_ADD(components_search_group, &d->components_search_groups, a, &group);
+    }
     return (components_search_group_range){ 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
 }
 
@@ -165,6 +182,35 @@ components_search_group_range dynamic_world_system_set(dynamic_world_system *d, 
     if (index == LIST_COUNT(components_search_group, &d->components_search_groups)) {
         dynamic_world_system_add(d, a, s);
         return (components_search_group_range){ 0, index + 1 };
+    }
+
+    components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s);
+    components_type_info previous_info = TAGGED_UNION_GET_UNCHECKED(
+        COMPONENTS_ALL_ID, 
+        *LIST_GET(components_search_group, &d->components_search_groups, index)
+    );
+    if (info.component_count <= previous_info.component_count) {
+        size_t index = previous_info.component_ids - (component_id *)d->component_ids.elements;
+        if (LIST_GET(component_id, &d->component_ids, index) != previous_info.component_ids) {
+            assert(false && "unreachable: failed component ids index computation");
+            exit(EXIT_FAILURE);
+        }
+
+        TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s).component_ids = LIST_SET_RANGE(
+            component_id,
+            &d->component_ids,
+            (previous_info.component_ids - (component_id *)d->component_ids.elements),
+            info.component_ids,
+            info.component_count
+        );
+    } else {
+        TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s).component_ids = LIST_ADD_RANGE(
+            component_id,
+            &d->component_ids,
+            a,
+            info.component_ids,
+            info.component_count
+        );
     }
 
     LIST_SET(components_search_group, &d->components_search_groups, index, &s);
@@ -177,7 +223,40 @@ components_search_group_range dynamic_world_system_set_range(dynamic_world_syste
         size_t missing = index + s.group_count - LIST_COUNT(components_search_group, &d->components_search_groups) - 1;
         LIST_APPEND_EMPTY(components_search_group, &d->components_search_groups, a, missing);
     }
-    LIST_SET_RANGE(components_search_group, &d->components_search_groups, index, s.groups, s.group_count);
+
+    for (size_t i = 0; i < s.group_count; ++i) {
+        components_search_group group = s.groups[i];
+        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group);
+        components_type_info previous_info = TAGGED_UNION_GET_UNCHECKED(
+            COMPONENTS_ALL_ID, 
+            *LIST_GET(components_search_group, &d->components_search_groups, index)
+        );
+        if (info.component_count <= previous_info.component_count) {
+            size_t index = previous_info.component_ids - (component_id *)d->component_ids.elements;
+            if (LIST_GET(component_id, &d->component_ids, index) != previous_info.component_ids) {
+                assert(false && "unreachable: failed component ids index computation");
+                exit(EXIT_FAILURE);
+            }
+
+            TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group).component_ids = LIST_SET_RANGE(
+                component_id,
+                &d->component_ids,
+                (previous_info.component_ids - (component_id *)d->component_ids.elements),
+                info.component_ids,
+                info.component_count
+            );
+        } else {
+            TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group).component_ids = LIST_ADD_RANGE(
+                component_id,
+                &d->component_ids,
+                a,
+                info.component_ids,
+                info.component_count
+            );
+        }
+        LIST_SET(components_search_group, &d->components_search_groups, index + i, &group);
+    }
+
     return (components_search_group_range){ 0, index + s.group_count };
 }
 

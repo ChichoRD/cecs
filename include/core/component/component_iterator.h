@@ -47,8 +47,8 @@ typedef TAGGED_UNION_STRUCT(
 
 
 typedef struct components_search_groups {
-    const components_search_group *const groups;
-    const size_t group_count;
+    components_search_group *groups;
+    size_t group_count;
 } components_search_groups;
 
 inline components_search_groups components_search_groups_create(

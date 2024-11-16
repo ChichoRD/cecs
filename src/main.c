@@ -311,10 +311,10 @@ bool init(world *w) {
     }
     SetConsoleOutputCP(65001);
     entity_id lonk = create_lonk(w, create_lonk_prefab(sa, w));
-    world_add_entity_to_scene(w, lonk, 1);
-    entity_id lonk2 = world_add_entity(w);
-    world_add_entity_to_scene(w, lonk2, 1);
-    WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk)->active = false;
+    world_add_entity_to_scene(w, lonk, 2);
+    // entity_id lonk2 = world_add_entity(w);
+    // world_add_entity_to_scene(w, lonk2, 1);
+    // WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
 
     create_map(w, create_wall_prefab(sa, w));
     for (size_t i = 0; i < 2; i++) {

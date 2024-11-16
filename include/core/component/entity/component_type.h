@@ -34,8 +34,8 @@ typedef COMPONENT_MASK_TYPE component_mask;
 #define COMPONENTS_MASK(...) (FOLD_L1(_COMPONENT_MASK_OR, ((component_mask)0), MAP(COMPONENT_MASK, COMMA, __VA_ARGS__)))
 
 typedef struct components_type_info {
-    const component_id *const component_ids;
-    const size_t component_count;
+    component_id *component_ids;
+    size_t component_count;
 } components_type_info;
 
 inline components_type_info components_type_info_create(const component_id *component_ids, size_t component_count) {
