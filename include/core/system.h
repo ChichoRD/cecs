@@ -80,6 +80,8 @@ entity_count world_system_iter(
 #define WORLD_SYSTEM_ITER(world_system0, world_ref, iteration_arena_ref, predicate_data, predicate) \
     world_system_iter(world_system0, world_ref, iteration_arena_ref, predicate_data, ((system_predicate *const)predicate))
 
+// TODO: iter_range
+
 typedef struct system_predicates {
     system_predicate *const *const predicates;
     const size_t predicate_count;

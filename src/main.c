@@ -66,7 +66,7 @@ typedef struct dies_by {
 } dies_by;
 COMPONENT_IMPLEMENT(dies_by);
 
-static renderable renderable_create(arena *a, char **sprite, v2_i16 offset, v2_i16 size) {
+static renderable renderable_create_alloc(char **sprite, v2_i16 offset, v2_i16 size) {
 	renderable r = (renderable) {
 		.sprite = calloc(size.x * size.y, sizeof(char*)),
 		.offset = offset,
@@ -80,20 +80,19 @@ static renderable renderable_create(arena *a, char **sprite, v2_i16 offset, v2_i
     return r;
 }
 
-static renderable renderable_create_lonk(arena *a) {
+static renderable renderable_create_lonk_alloc() {
     char *sprite[2][1] = {
         { GRN "\xe2\x96\xb2" CRESET },
         { YEL "\xe2\x96\xa0" CRESET },
     };
-    return renderable_create(
-        a,
+    return renderable_create_alloc(
         sprite,
         (v2_i16){0, 0},
         (v2_i16){1, 2}
     );
 }
 
-static renderable renderable_create_shockwave(arena *a, int16_t radius) {
+static renderable renderable_create_shockwave_alloc(int16_t radius) {
     int16_t size = radius * 2 + 1;
     char **sprite = calloc(size * size, sizeof(char *));
     for (int16_t i = -radius; i <= radius; i++) {
@@ -106,8 +105,7 @@ static renderable renderable_create_shockwave(arena *a, int16_t radius) {
             }
         }
     }
-    renderable r = renderable_create(
-        a,
+    renderable r = renderable_create_alloc(
         sprite,
         (v2_i16){-radius, -radius},
         (v2_i16){size, size}
@@ -116,14 +114,13 @@ static renderable renderable_create_shockwave(arena *a, int16_t radius) {
     return r;
 }
 
-static renderable renderable_create_wall(arena *a, char *color) {
+static renderable renderable_create_wall_alloc(char *color) {
     // cheat: ░      ▒      ▓      █      ▄      ▀      ■      ▲      ■      ¬      ×     🧿
     // cheat: \xe2\x96\x91  \xe2\x96\x92    \xe2\x96\x93    \xe2\x96\x88    \xe2\x96\x84    \xe2\x96\x80    \xe2\x96\xa0    \xe2\x96\xb2    \xe2\x96\xa0    \xc2\xac    \xc3\x97    \xf0\x9f\xa7\xbf
     char *sprite[1][1] = {
 		{ color }
 	};
-    return renderable_create(
-        a,
+    return renderable_create_alloc(
         sprite,
         (v2_i16){ 0, 0 },
         (v2_i16){ 1, 1 }
@@ -131,20 +128,18 @@ static renderable renderable_create_wall(arena *a, char *color) {
 
 }
 
-static renderable renderable_create_slime(arena *a) {
+static renderable renderable_create_slime_alloc() {
     char *sprite[1][2] = { { GRN "\xf0\x9f\xa7\xbf" CRESET, "\0" } };
-    return renderable_create(
-        a,
+    return renderable_create_alloc(
         sprite,
         (v2_i16){ 0, 0 },
         (v2_i16){ 2, 1 }
     );
 }
 
-static renderable renderable_create_duck(arena *a, char *color) {
+static renderable renderable_create_duck_alloc(char *color) {
     char *sprite[1][2] = { { YEL "\xc2\xac" CRESET, color } };
-    return renderable_create(
-        a,
+    return renderable_create_alloc(
         sprite,
         (v2_i16){ 0, 0 },
         (v2_i16){ 2, 1 }
@@ -156,10 +151,7 @@ typedef struct console_buffer {
 } console_buffer;
 RESOURCE_IMPLEMENT(console_buffer);
 
-typedef arena strings_arena;
-RESOURCE_IMPLEMENT(strings_arena);
-
-bool create_duck(arena *a, world *w, v2_i16 initial_position, const entity_id *const threats, size_t threats_count) {
+bool create_duck(world *w, v2_i16 initial_position, const entity_id *const threats, size_t threats_count) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -170,7 +162,7 @@ bool create_duck(arena *a, world *w, v2_i16 initial_position, const entity_id *c
 
     char *default_color = WHT "\xe2\x96\x84" CRESET;
     char *golden_color = YEL "\xe2\x96\x84" CRESET;
-    renderable r = renderable_create_duck(a, rand() % 1000 < 45 ? golden_color : default_color);
+    renderable r = renderable_create_duck_alloc(rand() % 1000 < 45 ? golden_color : default_color);
     WORLD_SET_COMPONENT(
         renderable,
         w,
@@ -184,7 +176,7 @@ bool create_duck(arena *a, world *w, v2_i16 initial_position, const entity_id *c
     return EXIT_SUCCESS;
 }
 
-bool create_slime(arena *a, world *w, v2_i16 initial_position, entity_id parent) {
+bool create_slime(world *w, v2_i16 initial_position, entity_id parent) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -192,7 +184,7 @@ bool create_slime(arena *a, world *w, v2_i16 initial_position, entity_id parent)
         e,
         &initial_position
     );
-    renderable r = renderable_create_slime(a);
+    renderable r = renderable_create_slime_alloc();
     WORLD_SET_COMPONENT(
         renderable,
         w,
@@ -203,7 +195,7 @@ bool create_slime(arena *a, world *w, v2_i16 initial_position, entity_id parent)
     return EXIT_SUCCESS;
 }
 
-entity_id create_lonk_prefab(arena *a, world *w) {
+entity_id create_lonk_prefab(world *w) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -229,7 +221,7 @@ entity_id create_lonk_prefab(arena *a, world *w) {
             .velocity = {0, 0}
         })
     );
-    renderable r = renderable_create_lonk(a);
+    renderable r = renderable_create_lonk_alloc();
     WORLD_SET_COMPONENT(
         renderable,
         w,
@@ -254,7 +246,7 @@ entity_id create_lonk(world *w, prefab_id prefab) {
     return world_add_entity_from_prefab(w, prefab);
 }
 
-prefab_id create_wall_prefab(arena *a, world *w) {
+prefab_id create_wall_prefab(world *w) {
     entity_id e = world_add_entity(w);
     WORLD_SET_COMPONENT(
         position,
@@ -264,7 +256,7 @@ prefab_id create_wall_prefab(arena *a, world *w) {
             0, 0
         })
     );
-    renderable r = renderable_create_wall(a, BLU "\xe2\x96\x88" CRESET);
+    renderable r = renderable_create_wall_alloc(BLU "\xe2\x96\x88" CRESET);
     WORLD_SET_COMPONENT(
         renderable,
         w,
@@ -301,7 +293,6 @@ bool init(world *w) {
     );
     srand(timespec_get(&t->game_start, TIME_UTC));
     arena a = arena_create();
-    strings_arena *sa = WORLD_SET_RESOURCE(strings_arena, w, &a);
 
     console_buffer cb;
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
@@ -310,25 +301,24 @@ bool init(world *w) {
         }
     }
     SetConsoleOutputCP(65001);
-    entity_id lonk = create_lonk(w, create_lonk_prefab(sa, w));
+    entity_id lonk = create_lonk(w, create_lonk_prefab(w));
     world_add_entity_to_scene(w, lonk, 1);
     // entity_id lonk2 = world_add_entity(w);
     // world_add_entity_to_scene(w, lonk2, 1);
     // WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
 
-    create_map(w, create_wall_prefab(sa, w));
+    create_map(w, create_wall_prefab(w));
     for (size_t i = 0; i < 2; i++) {
-        create_duck(sa, w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (entity_id[]){lonk}, 1);
+        create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (entity_id[]){lonk}, 1);
     }
-    create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
-    create_slime(sa, w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, world_add_entity(w));
+    create_slime(w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
+    create_slime(w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, world_add_entity(w));
 
     WORLD_SET_RESOURCE(console_buffer, w, &cb);
     return EXIT_SUCCESS;
 }
 
 bool create_shockwave(world *w, position p, velocity v) {
-    strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
     entity_id e = world_add_entity(w);
 
     WORLD_SET_COMPONENT(
@@ -339,7 +329,7 @@ bool create_shockwave(world *w, position p, velocity v) {
     );
     const int16_t SPEED_MULTIPLIER = 8;
     const int16_t RADIUS = SPEED_MULTIPLIER;
-    renderable r = renderable_create_shockwave(sa, RADIUS);
+    renderable r = renderable_create_shockwave_alloc(RADIUS);
     WORLD_SET_COMPONENT(
         renderable,
         w,
@@ -440,18 +430,18 @@ void update_shockwaves(
     world *w,
     system_predicate_data delta_time_seconds
 ) {
-    strings_arena *sa = WORLD_GET_RESOURCE(strings_arena, w);
     position *p = handle->position_component;
     velocity *v = handle->velocity_component;
     p->x += v->x;
     p->y += v->y;
     free(handle->renderable_component->sprite);
+    handle->renderable_component->sprite = NULL;
     if (p->x < 0 || p->x >= BOARD_WIDTH
         || p->y < 0 || p->y >= BOARD_HEIGHT
         || v->x == 0 && v->y == 0) {
         world_remove_entity(w, handle->entity_id);
     } else {
-        renderable new_r = renderable_create_shockwave(sa, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
+        renderable new_r = renderable_create_shockwave_alloc(abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
         *handle->renderable_component = new_r;
     }
     
@@ -573,17 +563,7 @@ bool render(const world *w, arena *iteration_arena) {
     printf("%s", (char *)screen.elements);
     arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
-    arena_dbg_info dbg = arena_get_dbg_info_compare_capacity(WORLD_GET_RESOURCE(
-        strings_arena,
-        w
-    ));
-    printf(
-        "arena (%d owned / %d total blocks): %d/%d\n\tarena minimums: %d/%d\n\tarena maximums: %d/%d\n\tlargest remaining capacity: %d\n",
-        dbg.owned_block_count, dbg.block_count, dbg.total_size, dbg.total_capacity,
-        dbg.smallest_block_size, dbg.smallest_block_capacity,
-        dbg.largest_block_size, dbg.largest_block_capacity,
-        dbg.largest_remaining_capacity
-    );
+
 
     *cb = new_console_buffer;
     return EXIT_SUCCESS;
@@ -642,7 +622,23 @@ bool update(world *w, double delta_time_seconds) {
 }
 
 bool finalize(world *w) {
-    arena_free(WORLD_GET_RESOURCE(strings_arena, w));
+    arena a = arena_create();
+    COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
+    for (
+        component_iterator it = component_iterator_create(component_iterator_descriptor_create(
+            &w->components,
+            &a,
+            COMPONENTS_SEARCH_GROUPS_CREATE(
+                COMPONENTS_ALL(renderable)
+            )
+        ));
+        !component_iterator_done(&it);
+        component_iterator_next(&it)
+    ) {
+        component_iterator_current(&it, &handle);
+        free(handle.renderable_component->sprite);
+    }
+    arena_free(&a);
     return EXIT_SUCCESS;
 }
 

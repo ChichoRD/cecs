@@ -188,9 +188,11 @@ void *arena_alloc(arena *a, size_t size) {
 }
 
 void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_size) {
-    if (new_size <= current_size) {
-        return data_block;
-    }
+    //if (new_size <= current_size) {
+    //    return data_block;
+    //}
+    ptrdiff_t expansion = (ptrdiff_t)new_size - (ptrdiff_t)current_size;
+    size_t transfer_size = current_size < new_size ? current_size : new_size;
 
     if (data_block == NULL || current_size == 0) {
         return arena_alloc(a, new_size);
@@ -216,7 +218,7 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
             old_data_block = current;
 
             bool data_is_last_in_block = (uint8_t*)data_block + current_size == current->b.data + current->b.size;
-            if (data_is_last_in_block && block_can_alloc(&current->b, new_size - current_size)) {
+            if (data_is_last_in_block && (expansion <= 0 || block_can_alloc(&current->b, expansion))) {
                 strategy = arena_reallocate_in_place;
             }
         }
@@ -240,7 +242,7 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
     switch (strategy) {
     case arena_reallocate_in_place: {
         assert(old_data_block != NULL && "error: no data block found in arena");
-        old_data_block->b.size += new_size - current_size;
+        old_data_block->b.size += expansion;
         assert(old_data_block->b.size <= old_data_block->b.capacity && "error: reallocation exceeds block capacity");
         return data_block;
     }
@@ -279,18 +281,21 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         } else {
             new_data_block = block_alloc(&fit->b, new_size);
         }
-        memcpy(new_data_block, data_block, current_size);
+
+        if (new_data_block != data_block)
+            memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
     case arena_reallocate_fit: {
         assert(fit != NULL && "error: no fit block found in arena");
         uint8_t* new_data_block = block_alloc(&fit->b, new_size);
-        memcpy(new_data_block, data_block, current_size);
+        if (new_data_block != data_block)
+            memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
     case arena_reallocate_new: {
         uint8_t* new_data_block = block_alloc(arena_add_block(a, new_size), new_size);
-        memcpy(new_data_block, data_block, current_size);
+        memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
     default: {
