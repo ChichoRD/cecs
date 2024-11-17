@@ -68,7 +68,7 @@ COMPONENT_IMPLEMENT(dies_by);
 
 static renderable renderable_create(arena *a, char **sprite, v2_i16 offset, v2_i16 size) {
 	renderable r = (renderable) {
-		.sprite = arena_alloc(a, sizeof(char*) * size.x * size.y),
+		.sprite = calloc(size.x * size.y, sizeof(char*)),
 		.offset = offset,
 		.size = size
 	};
@@ -337,7 +337,7 @@ bool create_shockwave(world *w, position p, velocity v) {
         e,
         &p
     );
-    const int16_t SPEED_MULTIPLIER = 3;
+    const int16_t SPEED_MULTIPLIER = 8;
     const int16_t RADIUS = SPEED_MULTIPLIER;
     renderable r = renderable_create_shockwave(sa, RADIUS);
     WORLD_SET_COMPONENT(
@@ -445,13 +445,16 @@ void update_shockwaves(
     velocity *v = handle->velocity_component;
     p->x += v->x;
     p->y += v->y;
-    renderable new_r = renderable_create_shockwave(sa, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
-    *handle->renderable_component = new_r;
+    free(handle->renderable_component->sprite);
     if (p->x < 0 || p->x >= BOARD_WIDTH
         || p->y < 0 || p->y >= BOARD_HEIGHT
         || v->x == 0 && v->y == 0) {
         world_remove_entity(w, handle->entity_id);
+    } else {
+        renderable new_r = renderable_create_shockwave(sa, abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
+        *handle->renderable_component = new_r;
     }
+    
     if (abs(v->x) > 0) {
         v->x -= v->x / abs(v->x);
     }
@@ -570,15 +573,17 @@ bool render(const world *w, arena *iteration_arena) {
     printf("%s", (char *)screen.elements);
     arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
-    arena_dbg_info dbg = arena_get_dbg_info_compare_capacity(&w->entities.entity_ids_arena);
+    arena_dbg_info dbg = arena_get_dbg_info_compare_capacity(WORLD_GET_RESOURCE(
+        strings_arena,
+        w
+    ));
     printf(
-        "entity ids arena (%d owned / %d total blocks): %d/%d\n\tarena minimums: %d/%d\n\tarena maximums: %d/%d\n",
+        "arena (%d owned / %d total blocks): %d/%d\n\tarena minimums: %d/%d\n\tarena maximums: %d/%d\n\tlargest remaining capacity: %d\n",
         dbg.owned_block_count, dbg.block_count, dbg.total_size, dbg.total_capacity,
         dbg.smallest_block_size, dbg.smallest_block_capacity,
-        dbg.largest_block_size, dbg.largest_block_capacity
+        dbg.largest_block_size, dbg.largest_block_capacity,
+        dbg.largest_remaining_capacity
     );
-    printf("used entity ids count: %d\n", sparse_set_count_of_size(&w->entities.entity_ids, sizeof(entity_id)));
-    printf("free entity ids count: %d\n", queue_count_of_size(&w->entities.free_entity_ids, sizeof(entity_id)));
 
     *cb = new_console_buffer;
     return EXIT_SUCCESS;

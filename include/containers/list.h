@@ -66,11 +66,13 @@ static void list_grow(list *l, arena *a, size_t new_capacity) {
 
 static void list_shrink(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity < l->capacity && "Attempted to shrink list to larger capacity");
-    size_t current_capacity = l->capacity;
-    while (new_capacity < l->capacity / 2)
-        l->capacity /= 2;
+    if (new_capacity * 8 < l->capacity) {
+        size_t current_capacity = l->capacity;
+        while (new_capacity < l->capacity / 2)
+            l->capacity /= 2;
 
-    l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
+        l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
+    }
 }
 
 void *list_add(list *l, arena *a, const void *element, size_t size) {

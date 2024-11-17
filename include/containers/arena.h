@@ -187,7 +187,6 @@ void *arena_alloc(arena *a, size_t size) {
     return block_alloc(arena_add_block(a, size), size);
 }
 
-// TODO: add block splitting
 void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_size) {
     if (new_size <= current_size) {
         return data_block;
@@ -225,7 +224,7 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         if (block_can_alloc(&current->b, new_size) && strategy == arena_reallocate_none) {
             fit = current;
 
-            if (current_size * 4 >= current->b.size) {
+            if (current_size * 4 >= current->b.capacity) {
                 strategy = arena_reallocate_split;
             }
             else {
@@ -251,31 +250,33 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
 
         ptrdiff_t split_bytes = (uint8_t*)data_block + current_size - old_data_block->b.data;
         ptrdiff_t split_block_capacity = old_data_block->b.capacity - split_bytes;
-        assert(split_block_capacity >= 0 && "error: split block capacity is negative");
+        assert(split_block_capacity >= 0 && "error: split block capacity is not greater than 0");
         ptrdiff_t split_block_size = old_data_block->b.size - split_bytes;
         assert(split_block_size <= split_block_capacity && "error: split block size exceeds capacity");
 
-        linked_block* split_block = malloc(sizeof(linked_block));
-        *split_block = linked_block_create(
-            block_create_from_existing(split_block_capacity, split_block_size, old_data_block->b.data + split_bytes),
-            old_data_block->next
-        );
         old_data_block->b.capacity = split_bytes;
         old_data_block->b.size = split_bytes - current_size;
-        old_data_block->next = split_block;
 
-        if (a->last_block == old_data_block) {
-            a->last_block = split_block;
+        linked_block* split_block = NULL;
+        if (split_block_capacity > 0) {
+            split_block = malloc(sizeof(linked_block));
+            *split_block = linked_block_create(
+                block_create_from_existing(split_block_capacity, split_block_size, old_data_block->b.data + split_bytes),
+                old_data_block->next
+            );
+            old_data_block->next = split_block;
+
+            if (a->last_block == old_data_block) {
+                a->last_block = split_block;
+            }
         }
 
         uint8_t* new_data_block = NULL;
         if (fit == old_data_block && block_can_alloc(&old_data_block->b, new_size)) {
             new_data_block = block_alloc(&old_data_block->b, new_size);
-        }
-        else if (fit == old_data_block && block_can_alloc(&split_block->b, new_size)) {
+        } else if (fit == old_data_block && split_block != NULL && block_can_alloc(&split_block->b, new_size)) {
             new_data_block = block_alloc(&split_block->b, new_size);
-        }
-        else {
+        } else {
             new_data_block = block_alloc(&fit->b, new_size);
         }
         memcpy(new_data_block, data_block, current_size);
@@ -314,6 +315,8 @@ void arena_free(arena *a) {
     a->last_block = NULL;
 }
 
+// TODO: pool allocator
+
 typedef struct arena_dbg_info {
     size_t block_count;
     size_t owned_block_count;
@@ -326,6 +329,8 @@ typedef struct arena_dbg_info {
 
     size_t smallest_block_capacity;
     size_t smallest_block_size;
+
+    size_t largest_remaining_capacity;
 } arena_dbg_info;
 
 arena_dbg_info arena_get_dbg_info_compare_capacity(const arena *a) {
@@ -350,6 +355,10 @@ arena_dbg_info arena_get_dbg_info_compare_capacity(const arena *a) {
 			info.smallest_block_capacity = current->b.capacity;
 			info.smallest_block_size = current->b.size;
 		}
+
+        if (current->b.capacity - current->b.size > info.largest_remaining_capacity) {
+            info.largest_remaining_capacity = current->b.capacity - current->b.size;
+        }
 
 		current = current->next;
 	}
@@ -378,6 +387,10 @@ arena_dbg_info arena_get_dbg_info_compare_size(const arena *a) {
 			info.smallest_block_capacity = current->b.capacity;
 			info.smallest_block_size = current->b.size;
 		}
+
+        if (current->b.capacity - current->b.size > info.largest_remaining_capacity) {
+            info.largest_remaining_capacity = current->b.capacity - current->b.size;
+        }
 
         current = current->next;
 	}
@@ -410,6 +423,10 @@ arena_dbg_info arena_get_dbg_info_pick_smallest(const arena *a) {
         }
         if (current->b.size > info.largest_block_size) {
             info.largest_block_size = current->b.size;
+        }
+
+        if (current->b.capacity - current->b.size > info.largest_remaining_capacity) {
+            info.largest_remaining_capacity = current->b.capacity - current->b.size;
         }
 
         current = current->next;
