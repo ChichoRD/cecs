@@ -311,7 +311,7 @@ bool init(world *w) {
     }
     SetConsoleOutputCP(65001);
     entity_id lonk = create_lonk(w, create_lonk_prefab(sa, w));
-    world_add_entity_to_scene(w, lonk, 2);
+    world_add_entity_to_scene(w, lonk, 1);
     // entity_id lonk2 = world_add_entity(w);
     // world_add_entity_to_scene(w, lonk2, 1);
     // WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
@@ -570,6 +570,15 @@ bool render(const world *w, arena *iteration_arena) {
     printf("%s", (char *)screen.elements);
     arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
+    arena_dbg_info dbg = arena_get_dbg_info_compare_capacity(&w->entities.entity_ids_arena);
+    printf(
+        "entity ids arena (%d owned / %d total blocks): %d/%d\n\tarena minimums: %d/%d\n\tarena maximums: %d/%d\n",
+        dbg.owned_block_count, dbg.block_count, dbg.total_size, dbg.total_capacity,
+        dbg.smallest_block_size, dbg.smallest_block_capacity,
+        dbg.largest_block_size, dbg.largest_block_capacity
+    );
+    printf("used entity ids count: %d\n", sparse_set_count_of_size(&w->entities.entity_ids, sizeof(entity_id)));
+    printf("free entity ids count: %d\n", queue_count_of_size(&w->entities.free_entity_ids, sizeof(entity_id)));
 
     *cb = new_console_buffer;
     return EXIT_SUCCESS;

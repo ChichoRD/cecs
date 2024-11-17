@@ -201,7 +201,4 @@ world_system scene_world_system_get_with_range(scene_world_system *s, arena *a, 
     ));
 }
 
-// TODO: test scene_world_system
-// TODO: configurable systems (1/2)
-
 #endif

@@ -15,6 +15,7 @@ typedef struct block {
     size_t size;
     size_t capacity;
     uint8_t *data;
+    bool owns_data;
 } block;
 
 block block_create(size_t capacity) {
@@ -22,7 +23,17 @@ block block_create(size_t capacity) {
     b.size = 0;
     b.capacity = capacity;
     b.data = (uint8_t *)calloc(capacity, sizeof(uint8_t));
+    b.owns_data = true;
     return b;
+}
+
+block block_create_from_existing(size_t capacity, size_t size, uint8_t *data) {
+	block b;
+	b.size = size;
+	b.capacity = capacity;
+	b.data = data;
+    b.owns_data = false;
+	return b;
 }
 
 size_t block_alignment_padding_from_size(uint8_t *ptr, size_t structure_size) {
@@ -97,7 +108,9 @@ void block_free(block *b) {
     b->capacity = 0;
     uint8_t *data = b->data;
     b->data = NULL;
-    free(data);
+
+    if (b->owns_data)
+        free(data);
 }
 
 
@@ -184,45 +197,105 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         return arena_alloc(a, new_size);
     }
 
-    linked_block *best_fit = NULL;
-    size_t best_fit_remaining = SIZE_MAX;
-    size_t expansion = new_size - current_size;
+    enum arena_realocation_strategy {
+        arena_reallocate_none,
+        arena_reallocate_in_place,
+        arena_reallocate_split,
+        arena_reallocate_fit,
+        arena_reallocate_new
+    } strategy = arena_reallocate_none;
 
-    linked_block *current = a->first_block;
-    while (current != NULL) {
-        size_t remaining = current->b.capacity - current->b.size;
-        if (((uint8_t *)data_block >= current->b.data)
-            && ((uint8_t *)data_block + current_size == (current->b.data + current->b.size))) {
-            if (remaining >= expansion) {
-                current->b.size += expansion;
-                return data_block;
-            } else {
-                current->b.size -= current_size;
+    linked_block* old_data_block = NULL;
+    linked_block* fit = NULL;
+    linked_block* current = a->first_block;
+    while (current != NULL
+        && (strategy == arena_reallocate_none || old_data_block == NULL)) {
+        bool in_data_block = ((uint8_t*)data_block >= current->b.data)
+            && ((uint8_t*)data_block + current_size <= (current->b.data + current->b.size));
+        if (in_data_block) {
+            assert(old_data_block == NULL && "error: multiple data blocks found in arena");
+            old_data_block = current;
+
+            bool data_is_last_in_block = (uint8_t*)data_block + current_size == current->b.data + current->b.size;
+            if (data_is_last_in_block && block_can_alloc(&current->b, new_size - current_size)) {
+                strategy = arena_reallocate_in_place;
             }
-        } else if (block_can_alloc(&current->b, new_size)
-            && (best_fit == NULL || (remaining < best_fit_remaining))) {
-            best_fit = current;
-            best_fit_remaining = remaining;
+        }
+
+        if (block_can_alloc(&current->b, new_size) && strategy == arena_reallocate_none) {
+            fit = current;
+
+            if (current_size * 4 >= current->b.size) {
+                strategy = arena_reallocate_split;
+            }
+            else {
+                strategy = arena_reallocate_fit;
+            }
         }
         current = current->next;
     }
+    if (current == NULL && strategy == arena_reallocate_none) {
+        strategy = arena_reallocate_new;
+    }
 
-    if (best_fit != NULL) {
-        void *new_data_block = block_alloc(&best_fit->b, new_size);
-        memcpy(new_data_block, data_block, current_size);
-        return new_data_block;
-    } else {
-        void *new_data_block = block_alloc(arena_add_block(a, new_size), new_size);
+    switch (strategy) {
+    case arena_reallocate_in_place: {
+        assert(old_data_block != NULL && "error: no data block found in arena");
+        old_data_block->b.size += new_size - current_size;
+        assert(old_data_block->b.size <= old_data_block->b.capacity && "error: reallocation exceeds block capacity");
+        return data_block;
+    }
+    case arena_reallocate_split: {
+        assert(old_data_block != NULL && "error: no data block found in arena");
+        assert(fit != NULL && "error: no fit block found in arena");
+
+        ptrdiff_t split_bytes = (uint8_t*)data_block + current_size - old_data_block->b.data;
+        ptrdiff_t split_block_capacity = old_data_block->b.capacity - split_bytes;
+        assert(split_block_capacity >= 0 && "error: split block capacity is negative");
+        ptrdiff_t split_block_size = old_data_block->b.size - split_bytes;
+        assert(split_block_size <= split_block_capacity && "error: split block size exceeds capacity");
+
+        linked_block* split_block = malloc(sizeof(linked_block));
+        *split_block = linked_block_create(
+            block_create_from_existing(split_block_capacity, split_block_size, old_data_block->b.data + split_bytes),
+            old_data_block->next
+        );
+        old_data_block->b.capacity = split_bytes;
+        old_data_block->b.size = split_bytes - current_size;
+        old_data_block->next = split_block;
+
+        if (a->last_block == old_data_block) {
+            a->last_block = split_block;
+        }
+
+        uint8_t* new_data_block = NULL;
+        if (fit == old_data_block && block_can_alloc(&old_data_block->b, new_size)) {
+            new_data_block = block_alloc(&old_data_block->b, new_size);
+        }
+        else if (fit == old_data_block && block_can_alloc(&split_block->b, new_size)) {
+            new_data_block = block_alloc(&split_block->b, new_size);
+        }
+        else {
+            new_data_block = block_alloc(&fit->b, new_size);
+        }
         memcpy(new_data_block, data_block, current_size);
         return new_data_block;
     }
-}
-
-void arena_clear(arena *a) {
-    linked_block *current = a->first_block;
-    while (current != NULL) {
-        current->b.size = 0;
-        current = current->next;
+    case arena_reallocate_fit: {
+        assert(fit != NULL && "error: no fit block found in arena");
+        uint8_t* new_data_block = block_alloc(&fit->b, new_size);
+        memcpy(new_data_block, data_block, current_size);
+        return new_data_block;
+    }
+    case arena_reallocate_new: {
+        uint8_t* new_data_block = block_alloc(arena_add_block(a, new_size), new_size);
+        memcpy(new_data_block, data_block, current_size);
+        return new_data_block;
+    }
+    default: {
+        assert(false && "unreachable: invalid arena reallocation strategy");
+        return NULL;
+    }
     }
 }
 
@@ -239,6 +312,109 @@ void arena_free(arena *a) {
 
     a->first_block = NULL;
     a->last_block = NULL;
+}
+
+typedef struct arena_dbg_info {
+    size_t block_count;
+    size_t owned_block_count;
+
+    size_t total_capacity;
+    size_t total_size;
+
+    size_t largest_block_capacity;
+    size_t largest_block_size;
+
+    size_t smallest_block_capacity;
+    size_t smallest_block_size;
+} arena_dbg_info;
+
+arena_dbg_info arena_get_dbg_info_compare_capacity(const arena *a) {
+    arena_dbg_info info = {0};
+    info.smallest_block_capacity = SIZE_MAX;
+    info.smallest_block_size = SIZE_MAX;
+
+    linked_block *current = a->first_block;
+    while (current != NULL) {
+		++info.block_count;
+        if (current->b.owns_data) {
+			++info.owned_block_count;
+		}
+		info.total_capacity += current->b.capacity;
+		info.total_size += current->b.size;
+
+		if (current->b.capacity > info.largest_block_capacity) {
+			info.largest_block_capacity = current->b.capacity;
+			info.largest_block_size = current->b.size;
+		}
+		if (current->b.capacity < info.smallest_block_capacity) {
+			info.smallest_block_capacity = current->b.capacity;
+			info.smallest_block_size = current->b.size;
+		}
+
+		current = current->next;
+	}
+    return info;
+}
+
+arena_dbg_info arena_get_dbg_info_compare_size(const arena *a) {
+    arena_dbg_info info = {0};
+    info.smallest_block_capacity = SIZE_MAX;
+    info.smallest_block_size = SIZE_MAX;
+    linked_block *current = a->first_block;
+    while (current != NULL) {
+        ++info.block_count;
+		if (current->b.owns_data) {
+            ++info.owned_block_count;
+		}
+        info.total_capacity += current->b.capacity;
+        info.total_size += current->b.size;
+
+        if (current->b.size > info.largest_block_size) {
+			info.largest_block_capacity = current->b.capacity;
+			info.largest_block_size = current->b.size;
+		}
+
+        if (current->b.size < info.smallest_block_size) {
+			info.smallest_block_capacity = current->b.capacity;
+			info.smallest_block_size = current->b.size;
+		}
+
+        current = current->next;
+	}
+	return info;
+}
+
+arena_dbg_info arena_get_dbg_info_pick_smallest(const arena *a) {
+    arena_dbg_info info = {0};
+    info.smallest_block_capacity = SIZE_MAX;
+    info.smallest_block_size = SIZE_MAX;
+
+    linked_block *current = a->first_block;
+    while (current != NULL) {
+        ++info.block_count;
+        if (current->b.owns_data) {
+            ++info.owned_block_count;
+        }
+        info.total_capacity += current->b.capacity;
+        info.total_size += current->b.size;
+
+        if (current->b.capacity < info.smallest_block_capacity) {
+            info.smallest_block_capacity = current->b.capacity;
+        }
+        if (current->b.size < info.smallest_block_size) {
+            info.smallest_block_size = current->b.size;
+        }
+
+        if (current->b.capacity > info.largest_block_capacity) {
+            info.largest_block_capacity = current->b.capacity;
+        }
+        if (current->b.size > info.largest_block_size) {
+            info.largest_block_size = current->b.size;
+        }
+
+        current = current->next;
+    }
+    return info;
 }
 
 #endif
