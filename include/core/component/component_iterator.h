@@ -52,7 +52,7 @@ typedef struct components_search_groups {
 } components_search_groups;
 
 inline components_search_groups components_search_groups_create(
-    const components_search_group *groups,
+    components_search_group *groups,
     size_t group_count
 ) {
     return (components_search_groups) {

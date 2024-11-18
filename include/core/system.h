@@ -59,7 +59,7 @@ entity_count world_system_iter(
     world *w,
     arena *iteration_arena,
     system_predicate_data data,
-    const system_predicate *predicate
+    system_predicate *predicate
 ) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
@@ -77,7 +77,7 @@ entity_count world_system_iter(
     return count;
 }
 #define WORLD_SYSTEM_ITER(world_system0, world_ref, iteration_arena_ref, predicate_data, predicate) \
-    world_system_iter(world_system0, world_ref, iteration_arena_ref, predicate_data, ((system_predicate const *)predicate))
+    world_system_iter(world_system0, world_ref, iteration_arena_ref, predicate_data, ((system_predicate *)predicate))
 
 entity_count world_system_iter_range(
     const world_system s,
@@ -85,7 +85,7 @@ entity_count world_system_iter_range(
     arena *iteration_arena,
     entity_id_range range,
     system_predicate_data data,
-    const system_predicate *predicate
+    system_predicate *predicate
 ) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
@@ -104,14 +104,14 @@ entity_count world_system_iter_range(
 }
 #define WORLD_SYSTEM_ITER_RANGE(world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, predicate) \
     world_system_iter_range( \
-        world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, ((system_predicate const *)predicate) \
+        world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, ((system_predicate *)predicate) \
     )
 
 typedef struct system_predicates {
-    const system_predicate **predicates;
+    system_predicate **predicates;
     size_t predicate_count;
 } system_predicates;
-system_predicates system_predicates_create(const system_predicate **predicates, size_t predicate_count) {
+system_predicates system_predicates_create(system_predicate **predicates, size_t predicate_count) {
     return (system_predicates){
         .predicates = predicates,
         .predicate_count = predicate_count
@@ -125,8 +125,8 @@ system_predicates system_predicates_create(const system_predicate **predicates, 
 
 typedef union {
     struct {
-        const system_predicate **predicates;
-        const size_t predicate_count;
+        system_predicate **predicates;
+        size_t predicate_count;
     };
     system_predicates system_predicates;
 } system_predicates_deconstruct;

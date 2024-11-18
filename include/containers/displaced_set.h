@@ -137,7 +137,7 @@ counted_set counted_set_create_with_capacity(arena *a, size_t element_capacity, 
     };
 }
 
-inline counted_set_counter counted_set_count_of(counted_set *s, size_t index) {
+inline counted_set_counter counted_set_count_of(const counted_set *s, size_t index) {
     return *DISPLACED_SET_GET(counted_set_counter, &s->counts, index);
 }
 

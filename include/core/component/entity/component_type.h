@@ -38,7 +38,7 @@ typedef struct components_type_info {
     size_t component_count;
 } components_type_info;
 
-inline components_type_info components_type_info_create(const component_id *component_ids, size_t component_count) {
+inline components_type_info components_type_info_create(component_id *component_ids, size_t component_count) {
     return (components_type_info) {
         .component_ids = component_ids,
         .component_count = component_count

@@ -28,10 +28,10 @@ typedef optional_component get_component(const void *self, entity_id id, size_t 
 typedef optional_component set_component(void *self, arena *a, entity_id id, void *component, size_t size);
 typedef bool remove_component(void *self, arena *a, entity_id id, void *out_removed_component, size_t size);
 typedef struct component_storage_functions {
-    const info *const info;
-    const get_component *const get;
-    const set_component *const set;
-    const remove_component *const remove;
+    info *const info;
+    get_component *const get;
+    set_component *const set;
+    remove_component *const remove;
 } component_storage_functions;
 
 typedef union component_storage_ptr {
@@ -174,7 +174,7 @@ optional_component sparse_component_storage_set(sparse_component_storage *self, 
 }
 
 bool sparse_component_storage_remove(sparse_component_storage *self, arena *a, entity_id id, void *out_removed_component, size_t size) {
-    if (displaced_set_contains_index(&self->components, id)) {
+    if (displaced_set_contains_index(&self->components, (size_t)id)) {
         memcpy(out_removed_component, displaced_set_get(&self->components, (size_t)id, size), size);
         return true;
     } else {

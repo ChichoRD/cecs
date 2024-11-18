@@ -87,12 +87,16 @@ entity_id_range world_entities_add_entity_range(world_entities *we, size_t count
         .end = world_entities_count(we) + QUEUE_COUNT(entity_id, &we->free_entity_ids) + count
     };
 
-    for (size_t i = range.start; i < range.end; i++) {
+    assert(
+        range.start >= 0 && range.end
+        && "error: both start and end of entity_id_range must be non-negative"
+    );
+    for (ptrdiff_t i = range.start; i < range.end; i++) {
         SPARSE_SET_SET(
             entity_id,
             &we->entity_ids,
             &we->entity_ids_arena,
-            (size_t)range.start + i,
+            ((size_t)(range.start + i)),
             &(entity_id){i}
         );
     }

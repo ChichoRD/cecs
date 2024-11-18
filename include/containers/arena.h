@@ -42,7 +42,7 @@ size_t block_alignment_padding_from_size(uint8_t *ptr, size_t structure_size) {
         uintptr_t b;
         long double c;
     };
-    uint_fast8_t alignment = min(structure_size, (uint_fast8_t)sizeof(union max_alignment));
+    uint_fast8_t alignment = (uint_fast8_t)min(structure_size, sizeof(union max_alignment));
     
     #define ALIGNMENT_2 2
     #define ALIGNMENT_4 4
@@ -251,7 +251,7 @@ static bool arena_split_block_at(void *split, linked_block *block, linked_block 
 
     assert(
         split_bytes >= 0
-        && split_bytes <= block->b.size
+        && split_bytes <= (ptrdiff_t)block->b.size
         && "error: data block was not allocated in this block"
     );
     size_t split_block_capacity = block->b.capacity - split_bytes;
