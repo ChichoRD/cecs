@@ -9,7 +9,6 @@
 #include "../../containers/range.h"
 #include "../../containers/arena.h"
 #include "../../containers/tagged_union.h"
-#include "../../types/wide_ptr.h"
 #include "entity/component_type.h"
 #include "entity/entity.h"
 
@@ -33,14 +32,6 @@ typedef struct component_storage_functions {
     set_component *const set;
     remove_component *const remove;
 } component_storage_functions;
-
-typedef union component_storage_ptr {
-    wide_ptr raw_storage;
-    struct {
-        void *storage;
-        component_storage_functions *functions;
-    };
-} component_storage_ptr;
 
 
 typedef struct unit_component_storage {

@@ -7,7 +7,6 @@
 #include <intrin.h>
 #include "list.h"
 #include "range.h"
-#include "view.h"
 
 #define BIT_PAGE_SIZE_LOG2 2
 #define BIT_PAGE_SIZE (1 << BIT_PAGE_SIZE_LOG2)
