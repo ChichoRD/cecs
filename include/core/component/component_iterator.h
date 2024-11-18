@@ -79,7 +79,7 @@ typedef struct component_iterator_descriptor {
     const world_components_checksum checksum;
     const world_components *const world_components;
     components_type_info_deconstruct;
-    hibitset entities_bitset; 
+    hibitset entities_bitset;
 } component_iterator_descriptor;
 
 bool component_iterator_descriptor_copy_component_bitsets(
@@ -313,6 +313,7 @@ raw_iteration_handle_reference component_iterator_descriptor_allocate_handle_in(
 typedef struct component_iterator {
     component_iterator_descriptor descriptor;
     hibitset_iterator entities_iterator;
+    entity_id_range entity_range;
 } component_iterator;
 
 component_iterator component_iterator_create(component_iterator_descriptor descriptor) {
@@ -324,25 +325,44 @@ component_iterator component_iterator_create(component_iterator_descriptor descr
     }
     return (component_iterator) {
         .descriptor = descriptor,
-        .entities_iterator = iterator
+        .entities_iterator = iterator,
+        .entity_range = hibitset_bit_range(&descriptor.entities_bitset)
     };
 }
-#define COMPONENT_ITERATOR_CREATE(world_components_ref, arena_ref, ...) \
-    component_iterator_create(component_iterator_descriptor_create( \
-        world_components_ref, \
-        arena_ref, \
-        COMPONENTS_SEARCH_GROUPS_CREATE(COMPONENTS_ALL(__VA_ARGS__)) \
-    ))
-
 #define COMPONENT_ITERATOR_CREATE_GROUPED(world_components_ref, arena_ref, ...) \
     component_iterator_create(component_iterator_descriptor_create( \
         world_components_ref, \
         arena_ref, \
         COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__) \
     ))
+#define COMPONENT_ITERATOR_CREATE(world_components_ref, arena_ref, ...) \
+    COMPONENT_ITERATOR_CREATE_GROUPED(world_components_ref, arena_ref, COMPONENTS_ALL(__VA_ARGS__))
+
+component_iterator component_iterator_create_ranged(component_iterator_descriptor descriptor, entity_id_range range) {
+    assert(descriptor.checksum == descriptor.world_components->checksum
+        && "Component iterator descriptor is invalid or outdated, please create a new one");
+    hibitset_iterator iterator = hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
+    if (!hibitset_iterator_current_is_set(&iterator)) {
+        hibitset_iterator_next_set(&iterator);
+    }
+    return (component_iterator) {
+        .descriptor = descriptor,
+        .entities_iterator = iterator,
+        .entity_range = range
+    };
+}
+#define COMPONENT_ITERATOR_CREATE_RANGED_GROUPED(world_components_ref, arena_ref, entity_id_range0, ...) \
+    component_iterator_create_ranged(component_iterator_descriptor_create( \
+        world_components_ref, \
+        arena_ref, \
+        COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__) \
+    ), entity_id_range0)
+#define COMPONENT_ITERATOR_CREATE_RANGED(world_components_ref, arena_ref, entity_id_range0, ...) \
+    COMPONENT_ITERATOR_CREATE_RANGED_GROUPED(world_components_ref, arena_ref, entity_id_range0, COMPONENTS_ALL(__VA_ARGS__))
 
 bool component_iterator_done(const component_iterator *it) {
-    return hibitset_iterator_done(&it->entities_iterator);
+    return !exclusive_range_contains(it->entity_range, it->entities_iterator.current_bit_index)
+        || hibitset_iterator_done(&it->entities_iterator);
 }
 
 entity_id component_iterator_current(const component_iterator *it, raw_iteration_handle_reference out_iteration_handle) {

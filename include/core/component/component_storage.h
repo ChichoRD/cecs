@@ -196,6 +196,7 @@ static const component_storage_functions sparse_component_storage_functions = {
     .remove = (remove_component *const)sparse_component_storage_remove
 };
 
+// TODO: add more storage types
 
 typedef TAGGED_UNION_STRUCT(
     component_storage_union,

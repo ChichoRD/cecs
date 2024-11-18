@@ -61,6 +61,9 @@ typedef struct renderable {
 } renderable;
 COMPONENT_IMPLEMENT(renderable);
 
+typedef bool owns_renderable;
+TAG_IMPLEMENT(owns_renderable);
+
 typedef struct dies_by {
     entity_id cause;
 } dies_by;
@@ -169,6 +172,7 @@ bool create_duck(world *w, v2_i16 initial_position, const entity_id *const threa
         e,
         &r
     );
+    WORLD_ADD_TAG(owns_renderable, w, e);
     WORLD_ADD_TAG(is_duck, w, e);
     for (size_t i = 0; i < threats_count; i++) {
         WORLD_SET_COMPONENT_RELATION(dies_by, w, e, &(dies_by){ threats[i] }, threats[i]);
@@ -191,6 +195,7 @@ bool create_slime(world *w, v2_i16 initial_position, entity_id parent) {
         e,
         &r
     );
+    WORLD_ADD_TAG(owns_renderable, w, e);
     WORLD_SET_COMPONENT_RELATION(is_child_of, w, e, &(is_child_of){parent}, parent);
     return EXIT_SUCCESS;
 }
@@ -228,6 +233,7 @@ entity_id create_lonk_prefab(world *w) {
         e,
         &r
     );
+    WORLD_ADD_TAG(owns_renderable, w, e);
     WORLD_SET_COMPONENT(
         controllable,
         w,
@@ -243,7 +249,9 @@ entity_id create_lonk_prefab(world *w) {
 }
 
 entity_id create_lonk(world *w, prefab_id prefab) {
-    return world_add_entity_from_prefab(w, prefab);
+    entity_id lonk = world_add_entity_from_prefab(w, prefab);
+    WORLD_REMOVE_TAG(owns_renderable, w, lonk);
+    return lonk;
 }
 
 prefab_id create_wall_prefab(world *w) {
@@ -263,6 +271,7 @@ prefab_id create_wall_prefab(world *w) {
         e,
         &r
     );
+    WORLD_ADD_TAG(owns_renderable, w, e);
     WORLD_ADD_TAG(is_solid, w, e);
     return world_set_prefab(w, e);
 }
@@ -272,7 +281,9 @@ bool create_map(world *w, prefab_id prefab) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
             entity_id e = world_add_entity(w);
             if (x == 0 || x == BOARD_WIDTH - 1 || y == 0 || y == BOARD_HEIGHT - 1) {
-                WORLD_SET_COMPONENT(position, w, world_add_entity_from_prefab(w, prefab), (&(position){x, y}));
+                entity_id wall = world_add_entity_from_prefab(w, prefab);
+                WORLD_SET_COMPONENT(position, w, wall, (&(position){x, y}));
+                WORLD_REMOVE_TAG(owns_renderable, w, wall);
             }
         }
     } 
@@ -302,6 +313,7 @@ bool init(world *w) {
     }
     SetConsoleOutputCP(65001);
     entity_id lonk = create_lonk(w, create_lonk_prefab(w));
+    world_add_entity_to_scene(w, lonk, 0);
     world_add_entity_to_scene(w, lonk, 1);
     // entity_id lonk2 = world_add_entity(w);
     // world_add_entity_to_scene(w, lonk2, 1);
@@ -327,7 +339,7 @@ bool create_shockwave(world *w, position p, velocity v) {
         e,
         &p
     );
-    const int16_t SPEED_MULTIPLIER = 8;
+    const int16_t SPEED_MULTIPLIER = 4;
     const int16_t RADIUS = SPEED_MULTIPLIER;
     renderable r = renderable_create_shockwave_alloc(RADIUS);
     WORLD_SET_COMPONENT(
@@ -336,6 +348,7 @@ bool create_shockwave(world *w, position p, velocity v) {
         e,
         &r
     );
+    WORLD_ADD_TAG(owns_renderable, w, e);
     WORLD_SET_COMPONENT(
         velocity,
         w,
@@ -468,10 +481,11 @@ void update_children_position(
 
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
     scene_world_system s = scene_world_system_create(1, iteration_arena);
-    WORLD_SYSTEM_ITER(
+    WORLD_SYSTEM_ITER_RANGE(
         scene_world_system_get_with(&s, iteration_arena, COMPONENTS_ALL(velocity, controllable)),
         w,
         iteration_arena,
+        ((entity_id_range){0, 1}),
         system_predicate_data_create_none(),
         update_controllables
     );
@@ -538,9 +552,9 @@ bool render(const world *w, arena *iteration_arena) {
             new_console_buffer.buffer[x][y] = " ";
         }
     }
-
+    scene_world_system s = scene_world_system_create(0, iteration_arena);
     WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE(position, renderable),
+        scene_world_system_get_with(&s, iteration_arena, COMPONENTS_ALL(position, renderable)),
         w,
         iteration_arena,
         system_predicate_data_create_user_data(&new_console_buffer),
@@ -563,7 +577,17 @@ bool render(const world *w, arena *iteration_arena) {
     printf("%s", (char *)screen.elements);
     arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
-
+    //arena_dbg_info dbg = arena_get_dbg_info_compare_size(&w->entities.entity_ids_arena);
+    //printf(
+    //    "arena (%d owned / %d blocks): %d / %d\n"
+    //    "\tminimums: %d / %d\n"
+    //    "\tmaximums: %d / %d\n"
+    //    "\tlargest unused: %d\n",
+    //    dbg.owned_block_count, dbg.block_count, dbg.total_size, dbg.total_capacity,
+    //    dbg.smallest_block_size, dbg.smallest_block_capacity,
+    //    dbg.largest_block_size, dbg.largest_block_capacity,
+    //    dbg.largest_remaining_capacity
+    //);
 
     *cb = new_console_buffer;
     return EXIT_SUCCESS;
@@ -624,12 +648,13 @@ bool update(world *w, double delta_time_seconds) {
 bool finalize(world *w) {
     arena a = arena_create();
     COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
+    //size_t count = 0;
     for (
         component_iterator it = component_iterator_create(component_iterator_descriptor_create(
             &w->components,
             &a,
             COMPONENTS_SEARCH_GROUPS_CREATE(
-                COMPONENTS_ALL(renderable)
+                COMPONENTS_ALL(renderable, owns_renderable)
             )
         ));
         !component_iterator_done(&it);
@@ -637,12 +662,15 @@ bool finalize(world *w) {
     ) {
         component_iterator_current(&it, &handle);
         free(handle.renderable_component->sprite);
+        //++count;
     }
+    //printf("freed %d renderables\n", count);
     arena_free(&a);
     return EXIT_SUCCESS;
 }
 
 int main(void) {
+    // TODO: maybe prefix everything with "cecs_"
     world w = world_create(1024, 32, 4);
 
     bool quitting = false;

@@ -66,7 +66,7 @@ static void list_grow(list *l, arena *a, size_t new_capacity) {
 
 static void list_shrink(list *l, arena *a, size_t new_capacity) {
     assert(new_capacity < l->capacity && "Attempted to shrink list to larger capacity");
-    if (new_capacity * 8 < l->capacity) {
+    if (new_capacity < l->capacity / 4) {
         size_t current_capacity = l->capacity;
         while (new_capacity < l->capacity / 2)
             l->capacity /= 2;

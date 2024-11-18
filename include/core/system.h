@@ -8,8 +8,7 @@
 #include "world.h"
 
 typedef struct world_system {
-    components_search_groups search_groups;
-    //list subsystems;
+    components_search_groups const search_groups;
 } world_system;
 
 world_system world_system_create(components_search_groups search_groups) {
@@ -60,7 +59,7 @@ entity_count world_system_iter(
     world *w,
     arena *iteration_arena,
     system_predicate_data data,
-    system_predicate *const predicate
+    const system_predicate *predicate
 ) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
@@ -78,15 +77,41 @@ entity_count world_system_iter(
     return count;
 }
 #define WORLD_SYSTEM_ITER(world_system0, world_ref, iteration_arena_ref, predicate_data, predicate) \
-    world_system_iter(world_system0, world_ref, iteration_arena_ref, predicate_data, ((system_predicate *const)predicate))
+    world_system_iter(world_system0, world_ref, iteration_arena_ref, predicate_data, ((system_predicate const *)predicate))
 
-// TODO: iter_range
+entity_count world_system_iter_range(
+    const world_system s,
+    world *w,
+    arena *iteration_arena,
+    entity_id_range range,
+    system_predicate_data data,
+    const system_predicate *predicate
+) {
+    entity_count count = 0;
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
+    raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
+    for (
+        component_iterator it = component_iterator_create_ranged(descriptor, range);
+        !component_iterator_done(&it);
+        component_iterator_next(&it)
+    ) {
+        ++count;
+        component_iterator_current(&it, handle);
+        predicate(handle, w, data);
+    }
+    free(handle);
+    return count;
+}
+#define WORLD_SYSTEM_ITER_RANGE(world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, predicate) \
+    world_system_iter_range( \
+        world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, ((system_predicate const *)predicate) \
+    )
 
 typedef struct system_predicates {
-    system_predicate *const *const predicates;
-    const size_t predicate_count;
+    const system_predicate **predicates;
+    size_t predicate_count;
 } system_predicates;
-system_predicates system_predicates_create(const system_predicate *const *predicates, size_t predicate_count) {
+system_predicates system_predicates_create(const system_predicate **predicates, size_t predicate_count) {
     return (system_predicates){
         .predicates = predicates,
         .predicate_count = predicate_count
@@ -100,7 +125,7 @@ system_predicates system_predicates_create(const system_predicate *const *predic
 
 typedef union {
     struct {
-        const system_predicate *const *predicates;
+        const system_predicate **predicates;
         const size_t predicate_count;
     };
     system_predicates system_predicates;
@@ -132,6 +157,36 @@ entity_count world_system_iter_all(
 }
 #define WORLD_SYSTEM_ITER_ALL(world_system0, world_ref, iteration_arena_ref, predicate_data, ...) \
     world_system_iter_all(world_system0, world_ref, iteration_arena_ref, predicate_data, SYSTEM_PREDICATES_CREATE(__VA_ARGS__))
+
+entity_count world_system_iter_range_all(
+    const world_system s,
+    world *w,
+    arena *iteration_arena,
+    entity_id_range range,
+    system_predicate_data data,
+    system_predicates predicates
+) {
+    entity_count count = 0;
+    component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
+    raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
+    for (
+        component_iterator it = component_iterator_create_ranged(descriptor, range);
+        !component_iterator_done(&it);
+        component_iterator_next(&it)
+    ) {
+        ++count;
+        component_iterator_current(&it, handle);
+        for (size_t i = 0; i < predicates.predicate_count; i++) {
+            predicates.predicates[i](handle, w, data);
+        }
+    }
+    free(handle);
+    return count;
+}
+#define WORLD_SYSTEM_ITER_RANGE_ALL(world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, ...) \
+    world_system_iter_range_all( \
+        world_system0, world_ref, iteration_arena_ref, entity_id_range0, predicate_data, SYSTEM_PREDICATES_CREATE(__VA_ARGS__) \
+    )
 
 
 typedef struct dynamic_world_system {

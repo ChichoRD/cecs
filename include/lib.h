@@ -147,7 +147,6 @@ scene_id world_remove_entity_from_scene(world *w, entity_id id, scene_id scene) 
     );
 }
 
-
 typedef struct scene_world_system {
     dynamic_world_system world_system;
     scene_id scene;
