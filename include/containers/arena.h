@@ -187,49 +187,51 @@ void *arena_alloc(arena *a, size_t size) {
     return block_alloc(arena_add_block(a, size), size);
 }
 
-void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_size) {
-    //if (new_size <= current_size) {
-    //    return data_block;
-    //}
-    ptrdiff_t expansion = (ptrdiff_t)new_size - (ptrdiff_t)current_size;
-    size_t transfer_size = current_size < new_size ? current_size : new_size;
+typedef enum arena_reallocation_strategy {
+    arena_reallocate_none,
+    arena_reallocate_in_place,
+    arena_reallocate_split,
+    arena_reallocate_fit,
+    arena_reallocate_new
+} arena_reallocation_strategy;
 
-    if (data_block == NULL || current_size == 0) {
-        return arena_alloc(a, new_size);
-    }
-
-    enum arena_realocation_strategy {
-        arena_reallocate_none,
-        arena_reallocate_in_place,
-        arena_reallocate_split,
-        arena_reallocate_fit,
-        arena_reallocate_new
-    } strategy = arena_reallocate_none;
-
-    linked_block* old_data_block = NULL;
-    linked_block* fit = NULL;
-    linked_block* current = a->first_block;
-    while (current != NULL
-        && (strategy == arena_reallocate_none || old_data_block == NULL)) {
-        bool in_data_block = ((uint8_t*)data_block >= current->b.data)
-            && ((uint8_t*)data_block + current_size <= (current->b.data + current->b.size));
+static arena_reallocation_strategy arena_realloc_find_fit(
+    arena *a,
+    void *data_block,
+    size_t current_size,
+    size_t new_size,
+    linked_block **out_old_data_block,
+    linked_block **out_fit
+) {
+    *out_fit = NULL;
+    linked_block *old_data_block = NULL;
+    linked_block *current = a->first_block;
+    arena_reallocation_strategy strategy = arena_reallocate_none;
+    while (
+        current != NULL
+        && (strategy == arena_reallocate_none || old_data_block == NULL)
+    ) {
+        bool in_data_block = ((uint8_t *)data_block >= current->b.data)
+            && ((uint8_t *)data_block + current_size <= (current->b.data + current->b.size));
         if (in_data_block) {
-            assert(old_data_block == NULL && "error: multiple data blocks found in arena");
+            assert(old_data_block == NULL && "error: data cannot be present simultaneously in multiple blocks");
             old_data_block = current;
 
-            bool data_is_last_in_block = (uint8_t*)data_block + current_size == current->b.data + current->b.size;
-            if (data_is_last_in_block && (expansion <= 0 || block_can_alloc(&current->b, expansion))) {
+            bool data_is_last_in_block = (uint8_t *)data_block + current_size == current->b.data + current->b.size;
+            if (
+                data_is_last_in_block
+                && (new_size <= current_size || block_can_alloc(&current->b, new_size - current_size))
+            ) {
                 strategy = arena_reallocate_in_place;
             }
         }
 
         if (block_can_alloc(&current->b, new_size) && strategy == arena_reallocate_none) {
-            fit = current;
+            *out_fit = current;
 
-            if (current_size * 4 >= current->b.capacity) {
+            if (current_size >= current->b.capacity / 4) {
                 strategy = arena_reallocate_split;
-            }
-            else {
+            } else {
                 strategy = arena_reallocate_fit;
             }
         }
@@ -239,10 +241,53 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         strategy = arena_reallocate_new;
     }
 
-    switch (strategy) {
+    *out_old_data_block = old_data_block;
+    return strategy;
+}
+
+static bool arena_split_block_at(void *split, linked_block *block, linked_block **out_split_block) {
+    assert(block != NULL && "error: block must not be NULL");
+    ptrdiff_t split_bytes = (uint8_t *)split - block->b.data;
+
+    assert(
+        split_bytes >= 0
+        && split_bytes <= block->b.size
+        && "error: data block was not allocated in this block"
+    );
+    size_t split_block_capacity = block->b.capacity - split_bytes;
+    size_t split_block_size = block->b.size - split_bytes;
+
+    if (split_block_capacity == 0) {
+        *out_split_block = NULL;
+        return false;
+    } else {
+        linked_block *split_block = malloc(sizeof(linked_block));
+        *split_block = linked_block_create(
+            block_create_from_existing(split_block_capacity, split_block_size, block->b.data + split_bytes),
+            block->next
+        );
+
+        block->next = split_block;
+        block->b.capacity = split_bytes;
+
+        *out_split_block = split_block;
+        return true;
+    }
+}
+
+void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_size) {
+    size_t transfer_size = current_size < new_size ? current_size : new_size;
+
+    if (data_block == NULL || current_size == 0) {
+        return arena_alloc(a, new_size);
+    }
+
+    linked_block* old_data_block;
+    linked_block* fit;
+    switch (arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &fit)) {
     case arena_reallocate_in_place: {
         assert(old_data_block != NULL && "error: no data block found in arena");
-        old_data_block->b.size += expansion;
+        old_data_block->b.size += (ptrdiff_t)new_size - (ptrdiff_t)current_size;
         assert(old_data_block->b.size <= old_data_block->b.capacity && "error: reallocation exceeds block capacity");
         return data_block;
     }
@@ -250,28 +295,15 @@ void *arena_realloc(arena *a, void *data_block, size_t current_size, size_t new_
         assert(old_data_block != NULL && "error: no data block found in arena");
         assert(fit != NULL && "error: no fit block found in arena");
 
-        ptrdiff_t split_bytes = (uint8_t*)data_block + current_size - old_data_block->b.data;
-        ptrdiff_t split_block_capacity = old_data_block->b.capacity - split_bytes;
-        assert(split_block_capacity >= 0 && "error: split block capacity is not greater than 0");
-        ptrdiff_t split_block_size = old_data_block->b.size - split_bytes;
-        assert(split_block_size <= split_block_capacity && "error: split block size exceeds capacity");
-
-        old_data_block->b.capacity = split_bytes;
-        old_data_block->b.size = split_bytes - current_size;
-
-        linked_block* split_block = NULL;
-        if (split_block_capacity > 0) {
-            split_block = malloc(sizeof(linked_block));
-            *split_block = linked_block_create(
-                block_create_from_existing(split_block_capacity, split_block_size, old_data_block->b.data + split_bytes),
-                old_data_block->next
-            );
-            old_data_block->next = split_block;
-
-            if (a->last_block == old_data_block) {
+        linked_block *split_block = NULL;
+        if (arena_split_block_at((uint8_t *)data_block + current_size, old_data_block, &split_block)) {
+            if (old_data_block == a->last_block) {
                 a->last_block = split_block;
             }
+        } else {
+            assert(split_block == NULL && "error: an split block should not have been created if there was no capacity");
         }
+        old_data_block->b.size = old_data_block->b.capacity - current_size;
 
         uint8_t* new_data_block = NULL;
         if (fit == old_data_block && block_can_alloc(&old_data_block->b, new_size)) {

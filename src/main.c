@@ -314,7 +314,6 @@ bool init(world *w) {
     SetConsoleOutputCP(65001);
     entity_id lonk = create_lonk(w, create_lonk_prefab(w));
     world_add_entity_to_scene(w, lonk, 0);
-    world_add_entity_to_scene(w, lonk, 1);
     // entity_id lonk2 = world_add_entity(w);
     // world_add_entity_to_scene(w, lonk2, 1);
     // WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
@@ -480,12 +479,12 @@ void update_children_position(
 }
 
 bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
-    scene_world_system s = scene_world_system_create(1, iteration_arena);
+    scene_world_system s = scene_world_system_create(0, iteration_arena);
     WORLD_SYSTEM_ITER_RANGE(
         scene_world_system_get_with(&s, iteration_arena, COMPONENTS_ALL(velocity, controllable)),
         w,
         iteration_arena,
-        ((entity_id_range){0, 1}),
+        ((entity_id_range){0, 2}),
         system_predicate_data_create_none(),
         update_controllables
     );
@@ -552,9 +551,9 @@ bool render(const world *w, arena *iteration_arena) {
             new_console_buffer.buffer[x][y] = " ";
         }
     }
-    scene_world_system s = scene_world_system_create(0, iteration_arena);
+    //scene_world_system s = scene_world_system_create(0, iteration_arena);
     WORLD_SYSTEM_ITER(
-        scene_world_system_get_with(&s, iteration_arena, COMPONENTS_ALL(position, renderable)),
+        WORLD_SYSTEM_CREATE(position, renderable),
         w,
         iteration_arena,
         system_predicate_data_create_user_data(&new_console_buffer),
