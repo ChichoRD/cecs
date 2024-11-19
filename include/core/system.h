@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "containers/tagged_union.h"
+#include "../containers/tagged_union.h"
 #include "component/component_iterator.h"
 #include "world.h"
 

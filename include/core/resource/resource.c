@@ -1,5 +1,7 @@
 #include "resource.h"
 
+resource_id resource_id_count = 0;
+
 world_resources world_resources_create(size_t resource_capactity, size_t resource_default_size) {
     world_resources wr;
     wr.resources_arena = arena_create_with_capacity(resource_capactity * (resource_default_size + sizeof(resource_handle)));

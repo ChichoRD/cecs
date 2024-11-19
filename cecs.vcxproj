@@ -133,16 +133,53 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="include\containers\arena.c" />
+    <ClCompile Include="include\containers\bitset.c" />
+    <ClCompile Include="include\containers\displaced_set.c" />
+    <ClCompile Include="include\containers\queue.c" />
+    <ClCompile Include="include\containers\sparse_set.c" />
+    <ClCompile Include="include\core\component\component.c" />
+    <ClCompile Include="include\core\component\component_iterator.c" />
+    <ClCompile Include="include\core\component\component_storage.c" />
+    <ClCompile Include="include\core\component\entity\entity.c" />
+    <ClCompile Include="include\core\relation.c" />
+    <ClCompile Include="include\core\resource\resource.c" />
+    <ClCompile Include="include\core\system.c" />
+    <ClCompile Include="include\core\world.c" />
+    <ClCompile Include="include\lib.c" />
     <ClCompile Include="src\main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\arena.h" />
+    <ClInclude Include="include\color.h" />
     <ClInclude Include="include\component.h" />
+    <ClInclude Include="include\containers\arena.h" />
+    <ClInclude Include="include\containers\bitset.h" />
+    <ClInclude Include="include\containers\displaced_set.h" />
+    <ClInclude Include="include\containers\list.h" />
+    <ClInclude Include="include\containers\queue.h" />
+    <ClInclude Include="include\containers\range.h" />
+    <ClInclude Include="include\containers\sparse_set.h" />
+    <ClInclude Include="include\containers\tagged_union.h" />
+    <ClInclude Include="include\core\component\component.h" />
+    <ClInclude Include="include\core\component\component_iterator.h" />
+    <ClInclude Include="include\core\component\component_storage.h" />
+    <ClInclude Include="include\core\component\entity\component_type.h" />
+    <ClInclude Include="include\core\component\entity\entity.h" />
+    <ClInclude Include="include\core\component\entity\game_component.h" />
+    <ClInclude Include="include\core\component\entity\tag.h" />
+    <ClInclude Include="include\core\relation.h" />
+    <ClInclude Include="include\core\resource\resource.h" />
+    <ClInclude Include="include\core\system.h" />
+    <ClInclude Include="include\core\world.h" />
     <ClInclude Include="include\entity.h" />
+    <ClInclude Include="include\lib.h" />
     <ClInclude Include="include\list.h" />
     <ClInclude Include="include\map.h" />
     <ClInclude Include="include\query.h" />
     <ClInclude Include="include\resource.h" />
+    <ClInclude Include="include\types\macro_utils.h" />
+    <ClInclude Include="include\types\type_id.h" />
     <ClInclude Include="include\type_id.h" />
     <ClInclude Include="include\view.h" />
     <ClInclude Include="include\world.h" />

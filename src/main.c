@@ -303,7 +303,6 @@ bool init(world *w) {
         })
     );
     srand(timespec_get(&t->game_start, TIME_UTC));
-    arena a = arena_create();
 
     console_buffer cb;
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
@@ -554,7 +553,7 @@ bool render(const world *w, arena *iteration_arena) {
     //scene_world_system s = scene_world_system_create(0, iteration_arena);
     WORLD_SYSTEM_ITER(
         WORLD_SYSTEM_CREATE(position, renderable),
-        w,
+        (world *)w,
         iteration_arena,
         system_predicate_data_create_user_data(&new_console_buffer),
         update_console_buffer
@@ -680,7 +679,7 @@ int main(void) {
 
     game_time* t = WORLD_GET_RESOURCE(game_time, &w);
     timespec_get(&t->frame_start, TIME_UTC);
-    const DWORD sleep_milliseconds = 1000 / TARGET_FPS;
+    const DWORD sleep_milliseconds = (DWORD)(1000.0 / TARGET_FPS);
     Sleep(sleep_milliseconds);
     while (!quitting && !app_error)
     {

@@ -14,7 +14,7 @@ typedef COMPONENT_ID_TYPE component_id;
 #define COMPONENT_ID_TYPE_BITS (1 << COMPONENT_ID_TYPE_BITS_LOG2)
 static_assert(COMPONENT_ID_TYPE_BITS == (8 * sizeof(component_id)), "Invalid component_id type size");
 
-static component_id component_id_count = 0;
+extern component_id component_id_count;
 
 #define COMPONENT(type) CAT2(type, _component)
 #define _COMPONENT_IMPLEMENT(component) TYPE_ID_IMPLEMENT_COUNTER(component, component_id_count)

@@ -9,7 +9,7 @@
 #include "../../types/macro_utils.h"
 
 typedef uint64_t resource_id;
-static resource_id resource_id_count = 0;
+extern resource_id resource_id_count;
 
 #define RESOURCE(type) type##_resource
 #define _RESOURCE_IMPLEMENT(resource) TYPE_ID_IMPLEMENT_COUNTER(resource, resource_id_count)

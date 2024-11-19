@@ -59,6 +59,11 @@ void* displaced_set_set(displaced_set* s, arena* a, size_t index, void* element,
     }
 }
 
+void* displaced_set_get(const displaced_set* s, size_t index, size_t size) {
+    assert(displaced_set_contains_index(s, index) && "index out of bounds");
+    return list_get(&s->elements, displaced_set_list_index(s, index), size);
+}
+
 bool displaced_set_remove(displaced_set* s, size_t index, size_t size, void* null_bit_pattern) {
     if (displaced_set_contains(s, index, null_bit_pattern, size)) {
         return false;

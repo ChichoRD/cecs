@@ -5,14 +5,14 @@
 #include <stdbool.h>
 
 typedef uint64_t type_id;
-static type_id type_id_count = 0;
+extern type_id type_id_count;
 
 #define _PASTE(x, y) x##y
 
 #define TYPE_ID_IMPLEMENT_COUNTER(type, counter) \
     static bool type##_initialized_type_id = false; \
     static type_id type##_id = 0; \
-    type_id TYPE_ID(type) { \
+    static type_id TYPE_ID(type) { \
         if (!type##_initialized_type_id) { \
             type##_initialized_type_id = true; \
             type##_id = counter++; \

@@ -37,10 +37,7 @@ void *displaced_set_set(displaced_set *s, arena *a, size_t index, void *element,
 #define DISPLACED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
     ((type *)displaced_set_set(set_ref, arena_ref, index, element_ref, sizeof(type)))
 
-void *displaced_set_get(const displaced_set *s, size_t index, size_t size) {
-    assert(displaced_set_contains_index(s, index) && "index out of bounds");
-    return list_get(&s->elements, displaced_set_list_index(s, index), size);
-}
+void *displaced_set_get(const displaced_set *s, size_t index, size_t size);
 #define DISPLACED_SET_GET(type, set_ref, index) \
     ((type *)displaced_set_get(set_ref, index, sizeof(type)))
 

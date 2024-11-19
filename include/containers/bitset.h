@@ -14,6 +14,7 @@
 #define BIT_WORD_BITS_LOG2 6
 #define BIT_WORD_BITS (1 << BIT_WORD_BITS_LOG2)
 #define BIT_WORD_TYPE uint64_t
+// TODO: make uintptr_t
 
 typedef BIT_WORD_TYPE bit_word;
 #define BIT_WORD_BIT_COUNT (8 * sizeof(bit_word))

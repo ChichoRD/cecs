@@ -120,6 +120,14 @@ tag_id world_remove_tag(world* w, entity_id id, tag_id tag_id) {
     return tag_id;
 }
 
+entity_id world_add_entity(world* w) {
+    entity_id e = world_entities_add_entity(&w->entities);
+#if WORLD_FLAG_ALL_ENTITIES
+    world_set_entity_flags(w, e, entity_flags_default());
+#endif
+    return e;
+}
+
 entity_id world_clear_entity(world* w, entity_id entity_id) {
     assert(
         !world_get_entity_flags(w, entity_id).is_inmutable
@@ -278,6 +286,11 @@ void* world_set_component_relation(world* w, entity_id id, component_id componen
             .is_size_known = true,
     }
     );
+}
+
+void* world_get_component_relation(const world* w, entity_id id, component_id component_id, tag_id tag_id) {
+    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
+    return world_get_component(w, id, relation_id_create(relation_id_descriptor_create_tag(component_id, tag_id)));
 }
 
 bool world_remove_component_relation(world* w, entity_id id, component_id component_id, void* out_removed_component, tag_id tag_id) {

@@ -76,13 +76,7 @@ tag_id world_remove_tag(world *w, entity_id id, tag_id tag_id);
     world_remove_tag(world_ref, entity_id0, TAG_ID(type))
 
 
-entity_id world_add_entity(world *w) {
-    entity_id e = world_entities_add_entity(&w->entities);
-#if WORLD_FLAG_ALL_ENTITIES
-    world_set_entity_flags(w, e, entity_flags_default());
-#endif
-    return e;
-}
+entity_id world_add_entity(world *w);
 
 entity_id world_clear_entity(world *w, entity_id entity_id);
 
@@ -107,10 +101,7 @@ void *world_set_component_relation(world *w, entity_id id, component_id componen
 #define WORLD_SET_COMPONENT_RELATION(component_type, world_ref, entity_id0, component_ref, target_id) \
     world_set_component_relation(world_ref, entity_id0, COMPONENT_ID(component_type), component_ref, sizeof(component_type), target_id)
 
-void *world_get_component_relation(const world *w, entity_id id, component_id component_id, tag_id tag_id) {
-    assert(world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    return world_get_component(w, id, relation_id_create(relation_id_descriptor_create_tag(component_id, tag_id)));
-}
+void *world_get_component_relation(const world *w, entity_id id, component_id component_id, tag_id tag_id);
 #define WORLD_GET_COMPONENT_RELATION(component_type, world_ref, entity_id0, target_id) \
     ((component_type *)world_get_component_relation(world_ref, entity_id0, COMPONENT_ID(component_type), target_id))
 

@@ -1,5 +1,15 @@
 #include "component.h"
 
+world_components_checksum world_components_checksum_hash(world_components_checksum current) {
+    const uint32_t fnv32_prime = 0x01000193;
+    const uint32_t fnv32_basis = 0x811C9DC5;
+    return (fnv32_basis ^ current) * fnv32_prime;
+}
+
+inline world_components_checksum world_components_checksum_add(world_components_checksum current, component_id component_id) {
+    return world_components_checksum_hash(current + (world_components_checksum)component_id);
+}
+
 world_components world_components_create(size_t component_type_capacity) {
     return (world_components) {
         .storages_arena = arena_create_with_capacity(

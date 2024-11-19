@@ -20,10 +20,13 @@
                 "/EHsc",
                 "/nologo",
                 "/Fe${fileDirname}\\${fileBasenameNoExtension}.exe",
-                "${file}"
+                "${file}",
+
+                "/I${workspaceFolder}\\include\\",
+                "/FC"
             ],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${fileDirname}",
             },
             "problemMatcher": [
                 "$msCompile"
