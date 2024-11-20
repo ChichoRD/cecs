@@ -1,11 +1,11 @@
 #include "component_iterator.h"
 
-bool component_iterator_descriptor_copy_component_bitsets(const world_components* world_components, components_type_info components_type_info, hibitset bitsets_destination[]) {
+bool component_iterator_descriptor_copy_component_bitsets(const world_components* world_components, components_type_info components_type_info, cecs_hibitset bitsets_destination[]) {
     bool intersection_empty = false;
     for (size_t i = 0; i < components_type_info.component_count; i++) {
         if (!world_components_has_storage(world_components, components_type_info.component_ids[i])) {
             intersection_empty = true;
-            bitsets_destination[i] = hibitset_empty();
+            bitsets_destination[i] = cecs_hibitset_empty();
         }
         else {
             component_storage* storage = world_components_get_component_storage_unchecked(
@@ -18,7 +18,7 @@ bool component_iterator_descriptor_copy_component_bitsets(const world_components
     return !intersection_empty;
 }
 
-size_t component_iterator_descriptor_append_sized_component_ids(const world_components* world_components, arena* iterator_temporary_arena, components_type_info components_type_info, list* sized_component_ids) {
+size_t component_iterator_descriptor_append_sized_component_ids(const world_components* world_components, cecs_arena* iterator_temporary_arena, components_type_info components_type_info, list* sized_component_ids) {
     size_t sized_count = 0;
     for (size_t i = 0; i < components_type_info.component_count; i++) {
         if (
@@ -36,9 +36,9 @@ size_t component_iterator_descriptor_append_sized_component_ids(const world_comp
     return sized_count;
 }
 
-hibitset component_iterator_descriptor_get_search_groups_bitset(const world_components* world_components, arena* iterator_temporary_arena, components_search_groups search_groups, size_t max_component_count) {
-    hibitset* bitsets = calloc(max_component_count, sizeof(hibitset));
-    hibitset entities_bitset = hibitset_create(iterator_temporary_arena);
+cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world_components* world_components, cecs_arena* iterator_temporary_arena, components_search_groups search_groups, size_t max_component_count) {
+    cecs_hibitset* bitsets = calloc(max_component_count, sizeof(cecs_hibitset));
+    cecs_hibitset entities_bitset = cecs_hibitset_create(iterator_temporary_arena);
     bool has_empty_intersection = false;
     for (size_t i = 0; i < search_groups.group_count; i++) {
         components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
@@ -49,7 +49,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
             info,
             bitsets
         );
-        bool entities_bitset_empty = exclusive_range_is_empty(hibitset_bit_range(&entities_bitset));
+        bool entities_bitset_empty = exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
 
         TAGGED_UNION_MATCH(search_groups.groups[i]) {
             case TAGGED_UNION_VARIANT(COMPONENTS_ALL_ID, components_search_group): {
@@ -57,18 +57,18 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
                     break;
 
                 if (component_bitsets_empty) {
-                    hibitset_unset_all(&entities_bitset);
+                    cecs_hibitset_unset_all(&entities_bitset);
                 }
                 else if (entities_bitset_empty) {
                     entities_bitset = info.component_count == 1
                         ? bitsets[0]
-                        : hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
+                        : cecs_hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
                 }
                 else {
-                    hibitset_intersect(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
+                    cecs_hibitset_intersect(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 }
 
-                has_empty_intersection |= exclusive_range_is_empty(hibitset_bit_range(&entities_bitset));
+                has_empty_intersection |= exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
                 break;
             }
 
@@ -79,10 +79,10 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
                 if (entities_bitset_empty) {
                     entities_bitset = info.component_count == 1
                         ? bitsets[0]
-                        : hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
+                        : cecs_hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
                 }
                 else {
-                    hibitset_join(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
+                    cecs_hibitset_join(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 }
                 break;
             }
@@ -91,7 +91,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
                 if (component_bitsets_empty || entities_bitset_empty) {
                     break;
                 }
-                hibitset_subtract(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
+                cecs_hibitset_subtract(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 break;
             }
 
@@ -102,13 +102,13 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
                 if (entities_bitset_empty) {
                     entities_bitset = info.component_count == 1
                         ? bitsets[0]
-                        : hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
+                        : cecs_hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
                 }
                 else {
-                    hibitset intersection = info.component_count == 1
+                    cecs_hibitset intersection = info.component_count == 1
                         ? bitsets[0]
-                        : hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
-                    hibitset_join(&entities_bitset, &intersection, 1, iterator_temporary_arena);
+                        : cecs_hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
+                    cecs_hibitset_join(&entities_bitset, &intersection, 1, iterator_temporary_arena);
                 }
                 break;
             }
@@ -118,21 +118,21 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
                     break;
 
                 if (component_bitsets_empty) {
-                    hibitset_unset_all(&entities_bitset);
+                    cecs_hibitset_unset_all(&entities_bitset);
                 }
                 else if (entities_bitset_empty) {
                     entities_bitset = info.component_count == 1
                         ? bitsets[0]
-                        : hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
+                        : cecs_hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
                 }
                 else {
-                    hibitset union_ = info.component_count == 1
+                    cecs_hibitset union_ = info.component_count == 1
                         ? bitsets[0]
-                        : hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
-                    hibitset_intersect(&entities_bitset, &union_, 1, iterator_temporary_arena);
+                        : cecs_hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
+                    cecs_hibitset_intersect(&entities_bitset, &union_, 1, iterator_temporary_arena);
                 }
 
-                has_empty_intersection |= exclusive_range_is_empty(hibitset_bit_range(&entities_bitset));
+                has_empty_intersection |= exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
                 break;
             }
 
@@ -147,7 +147,7 @@ hibitset component_iterator_descriptor_get_search_groups_bitset(const world_comp
     return entities_bitset;
 }
 
-component_iterator_descriptor component_iterator_descriptor_create(const world_components* world_components, arena* iterator_temporary_arena, components_search_groups search_groups) {
+component_iterator_descriptor component_iterator_descriptor_create(const world_components* world_components, cecs_arena* iterator_temporary_arena, components_search_groups search_groups) {
     list sized_component_ids = LIST_CREATE_WITH_CAPACITY(component_id, iterator_temporary_arena, search_groups.group_count);
     size_t sized_component_count = 0;
     size_t component_count = 0;
@@ -167,7 +167,7 @@ component_iterator_descriptor component_iterator_descriptor_create(const world_c
         }
     }
 
-    hibitset entities_bitset = component_iterator_descriptor_get_search_groups_bitset(
+    cecs_hibitset entities_bitset = component_iterator_descriptor_get_search_groups_bitset(
         world_components,
         iterator_temporary_arena,
         search_groups,
@@ -190,30 +190,30 @@ raw_iteration_handle_reference component_iterator_descriptor_allocate_handle(con
     return malloc(component_iteration_handle_size(descriptor.components_type_info));
 }
 
-raw_iteration_handle_reference component_iterator_descriptor_allocate_handle_in(arena* a, const component_iterator_descriptor descriptor) {
-    return arena_alloc(a, component_iteration_handle_size(descriptor.components_type_info));
+raw_iteration_handle_reference component_iterator_descriptor_allocate_handle_in(cecs_arena* a, const component_iterator_descriptor descriptor) {
+    return cecs_arena_alloc(a, component_iteration_handle_size(descriptor.components_type_info));
 }
 
 component_iterator component_iterator_create(component_iterator_descriptor descriptor) {
     assert(descriptor.checksum == descriptor.world_components->checksum
         && "Component iterator descriptor is invalid or outdated, please create a new one");
-    hibitset_iterator iterator = hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
-    if (!hibitset_iterator_current_is_set(&iterator)) {
-        hibitset_iterator_next_set(&iterator);
+    cecs_hibitset_iterator iterator = cecs_hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
+    if (!cecs_hibitset_iterator_current_is_set(&iterator)) {
+        cecs_hibitset_iterator_next_set(&iterator);
     }
     return (component_iterator) {
         .descriptor = descriptor,
             .entities_iterator = iterator,
-            .entity_range = hibitset_bit_range(&descriptor.entities_bitset)
+            .entity_range = cecs_hibitset_bit_range(&descriptor.entities_bitset)
     };
 }
 
 component_iterator component_iterator_create_ranged(component_iterator_descriptor descriptor, entity_id_range range) {
     assert(descriptor.checksum == descriptor.world_components->checksum
         && "Component iterator descriptor is invalid or outdated, please create a new one");
-    hibitset_iterator iterator = hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
-    if (!hibitset_iterator_current_is_set(&iterator)) {
-        hibitset_iterator_next_set(&iterator);
+    cecs_hibitset_iterator iterator = cecs_hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
+    if (!cecs_hibitset_iterator_current_is_set(&iterator)) {
+        cecs_hibitset_iterator_next_set(&iterator);
     }
     return (component_iterator) {
         .descriptor = descriptor,
@@ -224,7 +224,7 @@ component_iterator component_iterator_create_ranged(component_iterator_descripto
 
 bool component_iterator_done(const component_iterator* it) {
     return !exclusive_range_contains(it->entity_range, it->entities_iterator.current_bit_index)
-        || hibitset_iterator_done(&it->entities_iterator);
+        || cecs_hibitset_iterator_done(&it->entities_iterator);
 }
 
 entity_id component_iterator_current(const component_iterator* it, raw_iteration_handle_reference out_iteration_handle) {
@@ -247,5 +247,5 @@ entity_id component_iterator_current(const component_iterator* it, raw_iteration
 }
 
 size_t component_iterator_next(component_iterator* it) {
-    return hibitset_iterator_next_set(&it->entities_iterator);
+    return cecs_hibitset_iterator_next_set(&it->entities_iterator);
 }

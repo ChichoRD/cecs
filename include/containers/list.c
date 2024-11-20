@@ -8,7 +8,7 @@ list list_create() {
     return l;
 }
 
-list list_create_with_capacity(arena* a, size_t capacity)
+list list_create_with_capacity(cecs_arena* a, size_t capacity)
 {
     if (capacity == 0)
         return list_create();
@@ -16,12 +16,12 @@ list list_create_with_capacity(arena* a, size_t capacity)
         list l;
         l.count = 0;
         l.capacity = capacity;
-        l.elements = arena_alloc(a, capacity);
+        l.elements = cecs_arena_alloc(a, capacity);
         return l;
     }
 }
 
-void list_grow(list* l, arena* a, size_t new_capacity) {
+void list_grow(list* l, cecs_arena* a, size_t new_capacity) {
     assert(new_capacity > l->capacity && "Attempted to grow list to smaller capacity");
     size_t current_capacity = l->capacity;
     if (l->capacity == 0)
@@ -30,21 +30,21 @@ void list_grow(list* l, arena* a, size_t new_capacity) {
     while (new_capacity > l->capacity)
         l->capacity *= 2;
 
-    l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
+    l->elements = cecs_arena_realloc(a, l->elements, current_capacity, l->capacity);
 }
 
-void list_shrink(list* l, arena* a, size_t new_capacity) {
+void list_shrink(list* l, cecs_arena* a, size_t new_capacity) {
     assert(new_capacity < l->capacity && "Attempted to shrink list to larger capacity");
     if (new_capacity < l->capacity / 4) {
         size_t current_capacity = l->capacity;
         while (new_capacity < l->capacity / 2)
             l->capacity /= 2;
 
-        l->elements = arena_realloc(a, l->elements, current_capacity, l->capacity);
+        l->elements = cecs_arena_realloc(a, l->elements, current_capacity, l->capacity);
     }
 }
 
-void list_remove(list* l, arena* a, size_t index, size_t size)
+void list_remove(list* l, cecs_arena* a, size_t index, size_t size)
 {
     assert((index * size < l->count) && "Attempted to remove element with index out of bounds");
     memmove(
@@ -59,7 +59,7 @@ void list_remove(list* l, arena* a, size_t index, size_t size)
     l->count = new_count;
 }
 
-void list_remove_range(list* l, arena* a, size_t index, size_t count, size_t size)
+void list_remove_range(list* l, cecs_arena* a, size_t index, size_t count, size_t size)
 {
     assert((index * size < l->count) && "Attempted to remove elements with starting index out of bounds");
     assert(((index + count) * size <= l->count) && "Attempted to remove elements with end out of bounds");
@@ -74,7 +74,7 @@ void list_remove_range(list* l, arena* a, size_t index, size_t count, size_t siz
     l->count = new_count;
 }
 
-void* list_remove_swap_last(list* l, arena* a, size_t index, size_t size) {
+void* list_remove_swap_last(list* l, cecs_arena* a, size_t index, size_t size) {
     void* swapped = list_set(l, index, list_last(l, size), size);
 
     size_t new_count = l->count - size;
@@ -109,7 +109,7 @@ void* list_set_range(list* l, size_t index, void* elements, size_t count, size_t
     return memcpy((uint8_t*)l->elements + index * size, elements, count * size);
 }
 
-void* list_append_empty(list* l, arena* a, size_t count, size_t size) {
+void* list_append_empty(list* l, cecs_arena* a, size_t count, size_t size) {
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);
@@ -117,7 +117,7 @@ void* list_append_empty(list* l, arena* a, size_t count, size_t size) {
     return list_last(l, size);
 }
 
-void* list_prepend_empty(list* l, arena* a, size_t count, size_t size) {
+void* list_prepend_empty(list* l, cecs_arena* a, size_t count, size_t size) {
     size_t list_count = l->count;
     list_append_empty(l, a, count, size);
     memmove(
@@ -128,7 +128,7 @@ void* list_prepend_empty(list* l, arena* a, size_t count, size_t size) {
     return l->elements;
 }
 
-void* list_insert_range(list* l, arena* a, size_t index, void* elements, size_t count, size_t size) {
+void* list_insert_range(list* l, cecs_arena* a, size_t index, void* elements, size_t count, size_t size) {
     assert((index * size <= l->count) && "Attempted to insert elements with starting index out of bounds");
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
@@ -144,7 +144,7 @@ void* list_insert_range(list* l, arena* a, size_t index, void* elements, size_t 
     return ptr;
 }
 
-void* list_insert(list* l, arena* a, size_t index, void* element, size_t size) {
+void* list_insert(list* l, cecs_arena* a, size_t index, void* element, size_t size) {
     assert((index * size <= l->count) && "Attempted to insert element with index out of bounds");
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
@@ -172,7 +172,7 @@ void* list_set(list* l, size_t index, void* element, size_t size)
     return memcpy((uint8_t*)l->elements + index * size, element, size);
 }
 
-void* list_add_range(list* l, arena* a, void* elements, size_t count, size_t size) {
+void* list_add_range(list* l, cecs_arena* a, void* elements, size_t count, size_t size) {
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);
@@ -182,7 +182,7 @@ void* list_add_range(list* l, arena* a, void* elements, size_t count, size_t siz
     return ptr;
 }
 
-void* list_add(list* l, arena* a, const void* element, size_t size) {
+void* list_add(list* l, cecs_arena* a, const void* element, size_t size) {
     size_t new_count = l->count + size;
     if (new_count > l->capacity)
         list_grow(l, a, new_count);

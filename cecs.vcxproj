@@ -150,11 +150,11 @@
     <ClCompile Include="src\main.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\arena.h" />
+    <ClInclude Include="include\cecs_arena.h" />
     <ClInclude Include="include\color.h" />
     <ClInclude Include="include\component.h" />
-    <ClInclude Include="include\containers\arena.h" />
-    <ClInclude Include="include\containers\bitset.h" />
+    <ClInclude Include="include\containers\cecs_arena.h" />
+    <ClInclude Include="include\containers\cecs_bitset.h" />
     <ClInclude Include="include\containers\displaced_set.h" />
     <ClInclude Include="include\containers\list.h" />
     <ClInclude Include="include\containers\queue.h" />

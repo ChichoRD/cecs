@@ -12,7 +12,7 @@
 typedef ENTITY_ID_TYPE entity_id;
 
 typedef struct world_entities {
-    arena entity_ids_arena;
+    cecs_arena entity_ids_arena;
     sparse_set entity_ids;
     queue free_entity_ids;
 } world_entities;

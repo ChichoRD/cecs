@@ -63,7 +63,7 @@ inline relation_id relation_id_create(relation_id_descriptor descriptor) {
 
 typedef counted_set associated_entity_ids;
 typedef struct world_relations {
-    arena entity_associated_ids_arena;
+    cecs_arena entity_associated_ids_arena;
     sparse_set entity_associated_ids;
 } world_relations;
 

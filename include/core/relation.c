@@ -2,7 +2,7 @@
 
 world_relations world_relations_create(size_t entity_capacity) {
     world_relations wr;
-    wr.entity_associated_ids_arena = arena_create_with_capacity(sizeof(associated_entity_ids) * entity_capacity);
+    wr.entity_associated_ids_arena = cecs_arena_create_with_capacity(sizeof(associated_entity_ids) * entity_capacity);
     wr.entity_associated_ids = sparse_set_create_with_capacity(
         &wr.entity_associated_ids_arena,
         entity_capacity,
@@ -12,7 +12,7 @@ world_relations world_relations_create(size_t entity_capacity) {
 }
 
 void world_relations_free(world_relations* wr) {
-    arena_free(&wr->entity_associated_ids_arena);
+    cecs_arena_free(&wr->entity_associated_ids_arena);
     wr->entity_associated_ids = (sparse_set){ 0 };
 }
 

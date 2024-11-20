@@ -12,11 +12,11 @@ optional_component unit_component_storage_get(const unit_component_storage* self
     return OPTION_CREATE_NONE_STRUCT(optional_component);
 }
 
-optional_component unit_component_storage_set(const unit_component_storage* self, arena* a, entity_id id, void* component, size_t size) {
+optional_component unit_component_storage_set(const unit_component_storage* self, cecs_arena* a, entity_id id, void* component, size_t size) {
     return OPTION_CREATE_NONE_STRUCT(optional_component);
 }
 
-bool unit_component_storage_remove(const unit_component_storage* self, arena* a, entity_id id, void* out_removed_component, size_t size) {
+bool unit_component_storage_remove(const unit_component_storage* self, cecs_arena* a, entity_id id, void* out_removed_component, size_t size) {
     memset(out_removed_component, 0, size);
     return false;
 }
@@ -44,7 +44,7 @@ optional_component indirect_component_storage_get(const indirect_component_stora
     }
 }
 
-optional_component indirect_component_storage_set(indirect_component_storage* self, arena* a, entity_id id, void* component, size_t size) {
+optional_component indirect_component_storage_set(indirect_component_storage* self, cecs_arena* a, entity_id id, void* component, size_t size) {
     return OPTION_CREATE_SOME_STRUCT(
         optional_component,
         *DISPLACED_SET_SET(
@@ -57,7 +57,7 @@ optional_component indirect_component_storage_set(indirect_component_storage* se
     );
 }
 
-bool indirect_component_storage_remove(indirect_component_storage* self, arena* a, entity_id id, void* out_removed_component, size_t size) {
+bool indirect_component_storage_remove(indirect_component_storage* self, cecs_arena* a, entity_id id, void* out_removed_component, size_t size) {
     void* removed_component = NULL;
     if (displaced_set_remove_out(
         &self->component_references,
@@ -98,14 +98,14 @@ optional_component sparse_component_storage_get(const sparse_component_storage* 
     }
 }
 
-optional_component sparse_component_storage_set(sparse_component_storage* self, arena* a, entity_id id, void* component, size_t size) {
+optional_component sparse_component_storage_set(sparse_component_storage* self, cecs_arena* a, entity_id id, void* component, size_t size) {
     return OPTION_CREATE_SOME_STRUCT(
         optional_component,
         displaced_set_set(&self->components, a, (size_t)id, component, size)
     );
 }
 
-bool sparse_component_storage_remove(sparse_component_storage* self, arena* a, entity_id id, void* out_removed_component, size_t size) {
+bool sparse_component_storage_remove(sparse_component_storage* self, cecs_arena* a, entity_id id, void* out_removed_component, size_t size) {
     if (displaced_set_contains_index(&self->components, (size_t)id)) {
         memcpy(out_removed_component, displaced_set_get(&self->components, (size_t)id, size), size);
         return true;
@@ -116,13 +116,13 @@ bool sparse_component_storage_remove(sparse_component_storage* self, arena* a, e
     }
 }
 
-sparse_component_storage sparse_component_storage_create(arena* a, size_t component_capacity, size_t component_size) {
+sparse_component_storage sparse_component_storage_create(cecs_arena* a, size_t component_capacity, size_t component_size) {
     return (sparse_component_storage) {
         .components = displaced_set_create_with_capacity(a, component_capacity * component_size),
     };
 }
 
-component_storage component_storage_create_sparse(arena* a, size_t component_capacity, size_t component_size) {
+component_storage component_storage_create_sparse(cecs_arena* a, size_t component_capacity, size_t component_size) {
     sparse_component_storage storage = sparse_component_storage_create(a, component_capacity, component_size);
     return (component_storage) {
         .storage = TAGGED_UNION_CREATE(
@@ -130,11 +130,11 @@ component_storage component_storage_create_sparse(arena* a, size_t component_cap
             component_storage_union,
             storage
         ),
-            .entity_bitset = hibitset_create(a),
+            .entity_bitset = cecs_hibitset_create(a),
     };
 }
 
-component_storage component_storage_create_unit(arena* a) {
+component_storage component_storage_create_unit(cecs_arena* a) {
     unit_component_storage storage = unit_component_storage_create();
     return (component_storage) {
         .storage = TAGGED_UNION_CREATE(
@@ -142,11 +142,11 @@ component_storage component_storage_create_unit(arena* a) {
             component_storage_union,
             storage
         ),
-            .entity_bitset = hibitset_create(a),
+            .entity_bitset = cecs_hibitset_create(a),
     };
 }
 
-component_storage component_storage_create_indirect(arena* a, component_storage* other_storage) {
+component_storage component_storage_create_indirect(cecs_arena* a, component_storage* other_storage) {
     indirect_component_storage storage = indirect_component_storage_create(&other_storage->storage);
     return (component_storage) {
         .storage = TAGGED_UNION_CREATE(
@@ -154,12 +154,12 @@ component_storage component_storage_create_indirect(arena* a, component_storage*
             component_storage_union,
             storage
         ),
-            .entity_bitset = hibitset_create(a),
+            .entity_bitset = cecs_hibitset_create(a),
     };
 }
 
 bool component_storage_has(const component_storage* self, entity_id id) {
-    return hibitset_is_set(&self->entity_bitset, (size_t)id);
+    return cecs_hibitset_is_set(&self->entity_bitset, (size_t)id);
 }
 
 const list* component_storage_components(const component_storage* self) {
@@ -194,12 +194,12 @@ void* component_storage_get_or_null(const component_storage* self, entity_id id,
     return OPTION_GET_OR_NULL(optional_component, component);
 }
 
-optional_component component_storage_set(component_storage* self, arena* a, entity_id id, void* component, size_t size) {
-    hibitset_set(&self->entity_bitset, a, (size_t)id);
+optional_component component_storage_set(component_storage* self, cecs_arena* a, entity_id id, void* component, size_t size) {
+    cecs_hibitset_set(&self->entity_bitset, a, (size_t)id);
     return component_storage_get_functions(self).set(&self->storage, a, id, component, size);
 }
 
-bool component_storage_remove(component_storage* self, arena* a, entity_id id, void* out_removed_component, size_t size) {
-    hibitset_unset(&self->entity_bitset, a, (size_t)id);
+bool component_storage_remove(component_storage* self, cecs_arena* a, entity_id id, void* out_removed_component, size_t size) {
+    cecs_hibitset_unset(&self->entity_bitset, a, (size_t)id);
     return component_storage_get_functions(self).remove(&self->storage, a, id, out_removed_component, size);
 }

@@ -1,7 +1,7 @@
-#include "arena.h"
+#include "cecs_arena.h"
 
-block block_create(size_t capacity) {
-    block b;
+cecs_block cecs_block_create(size_t capacity) {
+    cecs_block b;
     b.size = 0;
     b.capacity = capacity;
     b.data = (uint8_t*)calloc(capacity, sizeof(uint8_t));
@@ -9,17 +9,17 @@ block block_create(size_t capacity) {
     return b;
 }
 
-void* block_alloc(block* b, size_t size) {
+void* cecs_block_alloc(cecs_block* b, size_t size) {
     size_t remaining = b->capacity - b->size;
     assert((remaining >= size) && "Requested size exceeds block capacity");
 
     void* ptr = b->data + b->size;
-    size_t padding = block_alignment_padding_from_size(ptr, size);
+    size_t padding = cecs_block_alignment_padding_from_size(ptr, size);
     b->size += size + padding;
     return (uint8_t*)ptr + padding;
 }
 
-void block_free(block* b) {
+void cecs_block_free(cecs_block* b) {
     b->size = 0;
     b->capacity = 0;
     uint8_t* data = b->data;
@@ -29,8 +29,8 @@ void block_free(block* b) {
         free(data);
 }
 
-block block_create_from_existing(size_t capacity, size_t size, uint8_t* data) {
-    block b;
+cecs_block cecs_block_create_from_existing(size_t capacity, size_t size, uint8_t* data) {
+    cecs_block b;
     b.size = size;
     b.capacity = capacity;
     b.data = data;
@@ -38,7 +38,7 @@ block block_create_from_existing(size_t capacity, size_t size, uint8_t* data) {
     return b;
 }
 
-size_t block_alignment_padding_from_size(uint8_t* ptr, size_t structure_size) {
+size_t cecs_block_alignment_padding_from_size(uint8_t* ptr, size_t structure_size) {
     union max_alignment {
         uintmax_t a;
         uintptr_t b;
@@ -91,20 +91,20 @@ size_t block_alignment_padding_from_size(uint8_t* ptr, size_t structure_size) {
 #undef ALIGNMENT_8
 }
 
-bool block_can_alloc(const block* b, size_t structure_size) {
-    return b->size + structure_size + block_alignment_padding_from_size(b->data + b->size, structure_size) <= b->capacity;
+bool cecs_block_can_alloc(const cecs_block* b, size_t structure_size) {
+    return b->size + structure_size + cecs_block_alignment_padding_from_size(b->data + b->size, structure_size) <= b->capacity;
 }
 
-linked_block linked_block_create(block b, linked_block* next) {
-    linked_block lb;
+cecs_linked_block cecs_linked_block_create(cecs_block b, cecs_linked_block* next) {
+    cecs_linked_block lb;
     lb.b = b;
     lb.next = next;
     return lb;
 }
 
-linked_block* arena_prepend(arena* a, block b) {
-    linked_block* new = (linked_block*)malloc(sizeof(linked_block));
-    *new = linked_block_create(b, a->first_block);
+cecs_linked_block* cecs_arena_prepend(cecs_arena* a, cecs_block b) {
+    cecs_linked_block* new = (cecs_linked_block*)malloc(sizeof(cecs_linked_block));
+    *new = cecs_linked_block_create(b, a->first_block);
 
     a->first_block = new;
     if (a->last_block == NULL) {
@@ -113,31 +113,31 @@ linked_block* arena_prepend(arena* a, block b) {
     return new;
 }
 
-block* arena_add_block_exact(arena* a, size_t capacity) {
-    block b = block_create(capacity);
-    return &arena_prepend(a, b)->b;
+cecs_block* cecs_arena_add_block_exact(cecs_arena* a, size_t capacity) {
+    cecs_block b = cecs_block_create(capacity);
+    return &cecs_arena_prepend(a, b)->b;
 }
 
-block* arena_add_block(arena* a, size_t size) {
+cecs_block* cecs_arena_add_block(cecs_arena* a, size_t size) {
     if (a->last_block == NULL) {
-        return arena_add_block_exact(a, size > DEFAULT_BLOCK_CAPACITY ? size : DEFAULT_BLOCK_CAPACITY);
+        return cecs_arena_add_block_exact(a, size > CECS_DEFAULT_BLOCK_CAPACITY ? size : CECS_DEFAULT_BLOCK_CAPACITY);
     }
     else {
-        return arena_add_block_exact(a, size > a->last_block->b.capacity ? size : a->last_block->b.capacity);
+        return cecs_arena_add_block_exact(a, size > a->last_block->b.capacity ? size : a->last_block->b.capacity);
     }
 }
 
-arena arena_create_with_capacity(size_t capacity) {
-    arena a = arena_create();
-    arena_add_block_exact(&a, capacity);
+cecs_arena cecs_arena_create_with_capacity(size_t capacity) {
+    cecs_arena a = cecs_arena_create();
+    cecs_arena_add_block_exact(&a, capacity);
     return a;
 }
 
-arena_reallocation_strategy arena_realloc_find_fit(arena* a, void* data_block, size_t current_size, size_t new_size, linked_block** out_old_data_block, linked_block** out_fit) {
+cecs_arena_reallocation_strategy arena_realloc_find_fit(cecs_arena* a, void* data_block, size_t current_size, size_t new_size, cecs_linked_block** out_old_data_block, cecs_linked_block** out_fit) {
     *out_fit = NULL;
-    linked_block* old_data_block = NULL;
-    linked_block* current = a->first_block;
-    arena_reallocation_strategy strategy = arena_reallocate_none;
+    cecs_linked_block* old_data_block = NULL;
+    cecs_linked_block* current = a->first_block;
+    cecs_arena_reallocation_strategy strategy = arena_reallocate_none;
     while (
         current != NULL
         && (strategy == arena_reallocate_none || old_data_block == NULL)
@@ -151,13 +151,13 @@ arena_reallocation_strategy arena_realloc_find_fit(arena* a, void* data_block, s
             bool data_is_last_in_block = (uint8_t*)data_block + current_size == current->b.data + current->b.size;
             if (
                 data_is_last_in_block
-                && (new_size <= current_size || block_can_alloc(&current->b, new_size - current_size))
+                && (new_size <= current_size || cecs_block_can_alloc(&current->b, new_size - current_size))
                 ) {
                 strategy = arena_reallocate_in_place;
             }
         }
 
-        if (block_can_alloc(&current->b, new_size) && strategy == arena_reallocate_none) {
+        if (cecs_block_can_alloc(&current->b, new_size) && strategy == arena_reallocate_none) {
             *out_fit = current;
 
             if (current_size >= current->b.capacity / 4) {
@@ -177,7 +177,7 @@ arena_reallocation_strategy arena_realloc_find_fit(arena* a, void* data_block, s
     return strategy;
 }
 
-bool arena_split_block_at(void* split, linked_block* block, linked_block** out_split_block) {
+bool cecs_arena_split_block_at(void* split, cecs_linked_block* block, cecs_linked_block** out_split_block) {
     assert(block != NULL && "error: block must not be NULL");
     ptrdiff_t split_bytes = (uint8_t*)split - block->b.data;
 
@@ -194,9 +194,9 @@ bool arena_split_block_at(void* split, linked_block* block, linked_block** out_s
         return false;
     }
     else {
-        linked_block* split_block = malloc(sizeof(linked_block));
-        *split_block = linked_block_create(
-            block_create_from_existing(split_block_capacity, split_block_size, block->b.data + split_bytes),
+        cecs_linked_block* split_block = malloc(sizeof(cecs_linked_block));
+        *split_block = cecs_linked_block_create(
+            cecs_block_create_from_existing(split_block_capacity, split_block_size, block->b.data + split_bytes),
             block->next
         );
 
@@ -208,15 +208,15 @@ bool arena_split_block_at(void* split, linked_block* block, linked_block** out_s
     }
 }
 
-void* arena_realloc(arena* a, void* data_block, size_t current_size, size_t new_size) {
+void* cecs_arena_realloc(cecs_arena* a, void* data_block, size_t current_size, size_t new_size) {
     size_t transfer_size = current_size < new_size ? current_size : new_size;
 
     if (data_block == NULL || current_size == 0) {
-        return arena_alloc(a, new_size);
+        return cecs_arena_alloc(a, new_size);
     }
 
-    linked_block* old_data_block;
-    linked_block* fit;
+    cecs_linked_block* old_data_block;
+    cecs_linked_block* fit;
     switch (arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &fit)) {
     case arena_reallocate_in_place: {
         assert(old_data_block != NULL && "error: no data block found in arena");
@@ -228,8 +228,8 @@ void* arena_realloc(arena* a, void* data_block, size_t current_size, size_t new_
         assert(old_data_block != NULL && "error: no data block found in arena");
         assert(fit != NULL && "error: no fit block found in arena");
 
-        linked_block* split_block = NULL;
-        if (arena_split_block_at((uint8_t*)data_block + current_size, old_data_block, &split_block)) {
+        cecs_linked_block* split_block = NULL;
+        if (cecs_arena_split_block_at((uint8_t*)data_block + current_size, old_data_block, &split_block)) {
             if (old_data_block == a->last_block) {
                 a->last_block = split_block;
             }
@@ -240,14 +240,14 @@ void* arena_realloc(arena* a, void* data_block, size_t current_size, size_t new_
         old_data_block->b.size = old_data_block->b.capacity - current_size;
 
         uint8_t* new_data_block = NULL;
-        if (fit == old_data_block && block_can_alloc(&old_data_block->b, new_size)) {
-            new_data_block = block_alloc(&old_data_block->b, new_size);
+        if (fit == old_data_block && cecs_block_can_alloc(&old_data_block->b, new_size)) {
+            new_data_block = cecs_block_alloc(&old_data_block->b, new_size);
         }
-        else if (fit == old_data_block && split_block != NULL && block_can_alloc(&split_block->b, new_size)) {
-            new_data_block = block_alloc(&split_block->b, new_size);
+        else if (fit == old_data_block && split_block != NULL && cecs_block_can_alloc(&split_block->b, new_size)) {
+            new_data_block = cecs_block_alloc(&split_block->b, new_size);
         }
         else {
-            new_data_block = block_alloc(&fit->b, new_size);
+            new_data_block = cecs_block_alloc(&fit->b, new_size);
         }
 
         if (new_data_block != data_block)
@@ -256,13 +256,13 @@ void* arena_realloc(arena* a, void* data_block, size_t current_size, size_t new_
     }
     case arena_reallocate_fit: {
         assert(fit != NULL && "error: no fit block found in arena");
-        uint8_t* new_data_block = block_alloc(&fit->b, new_size);
+        uint8_t* new_data_block = cecs_block_alloc(&fit->b, new_size);
         if (new_data_block != data_block)
             memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
     case arena_reallocate_new: {
-        uint8_t* new_data_block = block_alloc(arena_add_block(a, new_size), new_size);
+        uint8_t* new_data_block = cecs_block_alloc(cecs_arena_add_block(a, new_size), new_size);
         memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
@@ -273,12 +273,12 @@ void* arena_realloc(arena* a, void* data_block, size_t current_size, size_t new_
     }
 }
 
-arena_dbg_info arena_get_dbg_info_compare_capacity(const arena* a) {
-    arena_dbg_info info = { 0 };
+cecs_arena_dbg_info cecs_arena_get_dbg_info_compare_capacity(const cecs_arena* a) {
+    cecs_arena_dbg_info info = { 0 };
     info.smallest_block_capacity = SIZE_MAX;
     info.smallest_block_size = SIZE_MAX;
 
-    linked_block* current = a->first_block;
+    cecs_linked_block* current = a->first_block;
     while (current != NULL) {
         ++info.block_count;
         if (current->b.owns_data) {
@@ -305,11 +305,11 @@ arena_dbg_info arena_get_dbg_info_compare_capacity(const arena* a) {
     return info;
 }
 
-arena_dbg_info arena_get_dbg_info_compare_size(const arena* a) {
-    arena_dbg_info info = { 0 };
+cecs_arena_dbg_info cecs_arena_get_dbg_info_compare_size(const cecs_arena* a) {
+    cecs_arena_dbg_info info = { 0 };
     info.smallest_block_capacity = SIZE_MAX;
     info.smallest_block_size = SIZE_MAX;
-    linked_block* current = a->first_block;
+    cecs_linked_block* current = a->first_block;
     while (current != NULL) {
         ++info.block_count;
         if (current->b.owns_data) {
@@ -337,12 +337,12 @@ arena_dbg_info arena_get_dbg_info_compare_size(const arena* a) {
     return info;
 }
 
-arena_dbg_info arena_get_dbg_info_pick_smallest(const arena* a) {
-    arena_dbg_info info = { 0 };
+cecs_arena_dbg_info cecs_arena_get_dbg_info_pick_smallest(const cecs_arena* a) {
+    cecs_arena_dbg_info info = { 0 };
     info.smallest_block_capacity = SIZE_MAX;
     info.smallest_block_size = SIZE_MAX;
 
-    linked_block* current = a->first_block;
+    cecs_linked_block* current = a->first_block;
     while (current != NULL) {
         ++info.block_count;
         if (current->b.owns_data) {
@@ -374,12 +374,12 @@ arena_dbg_info arena_get_dbg_info_pick_smallest(const arena* a) {
     return info;
 }
 
-void arena_free(arena* a) {
-    linked_block* current = a->first_block;
+void cecs_arena_free(cecs_arena* a) {
+    cecs_linked_block* current = a->first_block;
     while (current != NULL) {
-        linked_block* next = current->next;
+        cecs_linked_block* next = current->next;
         if (current == NULL) assert(false && "current must not be NULL");
-        linked_block_free(current);
+        cecs_linked_block_free(current);
         if (current == NULL) assert(false && "current must not be NULL");
         free(current);
         current = next;
@@ -389,27 +389,27 @@ void arena_free(arena* a) {
     a->last_block = NULL;
 }
 
-void* arena_alloc(arena* a, size_t size) {
-    linked_block* current = a->first_block;
+void* cecs_arena_alloc(cecs_arena* a, size_t size) {
+    cecs_linked_block* current = a->first_block;
     while (current != NULL) {
-        if (block_can_alloc(&current->b, size)) {
-            return block_alloc(&current->b, size);
+        if (cecs_block_can_alloc(&current->b, size)) {
+            return cecs_block_alloc(&current->b, size);
         }
         current = current->next;
     }
 
-    return block_alloc(arena_add_block(a, size), size);
+    return cecs_block_alloc(cecs_arena_add_block(a, size), size);
 }
 
-arena arena_create(void) {
-    arena a;
+cecs_arena cecs_arena_create(void) {
+    cecs_arena a;
     a.first_block = NULL;
     a.last_block = NULL;
     return a;
 }
 
-void linked_block_free(linked_block* lb) {
-    block_free(&lb->b);
-    lb->b = (block){ 0 };
+void cecs_linked_block_free(cecs_linked_block* lb) {
+    cecs_block_free(&lb->b);
+    lb->b = (cecs_block){ 0 };
     lb->next = NULL;
 }

@@ -2,14 +2,14 @@
 
 world_entities world_entities_create(size_t entity_capacity) {
     world_entities we;
-    we.entity_ids_arena = arena_create_with_capacity(sizeof(entity_id) * entity_capacity);
+    we.entity_ids_arena = cecs_arena_create_with_capacity(sizeof(entity_id) * entity_capacity);
     we.entity_ids = sparse_set_create_of_integers_with_capacity(&we.entity_ids_arena, entity_capacity, sizeof(entity_id));
     we.free_entity_ids = queue_create_with_capacity(&we.entity_ids_arena, sizeof(entity_id) * entity_capacity);
     return we;
 }
 
 void world_entities_free(world_entities* we) {
-    arena_free(&we->entity_ids_arena);
+    cecs_arena_free(&we->entity_ids_arena);
     we->free_entity_ids = (queue){ 0 };
     we->entity_ids = (sparse_set){ 0 };
 }

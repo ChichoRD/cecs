@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <memory.h>
 #include <stdbool.h>
-#include "../containers/arena.h"
+#include "../containers/cecs_arena.h"
 #include "../containers/list.h"
 #include "component/entity/entity.h"
 #include "component/entity/tag.h"

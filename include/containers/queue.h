@@ -13,7 +13,7 @@ typedef struct queue {
 
 queue queue_create();
 
-queue queue_create_with_capacity(arena *a, size_t capacity);
+queue queue_create_with_capacity(cecs_arena *a, size_t capacity);
 
 inline size_t queue_count_of_size(const queue *q, size_t size) {
     return list_count_of_size(&q->elements, size) - q->first;
@@ -35,19 +35,19 @@ inline void *queue_last(const queue *q, size_t size) {
 }
 #define QUEUE_LAST(type, queue_ref) ((type *)queue_last(queue_ref, sizeof(type)))
 
-size_t queue_pop_first(queue *q, arena *a, void *out_pop_element, size_t size);
+size_t queue_pop_first(queue *q, cecs_arena *a, void *out_pop_element, size_t size);
 #define QUEUE_POP_FIRST(type, queue_ref, arena_ref, out_pop_element) \
     queue_pop_first(queue_ref, arena_ref, out_pop_element, sizeof(type))
 
-size_t queue_pop_last(queue *q, arena *a, void *out_pop_element, size_t size);
+size_t queue_pop_last(queue *q, cecs_arena *a, void *out_pop_element, size_t size);
 #define QUEUE_POP_LAST(type, queue_ref, arena_ref, out_pop_element) \
     queue_pop_last(queue_ref, arena_ref, out_pop_element, sizeof(type))
 
-void *queue_push_first(queue *q, arena *a, void *element, size_t size);
+void *queue_push_first(queue *q, cecs_arena *a, void *element, size_t size);
 #define QUEUE_PUSH_FIRST(type, queue_ref, arena_ref, element_ref) \
     ((type *)queue_push_first(queue_ref, arena_ref, element_ref, sizeof(type)))
 
-void *queue_push_last(queue *q, arena *a, void *element, size_t size);
+void *queue_push_last(queue *q, cecs_arena *a, void *element, size_t size);
 #define QUEUE_PUSH_LAST(type, queue_ref, arena_ref, element_ref) \
     ((type *)queue_push_last(queue_ref, arena_ref, element_ref, sizeof(type)))
 

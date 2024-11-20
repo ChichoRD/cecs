@@ -477,7 +477,7 @@ void update_children_position(
     // handle->renderable_component->offset = (v2_i16){ parent_position.x - p.x, parent_position.y - p.y };
 }
 
-bool update_entities(world *w, arena *iteration_arena, double delta_time_seconds) {
+bool update_entities(world *w, cecs_arena *iteration_arena, double delta_time_seconds) {
     scene_world_system s = scene_world_system_create(0, iteration_arena);
     WORLD_SYSTEM_ITER_RANGE(
         scene_world_system_get_with(&s, iteration_arena, COMPONENTS_ALL(velocity, controllable)),
@@ -541,7 +541,7 @@ void update_console_buffer(
     }
 }
 
-bool render(const world *w, arena *iteration_arena) {
+bool render(const world *w, cecs_arena *iteration_arena) {
     console_buffer *cb = WORLD_GET_RESOURCE(console_buffer, w);
     console_buffer new_console_buffer = *cb;
 
@@ -562,7 +562,7 @@ bool render(const world *w, arena *iteration_arena) {
     printf("\x1b[%d;%dH\x1b[J", 0, 0);
     fflush(stdout);
     //system("cls");
-    arena screen_arena = arena_create();
+    cecs_arena screen_arena = cecs_arena_create();
     list screen = list_create_with_capacity(&screen_arena, sizeof(char) * BOARD_WIDTH * BOARD_HEIGHT);
     for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
         for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
@@ -573,7 +573,7 @@ bool render(const world *w, arena *iteration_arena) {
         list_add(&screen, &screen_arena, "\n", sizeof(char));
     }
     printf("%s", (char *)screen.elements);
-    arena_free(&screen_arena);
+    cecs_arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
     //arena_dbg_info dbg = arena_get_dbg_info_compare_size(&w->entities.entity_ids_arena);
     //printf(
@@ -603,7 +603,7 @@ void write_controllables(
     }
 }
 
-bool process_input(world *w, arena *iteration_arena) {
+bool process_input(world *w, cecs_arena *iteration_arena) {
     controllable c = (controllable) {
         .active = true,
         .buffer_count = 0,
@@ -635,16 +635,16 @@ bool process_input(world *w, arena *iteration_arena) {
 }
 
 bool update(world *w, double delta_time_seconds) {
-    arena iteration_arena = arena_create();
+    cecs_arena iteration_arena = cecs_arena_create();
     bool result = update_entities(w, &iteration_arena, delta_time_seconds)
         || render(w, &iteration_arena)
         || process_input(w, &iteration_arena);
-    arena_free(&iteration_arena);
+    cecs_arena_free(&iteration_arena);
     return result;
 }
 
 bool finalize(world *w) {
-    arena a = arena_create();
+    cecs_arena a = cecs_arena_create();
     COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
     //size_t count = 0;
     for (
@@ -663,7 +663,7 @@ bool finalize(world *w) {
         //++count;
     }
     //printf("freed %d renderables\n", count);
-    arena_free(&a);
+    cecs_arena_free(&a);
     return EXIT_SUCCESS;
 }
 

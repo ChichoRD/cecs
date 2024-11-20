@@ -9,8 +9,8 @@
 #include "../../types/type_id.h"
 #include "../../containers/tagged_union.h"
 #include "../../containers/sparse_set.h"
-#include "../../containers/bitset.h"
-#include "../../containers/arena.h"
+#include "../../containers/cecs_bitset.h"
+#include "../../containers/cecs_arena.h"
 #include "entity/entity.h"
 #include "component_storage.h"
 
@@ -30,8 +30,8 @@ typedef struct component_discard {
 
 typedef OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
 typedef struct world_components {
-    arena storages_arena;
-    arena components_arena;
+    cecs_arena storages_arena;
+    cecs_arena components_arena;
     paged_sparse_set component_storages;
     paged_sparse_set component_sizes;
     world_components_checksum checksum;

@@ -4,7 +4,7 @@ displaced_set displaced_set_create() {
     return (displaced_set) { .elements = list_create(), .index_range = { 0, 0 } };
 }
 
-displaced_set displaced_set_create_with_capacity(arena* a, size_t capacity) {
+displaced_set displaced_set_create_with_capacity(cecs_arena* a, size_t capacity) {
     return (displaced_set) { .elements = list_create_with_capacity(a, capacity), .index_range = { 0, 0 } };
 }
 
@@ -17,7 +17,7 @@ bool displaced_set_is_empty(displaced_set* s) {
     return exclusive_range_is_empty(s->index_range);
 }
 
-void* displaced_set_expand(displaced_set* s, arena* a, size_t index, size_t size) {
+void* displaced_set_expand(displaced_set* s, cecs_arena* a, size_t index, size_t size) {
     if (displaced_set_is_empty(s)) {
         s->index_range = exclusive_range_singleton(index);
         return list_append_empty(&s->elements, a, 1, size);
@@ -50,7 +50,7 @@ void* displaced_set_expand(displaced_set* s, arena* a, size_t index, size_t size
     }
 }
 
-void* displaced_set_set(displaced_set* s, arena* a, size_t index, void* element, size_t size) {
+void* displaced_set_set(displaced_set* s, cecs_arena* a, size_t index, void* element, size_t size) {
     if (!displaced_set_contains_index(s, index)) {
         return memcpy(displaced_set_expand(s, a, index, size), element, size);
     }
@@ -97,14 +97,14 @@ counted_set counted_set_create() {
     return (counted_set) { .elements = displaced_set_create(), .counts = displaced_set_create() };
 }
 
-counted_set counted_set_create_with_capacity(arena* a, size_t element_capacity, size_t element_size) {
+counted_set counted_set_create_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
     return (counted_set) {
         .elements = displaced_set_create_with_capacity(a, element_size * element_capacity),
             .counts = displaced_set_create_with_capacity(a, sizeof(counted_set_counter) * element_capacity)
     };
 }
 
-void* counted_set_set_many(counted_set* s, arena* a, size_t index, void* element, size_t count, size_t size) {
+void* counted_set_set_many(counted_set* s, cecs_arena* a, size_t index, void* element, size_t count, size_t size) {
     if (counted_set_contains(s, index)
         && (memcmp(displaced_set_get(&s->elements, index, size), element, size)) == 0) {
         *DISPLACED_SET_GET(counted_set_counter, &s->counts, index) += (counted_set_counter)count;
@@ -116,7 +116,7 @@ void* counted_set_set_many(counted_set* s, arena* a, size_t index, void* element
     }
 }
 
-void* counted_set_set(counted_set* s, arena* a, size_t index, void* element, size_t size) {
+void* counted_set_set(counted_set* s, cecs_arena* a, size_t index, void* element, size_t size) {
     return counted_set_set_many(s, a, index, element, 1, size);
 }
 
@@ -125,7 +125,7 @@ void* counted_set_get(const counted_set* s, size_t index, size_t size) {
     return displaced_set_get(&s->elements, index, size);
 }
 
-void* counted_set_get_or_set(counted_set* s, arena* a, size_t index, void* otherwise_element, size_t size) {
+void* counted_set_get_or_set(counted_set* s, cecs_arena* a, size_t index, void* otherwise_element, size_t size) {
     if (counted_set_contains(s, index)) {
         return counted_set_get(s, index, size);
     }
@@ -135,7 +135,7 @@ void* counted_set_get_or_set(counted_set* s, arena* a, size_t index, void* other
     }
 }
 
-void* counted_set_increment_or_set(counted_set* s, arena* a, size_t index, void* otherwise_element, size_t size) {
+void* counted_set_increment_or_set(counted_set* s, cecs_arena* a, size_t index, void* otherwise_element, size_t size) {
     if (counted_set_contains(s, index)) {
         *DISPLACED_SET_GET(counted_set_counter, &s->counts, index) += 1;
         return counted_set_get(s, index, size);

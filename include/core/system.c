@@ -1,6 +1,6 @@
 #include "system.h"
 
-entity_count world_system_iter(const world_system s, world* w, arena* iteration_arena, system_predicate_data data, system_predicate* predicate) {
+entity_count world_system_iter(const world_system s, world* w, cecs_arena* iteration_arena, system_predicate_data data, system_predicate* predicate) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
@@ -17,7 +17,7 @@ entity_count world_system_iter(const world_system s, world* w, arena* iteration_
     return count;
 }
 
-entity_count world_system_iter_range(const world_system s, world* w, arena* iteration_arena, entity_id_range range, system_predicate_data data, system_predicate* predicate) {
+entity_count world_system_iter_range(const world_system s, world* w, cecs_arena* iteration_arena, entity_id_range range, system_predicate_data data, system_predicate* predicate) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
@@ -41,7 +41,7 @@ system_predicates system_predicates_create(system_predicate** predicates, size_t
     };
 }
 
-entity_count world_system_iter_all(const world_system s, world* w, arena* iteration_arena, system_predicate_data data, system_predicates predicates) {
+entity_count world_system_iter_all(const world_system s, world* w, cecs_arena* iteration_arena, system_predicate_data data, system_predicates predicates) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
@@ -60,7 +60,7 @@ entity_count world_system_iter_all(const world_system s, world* w, arena* iterat
     return count;
 }
 
-entity_count world_system_iter_range_all(const world_system s, world* w, arena* iteration_arena, entity_id_range range, system_predicate_data data, system_predicates predicates) {
+entity_count world_system_iter_range_all(const world_system s, world* w, cecs_arena* iteration_arena, entity_id_range range, system_predicate_data data, system_predicates predicates) {
     entity_count count = 0;
     component_iterator_descriptor descriptor = component_iterator_descriptor_create(&w->components, iteration_arena, s.search_groups);
     raw_iteration_handle_reference handle = component_iterator_descriptor_allocate_handle(descriptor);
@@ -86,7 +86,7 @@ dynamic_world_system dynamic_world_system_create() {
     };
 }
 
-dynamic_world_system dynamic_world_system_create_from(components_search_groups s, arena* a) {
+dynamic_world_system dynamic_world_system_create_from(components_search_groups s, cecs_arena* a) {
     dynamic_world_system d = dynamic_world_system_create();
     for (size_t i = 0; i < s.group_count; ++i) {
         components_search_group group = s.groups[i];
@@ -98,7 +98,7 @@ dynamic_world_system dynamic_world_system_create_from(components_search_groups s
     return d;
 }
 
-components_search_group_range dynamic_world_system_add(dynamic_world_system* d, arena* a, components_search_group s) {
+components_search_group_range dynamic_world_system_add(dynamic_world_system* d, cecs_arena* a, components_search_group s) {
     components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s);
     TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, s).component_ids =
         LIST_ADD_RANGE(component_id, &d->component_ids, a, info.component_ids, info.component_count);
@@ -107,7 +107,7 @@ components_search_group_range dynamic_world_system_add(dynamic_world_system* d, 
     return (components_search_group_range) { 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
 }
 
-components_search_group_range dynamic_world_system_add_range(dynamic_world_system* d, arena* a, components_search_groups s) {
+components_search_group_range dynamic_world_system_add_range(dynamic_world_system* d, cecs_arena* a, components_search_groups s) {
     for (size_t i = 0; i < s.group_count; ++i) {
         components_search_group group = s.groups[i];
         components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, group);
@@ -118,7 +118,7 @@ components_search_group_range dynamic_world_system_add_range(dynamic_world_syste
     return (components_search_group_range) { 0, LIST_COUNT(components_search_group, &d->components_search_groups) };
 }
 
-components_search_group_range dynamic_world_system_set(dynamic_world_system* d, arena* a, components_search_group s, size_t index) {
+components_search_group_range dynamic_world_system_set(dynamic_world_system* d, cecs_arena* a, components_search_group s, size_t index) {
     assert(index <= LIST_COUNT(components_search_group, &d->components_search_groups) && "index out of bounds");
     if (index == LIST_COUNT(components_search_group, &d->components_search_groups)) {
         dynamic_world_system_add(d, a, s);
@@ -159,7 +159,7 @@ components_search_group_range dynamic_world_system_set(dynamic_world_system* d, 
     return (components_search_group_range) { 0, index + 1 };
 }
 
-components_search_group_range dynamic_world_system_set_range(dynamic_world_system* d, arena* a, components_search_groups s, size_t index) {
+components_search_group_range dynamic_world_system_set_range(dynamic_world_system* d, cecs_arena* a, components_search_groups s, size_t index) {
     assert(index <= LIST_COUNT(components_search_group, &d->components_search_groups) && "index out of bounds");
     if (index + s.group_count >= LIST_COUNT(components_search_group, &d->components_search_groups) - 1) {
         size_t missing = index + s.group_count - LIST_COUNT(components_search_group, &d->components_search_groups) - 1;
@@ -217,6 +217,6 @@ world_system dynamic_world_system_get_range(const dynamic_world_system* d, compo
     ));
 }
 
-dynamic_world_system dynamic_world_system_clone(const dynamic_world_system* d, arena* a) {
+dynamic_world_system dynamic_world_system_clone(const dynamic_world_system* d, cecs_arena* a) {
     return dynamic_world_system_create_from(dynamic_world_system_get(d).search_groups, a);
 }

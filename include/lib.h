@@ -6,7 +6,7 @@
 #include "core/component/entity/entity.h"
 #include "core/system.h"
 #include "core/world.h"
-#include "containers/arena.h"
+#include "containers/cecs_arena.h"
 #include "containers/list.h"
 
 
@@ -66,14 +66,14 @@ typedef struct scene_world_system {
     size_t scene_group_index;
 } scene_world_system;
 
-scene_world_system scene_world_system_create(scene_id scene, arena *a);
+scene_world_system scene_world_system_create(scene_id scene, cecs_arena *a);
 
-scene_world_system scene_world_system_create_from(scene_id scene, arena *a, components_search_groups search_groups);
+scene_world_system scene_world_system_create_from(scene_id scene, cecs_arena *a, components_search_groups search_groups);
 
-scene_world_system *scene_world_system_set_active_scene(scene_world_system *s, arena *a, scene_id scene);
+scene_world_system *scene_world_system_set_active_scene(scene_world_system *s, cecs_arena *a, scene_id scene);
 
-world_system scene_world_system_get_with(scene_world_system *s, arena *a, components_search_group search_group);
+world_system scene_world_system_get_with(scene_world_system *s, cecs_arena *a, components_search_group search_group);
 
-world_system scene_world_system_get_with_range(scene_world_system *s, arena *a, components_search_groups search_groups);
+world_system scene_world_system_get_with_range(scene_world_system *s, cecs_arena *a, components_search_groups search_groups);
 
 #endif

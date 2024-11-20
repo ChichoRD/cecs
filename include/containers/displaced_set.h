@@ -16,7 +16,7 @@ typedef struct displaced_set {
 
 displaced_set displaced_set_create();
 
-displaced_set displaced_set_create_with_capacity(arena *a, size_t capacity);
+displaced_set displaced_set_create_with_capacity(cecs_arena *a, size_t capacity);
 
 inline bool displaced_set_contains_index(const displaced_set *s, size_t index) {
     return exclusive_range_contains(s->index_range, index);
@@ -31,9 +31,9 @@ bool displaced_set_contains(const displaced_set *s, size_t index, void *null_bit
 
 bool displaced_set_is_empty(displaced_set *s);
 
-void *displaced_set_expand(displaced_set *s, arena *a, size_t index, size_t size);
+void *displaced_set_expand(displaced_set *s, cecs_arena *a, size_t index, size_t size);
 
-void *displaced_set_set(displaced_set *s, arena *a, size_t index, void *element, size_t size);
+void *displaced_set_set(displaced_set *s, cecs_arena *a, size_t index, void *element, size_t size);
 #define DISPLACED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
     ((type *)displaced_set_set(set_ref, arena_ref, index, element_ref, sizeof(type)))
 
@@ -62,7 +62,7 @@ inline counted_set counted_set_empty() {
 
 counted_set counted_set_create();
 
-counted_set counted_set_create_with_capacity(arena *a, size_t element_capacity, size_t element_size);
+counted_set counted_set_create_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
 inline counted_set_counter counted_set_count_of(const counted_set *s, size_t index) {
     return *DISPLACED_SET_GET(counted_set_counter, &s->counts, index);
@@ -74,9 +74,9 @@ inline bool counted_set_contains(const counted_set *s, size_t index) {
 }
 
 
-void *counted_set_set_many(counted_set *s, arena *a, size_t index, void *element, size_t count, size_t size);
+void *counted_set_set_many(counted_set *s, cecs_arena *a, size_t index, void *element, size_t count, size_t size);
 
-void *counted_set_set(counted_set *s, arena *a, size_t index, void *element, size_t size);
+void *counted_set_set(counted_set *s, cecs_arena *a, size_t index, void *element, size_t size);
 #define COUNTED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
     ((type *)counted_set_set(set_ref, arena_ref, index, element_ref, sizeof(type)))
 
@@ -84,11 +84,11 @@ void *counted_set_get(const counted_set *s, size_t index, size_t size);
 #define COUNTED_SET_GET(type, set_ref, index) \
     ((type *)counted_set_get(set_ref, index, sizeof(type)))
 
-void *counted_set_get_or_set(counted_set *s, arena *a, size_t index, void *otherwise_element, size_t size);
+void *counted_set_get_or_set(counted_set *s, cecs_arena *a, size_t index, void *otherwise_element, size_t size);
 #define COUNTED_SET_GET_OR_SET(type, set_ref, arena_ref, index, otherwise_element_ref) \
     ((type *)counted_set_get_or_set(set_ref, arena_ref, index, otherwise_element_ref, sizeof(type)))
 
-void *counted_set_increment_or_set(counted_set *s, arena *a, size_t index, void *otherwise_element, size_t size);
+void *counted_set_increment_or_set(counted_set *s, cecs_arena *a, size_t index, void *otherwise_element, size_t size);
 #define COUNTED_SET_INCREMENT_OR_SET(type, set_ref, arena_ref, index, otherwise_element_ref) \
     ((type *)counted_set_increment_or_set(set_ref, arena_ref, index, otherwise_element_ref, sizeof(type)))
 

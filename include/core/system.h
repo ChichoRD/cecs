@@ -57,7 +57,7 @@ typedef void system_predicate(const raw_iteration_handle_reference handle, world
 entity_count world_system_iter(
     const world_system s,
     world *w,
-    arena *iteration_arena,
+    cecs_arena *iteration_arena,
     system_predicate_data data,
     system_predicate *predicate
 );
@@ -67,7 +67,7 @@ entity_count world_system_iter(
 entity_count world_system_iter_range(
     const world_system s,
     world *w,
-    arena *iteration_arena,
+    cecs_arena *iteration_arena,
     entity_id_range range,
     system_predicate_data data,
     system_predicate *predicate
@@ -99,7 +99,7 @@ typedef union {
 entity_count world_system_iter_all(
     const world_system s,
     world *w,
-    arena *iteration_arena,
+    cecs_arena *iteration_arena,
     system_predicate_data data,
     system_predicates predicates
 );
@@ -109,7 +109,7 @@ entity_count world_system_iter_all(
 entity_count world_system_iter_range_all(
     const world_system s,
     world *w,
-    arena *iteration_arena,
+    cecs_arena *iteration_arena,
     entity_id_range range,
     system_predicate_data data,
     system_predicates predicates
@@ -127,21 +127,21 @@ typedef struct dynamic_world_system {
 
 dynamic_world_system dynamic_world_system_create();
 
-dynamic_world_system dynamic_world_system_create_from(components_search_groups s, arena *a);
+dynamic_world_system dynamic_world_system_create_from(components_search_groups s, cecs_arena *a);
 
 typedef exclusive_range components_search_group_range; 
-components_search_group_range dynamic_world_system_add(dynamic_world_system *d, arena *a, components_search_group s);
+components_search_group_range dynamic_world_system_add(dynamic_world_system *d, cecs_arena *a, components_search_group s);
 
-components_search_group_range dynamic_world_system_add_range(dynamic_world_system *d, arena *a, components_search_groups s);
+components_search_group_range dynamic_world_system_add_range(dynamic_world_system *d, cecs_arena *a, components_search_groups s);
 
-components_search_group_range dynamic_world_system_set(dynamic_world_system *d, arena *a, components_search_group s, size_t index);
+components_search_group_range dynamic_world_system_set(dynamic_world_system *d, cecs_arena *a, components_search_group s, size_t index);
 
-components_search_group_range dynamic_world_system_set_range(dynamic_world_system *d, arena *a, components_search_groups s, size_t index);
+components_search_group_range dynamic_world_system_set_range(dynamic_world_system *d, cecs_arena *a, components_search_groups s, size_t index);
 
 world_system dynamic_world_system_get(const dynamic_world_system *d);
 
 world_system dynamic_world_system_get_range(const dynamic_world_system *d, components_search_group_range r);
 
-dynamic_world_system dynamic_world_system_clone(const dynamic_world_system *d, arena *a);
+dynamic_world_system dynamic_world_system_clone(const dynamic_world_system *d, cecs_arena *a);
 
 #endif

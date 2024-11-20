@@ -18,7 +18,7 @@ sparse_set sparse_set_create_of_integers() {
     };
 }
 
-sparse_set sparse_set_create_with_capacity(arena* a, size_t element_capacity, size_t element_size) {
+sparse_set sparse_set_create_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
     return (sparse_set) {
         .elements =
             TAGGED_UNION_CREATE(any_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
@@ -27,7 +27,7 @@ sparse_set sparse_set_create_with_capacity(arena* a, size_t element_capacity, si
     };
 }
 
-sparse_set sparse_set_create_of_integers_with_capacity(arena* a, size_t element_capacity, size_t element_size) {
+sparse_set sparse_set_create_of_integers_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
     return (sparse_set) {
         .elements =
             TAGGED_UNION_CREATE(integer_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
@@ -61,7 +61,7 @@ bool sparse_set_is_empty(const sparse_set* s) {
     return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).count == 0;
 }
 
-void* sparse_set_set(sparse_set* s, arena* a, size_t key, void* element, size_t element_size) {
+void* sparse_set_set(sparse_set* s, cecs_arena* a, size_t key, void* element, size_t element_size) {
     if (TAGGED_UNION_IS(integer_elements, sparse_set_elements, s->elements)) {
         ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element, key);
     }
@@ -96,7 +96,7 @@ void* sparse_set_set(sparse_set* s, arena* a, size_t key, void* element, size_t 
     }
 }
 
-bool sparse_set_remove(sparse_set* s, arena* a, size_t key, void* out_removed_element, size_t element_size) {
+bool sparse_set_remove(sparse_set* s, cecs_arena* a, size_t key, void* out_removed_element, size_t element_size) {
     if (!displaced_set_contains_index(&s->indices, key)
         || sparse_set_is_empty(s)) {
         memset(out_removed_element, 0, element_size);
@@ -164,7 +164,7 @@ paged_sparse_set paged_sparse_set_create_of_integers() {
     return set;
 }
 
-paged_sparse_set paged_sparse_set_create_with_capacity(arena* a, size_t element_capacity, size_t element_size) {
+paged_sparse_set paged_sparse_set_create_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
     paged_sparse_set set = (paged_sparse_set){
         .elements =
         TAGGED_UNION_CREATE(any_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
@@ -176,7 +176,7 @@ paged_sparse_set paged_sparse_set_create_with_capacity(arena* a, size_t element_
     return set;
 }
 
-paged_sparse_set paged_sparse_set_create_of_integers_with_capacity(arena* a, size_t element_capacity, size_t element_size) {
+paged_sparse_set paged_sparse_set_create_of_integers_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
     paged_sparse_set set = (paged_sparse_set){
         .elements =
         TAGGED_UNION_CREATE(integer_elements, sparse_set_elements, list_create_with_capacity(a, element_capacity * element_size)),
@@ -216,7 +216,7 @@ bool paged_sparse_set_is_empty(const paged_sparse_set* s) {
     return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).count == 0;
 }
 
-void* paged_sparse_set_set(paged_sparse_set* s, arena* a, size_t key, void* element, size_t element_size) {
+void* paged_sparse_set_set(paged_sparse_set* s, cecs_arena* a, size_t key, void* element, size_t element_size) {
     uint8_t page_index = paged_sparse_set_page_index(key);
     displaced_set* indices = &s->indices[page_index];
     size_t page_key = paged_sparse_set_page_key(key, page_index);
@@ -253,7 +253,7 @@ void* paged_sparse_set_set(paged_sparse_set* s, arena* a, size_t key, void* elem
     }
 }
 
-bool paged_sparse_set_remove(paged_sparse_set* s, arena* a, size_t key, void* out_removed_element, size_t element_size) {
+bool paged_sparse_set_remove(paged_sparse_set* s, cecs_arena* a, size_t key, void* out_removed_element, size_t element_size) {
     uint8_t page_index = paged_sparse_set_page_index(key);
     displaced_set* indices = &s->indices[page_index];
     size_t page_key = paged_sparse_set_page_key(key, page_index);

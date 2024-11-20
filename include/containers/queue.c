@@ -7,7 +7,7 @@ queue queue_create() {
     };
 }
 
-queue queue_create_with_capacity(arena* a, size_t capacity) {
+queue queue_create_with_capacity(cecs_arena* a, size_t capacity) {
     return (queue) {
         .elements = list_create_with_capacity(a, capacity),
             .first = 0
@@ -19,7 +19,7 @@ void* queue_get(queue* q, size_t index, size_t size) {
     return list_get(&q->elements, q->first + index, size);
 }
 
-size_t queue_pop_first(queue* q, arena* a, void* out_pop_element, size_t size) {
+size_t queue_pop_first(queue* q, cecs_arena* a, void* out_pop_element, size_t size) {
     size_t list_count = list_count_of_size(&q->elements, size);
     assert(q->first < list_count && "Attempted to pop first element of empty queue");
     memcpy(out_pop_element, list_get(&q->elements, q->first++, size), size);
@@ -43,7 +43,7 @@ size_t queue_pop_first(queue* q, arena* a, void* out_pop_element, size_t size) {
     return remaining_count;
 }
 
-size_t queue_pop_last(queue* q, arena* a, void* out_pop_element, size_t size) {
+size_t queue_pop_last(queue* q, cecs_arena* a, void* out_pop_element, size_t size) {
     size_t list_count = list_count_of_size(&q->elements, size);
     assert(list_count > 0 && "Attempted to pop last element of empty queue");
     memcpy(out_pop_element, list_last(&q->elements, size), size);
@@ -52,7 +52,7 @@ size_t queue_pop_last(queue* q, arena* a, void* out_pop_element, size_t size) {
     return queue_count_of_size(q, size);
 }
 
-void* queue_push_first(queue* q, arena* a, void* element, size_t size) {
+void* queue_push_first(queue* q, cecs_arena* a, void* element, size_t size) {
     if (q->first == 0) {
         return list_insert(&q->elements, a, 0, element, size);
     }
@@ -61,6 +61,6 @@ void* queue_push_first(queue* q, arena* a, void* element, size_t size) {
     }
 }
 
-void* queue_push_last(queue* q, arena* a, void* element, size_t size) {
+void* queue_push_last(queue* q, cecs_arena* a, void* element, size_t size) {
     return list_add(&q->elements, a, element, size);
 }

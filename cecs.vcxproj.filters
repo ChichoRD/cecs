@@ -62,7 +62,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\arena.h">
+    <ClInclude Include="include\cecs_arena.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\component.h">
@@ -92,10 +92,10 @@
     <ClInclude Include="include\world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\arena.h">
+    <ClInclude Include="include\containers\cecs_arena.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\bitset.h">
+    <ClInclude Include="include\containers\cecs_bitset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\containers\displaced_set.h">

@@ -72,7 +72,7 @@ double game_time_update_time_since_start(game_time* t) {
 }
 
 bool world_get_entity_with(const world* w, entity_id* out_entity_id, components_search_groups search_groups) {
-    arena temporary_arena = arena_create();
+    cecs_arena temporary_arena = cecs_arena_create();
     component_iterator it = component_iterator_create(component_iterator_descriptor_create(
         &w->components,
         &temporary_arena,
@@ -81,11 +81,11 @@ bool world_get_entity_with(const world* w, entity_id* out_entity_id, components_
 
     if (!component_iterator_done(&it)) {
         *out_entity_id = component_iterator_current(&it, w->components.discard.handle);
-        arena_free(&temporary_arena);
+        cecs_arena_free(&temporary_arena);
         return true;
     }
     else {
-        arena_free(&temporary_arena);
+        cecs_arena_free(&temporary_arena);
         return false;
     }
 }
@@ -108,7 +108,7 @@ scene_id world_remove_entity_from_scene(world* w, entity_id id, scene_id scene) 
     );
 }
 
-scene_world_system scene_world_system_create(scene_id scene, arena* a) {
+scene_world_system scene_world_system_create(scene_id scene, cecs_arena* a) {
     scene_world_system s = {
         .world_system = dynamic_world_system_create_from(COMPONENTS_SEARCH_GROUPS_CREATE(
             COMPONENTS_ALL_IDS(RELATION_ID(is_scene_member_of, scene))),
@@ -120,13 +120,13 @@ scene_world_system scene_world_system_create(scene_id scene, arena* a) {
     return s;
 }
 
-scene_world_system scene_world_system_create_from(scene_id scene, arena* a, components_search_groups search_groups) {
+scene_world_system scene_world_system_create_from(scene_id scene, cecs_arena* a, components_search_groups search_groups) {
     scene_world_system s = scene_world_system_create(scene, a);
     dynamic_world_system_add_range(&s.world_system, a, search_groups);
     return s;
 }
 
-scene_world_system* scene_world_system_set_active_scene(scene_world_system* s, arena* a, scene_id scene) {
+scene_world_system* scene_world_system_set_active_scene(scene_world_system* s, cecs_arena* a, scene_id scene) {
     s->scene = scene;
     dynamic_world_system_set(
         &s->world_system,
@@ -137,7 +137,7 @@ scene_world_system* scene_world_system_set_active_scene(scene_world_system* s, a
     return s;
 }
 
-world_system scene_world_system_get_with(scene_world_system* s, arena* a, components_search_group search_group) {
+world_system scene_world_system_get_with(scene_world_system* s, cecs_arena* a, components_search_group search_group) {
     return dynamic_world_system_get_range(&s->world_system, dynamic_world_system_set(
         &s->world_system,
         a,
@@ -146,7 +146,7 @@ world_system scene_world_system_get_with(scene_world_system* s, arena* a, compon
     ));
 }
 
-world_system scene_world_system_get_with_range(scene_world_system* s, arena* a, components_search_groups search_groups) {
+world_system scene_world_system_get_with_range(scene_world_system* s, cecs_arena* a, components_search_groups search_groups) {
     return dynamic_world_system_get_range(&s->world_system, dynamic_world_system_set_range(
         &s->world_system,
         a,

@@ -8,7 +8,7 @@
 #include "tagged_union.h"
 #include "../types/macro_utils.h"
 #include "range.h"
-#include "arena.h"
+#include "cecs_arena.h"
 #include "list.h"
 #include "displaced_set.h"
 
@@ -54,9 +54,9 @@ sparse_set sparse_set_create();
 
 sparse_set sparse_set_create_of_integers();
 
-sparse_set sparse_set_create_with_capacity(arena *a, size_t element_capacity, size_t element_size);
+sparse_set sparse_set_create_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-sparse_set sparse_set_create_of_integers_with_capacity(arena *a, size_t element_capacity, size_t element_size);
+sparse_set sparse_set_create_of_integers_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
 inline void *sparse_set_data(const sparse_set *s) {
     return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).elements;
@@ -86,11 +86,11 @@ void *sparse_set_get_unchecked(const sparse_set *s, size_t key, size_t element_s
 
 bool sparse_set_is_empty(const sparse_set *s);
 
-void *sparse_set_set(sparse_set *s, arena *a, size_t key, void *element, size_t element_size);
+void *sparse_set_set(sparse_set *s, cecs_arena *a, size_t key, void *element, size_t element_size);
 #define SPARSE_SET_SET(type, sparse_set_ref, arena_ref, key, element_ref) \
     ((type *)sparse_set_set(sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
 
-bool sparse_set_remove(sparse_set *s, arena *a, size_t key, void *out_removed_element, size_t element_size);
+bool sparse_set_remove(sparse_set *s, cecs_arena *a, size_t key, void *out_removed_element, size_t element_size);
 #define SPARSE_SET_REMOVE(type, sparse_set_ref, arena_ref, key, out_removed_element_ref) \
     sparse_set_remove(sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
 
@@ -152,9 +152,9 @@ paged_sparse_set paged_sparse_set_create();
 
 paged_sparse_set paged_sparse_set_create_of_integers();
 
-paged_sparse_set paged_sparse_set_create_with_capacity(arena *a, size_t element_capacity, size_t element_size);
+paged_sparse_set paged_sparse_set_create_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-paged_sparse_set paged_sparse_set_create_of_integers_with_capacity(arena *a, size_t element_capacity, size_t element_size);
+paged_sparse_set paged_sparse_set_create_of_integers_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
 inline void *paged_sparse_set_data(const paged_sparse_set *s) {
     return TAGGED_UNION_GET_UNCHECKED(any_elements, s->elements).elements;
@@ -186,11 +186,11 @@ void *paged_sparse_set_get_unchecked(const paged_sparse_set *s, size_t key, size
 
 bool paged_sparse_set_is_empty(const paged_sparse_set *s);
 
-void *paged_sparse_set_set(paged_sparse_set *s, arena *a, size_t key, void *element, size_t element_size);
+void *paged_sparse_set_set(paged_sparse_set *s, cecs_arena *a, size_t key, void *element, size_t element_size);
 #define PAGED_SPARSE_SET_SET(type, paged_sparse_set_ref, arena_ref, key, element_ref) \
     ((type *)paged_sparse_set_set(paged_sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
 
-bool paged_sparse_set_remove(paged_sparse_set *s, arena *a, size_t key, void *out_removed_element, size_t element_size);
+bool paged_sparse_set_remove(paged_sparse_set *s, cecs_arena *a, size_t key, void *out_removed_element, size_t element_size);
 #define PAGED_SPARSE_SET_REMOVE(type, paged_sparse_set_ref, arena_ref, key, out_removed_element_ref) \
     paged_sparse_set_remove(paged_sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
 

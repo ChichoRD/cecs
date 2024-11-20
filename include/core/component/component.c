@@ -12,10 +12,10 @@ inline world_components_checksum world_components_checksum_add(world_components_
 
 world_components world_components_create(size_t component_type_capacity) {
     return (world_components) {
-        .storages_arena = arena_create_with_capacity(
+        .storages_arena = cecs_arena_create_with_capacity(
             (sizeof(component_storage) + sizeof(optional_component_size)) * component_type_capacity
         ),
-            .components_arena = arena_create(),
+            .components_arena = cecs_arena_create(),
             .component_storages = paged_sparse_set_create(),
             .component_sizes = paged_sparse_set_create(),
             .checksum = 0,
@@ -24,8 +24,8 @@ world_components world_components_create(size_t component_type_capacity) {
 }
 
 void world_components_free(world_components* wc) {
-    arena_free(&wc->components_arena);
-    arena_free(&wc->storages_arena);
+    cecs_arena_free(&wc->components_arena);
+    cecs_arena_free(&wc->storages_arena);
     wc->component_storages = (paged_sparse_set){ 0 };
     wc->component_sizes = (paged_sparse_set){ 0 };
     wc->discard = (component_discard){ 0 };
@@ -98,7 +98,7 @@ component_storage component_storage_descriptor_build(component_storage_descripto
 
 optional_component world_components_set_component(world_components* wc, entity_id entity_id, component_id component_id, void* component, size_t size, component_storage_descriptor additional_storage_descriptor) {
     if (size > wc->discard.size) {
-        wc->discard.handle = arena_realloc(&wc->components_arena, wc->discard.handle, wc->discard.size, size);
+        wc->discard.handle = cecs_arena_realloc(&wc->components_arena, wc->discard.handle, wc->discard.size, size);
         wc->discard.size = size;
     }
     wc->checksum = world_components_checksum_add(wc->checksum, component_id);

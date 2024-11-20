@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "../../types/macro_utils.h"
-#include "../../containers/arena.h"
+#include "../../containers/cecs_arena.h"
 #include "component.h"
 
 #define COMPONENTS_ALL_ID components_all
@@ -79,32 +79,32 @@ typedef struct component_iterator_descriptor {
     const world_components_checksum checksum;
     const world_components *const world_components;
     components_type_info_deconstruct;
-    hibitset entities_bitset;
+    cecs_hibitset entities_bitset;
 } component_iterator_descriptor;
 
 bool component_iterator_descriptor_copy_component_bitsets(
     const world_components *world_components,
     components_type_info components_type_info,
-    hibitset bitsets_destination[]
+    cecs_hibitset bitsets_destination[]
 );
 
 size_t component_iterator_descriptor_append_sized_component_ids(
     const world_components *world_components,
-    arena *iterator_temporary_arena,
+    cecs_arena *iterator_temporary_arena,
     components_type_info components_type_info,
     list *sized_component_ids
 );
 
-hibitset component_iterator_descriptor_get_search_groups_bitset(
+cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(
     const world_components *world_components,
-    arena *iterator_temporary_arena,
+    cecs_arena *iterator_temporary_arena,
     components_search_groups search_groups,
     size_t max_component_count
 );
 
 component_iterator_descriptor component_iterator_descriptor_create(
     const world_components *world_components,
-    arena *iterator_temporary_arena,
+    cecs_arena *iterator_temporary_arena,
     components_search_groups search_groups
 );
 
@@ -132,12 +132,12 @@ inline size_t component_iteration_handle_size(components_type_info components_ty
 typedef void *raw_iteration_handle_reference;
 raw_iteration_handle_reference component_iterator_descriptor_allocate_handle(const component_iterator_descriptor descriptor);
 
-raw_iteration_handle_reference component_iterator_descriptor_allocate_handle_in(arena *a, const component_iterator_descriptor descriptor);
+raw_iteration_handle_reference component_iterator_descriptor_allocate_handle_in(cecs_arena *a, const component_iterator_descriptor descriptor);
 
 
 typedef struct component_iterator {
     component_iterator_descriptor descriptor;
-    hibitset_iterator entities_iterator;
+    cecs_hibitset_iterator entities_iterator;
     entity_id_range entity_range;
 } component_iterator;
 
