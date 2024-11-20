@@ -81,7 +81,11 @@ entity_id_range world_entities_add_entity_range(world_entities* we, size_t count
 }
 
 entity_id_range world_entities_remove_entity_range(world_entities* we, entity_id_range range) {
-    for (entity_id i = range.start; i < range.end; i++) {
+    assert(
+        range.start >= 0 && range.end
+        && "error: both start and end of entity_id_range must be non-negative"
+    );
+    for (entity_id i = (entity_id)range.start; i < (entity_id)range.end; i++) {
         world_entities_remove_entity(we, i);
     }
     return range;

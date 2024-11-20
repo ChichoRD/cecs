@@ -168,8 +168,8 @@ bool hibitset_is_set_skip_unset(const hibitset* b, size_t bit_index, ssize_t* ou
         if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
             unsigned long unset_low = 1;
             unsigned long unset_high = 0;
-            uint32_t word_low = (uint32_t)word_shifted_to_bit;
-            uint32_t word_high = (uint32_t)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
+            unsigned long word_low = (unsigned long)word_shifted_to_bit;
+            unsigned long word_high = (unsigned long)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
 
             size_t unset_continuous_count = 0;
             if (!_BitScanForward(&unset_low, word_low)) {
@@ -201,10 +201,10 @@ bool hibitset_is_set_skip_unset_reverse(const hibitset* b, size_t bit_index, ssi
         bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
 
         if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
-            size_t unset_low = 1;
-            size_t unset_high = 0;
-            uint32_t word_low = (uint32_t)word_shifted_to_bit;
-            uint32_t word_high = (uint32_t)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
+            unsigned long unset_low = 1;
+            unsigned long unset_high = 0;
+            unsigned long word_low = (unsigned long)word_shifted_to_bit;
+            unsigned long word_high = (unsigned long)(word_shifted_to_bit >> (BIT_WORD_BIT_COUNT >> 1));
 
             size_t unset_continuous_count = 0;
             if (!_BitScanReverse(&unset_low, word_low)) {

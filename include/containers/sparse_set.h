@@ -124,13 +124,13 @@ typedef struct paged_sparse_set {
 
 inline uint8_t paged_sparse_set_log2(size_t n) {
 #if (SIZE_MAX == 0xFFFF)
-    return PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n);
+    return (uint8_t)(PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n));
 
 #elif (SIZE_MAX == 0xFFFFFFFF)
-    return PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt((uint32_t)n);
+    return (uint8_t)(PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt((uint32_t)n));
 
 #elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
-    return PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt64((uint64_t)n);
+    return (uint8_t)(PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt64((uint64_t)n));
 
 #else
     #error TBD code SIZE_T_BITS
