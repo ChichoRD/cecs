@@ -1,6 +1,7 @@
-project(cecs)
+cmake_minimum_required(VERSION 3.3)
+enable_language(C)
 
-set(CMAKE_CXX_STANDARD 17)
+set(C_STANDARD 17)
 add_compile_options(
     /Zc:preprocessor
     /we\"4022\"
@@ -15,38 +16,41 @@ add_compile_options(
 
     /EHsc
     /nologo
-    /Fe${fileDirname}\\${fileBasenameNoExtension}.exe
 )
 
 file(
-	GLOB
-	SOURCES
-	CMAKE_CONFIGURE_DEPENDS
-	include/*.c
-    include/*.h
-    include/containers/*.c
-    include/containers/*.h
-    include/core/*.c
-    include/core/*.h
-    include/core/component/*.c
-    include/core/component/*.h
-    include/core/component/entity/*.c
-    include/core/component/entity/*.h
-    include/core/resource/*.c
-    include/core/resource/*.h
-    include/types/*.c
-    include/types/*.h
-
+    GLOB_RECURSE
+    CECS_SOURCES
+    CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/*.c"
 )
 
 
-# add_link_options(
-# 	/VERBOSE
-# )
+project(cecs_app C)
+add_compile_options(
+    /Fe${fileDirname}\\${fileBasenameNoExtension}.exe
+)
 
-add_executable(cecs
-	# Archivo de código
-	src/main.c
-	#src/game.cpp
-	${SOURCES}
+add_executable(
+    ${PROJECT_NAME}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
+    ${CECS_SOURCES}
+)
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+)
+
+
+project(cecs_lib C)
+add_library(
+    cecs
+    STATIC
+    ${CECS_SOURCES}
+)
+target_include_directories(
+    cecs
+    PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
 )
