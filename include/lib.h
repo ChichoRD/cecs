@@ -7,7 +7,7 @@
 #include "core/system.h"
 #include "core/world.h"
 #include "containers/cecs_arena.h"
-#include "containers/list.h"
+#include "containers/cecs_dynamic_array.h"
 
 
 typedef entity_id prefab_id;

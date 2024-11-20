@@ -18,7 +18,7 @@ bool component_iterator_descriptor_copy_component_bitsets(const world_components
     return !intersection_empty;
 }
 
-size_t component_iterator_descriptor_append_sized_component_ids(const world_components* world_components, cecs_arena* iterator_temporary_arena, components_type_info components_type_info, list* sized_component_ids) {
+size_t component_iterator_descriptor_append_sized_component_ids(const world_components* world_components, cecs_arena* iterator_temporary_arena, components_type_info components_type_info, cecs_dynamic_array* sized_component_ids) {
     size_t sized_count = 0;
     for (size_t i = 0; i < components_type_info.component_count; i++) {
         if (
@@ -28,7 +28,7 @@ size_t component_iterator_descriptor_append_sized_component_ids(const world_comp
                 components_type_info.component_ids[i]
             )).is_unit_type_storage
             ) {
-            LIST_ADD(component_id, sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
+            CECS_DYNAMIC_ARRAY_ADD(component_id, sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
             ++sized_count;
         }
     }
@@ -41,7 +41,7 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
     cecs_hibitset entities_bitset = cecs_hibitset_create(iterator_temporary_arena);
     bool has_empty_intersection = false;
     for (size_t i = 0; i < search_groups.group_count; i++) {
-        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
+        components_type_info info = CECS_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
         assert(max_component_count >= info.component_count && "component count is larger than max component count");
 
         bool component_bitsets_empty = !component_iterator_descriptor_copy_component_bitsets(
@@ -49,10 +49,10 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
             info,
             bitsets
         );
-        bool entities_bitset_empty = exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
+        bool entities_bitset_empty = cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
 
-        TAGGED_UNION_MATCH(search_groups.groups[i]) {
-            case TAGGED_UNION_VARIANT(COMPONENTS_ALL_ID, components_search_group): {
+        CECS_UNION_MATCH(search_groups.groups[i]) {
+            case CECS_UNION_VARIANT(COMPONENTS_ALL_ID, components_search_group): {
                 if (has_empty_intersection)
                     break;
 
@@ -68,11 +68,11 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
                     cecs_hibitset_intersect(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
                 }
 
-                has_empty_intersection |= exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
+                has_empty_intersection |= cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
                 break;
             }
 
-            case TAGGED_UNION_VARIANT(COMPONENTS_ANY_ID, components_search_group): {
+            case CECS_UNION_VARIANT(COMPONENTS_ANY_ID, components_search_group): {
                 if (component_bitsets_empty)
                     break;
 
@@ -87,7 +87,7 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
                 break;
             }
 
-            case TAGGED_UNION_VARIANT(COMPONENTS_NONE_ID, components_search_group): {
+            case CECS_UNION_VARIANT(COMPONENTS_NONE_ID, components_search_group): {
                 if (component_bitsets_empty || entities_bitset_empty) {
                     break;
                 }
@@ -95,7 +95,7 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
                 break;
             }
 
-            case TAGGED_UNION_VARIANT(COMPONENTS_OR_ALL_ID, components_search_group): {
+            case CECS_UNION_VARIANT(COMPONENTS_OR_ALL_ID, components_search_group): {
                 if (component_bitsets_empty)
                     break;
 
@@ -113,7 +113,7 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
                 break;
             }
 
-            case TAGGED_UNION_VARIANT(COMPONENTS_AND_ANY_ID, components_search_group): {
+            case CECS_UNION_VARIANT(COMPONENTS_AND_ANY_ID, components_search_group): {
                 if (has_empty_intersection)
                     break;
 
@@ -132,7 +132,7 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
                     cecs_hibitset_intersect(&entities_bitset, &union_, 1, iterator_temporary_arena);
                 }
 
-                has_empty_intersection |= exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
+                has_empty_intersection |= cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
                 break;
             }
 
@@ -148,16 +148,16 @@ cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(const world
 }
 
 component_iterator_descriptor component_iterator_descriptor_create(const world_components* world_components, cecs_arena* iterator_temporary_arena, components_search_groups search_groups) {
-    list sized_component_ids = LIST_CREATE_WITH_CAPACITY(component_id, iterator_temporary_arena, search_groups.group_count);
+    cecs_dynamic_array sized_component_ids = CECS_DYNAMIC_ARRAY_CREATE_WITH_CAPACITY(component_id, iterator_temporary_arena, search_groups.group_count);
     size_t sized_component_count = 0;
     size_t component_count = 0;
     size_t max_component_count = 0;
     for (size_t i = 0; i < search_groups.group_count; i++) {
-        components_type_info info = TAGGED_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
+        components_type_info info = CECS_UNION_GET_UNCHECKED(COMPONENTS_ALL_ID, search_groups.groups[i]);
         component_count += info.component_count;
         max_component_count = max(max_component_count, info.component_count);
 
-        if (!TAGGED_UNION_IS(COMPONENTS_NONE_ID, components_search_group, search_groups.groups[i])) {
+        if (!CECS_UNION_IS(COMPONENTS_NONE_ID, components_search_group, search_groups.groups[i])) {
             sized_component_count += component_iterator_descriptor_append_sized_component_ids(
                 world_components,
                 iterator_temporary_arena,
@@ -223,7 +223,7 @@ component_iterator component_iterator_create_ranged(component_iterator_descripto
 }
 
 bool component_iterator_done(const component_iterator* it) {
-    return !exclusive_range_contains(it->entity_range, it->entities_iterator.current_bit_index)
+    return !cecs_exclusive_range_contains(it->entity_range, it->entities_iterator.current_bit_index)
         || cecs_hibitset_iterator_done(&it->entities_iterator);
 }
 

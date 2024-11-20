@@ -16,7 +16,7 @@
 #define COMPONENTS_OR_ALL_ID components_or_all
 #define COMPONENTS_AND_ANY_ID components_and_any
 
-typedef TAGGED_UNION_STRUCT(
+typedef CECS_UNION_STRUCT(
     components_search_group,
     components_type_info,
     COMPONENTS_ALL_ID,
@@ -31,7 +31,7 @@ typedef TAGGED_UNION_STRUCT(
 ) components_search_group;
 
 #define COMPONENTS_SEARCH_GROUP_CREATE(components_type_info, variant) \
-    ((components_search_group)TAGGED_UNION_CREATE(variant, components_search_group, components_type_info))
+    ((components_search_group)CECS_UNION_CREATE(variant, components_search_group, components_type_info))
 
 #define COMPONENTS_ALL(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), COMPONENTS_ALL_ID)
 #define COMPONENTS_ANY(...) COMPONENTS_SEARCH_GROUP_CREATE(COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), COMPONENTS_ANY_ID)
@@ -92,7 +92,7 @@ size_t component_iterator_descriptor_append_sized_component_ids(
     const world_components *world_components,
     cecs_arena *iterator_temporary_arena,
     components_type_info components_type_info,
-    list *sized_component_ids
+    cecs_dynamic_array *sized_component_ids
 );
 
 cecs_hibitset component_iterator_descriptor_get_search_groups_bitset(

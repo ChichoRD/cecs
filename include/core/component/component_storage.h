@@ -3,12 +3,12 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include "../../containers/list.h"
-#include "../../containers/displaced_set.h"
+#include "../../containers/cecs_dynamic_array.h"
+#include "../../containers/cecs_displaced_set.h"
 #include "../../containers/cecs_bitset.h"
-#include "../../containers/range.h"
+#include "../../containers/cecs_range.h"
 #include "../../containers/cecs_arena.h"
-#include "../../containers/tagged_union.h"
+#include "../../containers/cecs_union.h"
 #include "entity/component_type.h"
 #include "entity/entity.h"
 
@@ -20,7 +20,7 @@ typedef struct storage_info {
 } storage_info;
 
 
-typedef OPTION_STRUCT(void *, optional_component) optional_component;
+typedef CECS_OPTION_STRUCT(void *, optional_component) optional_component;
 
 typedef storage_info info(const void *self);
 typedef optional_component get_component(const void *self, entity_id id, size_t size);
@@ -57,7 +57,7 @@ unit_component_storage unit_component_storage_create();
 
 
 typedef struct indirect_component_storgage {
-    displaced_set component_references;
+    cecs_displaced_set component_references;
 } indirect_component_storage;
 
 const storage_info indirect_component_storage_info(const indirect_component_storage *self);
@@ -79,7 +79,7 @@ static const component_storage_functions indirect_component_storage_functions = 
 
 
 typedef struct sparse_component_storage {
-    displaced_set components;
+    cecs_displaced_set components;
 } sparse_component_storage;
 
 const storage_info sparse_component_storage_info(const sparse_component_storage *self);
@@ -101,7 +101,7 @@ static const component_storage_functions sparse_component_storage_functions = {
 
 // TODO: add more storage types
 
-typedef TAGGED_UNION_STRUCT(
+typedef CECS_UNION_STRUCT(
     component_storage_union,
     sparse_component_storage,
     sparse_component_storage,
@@ -124,15 +124,15 @@ component_storage component_storage_create_indirect(cecs_arena *a, component_sto
 
 bool component_storage_has(const component_storage *self, entity_id id);
 
-const list *component_storage_components(const component_storage *self);
+const cecs_dynamic_array *component_storage_components(const component_storage *self);
 
 inline component_storage_functions component_storage_get_functions(const component_storage *self) {
-    TAGGED_UNION_MATCH(self->storage) {
-        case TAGGED_UNION_VARIANT(sparse_component_storage, component_storage_union):
+    CECS_UNION_MATCH(self->storage) {
+        case CECS_UNION_VARIANT(sparse_component_storage, component_storage_union):
             return sparse_component_storage_functions;
-        case TAGGED_UNION_VARIANT(unit_component_storage, component_storage_union):
+        case CECS_UNION_VARIANT(unit_component_storage, component_storage_union):
             return unit_component_storage_functions;
-        case TAGGED_UNION_VARIANT(indirect_component_storage, component_storage_union):
+        case CECS_UNION_VARIANT(indirect_component_storage, component_storage_union):
             return indirect_component_storage_functions;
         default:
             {

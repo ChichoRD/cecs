@@ -7,8 +7,8 @@
 #include <assert.h>
 #include "../../types/macro_utils.h"
 #include "../../types/type_id.h"
-#include "../../containers/tagged_union.h"
-#include "../../containers/sparse_set.h"
+#include "../../containers/cecs_union.h"
+#include "../../containers/cecs_sparse_set.h"
 #include "../../containers/cecs_bitset.h"
 #include "../../containers/cecs_arena.h"
 #include "entity/entity.h"
@@ -28,12 +28,12 @@ typedef struct component_discard {
     size_t size;
 } component_discard;
 
-typedef OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
+typedef CECS_OPTION_STRUCT(size_t *, optional_component_size) optional_component_size;
 typedef struct world_components {
     cecs_arena storages_arena;
     cecs_arena components_arena;
-    paged_sparse_set component_storages;
-    paged_sparse_set component_sizes;
+    cecs_paged_sparse_set component_storages;
+    cecs_paged_sparse_set component_sizes;
     world_components_checksum checksum;
     component_discard discard;
 } world_components;
@@ -47,7 +47,7 @@ size_t world_components_get_component_storage_count(const world_components *wc);
 optional_component_size world_components_get_component_size(const world_components *wc, component_id component_id);
 size_t world_components_get_component_size_unchecked(const world_components *wc, component_id component_id);
 
-typedef OPTION_STRUCT(component_storage *, optional_component_storage) optional_component_storage;
+typedef CECS_OPTION_STRUCT(component_storage *, optional_component_storage) optional_component_storage;
 optional_component_storage world_components_get_component_storage(const world_components *wc, component_id component_id);
 component_storage *world_components_get_component_storage_unchecked(const world_components *wc, component_id component_id);
 
@@ -57,7 +57,7 @@ typedef component_id indirect_component_id;
 typedef struct component_storage_descriptor {
     bool is_size_known;
     size_t capacity;
-    OPTION_STRUCT(component_id, indirect_component_id) indirect_component_id;
+    CECS_OPTION_STRUCT(component_id, indirect_component_id) indirect_component_id;
 } component_storage_descriptor;
 
 component_storage component_storage_descriptor_build(

@@ -563,14 +563,14 @@ bool render(const world *w, cecs_arena *iteration_arena) {
     fflush(stdout);
     //system("cls");
     cecs_arena screen_arena = cecs_arena_create();
-    list screen = list_create_with_capacity(&screen_arena, sizeof(char) * BOARD_WIDTH * BOARD_HEIGHT);
+    cecs_dynamic_array screen = cecs_dynamic_array_create_with_capacity(&screen_arena, sizeof(char) * BOARD_WIDTH * BOARD_HEIGHT);
     for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
         for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
             size_t i = 0;
             while (new_console_buffer.buffer[x][y][i] != '\0')
-                list_add(&screen, &screen_arena, &new_console_buffer.buffer[x][y][i++], sizeof(char));        
+                cecs_dynamic_array_add(&screen, &screen_arena, &new_console_buffer.buffer[x][y][i++], sizeof(char));        
         }
-        list_add(&screen, &screen_arena, "\n", sizeof(char));
+        cecs_dynamic_array_add(&screen, &screen_arena, "\n", sizeof(char));
     }
     printf("%s", (char *)screen.elements);
     cecs_arena_free(&screen_arena);

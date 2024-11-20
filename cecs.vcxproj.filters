@@ -71,7 +71,7 @@
     <ClInclude Include="include\entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\list.h">
+    <ClInclude Include="include\cecs_dynamic_array.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\map.h">
@@ -98,22 +98,22 @@
     <ClInclude Include="include\containers\cecs_bitset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\displaced_set.h">
+    <ClInclude Include="include\containers\cecs_displaced_set.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\list.h">
+    <ClInclude Include="include\containers\cecs_dynamic_array.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\queue.h">
+    <ClInclude Include="include\containers\cecs_queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\range.h">
+    <ClInclude Include="include\containers\cecs_range.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\sparse_set.h">
+    <ClInclude Include="include\containers\cecs_sparse_set.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\containers\tagged_union.h">
+    <ClInclude Include="include\containers\cecs_union.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\core\component\entity\component_type.h">

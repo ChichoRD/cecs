@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "../containers/tagged_union.h"
+#include "../containers/cecs_union.h"
 #include "component/component_iterator.h"
 #include "world.h"
 
@@ -23,10 +23,10 @@ inline world_system world_system_create(components_search_groups search_groups) 
 #define WORLD_SYSTEM_CREATE_FROM_IDS(...) WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL_IDS(__VA_ARGS__))
 
 typedef size_t entity_count;
-typedef TAGGED_UNION_STRUCT(
+typedef CECS_UNION_STRUCT(
     system_predicate_data,
-    none,
-    none,
+    cecs_none,
+    cecs_none,
     double,
     delta_time,
     void *,
@@ -34,23 +34,23 @@ typedef TAGGED_UNION_STRUCT(
 ) system_predicate_data;
 
 inline system_predicate_data system_predicate_data_create_none() {
-    return (system_predicate_data)TAGGED_UNION_CREATE(none, system_predicate_data, NONE);
+    return (system_predicate_data)CECS_UNION_CREATE(cecs_none, system_predicate_data, CECS_NONE);
 }
 
 inline system_predicate_data system_predicate_data_create_delta_time(double delta_time_seconds) {
-    return (system_predicate_data)TAGGED_UNION_CREATE(delta_time, system_predicate_data, delta_time_seconds);
+    return (system_predicate_data)CECS_UNION_CREATE(delta_time, system_predicate_data, delta_time_seconds);
 }
 
 inline system_predicate_data system_predicate_data_create_user_data(void *data) {
-    return (system_predicate_data)TAGGED_UNION_CREATE(user_data, system_predicate_data, data);
+    return (system_predicate_data)CECS_UNION_CREATE(user_data, system_predicate_data, data);
 }
 
 inline double system_predicate_data_delta_time(system_predicate_data data) {
-    return TAGGED_UNION_GET_UNCHECKED(delta_time, data);
+    return CECS_UNION_GET_UNCHECKED(delta_time, data);
 }
 
 inline void *system_predicate_data_user_data(system_predicate_data data) {
-    return TAGGED_UNION_GET_UNCHECKED(user_data, data);
+    return CECS_UNION_GET_UNCHECKED(user_data, data);
 }
 
 typedef void system_predicate(const raw_iteration_handle_reference handle, world *world, system_predicate_data data);
@@ -121,15 +121,15 @@ entity_count world_system_iter_range_all(
 
 
 typedef struct dynamic_world_system {
-    list component_ids;
-    list components_search_groups;
+    cecs_dynamic_array component_ids;
+    cecs_dynamic_array components_search_groups;
 } dynamic_world_system;
 
 dynamic_world_system dynamic_world_system_create();
 
 dynamic_world_system dynamic_world_system_create_from(components_search_groups s, cecs_arena *a);
 
-typedef exclusive_range components_search_group_range; 
+typedef cecs_exclusive_range components_search_group_range; 
 components_search_group_range dynamic_world_system_add(dynamic_world_system *d, cecs_arena *a, components_search_group s);
 
 components_search_group_range dynamic_world_system_add_range(dynamic_world_system *d, cecs_arena *a, components_search_groups s);

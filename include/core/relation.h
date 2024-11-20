@@ -61,10 +61,10 @@ inline relation_id relation_id_create(relation_id_descriptor descriptor) {
     relation_id_create(relation_id_descriptor_create_tag(COMPONENT_ID(component_type), target_id))
 
 
-typedef counted_set associated_entity_ids;
+typedef cecs_counted_set associated_entity_ids;
 typedef struct world_relations {
     cecs_arena entity_associated_ids_arena;
-    sparse_set entity_associated_ids;
+    cecs_sparse_set entity_associated_ids;
 } world_relations;
 
 world_relations world_relations_create(size_t entity_capacity);
@@ -77,7 +77,7 @@ entity_id world_relations_set_associated_id(world_relations *wr, entity_id id, r
 
 entity_id world_relations_get_associated_id(world_relations *wr, entity_id id, relation_target target);
 
-typedef counted_set_iterator associated_entity_ids_iterator;
+typedef cecs_counted_set_iterator associated_entity_ids_iterator;
 associated_entity_ids_iterator world_relations_get_associated_ids(world_relations *wr, entity_id id);
 
 entity_id world_relations_increment_associated_id_or_set(

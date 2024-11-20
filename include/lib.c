@@ -116,7 +116,7 @@ scene_world_system scene_world_system_create(scene_id scene, cecs_arena* a) {
         ),
         .scene = scene,
     };
-    s.scene_group_index = LIST_COUNT(components_search_group, &s.world_system.components_search_groups) - 1;
+    s.scene_group_index = CECS_DYNAMIC_ARRAY_COUNT(components_search_group, &s.world_system.components_search_groups) - 1;
     return s;
 }
 

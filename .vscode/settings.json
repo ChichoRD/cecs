@@ -2,8 +2,8 @@
     "files.associations": {
         "*.h": "c",
         "iterator": "c",
-        "list": "c",
-        "initializer_list": "c",
+        "cecs_dynamic_array": "c",
+        "initializer_cecs_dynamic_array": "c",
         "utility": "c",
         "xutility": "c",
         "compare": "c",

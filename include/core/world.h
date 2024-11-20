@@ -5,7 +5,7 @@
 #include <memory.h>
 #include <stdbool.h>
 #include "../containers/cecs_arena.h"
-#include "../containers/list.h"
+#include "../containers/cecs_dynamic_array.h"
 #include "component/entity/entity.h"
 #include "component/entity/tag.h"
 #include "component/entity/game_component.h"

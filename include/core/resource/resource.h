@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "../../containers/cecs_arena.h"
-#include "../../containers/displaced_set.h"
+#include "../../containers/cecs_displaced_set.h"
 #include "../../types/type_id.h"
 #include "../../types/macro_utils.h"
 
@@ -26,7 +26,7 @@ typedef struct resource_discard {
 
 typedef struct world_resources {
     cecs_arena resources_arena;
-    displaced_set resource_handles;
+    cecs_displaced_set resource_handles;
     resource_discard discard;
 } world_resources;
 

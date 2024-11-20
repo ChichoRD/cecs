@@ -17,8 +17,8 @@ void* world_get_component(const world* w, entity_id entity_id, component_id comp
 
 bool world_try_get_component(const world* w, entity_id entity_id, component_id component_id, void** out_component) {
     optional_component component = world_components_get_component(&w->components, entity_id, component_id);
-    if (OPTION_IS_SOME(optional_component, component)) {
-        *out_component = OPTION_GET(optional_component, component);
+    if (CECS_OPTION_IS_SOME(optional_component, component)) {
+        *out_component = CECS_OPTION_GET(optional_component, component);
         return true;
     }
     else {
@@ -169,7 +169,7 @@ entity_id world_copy_entity_onto(world* w, entity_id destination, entity_id sour
             destination,
             component_storage_info(storage.storage).is_unit_type_storage
             ? NULL
-            : OPTION_GET(optional_component, component_storage_get(
+            : CECS_OPTION_GET(optional_component, component_storage_get(
                 storage.storage,
                 source,
                 storage.component_size
@@ -209,7 +209,7 @@ void* world_copy_entity_onto_and_grab(world* w, entity_id destination, entity_id
             destination,
             component_storage_info(storage.storage).is_unit_type_storage
             ? NULL
-            : OPTION_GET(optional_component, component_storage_get(
+            : CECS_OPTION_GET(optional_component, component_storage_get(
                 storage.storage,
                 source,
                 storage.component_size
@@ -217,8 +217,8 @@ void* world_copy_entity_onto_and_grab(world* w, entity_id destination, entity_id
             storage.component_size
         );
 
-        if (OPTION_IS_SOME(optional_component, copied_component) && grab_component_id == storage.component_id) {
-            grabbed = OPTION_GET(optional_component, copied_component);
+        if (CECS_OPTION_IS_SOME(optional_component, copied_component) && grab_component_id == storage.component_id) {
+            grabbed = CECS_OPTION_GET(optional_component, copied_component);
         }
     }
 
@@ -282,7 +282,7 @@ void* world_set_component_relation(world* w, entity_id id, component_id componen
         size,
         (component_storage_descriptor) {
         .capacity = 1,
-            .indirect_component_id = OPTION_CREATE_SOME(indirect_component_id, component_id),
+            .indirect_component_id = CECS_OPTION_CREATE_SOME(indirect_component_id, component_id),
             .is_size_known = true,
     }
     );

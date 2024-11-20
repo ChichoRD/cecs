@@ -1,5 +1,5 @@
-#ifndef ARENA_H
-#define ARENA_H
+#ifndef CECS_ARENA_H
+#define CECS_ARENA_H
 
 #include <stdint.h>
 #include <stdbool.h>

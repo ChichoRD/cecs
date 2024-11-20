@@ -155,12 +155,12 @@
     <ClInclude Include="include\component.h" />
     <ClInclude Include="include\containers\cecs_arena.h" />
     <ClInclude Include="include\containers\cecs_bitset.h" />
-    <ClInclude Include="include\containers\displaced_set.h" />
-    <ClInclude Include="include\containers\list.h" />
-    <ClInclude Include="include\containers\queue.h" />
-    <ClInclude Include="include\containers\range.h" />
-    <ClInclude Include="include\containers\sparse_set.h" />
-    <ClInclude Include="include\containers\tagged_union.h" />
+    <ClInclude Include="include\containers\cecs_displaced_set.h" />
+    <ClInclude Include="include\containers\cecs_dynamic_array.h" />
+    <ClInclude Include="include\containers\cecs_queue.h" />
+    <ClInclude Include="include\containers\cecs_range.h" />
+    <ClInclude Include="include\containers\cecs_sparse_set.h" />
+    <ClInclude Include="include\containers\cecs_union.h" />
     <ClInclude Include="include\core\component\component.h" />
     <ClInclude Include="include\core\component\component_iterator.h" />
     <ClInclude Include="include\core\component\component_storage.h" />
@@ -174,7 +174,7 @@
     <ClInclude Include="include\core\world.h" />
     <ClInclude Include="include\entity.h" />
     <ClInclude Include="include\lib.h" />
-    <ClInclude Include="include\list.h" />
+    <ClInclude Include="include\cecs_dynamic_array.h" />
     <ClInclude Include="include\map.h" />
     <ClInclude Include="include\query.h" />
     <ClInclude Include="include\resource.h" />

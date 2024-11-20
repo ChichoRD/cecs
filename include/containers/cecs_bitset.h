@@ -1,13 +1,13 @@
-#ifndef BITSET_H
-#define BITSET_H
+#ifndef CECS_BITSET_H
+#define CECS_BITSET_H
 
 #include <stdint.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <intrin.h>
-#include "list.h"
-#include "range.h"
-#include "tagged_union.h"
+#include "cecs_dynamic_array.h"
+#include "cecs_range.h"
+#include "cecs_union.h"
 
 #define CECS_BIT_PAGE_SIZE_LOG2 2
 #define CECS_BIT_PAGE_SIZE (1 << CECS_BIT_PAGE_SIZE_LOG2)
@@ -60,10 +60,10 @@ inline size_t cecs_layer_word_bit_index(size_t bit_index, size_t layer) {
     return cecs_layer_bit_index(bit_index, layer) & (CECS_BIT_WORD_BIT_COUNT - 1);
 }
 
-typedef exclusive_range cecs_word_range;
+typedef cecs_exclusive_range cecs_word_range;
 
 typedef struct cecs_bitset {
-    list bit_words;
+    cecs_dynamic_array bit_words;
     cecs_word_range word_range;
 } cecs_bitset;
 
@@ -135,21 +135,21 @@ void cecs_hibitset_unset(cecs_hibitset *b, cecs_arena *a, size_t bit_index);
 bool cecs_hibitset_is_set(const cecs_hibitset *b, size_t bit_index);
 
 #pragma intrinsic(_BitScanForward)
-bool cecs_hibitset_is_set_skip_unset(const cecs_hibitset *b, size_t bit_index, ssize_t *out_unset_bit_skip_count);
+bool cecs_hibitset_is_set_skip_unset(const cecs_hibitset *b, size_t bit_index, cecs_ssize_t *out_unset_bit_skip_count);
 
 #pragma intrinsic(_BitScanReverse)
-bool cecs_hibitset_is_set_skip_unset_reverse(const cecs_hibitset *b, size_t bit_index, ssize_t *out_unset_bit_skip_count);
+bool cecs_hibitset_is_set_skip_unset_reverse(const cecs_hibitset *b, size_t bit_index, cecs_ssize_t *out_unset_bit_skip_count);
 
 
 bit_word cecs_hibitset_get_word(const cecs_hibitset *b, size_t bit_index);
 
-exclusive_range cecs_hibitset_bit_range(const cecs_hibitset *b);
+cecs_exclusive_range cecs_hibitset_bit_range(const cecs_hibitset *b);
 
 bool cecs_hibitset_bit_in_range(const cecs_hibitset *b, size_t bit_index);
 
 
 typedef struct cecs_hibitset_iterator {
-    const COW_STRUCT(const cecs_hibitset, cecs_hibitset) hibitset;
+    const CECS_COW_STRUCT(const cecs_hibitset, cecs_hibitset) hibitset;
     size_t current_bit_index;
 } cecs_hibitset_iterator;
 
@@ -166,7 +166,7 @@ cecs_hibitset_iterator cecs_hibitset_iterator_create_owned_at_first(const cecs_h
 cecs_hibitset_iterator cecs_hibitset_iterator_create_owned_at_last(const cecs_hibitset b);
 
 inline bool cecs_hibitset_iterator_done(const cecs_hibitset_iterator *it) {
-    return !cecs_hibitset_bit_in_range(COW_GET_REFERENCE(cecs_hibitset, it->hibitset), it->current_bit_index);
+    return !cecs_hibitset_bit_in_range(CECS_COW_GET_REFERENCE(cecs_hibitset, it->hibitset), it->current_bit_index);
 }
 
 inline size_t cecs_hibitset_iterator_next(cecs_hibitset_iterator *it) {
@@ -186,7 +186,7 @@ inline size_t cecs_hibitset_iterator_current(const cecs_hibitset_iterator *it) {
 }
 
 inline bool cecs_hibitset_iterator_current_is_set(const cecs_hibitset_iterator *it) {
-    return cecs_hibitset_is_set(COW_GET_REFERENCE(cecs_hibitset, it->hibitset), cecs_hibitset_iterator_current(it));
+    return cecs_hibitset_is_set(CECS_COW_GET_REFERENCE(cecs_hibitset, it->hibitset), cecs_hibitset_iterator_current(it));
 }
 
 
