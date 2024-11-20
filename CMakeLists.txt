@@ -22,7 +22,7 @@ file(
     GLOB_RECURSE
     CECS_SOURCES
     CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/*.c"
 )
 
 
@@ -33,13 +33,13 @@ add_compile_options(
 
 add_executable(
     ${PROJECT_NAME}
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
     ${CECS_SOURCES}
 )
 target_include_directories(
     ${PROJECT_NAME}
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
 )
 
 
@@ -52,5 +52,5 @@ add_library(
 target_include_directories(
     cecs
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
 )

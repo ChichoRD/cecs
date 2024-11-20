@@ -125,7 +125,7 @@ typedef struct cecs_dynamic_world_system {
     cecs_dynamic_array components_search_groups;
 } cecs_dynamic_world_system;
 
-cecs_dynamic_world_system cecs_dynamic_world_system_create();
+cecs_dynamic_world_system cecs_dynamic_world_system_create(void);
 
 cecs_dynamic_world_system cecs_dynamic_world_system_create_from(cecs_components_search_groups s, cecs_arena *a);
 

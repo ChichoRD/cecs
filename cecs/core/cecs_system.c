@@ -79,7 +79,7 @@ cecs_entity_count cecs_world_system_iter_range_all(const cecs_world_system s, ce
     return count;
 }
 
-cecs_dynamic_world_system cecs_dynamic_world_system_create() {
+cecs_dynamic_world_system cecs_dynamic_world_system_create(void) {
     return (cecs_dynamic_world_system) {
         .component_ids = cecs_dynamic_array_create(),
             .components_search_groups = cecs_dynamic_array_create(),
