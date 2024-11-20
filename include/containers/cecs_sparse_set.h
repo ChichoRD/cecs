@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <intrin.h>
 #include "cecs_union.h"
-#include "../types/macro_utils.h"
+#include "../types/cecs_macro_utils.h"
 #include "cecs_range.h"
 #include "cecs_arena.h"
 #include "cecs_dynamic_array.h"
@@ -25,11 +25,11 @@
     ASSERT_DEREFERENCE_EQUALS_SIZE_CASE(type, element_ref, value)
 #define CECS_ASSERT_INTEGER_DEREFERENCE_EQUALS(element_size, element_ref, value) \
     switch (element_size) { \
-        MAP_CONST2( \
+        CECS_MAP_CONST2( \
             _CECS_ASSERT_DEREFERENCE_EQUALS_SIZE_CASE_SELECT, \
             element_ref, \
             value, \
-            SEMICOLON, \
+            CECS_SEMICOLON, \
             uint8_t, uint16_t, uint32_t, uint64_t \
         ); \
         default: \
@@ -44,15 +44,15 @@ typedef CECS_OPTION_STRUCT(void *, cecs_optional_element) cecs_optional_element;
 typedef cecs_dynamic_array cecs_any_elements;
 typedef cecs_dynamic_array cecs_integer_elements;
 typedef CECS_UNION_STRUCT(
-    sparse_set_elements,
+    cecs_sparse_set_elements,
     cecs_dynamic_array,
     cecs_any_elements,
     cecs_dynamic_array,
     cecs_integer_elements
-) sparse_set_elements;
+) cecs_sparse_set_elements;
 
 typedef struct cecs_sparse_set {
-    sparse_set_elements elements;
+    cecs_sparse_set_elements elements;
     cecs_displaced_set indices;
     cecs_dynamic_array keys;
 } cecs_sparse_set;
@@ -124,7 +124,7 @@ static_assert(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT == (sizeof(size_t) * 8), "CECS
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2 (CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 - CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE (1 << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2)
 typedef struct cecs_paged_sparse_set {
-    sparse_set_elements elements;
+    cecs_sparse_set_elements elements;
     cecs_dynamic_array keys;
     cecs_displaced_set indices[CECS_PAGED_SPARSE_SET_PAGE_COUNT];
 } cecs_paged_sparse_set;

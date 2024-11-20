@@ -2,7 +2,7 @@
 
 cecs_bitset cecs_bitset_create(cecs_arena* a, size_t capacity) {
     cecs_bitset b = (cecs_bitset){
-        .bit_words = CECS_DYNAMIC_ARRAY_CREATE_WITH_CAPACITY(bit_word, a, capacity),
+        .bit_words = CECS_DYNAMIC_ARRAY_CREATE_WITH_CAPACITY(cecs_bit_word, a, capacity),
         .word_range = { 0, 0 },
     };
     //bit_word *buffer = calloc(capacity, sizeof(bit_word));
@@ -18,8 +18,8 @@ void cecs_bitset_unset_all(cecs_bitset* b) {
 
 cecs_word_range cecs_bitset_expand(cecs_bitset* b, cecs_arena* a, size_t word_index) {
     if (cecs_exclusive_range_is_empty(b->word_range)) {
-        assert(CECS_DYNAMIC_ARRAY_COUNT(bit_word, &b->bit_words) == 0);
-        CECS_DYNAMIC_ARRAY_ADD(bit_word, &b->bit_words, a, &((bit_word) { 0 }));
+        assert(CECS_DYNAMIC_ARRAY_COUNT(cecs_bit_word, &b->bit_words) == 0);
+        CECS_DYNAMIC_ARRAY_ADD(cecs_bit_word, &b->bit_words, a, &((cecs_bit_word) { 0 }));
         return (b->word_range = cecs_exclusive_range_singleton(word_index));
     }
     cecs_word_range expanded_range = cecs_exclusive_range_from(
@@ -34,21 +34,21 @@ cecs_word_range cecs_bitset_expand(cecs_bitset* b, cecs_arena* a, size_t word_in
     cecs_word_range range1 = cecs_exclusive_range_from(expansion_ranges.ranges[1]);
     if (!cecs_exclusive_range_is_empty(range0)) {
         size_t missing_count = cecs_exclusive_range_length(range0);
-        bit_word* buffer = calloc(missing_count, sizeof(bit_word));
-        CECS_DYNAMIC_ARRAY_INSERT_RANGE(bit_word, &b->bit_words, a, 0, buffer, missing_count);
+        cecs_bit_word* buffer = calloc(missing_count, sizeof(cecs_bit_word));
+        CECS_DYNAMIC_ARRAY_INSERT_RANGE(cecs_bit_word, &b->bit_words, a, 0, buffer, missing_count);
         free(buffer);
     }
     else if (!cecs_exclusive_range_is_empty(range1)) {
         size_t missing_count = cecs_exclusive_range_length(range1);
-        bit_word* buffer = calloc(missing_count, sizeof(bit_word));
-        CECS_DYNAMIC_ARRAY_ADD_RANGE(bit_word, &b->bit_words, a, buffer, missing_count);
+        cecs_bit_word* buffer = calloc(missing_count, sizeof(cecs_bit_word));
+        CECS_DYNAMIC_ARRAY_ADD_RANGE(cecs_bit_word, &b->bit_words, a, buffer, missing_count);
         free(buffer);
     }
 
     return (b->word_range = expanded_range);
 }
 
-bit_word cecs_bitset_set(cecs_bitset* b, cecs_arena* a, size_t bit_index) {
+cecs_bit_word cecs_bitset_set(cecs_bitset* b, cecs_arena* a, size_t bit_index) {
     size_t word_index = cecs_layer_word_index(bit_index, 0);
     if (!cecs_exclusive_range_contains(b->word_range, word_index)) {
         cecs_bitset_expand(b, a, word_index);
@@ -59,11 +59,11 @@ bit_word cecs_bitset_set(cecs_bitset* b, cecs_arena* a, size_t bit_index) {
         && cecs_dynamic_array_index < cecs_exclusive_range_length(b->word_range)
         && "Index out of bounds, should have expanded or expansion failed"
     );
-    bit_word* w = CECS_DYNAMIC_ARRAY_GET(bit_word, &b->bit_words, cecs_dynamic_array_index);
-    return (*w |= (bit_word)1 << cecs_layer_word_bit_index(bit_index, 0));
+    cecs_bit_word* w = CECS_DYNAMIC_ARRAY_GET(cecs_bit_word, &b->bit_words, cecs_dynamic_array_index);
+    return (*w |= (cecs_bit_word)1 << cecs_layer_word_bit_index(bit_index, 0));
 }
 
-bit_word cecs_bitset_unset(cecs_bitset* b, cecs_arena* a, size_t bit_index) {
+cecs_bit_word cecs_bitset_unset(cecs_bitset* b, cecs_arena* a, size_t bit_index) {
     size_t word_index = cecs_layer_word_index(bit_index, 0);
     if (!cecs_exclusive_range_contains(b->word_range, word_index)) {
         cecs_bitset_expand(b, a, word_index);
@@ -74,44 +74,44 @@ bit_word cecs_bitset_unset(cecs_bitset* b, cecs_arena* a, size_t bit_index) {
         && cecs_dynamic_array_index < cecs_exclusive_range_length(b->word_range)
         && "Index out of bounds, should have expanded or expansion failed"
     );
-    bit_word* w = CECS_DYNAMIC_ARRAY_GET(bit_word, &b->bit_words, cecs_dynamic_array_index);
-    return (*w &= ~((bit_word)1 << cecs_layer_word_bit_index(bit_index, 0)));
+    cecs_bit_word* w = CECS_DYNAMIC_ARRAY_GET(cecs_bit_word, &b->bit_words, cecs_dynamic_array_index);
+    return (*w &= ~((cecs_bit_word)1 << cecs_layer_word_bit_index(bit_index, 0)));
 }
 
-bit_word cecs_bitset_get_word(const cecs_bitset* b, size_t bit_index) {
+cecs_bit_word cecs_bitset_get_word(const cecs_bitset* b, size_t bit_index) {
     size_t word_index = cecs_layer_word_index(bit_index, 0);
     if (!cecs_exclusive_range_contains(b->word_range, word_index)) {
-        return (bit_word)0;
+        return (cecs_bit_word)0;
     }
     cecs_ssize_t cecs_dynamic_array_index = (cecs_ssize_t)word_index - b->word_range.start;
-    bit_word* w = CECS_DYNAMIC_ARRAY_GET(bit_word, &b->bit_words, cecs_dynamic_array_index);
+    cecs_bit_word* w = CECS_DYNAMIC_ARRAY_GET(cecs_bit_word, &b->bit_words, cecs_dynamic_array_index);
     return *w;
 }
 
 bool cecs_bitset_is_set(const cecs_bitset* b, size_t bit_index) {
     return (cecs_bitset_get_word(b, bit_index)
-        & ((bit_word)1 << cecs_layer_word_bit_index(bit_index, 0))) != 0;
+        & ((cecs_bit_word)1 << cecs_layer_word_bit_index(bit_index, 0))) != 0;
 }
 
 bool cecs_bitset_bit_in_range(const cecs_bitset* b, size_t bit_index) {
     return cecs_exclusive_range_contains(b->word_range, cecs_layer_word_index(bit_index, 0));
 }
 
-bitset_iterator cecs_bitset_iterator_create(const cecs_bitset* b) {
-    return (bitset_iterator) {
+cecs_bitset_iterator cecs_bitset_iterator_create(const cecs_bitset* b) {
+    return (cecs_bitset_iterator) {
         .bitset = b,
             .current_bit_index = cecs_bit0_from_layer_word_index(b->word_range.start, 0),
     };
 }
 
-size_t cecs_bitset_iterator_next_set(bitset_iterator* it) {
+size_t cecs_bitset_iterator_next_set(cecs_bitset_iterator* it) {
     do {
         cecs_bitset_iterator_next(it);
     } while (!cecs_bitset_iterator_done(it) && !cecs_bitset_is_set(it->bitset, it->current_bit_index));
     return it->current_bit_index;
 }
 
-size_t cecs_bitset_iterator_next_unset(bitset_iterator* it) {
+size_t cecs_bitset_iterator_next_unset(cecs_bitset_iterator* it) {
     do {
         cecs_bitset_iterator_next(it);
     } while (!cecs_bitset_iterator_done(it) && cecs_bitset_is_set(it->bitset, it->current_bit_index));
@@ -142,10 +142,10 @@ void cecs_hibitset_set(cecs_hibitset* b, cecs_arena* a, size_t bit_index) {
 void cecs_hibitset_unset(cecs_hibitset* b, cecs_arena* a, size_t bit_index) {
     for (size_t layer = 0; layer < CECS_BIT_LAYER_COUNT; layer++) {
         size_t layer_bit = cecs_layer_bit_index(bit_index, layer);
-        bit_word unset_word = cecs_bitset_unset(&b->bitsets[layer], a, layer_bit);
+        cecs_bit_word unset_word = cecs_bitset_unset(&b->bitsets[layer], a, layer_bit);
 
         size_t layer_word_bit_page = cecs_layer_word_bit_index(bit_index, layer) / CECS_BIT_PAGE_SIZE;
-        bit_word unset_word_page = unset_word & cecs_page_mask(layer_word_bit_page);
+        cecs_bit_word unset_word_page = unset_word & cecs_page_mask(layer_word_bit_page);
 
         if (unset_word_page != 0) {
             break;
@@ -161,11 +161,11 @@ bool cecs_hibitset_is_set_skip_unset(const cecs_hibitset* b, size_t bit_index, c
     *out_unset_bit_skip_count = 1;
     for (cecs_ssize_t layer = CECS_BIT_LAYER_COUNT - 1; layer >= 0; layer--) {
         size_t layer_bit = cecs_layer_bit_index(bit_index, layer);
-        bit_word word = cecs_bitset_get_word(&b->bitsets[layer], layer_bit);
+        cecs_bit_word word = cecs_bitset_get_word(&b->bitsets[layer], layer_bit);
         size_t layer_word_bit_shift = layer_bit & (CECS_BIT_WORD_BIT_COUNT - 1);
-        bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
+        cecs_bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
 
-        if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
+        if ((word_shifted_to_bit & (cecs_bit_word)1) == (cecs_bit_word)0) {
             unsigned long unset_low = 1;
             unsigned long unset_high = 0;
             unsigned long word_low = (unsigned long)word_shifted_to_bit;
@@ -196,11 +196,11 @@ bool cecs_hibitset_is_set_skip_unset_reverse(const cecs_hibitset* b, size_t bit_
     *out_unset_bit_skip_count = 1;
     for (cecs_ssize_t layer = CECS_BIT_LAYER_COUNT - 1; layer >= 0; layer--) {
         size_t layer_bit = cecs_layer_bit_index(bit_index, layer);
-        bit_word word = cecs_bitset_get_word(&b->bitsets[layer], layer_bit);
+        cecs_bit_word word = cecs_bitset_get_word(&b->bitsets[layer], layer_bit);
         size_t layer_word_bit_shift = layer_bit & (CECS_BIT_WORD_BIT_COUNT - 1);
-        bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
+        cecs_bit_word word_shifted_to_bit = word >> layer_word_bit_shift;
 
-        if ((word_shifted_to_bit & (bit_word)1) == (bit_word)0) {
+        if ((word_shifted_to_bit & (cecs_bit_word)1) == (cecs_bit_word)0) {
             unsigned long unset_low = 1;
             unsigned long unset_high = 0;
             unsigned long word_low = (unsigned long)word_shifted_to_bit;
@@ -227,7 +227,7 @@ bool cecs_hibitset_is_set_skip_unset_reverse(const cecs_hibitset* b, size_t bit_
     return true;
 }
 
-bit_word cecs_hibitset_get_word(const cecs_hibitset* b, size_t bit_index) {
+cecs_bit_word cecs_hibitset_get_word(const cecs_hibitset* b, size_t bit_index) {
     return cecs_bitset_get_word(&b->bitsets[0], bit_index);
 }
 

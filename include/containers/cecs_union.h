@@ -3,25 +3,25 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include "../types/macro_utils.h"
+#include "../types/cecs_macro_utils.h"
 
 
 #define _CECS_PREPEND_UNDERSCORE(x) _##x
 #define _CECS_PREPEND_UNDERSCORE_SELECT(type, identifier) _CECS_PREPEND_UNDERSCORE(identifier)
-#define CECS_UNION(...) CAT(cecs_union, MAP_PAIRS(_CECS_PREPEND_UNDERSCORE_SELECT, COMMA, __VA_ARGS__))
+#define CECS_UNION(...) CECS_CAT(cecs_union, CECS_MAP_PAIRS(_CECS_PREPEND_UNDERSCORE_SELECT, CECS_COMMA, __VA_ARGS__))
 
 #define _CECS_PREPEND_VALUE(x) value_##x
 #define _CECS_UNION_FIELD(type, identifier) type _CECS_PREPEND_VALUE(identifier);
 #define _CECS_PREPEND_VARIANT(x) Variant_##x
 #define _CECS_PREPEND_VARIANT_SELECT(type, identifier) _CECS_PREPEND_VARIANT(identifier)
-#define _CECS_UNION_VARIANT_FIELD(prefix, identifier) CAT3(prefix, _, identifier)
+#define _CECS_UNION_VARIANT_FIELD(prefix, identifier) CECS_CAT3(prefix, _, identifier)
 #define _CECS_UNION_STRUCT(identifier, prefix, ...) \
     struct identifier { \
         union { \
-            MAP_PAIRS(_CECS_UNION_FIELD, EMPTY, __VA_ARGS__) \
+            CECS_MAP_PAIRS(_CECS_UNION_FIELD, CECS_EMPTY, __VA_ARGS__) \
         }; \
         enum { \
-            MAP_CONST1(_CECS_UNION_VARIANT_FIELD, prefix, COMMA, MAP_PAIRS(_CECS_PREPEND_VARIANT_SELECT, COMMA, __VA_ARGS__)), \
+            CECS_MAP_CONST1(_CECS_UNION_VARIANT_FIELD, prefix, CECS_COMMA, CECS_MAP_PAIRS(_CECS_PREPEND_VARIANT_SELECT, CECS_COMMA, __VA_ARGS__)), \
         } variant; \
     }
 

@@ -5,9 +5,9 @@
 #include <windows.h>
 #include <time.h>
 #include <conio.h>
-#include "../include/lib.h"
+#include "../include/cecs_lib.h"
 #include "../include/color.h"
-#include "../include/core/relation.h"
+#include "../include/core/cecs_relation.h"
 
 
 #define TARGET_FPS 240.0
@@ -21,30 +21,30 @@ typedef struct v2_i16 {
 } v2_i16;
 
 typedef v2_i16 position;
-COMPONENT_IMPLEMENT(position);
+CECS_COMPONENT_IMPLEMENT(position);
 
 typedef v2_i16 velocity;
-COMPONENT_IMPLEMENT(velocity);
+CECS_COMPONENT_IMPLEMENT(velocity);
 
 typedef struct velocity_register {
     v2_i16 velocity;
 } velocity_register;
-COMPONENT_IMPLEMENT(velocity_register);
+CECS_COMPONENT_IMPLEMENT(velocity_register);
 
 typedef struct box {
     position corner_position;
     v2_i16 size;
 } box;
-COMPONENT_IMPLEMENT(box);
+CECS_COMPONENT_IMPLEMENT(box);
 
 typedef bool is_solid;
-TAG_IMPLEMENT(is_solid);
+CECS_TAG_IMPLEMENT(is_solid);
 
 typedef bool is_duck;
-TAG_IMPLEMENT(is_duck);
+CECS_TAG_IMPLEMENT(is_duck);
 
 typedef bool is_shockwave;
-TAG_IMPLEMENT(is_shockwave);
+CECS_TAG_IMPLEMENT(is_shockwave);
 
 typedef struct controllable {
     #define CONTROLLABLE_BUFFER_SIZE 32
@@ -52,22 +52,22 @@ typedef struct controllable {
     uint8_t buffer_count;
     char buffer[CONTROLLABLE_BUFFER_SIZE];
 } controllable;
-COMPONENT_IMPLEMENT(controllable);
+CECS_COMPONENT_IMPLEMENT(controllable);
 
 typedef struct renderable {
     v2_i16 offset;
     v2_i16 size;
     char **sprite;
 } renderable;
-COMPONENT_IMPLEMENT(renderable);
+CECS_COMPONENT_IMPLEMENT(renderable);
 
 typedef bool owns_renderable;
-TAG_IMPLEMENT(owns_renderable);
+CECS_TAG_IMPLEMENT(owns_renderable);
 
 typedef struct dies_by {
-    entity_id cause;
+    cecs_entity_id cause;
 } dies_by;
-COMPONENT_IMPLEMENT(dies_by);
+CECS_COMPONENT_IMPLEMENT(dies_by);
 
 static renderable renderable_create_alloc(char **sprite, v2_i16 offset, v2_i16 size) {
 	renderable r = (renderable) {
@@ -152,11 +152,11 @@ static renderable renderable_create_duck_alloc(char *color) {
 typedef struct console_buffer {
     char *buffer[BOARD_WIDTH][BOARD_HEIGHT];
 } console_buffer;
-RESOURCE_IMPLEMENT(console_buffer);
+CECS_RESOURCE_IMPLEMENT(console_buffer);
 
-bool create_duck(world *w, v2_i16 initial_position, const entity_id *const threats, size_t threats_count) {
-    entity_id e = world_add_entity(w);
-    WORLD_SET_COMPONENT(
+bool create_duck(cecs_world *w, v2_i16 initial_position, const cecs_entity_id *const threats, size_t threats_count) {
+    cecs_entity_id e = cecs_world_add_entity(w);
+    CECS_WORLD_SET_COMPONENT(
         position,
         w,
         e,
@@ -166,43 +166,43 @@ bool create_duck(world *w, v2_i16 initial_position, const entity_id *const threa
     char *default_color = WHT "\xe2\x96\x84" CRESET;
     char *golden_color = YEL "\xe2\x96\x84" CRESET;
     renderable r = renderable_create_duck_alloc(rand() % 1000 < 45 ? golden_color : default_color);
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         renderable,
         w,
         e,
         &r
     );
-    WORLD_ADD_TAG(owns_renderable, w, e);
-    WORLD_ADD_TAG(is_duck, w, e);
+    CECS_WORLD_ADD_TAG(owns_renderable, w, e);
+    CECS_WORLD_ADD_TAG(is_duck, w, e);
     for (size_t i = 0; i < threats_count; i++) {
-        WORLD_SET_COMPONENT_RELATION(dies_by, w, e, &(dies_by){ threats[i] }, threats[i]);
+        CECS_WORLD_SET_COMPONENT_RELATION(dies_by, w, e, &(dies_by){ threats[i] }, threats[i]);
     }
     return EXIT_SUCCESS;
 }
 
-bool create_slime(world *w, v2_i16 initial_position, entity_id parent) {
-    entity_id e = world_add_entity(w);
-    WORLD_SET_COMPONENT(
+bool create_slime(cecs_world *w, v2_i16 initial_position, cecs_entity_id parent) {
+    cecs_entity_id e = cecs_world_add_entity(w);
+    CECS_WORLD_SET_COMPONENT(
         position,
         w,
         e,
         &initial_position
     );
     renderable r = renderable_create_slime_alloc();
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         renderable,
         w,
         e,
         &r
     );
-    WORLD_ADD_TAG(owns_renderable, w, e);
-    WORLD_SET_COMPONENT_RELATION(is_child_of, w, e, &(is_child_of){parent}, parent);
+    CECS_WORLD_ADD_TAG(owns_renderable, w, e);
+    CECS_WORLD_SET_COMPONENT_RELATION(cecs_is_child_of, w, e, &(cecs_is_child_of){parent}, parent);
     return EXIT_SUCCESS;
 }
 
-entity_id create_lonk_prefab(world *w) {
-    entity_id e = world_add_entity(w);
-    WORLD_SET_COMPONENT(
+cecs_entity_id create_lonk_prefab(cecs_world *w) {
+    cecs_entity_id e = cecs_world_add_entity(w);
+    CECS_WORLD_SET_COMPONENT(
         position,
         w,
         e,
@@ -210,7 +210,7 @@ entity_id create_lonk_prefab(world *w) {
             BOARD_WIDTH / 2, BOARD_HEIGHT / 2
         })
     );
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         velocity,
         w,
         e,
@@ -218,7 +218,7 @@ entity_id create_lonk_prefab(world *w) {
             0, 0
         })
     );
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         velocity_register,
         w,
         e,
@@ -227,14 +227,14 @@ entity_id create_lonk_prefab(world *w) {
         })
     );
     renderable r = renderable_create_lonk_alloc();
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         renderable,
         w,
         e,
         &r
     );
-    WORLD_ADD_TAG(owns_renderable, w, e);
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_ADD_TAG(owns_renderable, w, e);
+    CECS_WORLD_SET_COMPONENT(
         controllable,
         w,
         e,
@@ -244,19 +244,19 @@ entity_id create_lonk_prefab(world *w) {
             .buffer = {0}
         })
     );
-    world_get_or_set_default_entity_flags(w, e)->is_permanent = true;
-    return world_set_prefab(w, e);
+    cecs_world_get_or_set_default_entity_flags(w, e)->is_permanent = true;
+    return cecs_world_set_prefab(w, e);
 }
 
-entity_id create_lonk(world *w, prefab_id prefab) {
-    entity_id lonk = world_add_entity_from_prefab(w, prefab);
-    WORLD_REMOVE_TAG(owns_renderable, w, lonk);
+cecs_entity_id create_lonk(cecs_world *w, cecs_prefab_id prefab) {
+    cecs_entity_id lonk = cecs_world_add_entity_from_prefab(w, prefab);
+    CECS_WORLD_REMOVE_TAG(owns_renderable, w, lonk);
     return lonk;
 }
 
-prefab_id create_wall_prefab(world *w) {
-    entity_id e = world_add_entity(w);
-    WORLD_SET_COMPONENT(
+cecs_prefab_id create_wall_prefab(cecs_world *w) {
+    cecs_entity_id e = cecs_world_add_entity(w);
+    CECS_WORLD_SET_COMPONENT(
         position,
         w,
         e,
@@ -265,36 +265,36 @@ prefab_id create_wall_prefab(world *w) {
         })
     );
     renderable r = renderable_create_wall_alloc(BLU "\xe2\x96\x88" CRESET);
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         renderable,
         w,
         e,
         &r
     );
-    WORLD_ADD_TAG(owns_renderable, w, e);
-    WORLD_ADD_TAG(is_solid, w, e);
-    return world_set_prefab(w, e);
+    CECS_WORLD_ADD_TAG(owns_renderable, w, e);
+    CECS_WORLD_ADD_TAG(is_solid, w, e);
+    return cecs_world_set_prefab(w, e);
 }
 
-bool create_map(world *w, prefab_id prefab) {
+bool create_map(cecs_world *w, cecs_prefab_id prefab) {
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
-            entity_id e = world_add_entity(w);
+            cecs_entity_id e = cecs_world_add_entity(w);
             if (x == 0 || x == BOARD_WIDTH - 1 || y == 0 || y == BOARD_HEIGHT - 1) {
-                entity_id wall = world_add_entity_from_prefab(w, prefab);
-                WORLD_SET_COMPONENT(position, w, wall, (&(position){x, y}));
-                WORLD_REMOVE_TAG(owns_renderable, w, wall);
+                cecs_entity_id wall = cecs_world_add_entity_from_prefab(w, prefab);
+                CECS_WORLD_SET_COMPONENT(position, w, wall, (&(position){x, y}));
+                CECS_WORLD_REMOVE_TAG(owns_renderable, w, wall);
             }
         }
     } 
     return EXIT_SUCCESS;
 }
 
-bool init(world *w) {
-    game_time *t = WORLD_SET_RESOURCE(
-        game_time,
+bool init(cecs_world *w) {
+    cecs_game_time *t = CECS_WORLD_SET_RESOURCE(
+        cecs_game_time,
         w,
-        &((game_time) {
+        &((cecs_game_time) {
             .game_start = {0},
             .frame_start = {0},
             .frame_end = {0},
@@ -311,27 +311,27 @@ bool init(world *w) {
         }
     }
     SetConsoleOutputCP(65001);
-    entity_id lonk = create_lonk(w, create_lonk_prefab(w));
-    world_add_entity_to_scene(w, lonk, 0);
-    // entity_id lonk2 = world_add_entity(w);
-    // world_add_entity_to_scene(w, lonk2, 1);
-    // WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
+    cecs_entity_id lonk = create_lonk(w, create_lonk_prefab(w));
+    cecs_world_add_entity_to_scene(w, lonk, 0);
+    // entity_id lonk2 = cecs_world_add_entity(w);
+    // cecs_world_add_entity_to_scene(w, lonk2, 1);
+    // CECS_WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
 
     create_map(w, create_wall_prefab(w));
     for (size_t i = 0; i < 2; i++) {
-        create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (entity_id[]){lonk}, 1);
+        create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (cecs_entity_id[]){lonk}, 1);
     }
     create_slime(w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
-    create_slime(w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, world_add_entity(w));
+    create_slime(w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, cecs_world_add_entity(w));
 
-    WORLD_SET_RESOURCE(console_buffer, w, &cb);
+    CECS_WORLD_SET_RESOURCE(console_buffer, w, &cb);
     return EXIT_SUCCESS;
 }
 
-bool create_shockwave(world *w, position p, velocity v) {
-    entity_id e = world_add_entity(w);
+bool create_shockwave(cecs_world *w, position p, velocity v) {
+    cecs_entity_id e = cecs_world_add_entity(w);
 
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         position,
         w,
         e,
@@ -340,14 +340,14 @@ bool create_shockwave(world *w, position p, velocity v) {
     const int16_t SPEED_MULTIPLIER = 4;
     const int16_t RADIUS = SPEED_MULTIPLIER;
     renderable r = renderable_create_shockwave_alloc(RADIUS);
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_SET_COMPONENT(
         renderable,
         w,
         e,
         &r
     );
-    WORLD_ADD_TAG(owns_renderable, w, e);
-    WORLD_SET_COMPONENT(
+    CECS_WORLD_ADD_TAG(owns_renderable, w, e);
+    CECS_WORLD_SET_COMPONENT(
         velocity,
         w,
         e,
@@ -355,14 +355,14 @@ bool create_shockwave(world *w, position p, velocity v) {
             v.x * SPEED_MULTIPLIER, v.y * SPEED_MULTIPLIER
         })
     );
-    WORLD_ADD_TAG(is_shockwave, w, e);
+    CECS_WORLD_ADD_TAG(is_shockwave, w, e);
     return EXIT_SUCCESS;
 }
 
 void update_controllables(
-    COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle,
-    world *w,
-    system_predicate_data delta_time_seconds
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data delta_time_seconds
 ) {
     velocity *v = handle->velocity_component;
     controllable c = *handle->controllable_component;
@@ -390,9 +390,9 @@ void update_controllables(
 
 
 void update_lonk(
-    COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
-    world *w,
-    system_predicate_data delta_time_seconds
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data delta_time_seconds
 ) {
     position *p = handle->position_component;
     velocity v = *handle->velocity_component;
@@ -413,9 +413,9 @@ void update_lonk(
 }
 
 void update_ducks(
-    COMPONENT_ITERATION_HANDLE_STRUCT(position) *handle,
-    world *w,
-    system_predicate_data delta_time_seconds
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data delta_time_seconds
 ) {
     position *p = handle->position_component;
     if (rand() % 2 == 0) {
@@ -437,9 +437,9 @@ void update_ducks(
 }
 
 void update_shockwaves(
-    COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable) *handle,
-    world *w,
-    system_predicate_data delta_time_seconds
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data delta_time_seconds
 ) {
     position *p = handle->position_component;
     velocity *v = handle->velocity_component;
@@ -450,7 +450,7 @@ void update_shockwaves(
     if (p->x < 0 || p->x >= BOARD_WIDTH
         || p->y < 0 || p->y >= BOARD_HEIGHT
         || v->x == 0 && v->y == 0) {
-        world_remove_entity(w, handle->entity_id);
+        cecs_world_remove_entity(w, handle->entity_id);
     } else {
         renderable new_r = renderable_create_shockwave_alloc(abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
         *handle->renderable_component = new_r;
@@ -465,57 +465,57 @@ void update_shockwaves(
 }
 
 void update_children_position(
-    const COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, is_child_of) *handle,
-    world *w,
-    system_predicate_data delta_time_seconds
+    const CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, cecs_is_child_of) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data delta_time_seconds
 ) {
-    if (handle->is_child_of_component) {
-        //*handle = (is_child_of){0};
+    if (handle->cecs_is_child_of_component) {
+        //*handle = (cecs_is_child_of){0};
     }
     // position p = *handle->position_component;
-    // position parent_position = *WORLD_GET_COMPONENT(position, w, handle->is_child_of_component->parent);
+    // position parent_position = *CECS_WORLD_GET_COMPONENT(position, w, handle->cecs_is_child_of_component->parent);
     // handle->renderable_component->offset = (v2_i16){ parent_position.x - p.x, parent_position.y - p.y };
 }
 
-bool update_entities(world *w, cecs_arena *iteration_arena, double delta_time_seconds) {
-    scene_world_system s = scene_world_system_create(0, iteration_arena);
-    WORLD_SYSTEM_ITER_RANGE(
-        scene_world_system_get_with(&s, iteration_arena, COMPONENTS_ALL(velocity, controllable)),
+bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_time_seconds) {
+    cecs_scene_world_system s = cecs_scene_world_system_create(0, iteration_arena);
+    CECS_WORLD_SYSTEM_ITER_RANGE(
+        cecs_scene_world_system_get_with(&s, iteration_arena, CECS_COMPONENTS_ALL(velocity, controllable)),
         w,
         iteration_arena,
-        ((entity_id_range){0, 2}),
-        system_predicate_data_create_none(),
+        ((cecs_entity_id_range){0, 2}),
+        cecs_system_predicate_data_create_none(),
         update_controllables
     );
-    WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable),
+    CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable),
         w,
         iteration_arena,
-        system_predicate_data_create_none(),
+        cecs_system_predicate_data_create_none(),
         update_lonk
     );
-    WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE(position, velocity, renderable, is_shockwave),
+    CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(position, velocity, renderable, is_shockwave),
         w,
         iteration_arena,
-        system_predicate_data_create_none(),
+        cecs_system_predicate_data_create_none(),
         update_shockwaves
     );
-    entity_count duck_count = WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE(position, is_duck),
+    cecs_entity_count duck_count = CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(position, is_duck),
         w,
         iteration_arena,
-        system_predicate_data_create_none(),
+        cecs_system_predicate_data_create_none(),
         update_ducks
     );
     //  entity_id lonk;
-    // WORLD_GET_ENTITY_WITH(w, &lonk, COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
+    // CECS_WORLD_GET_ENTITY_WITH(w, &lonk, CECS_COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
     
-    WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE_GROUPED(COMPONENTS_ALL(position, renderable), COMPONENTS_OR_ALL(is_child_of)),
+    CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE_GROUPED(CECS_COMPONENTS_ALL(position, renderable), CECS_COMPONENTS_OR_ALL(cecs_is_child_of)),
         w,
         iteration_arena,
-        system_predicate_data_create_none(),
+        cecs_system_predicate_data_create_none(),
         update_children_position
     );
     return EXIT_SUCCESS;
@@ -523,11 +523,11 @@ bool update_entities(world *w, cecs_arena *iteration_arena, double delta_time_se
 
 
 void update_console_buffer(
-    COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable) *handle,
-    world *w,
-    system_predicate_data buffer_user_data
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data buffer_user_data
 ) {
-    console_buffer *new_console_buffer = system_predicate_data_user_data(buffer_user_data);
+    console_buffer *new_console_buffer = cecs_system_predicate_data_user_data(buffer_user_data);
     position p = *handle->position_component;
     renderable r = *handle->renderable_component;
     for (int16_t x = 0; x < r.size.x; x++) {
@@ -541,8 +541,8 @@ void update_console_buffer(
     }
 }
 
-bool render(const world *w, cecs_arena *iteration_arena) {
-    console_buffer *cb = WORLD_GET_RESOURCE(console_buffer, w);
+bool render(const cecs_world *w, cecs_arena *iteration_arena) {
+    console_buffer *cb = CECS_WORLD_GET_RESOURCE(console_buffer, w);
     console_buffer new_console_buffer = *cb;
 
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
@@ -550,12 +550,12 @@ bool render(const world *w, cecs_arena *iteration_arena) {
             new_console_buffer.buffer[x][y] = " ";
         }
     }
-    //scene_world_system s = scene_world_system_create(0, iteration_arena);
-    WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE(position, renderable),
-        (world *)w,
+    //scene_cecs_world_system s = scene_cecs_world_system_create(0, iteration_arena);
+    CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(position, renderable),
+        (cecs_world *)w,
         iteration_arena,
-        system_predicate_data_create_user_data(&new_console_buffer),
+        cecs_system_predicate_data_create_user_data(&new_console_buffer),
         update_console_buffer
     );
     
@@ -574,7 +574,7 @@ bool render(const world *w, cecs_arena *iteration_arena) {
     }
     printf("%s", (char *)screen.elements);
     cecs_arena_free(&screen_arena);
-    printf("fps: %f\n", 1.0 / WORLD_GET_RESOURCE(game_time, w)->averaged_delta_time_seconds);
+    printf("fps: %f\n", 1.0 / CECS_WORLD_GET_RESOURCE(cecs_game_time, w)->averaged_delta_time_seconds);
     //arena_dbg_info dbg = arena_get_dbg_info_compare_size(&w->entities.entity_ids_arena);
     //printf(
     //    "arena (%d owned / %d blocks): %d / %d\n"
@@ -593,17 +593,17 @@ bool render(const world *w, cecs_arena *iteration_arena) {
 
 
 void write_controllables(
-    COMPONENT_ITERATION_HANDLE_STRUCT(controllable) *handle,
-    world *w,
-    system_predicate_data controllable_user_data
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(controllable) *handle,
+    cecs_world *w,
+    cecs_system_predicate_data controllable_user_data
 ) {
-    controllable *c = system_predicate_data_user_data(controllable_user_data);
+    controllable *c = cecs_system_predicate_data_user_data(controllable_user_data);
     if (handle->controllable_component->active) {
         *handle->controllable_component = *c;
     }
 }
 
-bool process_input(world *w, cecs_arena *iteration_arena) {
+bool process_input(cecs_world *w, cecs_arena *iteration_arena) {
     controllable c = (controllable) {
         .active = true,
         .buffer_count = 0,
@@ -623,18 +623,18 @@ bool process_input(world *w, cecs_arena *iteration_arena) {
         c.buffer[c.buffer_count++] = input;
     }
 
-    WORLD_SYSTEM_ITER(
-        WORLD_SYSTEM_CREATE(controllable),
+    CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(controllable),
         w,
         iteration_arena,
-        system_predicate_data_create_user_data(&c),
+        cecs_system_predicate_data_create_user_data(&c),
         write_controllables
     );
 
     return EXIT_SUCCESS;
 }
 
-bool update(world *w, double delta_time_seconds) {
+bool update(cecs_world *w, double delta_time_seconds) {
     cecs_arena iteration_arena = cecs_arena_create();
     bool result = update_entities(w, &iteration_arena, delta_time_seconds)
         || render(w, &iteration_arena)
@@ -643,22 +643,22 @@ bool update(world *w, double delta_time_seconds) {
     return result;
 }
 
-bool finalize(world *w) {
+bool finalize(cecs_world *w) {
     cecs_arena a = cecs_arena_create();
-    COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
     //size_t count = 0;
     for (
-        component_iterator it = component_iterator_create(component_iterator_descriptor_create(
+        cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
             &w->components,
             &a,
-            COMPONENTS_SEARCH_GROUPS_CREATE(
-                COMPONENTS_ALL(renderable, owns_renderable)
+            CECS_COMPONENTS_SEARCH_GROUPS_CREATE(
+                CECS_COMPONENTS_ALL(renderable, owns_renderable)
             )
         ));
-        !component_iterator_done(&it);
-        component_iterator_next(&it)
+        !cecs_component_iterator_done(&it);
+        cecs_component_iterator_next(&it)
     ) {
-        component_iterator_current(&it, &handle);
+        cecs_component_iterator_current(&it, &handle);
         free(handle.renderable_component->sprite);
         //++count;
     }
@@ -669,7 +669,7 @@ bool finalize(world *w) {
 
 int main(void) {
     // TODO: maybe prefix everything with "cecs_"
-    world w = world_create(1024, 32, 4);
+    cecs_world w = cecs_world_create(1024, 32, 4);
 
     bool quitting = false;
     bool app_error = false;
@@ -677,16 +677,16 @@ int main(void) {
         app_error = true;
     }
 
-    game_time* t = WORLD_GET_RESOURCE(game_time, &w);
+    cecs_game_time* t = CECS_WORLD_GET_RESOURCE(cecs_game_time, &w);
     timespec_get(&t->frame_start, TIME_UTC);
     const DWORD sleep_milliseconds = (DWORD)(1000.0 / TARGET_FPS);
     Sleep(sleep_milliseconds);
     while (!quitting && !app_error)
     {
         timespec_get(&t->frame_end, TIME_UTC);
-        game_time_update_time_since_start(t);
+        cecs_game_time_update_time_since_start(t);
 
-        if (update(&w, game_time_update_delta_time(t))) {
+        if (update(&w, cecs_game_time_update_delta_time(t))) {
             app_error = true;
         }
 
@@ -698,6 +698,6 @@ int main(void) {
         app_error = true;
     }
 
-    world_free(&w);
+    cecs_world_free(&w);
     return app_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include "cecs_arena.h"
 
-#define padding_between(type, next_type) (offsetof(struct { type _a; next_type _b; }, _b) - sizeof(type))
+#define cecs_padding_between(type, next_type) (offsetof(struct { type _a; next_type _b; }, _b) - sizeof(type))
 
 typedef struct cecs_dynamic_array {
     size_t count;

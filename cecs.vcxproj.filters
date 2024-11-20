@@ -65,10 +65,10 @@
     <ClInclude Include="include\cecs_arena.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\component.h">
+    <ClInclude Include="include\cecs_component.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\entity.h">
+    <ClInclude Include="include\cecs_entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\cecs_dynamic_array.h">
@@ -80,16 +80,16 @@
     <ClInclude Include="include\query.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\resource.h">
+    <ClInclude Include="include\cecs_resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\type_id.h">
+    <ClInclude Include="include\cecs_type_id.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\view.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\world.h">
+    <ClInclude Include="include\cecs_world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\containers\cecs_arena.h">
@@ -116,49 +116,49 @@
     <ClInclude Include="include\containers\cecs_union.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\entity\component_type.h">
+    <ClInclude Include="include\core\component\entity\cecs_component_type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\entity\entity.h">
+    <ClInclude Include="include\core\component\entity\cecs_entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\entity\game_component.h">
+    <ClInclude Include="include\core\component\entity\cecs_game_component.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\entity\tag.h">
+    <ClInclude Include="include\core\component\entity\cecs_tag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\component.h">
+    <ClInclude Include="include\core\component\cecs_component.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\component_iterator.h">
+    <ClInclude Include="include\core\component\cecs_component_iterator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\component\component_storage.h">
+    <ClInclude Include="include\core\component\cecs_component_storage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\resource\resource.h">
+    <ClInclude Include="include\core\resource\cecs_resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\relation.h">
+    <ClInclude Include="include\core\cecs_relation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\system.h">
+    <ClInclude Include="include\core\cecs_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\world.h">
+    <ClInclude Include="include\core\cecs_world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\types\macro_utils.h">
+    <ClInclude Include="include\types\cecs_macro_utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\types\type_id.h">
+    <ClInclude Include="include\types\cecs_type_id.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\lib.h">
+    <ClInclude Include="include\cecs_lib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

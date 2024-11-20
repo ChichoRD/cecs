@@ -29,15 +29,15 @@
 #define CECS_BIT_WORD_BITS (1 << CECS_BIT_WORD_BITS_LOG2)
 #define CECS_BIT_WORD_TYPE size_t
 
-typedef CECS_BIT_WORD_TYPE bit_word;
-#define CECS_BIT_WORD_BIT_COUNT (8 * sizeof(bit_word))
+typedef CECS_BIT_WORD_TYPE cecs_bit_word;
+#define CECS_BIT_WORD_BIT_COUNT (8 * sizeof(cecs_bit_word))
 static_assert(CECS_BIT_WORD_BITS == CECS_BIT_WORD_BIT_COUNT, "CECS_BIT_WORD_BITS != CECS_BIT_WORD_BIT_COUNT");
 
 #define CECS_BIT_LAYER_COUNT (CECS_BIT_WORD_BITS_LOG2 - CECS_BIT_PAGE_SIZE_LOG2)
 
-#define CECS_ZERO_PAGE_MASK (((bit_word)1 << CECS_BIT_PAGE_SIZE) - 1)
-inline bit_word cecs_page_mask(size_t page_index) {
-    return ((bit_word)CECS_ZERO_PAGE_MASK << (page_index * CECS_BIT_PAGE_SIZE));
+#define CECS_ZERO_PAGE_MASK (((cecs_bit_word)1 << CECS_BIT_PAGE_SIZE) - 1)
+inline cecs_bit_word cecs_page_mask(size_t page_index) {
+    return ((cecs_bit_word)CECS_ZERO_PAGE_MASK << (page_index * CECS_BIT_PAGE_SIZE));
 }
 
 inline size_t cecs_layer_word_index(size_t bit_index, size_t layer) { 
@@ -73,41 +73,41 @@ void cecs_bitset_unset_all(cecs_bitset *b);
 
 cecs_word_range cecs_bitset_expand(cecs_bitset *b, cecs_arena *a, size_t word_index);
 
-bit_word cecs_bitset_set(cecs_bitset *b, cecs_arena *a, size_t bit_index);
+cecs_bit_word cecs_bitset_set(cecs_bitset *b, cecs_arena *a, size_t bit_index);
 
-bit_word cecs_bitset_unset(cecs_bitset *b, cecs_arena *a, size_t bit_index);
+cecs_bit_word cecs_bitset_unset(cecs_bitset *b, cecs_arena *a, size_t bit_index);
 
-bit_word cecs_bitset_get_word(const cecs_bitset *b, size_t bit_index);
+cecs_bit_word cecs_bitset_get_word(const cecs_bitset *b, size_t bit_index);
 
 bool cecs_bitset_is_set(const cecs_bitset *b, size_t bit_index);
 
 bool cecs_bitset_bit_in_range(const cecs_bitset *b, size_t bit_index);
 
 
-typedef struct bitset_iterator {
+typedef struct cecs_bitset_iterator {
     const cecs_bitset *const bitset;
     size_t current_bit_index;
-} bitset_iterator;
+} cecs_bitset_iterator;
 
-bitset_iterator cecs_bitset_iterator_create(const cecs_bitset *b);;
+cecs_bitset_iterator cecs_bitset_iterator_create(const cecs_bitset *b);;
 
-inline bool cecs_bitset_iterator_done(const bitset_iterator *it) {
+inline bool cecs_bitset_iterator_done(const cecs_bitset_iterator *it) {
     return !cecs_bitset_bit_in_range(it->bitset, it->current_bit_index);
 }
 
-inline size_t cecs_bitset_iterator_next(bitset_iterator *it) {
+inline size_t cecs_bitset_iterator_next(cecs_bitset_iterator *it) {
     return ++it->current_bit_index;
 }
 
-size_t cecs_bitset_iterator_next_set(bitset_iterator *it);
+size_t cecs_bitset_iterator_next_set(cecs_bitset_iterator *it);
 
-size_t cecs_bitset_iterator_next_unset(bitset_iterator *it);
+size_t cecs_bitset_iterator_next_unset(cecs_bitset_iterator *it);
 
-inline size_t cecs_bitset_iterator_current(const bitset_iterator *it) {
+inline size_t cecs_bitset_iterator_current(const cecs_bitset_iterator *it) {
     return it->current_bit_index;
 }
 
-inline bool cecs_bitset_iterator_current_is_set(const bitset_iterator *it) {
+inline bool cecs_bitset_iterator_current_is_set(const cecs_bitset_iterator *it) {
     return cecs_bitset_is_set(it->bitset, cecs_bitset_iterator_current(it));
 }
 
@@ -141,7 +141,7 @@ bool cecs_hibitset_is_set_skip_unset(const cecs_hibitset *b, size_t bit_index, c
 bool cecs_hibitset_is_set_skip_unset_reverse(const cecs_hibitset *b, size_t bit_index, cecs_ssize_t *out_unset_bit_skip_count);
 
 
-bit_word cecs_hibitset_get_word(const cecs_hibitset *b, size_t bit_index);
+cecs_bit_word cecs_hibitset_get_word(const cecs_hibitset *b, size_t bit_index);
 
 cecs_exclusive_range cecs_hibitset_bit_range(const cecs_hibitset *b);
 
