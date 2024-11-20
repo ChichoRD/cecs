@@ -11,10 +11,22 @@
 #define BIT_PAGE_SIZE_LOG2 2
 #define BIT_PAGE_SIZE (1 << BIT_PAGE_SIZE_LOG2)
 
+
+#if (SIZE_MAX == 0xFFFF)
+#define BIT_WORD_BITS_LOG2 4 
+
+#elif (SIZE_MAX == 0xFFFFFFFF)
+#define BIT_WORD_BITS_LOG2 5
+
+#elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
 #define BIT_WORD_BITS_LOG2 6
+
+#else
+    #error TBD code SIZE_T_BITS
+
+#endif
 #define BIT_WORD_BITS (1 << BIT_WORD_BITS_LOG2)
-#define BIT_WORD_TYPE uint64_t
-// TODO: make uintptr_t
+#define BIT_WORD_TYPE size_t
 
 typedef BIT_WORD_TYPE bit_word;
 #define BIT_WORD_BIT_COUNT (8 * sizeof(bit_word))
@@ -69,7 +81,6 @@ bit_word bitset_get_word(const bitset *b, size_t bit_index);
 bool bitset_is_set(const bitset *b, size_t bit_index);
 
 bool bitset_bit_in_range(const bitset *b, size_t bit_index);
-
 
 
 typedef struct bitset_iterator {
