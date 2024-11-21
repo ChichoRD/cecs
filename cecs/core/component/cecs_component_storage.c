@@ -1,3 +1,5 @@
+#include <memory.h>
+
 #include "cecs_component_storage.h"
 
 const cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_component_storage* self) {

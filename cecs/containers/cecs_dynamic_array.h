@@ -1,9 +1,6 @@
 #ifndef CECS_DYNAMIC_ARRAY_H
 #define CECS_DYNAMIC_ARRAY_H
 
-// TODO: choose better cecs_dynamic_array name
-
-#include <memory.h>
 #include <stddef.h>
 #include "cecs_arena.h"
 

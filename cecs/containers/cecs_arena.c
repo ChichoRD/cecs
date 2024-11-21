@@ -1,3 +1,9 @@
+#include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
+#include <limits.h>
+#include <string.h>
+
 #include "cecs_arena.h"
 
 cecs_block cecs_block_create(size_t capacity) {

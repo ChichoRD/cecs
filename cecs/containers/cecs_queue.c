@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "cecs_queue.h"
 
 cecs_queue cecs_queue_create(void) {

@@ -3,11 +3,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <limits.h>
-#include <string.h>
 
 #define CECS_DEFAULT_BLOCK_CAPACITY (8 * 1024)
 

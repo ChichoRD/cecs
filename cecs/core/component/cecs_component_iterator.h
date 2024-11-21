@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <assert.h>
 #include "../../types/cecs_macro_utils.h"
 #include "../../containers/cecs_arena.h"
 #include "cecs_component.h"

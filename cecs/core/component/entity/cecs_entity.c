@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "cecs_entity.h"
 
 cecs_world_entities cecs_world_entities_create(size_t entity_capacity) {

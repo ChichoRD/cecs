@@ -6,7 +6,6 @@
 #include "../../containers/cecs_dynamic_array.h"
 #include "../../containers/cecs_displaced_set.h"
 #include "../../containers/cecs_bitset.h"
-#include "../../containers/cecs_range.h"
 #include "../../containers/cecs_arena.h"
 #include "../../containers/cecs_union.h"
 #include "entity/cecs_component_type.h"

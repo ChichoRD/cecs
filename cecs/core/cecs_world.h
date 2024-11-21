@@ -2,10 +2,8 @@
 #define CECS_WORLD_H
 
 #include <assert.h>
-#include <memory.h>
 #include <stdbool.h>
 #include "../containers/cecs_arena.h"
-#include "../containers/cecs_dynamic_array.h"
 #include "component/entity/cecs_entity.h"
 #include "component/entity/cecs_tag.h"
 #include "component/entity/cecs_game_component.h"

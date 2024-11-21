@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
-#include <string.h>
 #include "cecs_union.h"
 #include "cecs_dynamic_array.h"
 #include "cecs_range.h"

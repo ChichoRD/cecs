@@ -1,3 +1,6 @@
+
+#include <stdlib.h>
+
 #include "cecs_component_iterator.h"
 
 bool cecs_component_iterator_descriptor_copy_component_bitsets(const cecs_world_components* world_components, cecs_components_type_info components_type_info, cecs_hibitset bitsets_destination[]) {

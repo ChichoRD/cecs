@@ -2,7 +2,6 @@
 #define SYSTEM_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include "../containers/cecs_union.h"
 #include "component/cecs_component_iterator.h"
 #include "cecs_world.h"

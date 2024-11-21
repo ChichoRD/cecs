@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "cecs_component.h"
 
 cecs_world_components_checksum cecs_world_components_checksum_hash(cecs_world_components_checksum current) {

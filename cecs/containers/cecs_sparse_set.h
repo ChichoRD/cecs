@@ -5,9 +5,8 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <intrin.h>
-#include "cecs_union.h"
 #include "../types/cecs_macro_utils.h"
-#include "cecs_range.h"
+#include "cecs_union.h"
 #include "cecs_arena.h"
 #include "cecs_dynamic_array.h"
 #include "cecs_displaced_set.h"

@@ -1,9 +1,10 @@
 #ifndef CECS_QUEUE_H
 #define CECS_QUEUE_H
 
-#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
+
 #include "cecs_dynamic_array.h"
 
 typedef struct cecs_queue {

@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <stdlib.h>
+
 #include "cecs_bitset.h"
 
 cecs_bitset cecs_bitset_create(cecs_arena* a, size_t capacity) {

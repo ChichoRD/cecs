@@ -1,3 +1,6 @@
+#include <string.h>
+#include <assert.h>
+
 #include "cecs_resource.h"
 
 cecs_resource_id cecs_resource_id_count = 0;

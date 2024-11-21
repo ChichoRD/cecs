@@ -7,7 +7,6 @@
 #include "core/cecs_system.h"
 #include "core/cecs_world.h"
 #include "containers/cecs_arena.h"
-#include "containers/cecs_dynamic_array.h"
 
 typedef cecs_entity_id cecs_prefab_id;
 cecs_prefab_id cecs_world_set_prefab(cecs_world *w, cecs_entity_id prefab);

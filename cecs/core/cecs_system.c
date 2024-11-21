@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "cecs_system.h"
 
 cecs_entity_count cecs_world_system_iter(const cecs_world_system s, cecs_world* w, cecs_arena* iteration_arena, cecs_system_predicate_data data, cecs_system_predicate* predicate) {

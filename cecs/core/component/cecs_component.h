@@ -3,13 +3,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <assert.h>
-#include "../../types/cecs_macro_utils.h"
 #include "../../types/cecs_type_id.h"
 #include "../../containers/cecs_union.h"
 #include "../../containers/cecs_sparse_set.h"
-#include "../../containers/cecs_bitset.h"
 #include "../../containers/cecs_arena.h"
 #include "entity/cecs_entity.h"
 #include "cecs_component_storage.h"

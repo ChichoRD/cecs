@@ -1,3 +1,4 @@
+#include <string.h>
 #include "cecs_displaced_set.h"
 
 cecs_displaced_set cecs_displaced_set_create(void) {

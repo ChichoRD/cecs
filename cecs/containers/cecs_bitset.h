@@ -2,8 +2,6 @@
 #define CECS_BITSET_H
 
 #include <stdint.h>
-#include <assert.h>
-#include <stdlib.h>
 #include <intrin.h>
 #include "cecs_dynamic_array.h"
 #include "cecs_range.h"

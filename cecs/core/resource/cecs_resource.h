@@ -2,7 +2,6 @@
 #define CECS_RESOURCE_H
 
 #include <stdint.h>
-#include <string.h>
 #include "../../containers/cecs_arena.h"
 #include "../../containers/cecs_displaced_set.h"
 #include "../../types/cecs_type_id.h"

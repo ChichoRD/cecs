@@ -1,3 +1,6 @@
+#include <memory.h>
+#include <assert.h>
+
 #include "cecs_dynamic_array.h"
 
 cecs_dynamic_array cecs_dynamic_array_create() {
