@@ -54,3 +54,22 @@ target_include_directories(
     PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
 )
+
+project(cecs_app_lib_only C)
+add_compile_options(
+    /Fe${fileDirname}\\${fileBasenameNoExtension}.exe
+)
+
+add_executable(
+    ${PROJECT_NAME}
+    "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
+)
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
+)
+target_link_libraries(
+    ${PROJECT_NAME}
+    "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/lib/*.lib"
+)
