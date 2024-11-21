@@ -1,3 +1,5 @@
+#include <memory.h>
+
 #include "cecs_sparse_set.h"
 
 cecs_sparse_set cecs_sparse_set_create(void) {
@@ -113,7 +115,6 @@ bool cecs_sparse_set_remove(cecs_sparse_set* s, cecs_arena* a, size_t key, void*
         );
         assert(*(size_t*)out_removed_element != 0);
 
-        size_t last_element_index = cecs_dynamic_array_count_of_size(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), element_size) - 1;
         void* swapped_last = cecs_dynamic_array_remove_swap_last(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), a, removed_index, element_size);
         {
             if (CECS_UNION_IS(cecs_any_elements, cecs_sparse_set_elements, s->elements)) {

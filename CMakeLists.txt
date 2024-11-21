@@ -6,7 +6,7 @@ add_compile_options(
     /Zc:preprocessor
     /we\"4022\"
     /GS
-    /W3
+    /W4
     /wd\"5045\"
     /wd\"4115\"
     /wd\"4255\"

@@ -119,7 +119,7 @@ cecs_component_storage cecs_component_storage_create_sparse(cecs_arena *a, size_
 
 cecs_component_storage cecs_component_storage_create_unit(cecs_arena *a);
 
-cecs_component_storage cecs_component_storage_create_indirect(cecs_arena *a, cecs_component_storage *other_storage);
+cecs_component_storage cecs_component_storage_create_indirect(cecs_arena *a);
 
 bool cecs_component_storage_has(const cecs_component_storage *self, cecs_entity_id id);
 

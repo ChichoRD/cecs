@@ -148,7 +148,7 @@ cecs_component_storage cecs_component_storage_create_unit(cecs_arena* a) {
     };
 }
 
-cecs_component_storage cecs_component_storage_create_indirect(cecs_arena* a, cecs_component_storage* other_storage) {
+cecs_component_storage cecs_component_storage_create_indirect(cecs_arena* a) {
     cecs_indirect_component_storage storage = cecs_indirect_component_storage_create();
     return (cecs_component_storage) {
         .storage = CECS_UNION_CREATE(
@@ -156,7 +156,7 @@ cecs_component_storage cecs_component_storage_create_indirect(cecs_arena* a, cec
             cecs_component_storage_union,
             storage
         ),
-            .entity_bitset = cecs_hibitset_create(a),
+        .entity_bitset = cecs_hibitset_create(a),
     };
 }
 

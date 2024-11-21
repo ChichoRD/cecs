@@ -73,8 +73,7 @@ cecs_component_storage cecs_component_storage_descriptor_build(cecs_component_st
         cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
         if (cecs_world_components_has_storage(wc, other_id)) {
             return cecs_component_storage_create_indirect(
-                &wc->components_arena,
-                cecs_world_components_get_component_storage_unchecked(wc, other_id)
+                &wc->components_arena
             );
         }
         else {
@@ -84,8 +83,7 @@ cecs_component_storage cecs_component_storage_descriptor_build(cecs_component_st
                     .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
             }, wc, 0);
             return cecs_component_storage_create_indirect(
-                &wc->components_arena,
-                CECS_PAGED_SPARSE_SET_SET(cecs_component_storage, &wc->component_storages, &wc->storages_arena, (size_t)other_id, &other_storage)
+                &wc->components_arena
             );
         }
     }
