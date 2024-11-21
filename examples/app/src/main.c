@@ -5,9 +5,9 @@
 #include <windows.h>
 #include <time.h>
 #include <conio.h>
-#include "../cecs/cecs.h"
+
+#include <cecs.h>
 #include "color.h"
-#include "../cecs/core/cecs_relation.h"
 
 
 #define TARGET_FPS 240.0
