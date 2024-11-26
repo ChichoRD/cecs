@@ -9,20 +9,7 @@ enable_language(C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-<<<<<<< Updated upstream
 set(C_STANDARD 17)
-add_compile_options(
-    /Zc:preprocessor
-    /we\"4022\"
-    /GS
-    /W4
-    /wd\"5045\"
-    /wd\"4115\"
-    /wd\"4255\"
-    /wd\"4668\"
-    /Zc:wchar_t
-    /Zi
-=======
 if (MSVC)
     add_compile_options(
         /Zc:preprocessor
@@ -35,7 +22,6 @@ if (MSVC)
         /wd\"4668\"
         /Zc:wchar_t
         /Zi
->>>>>>> Stashed changes
 
         /EHsc
         /nologo
@@ -94,37 +80,34 @@ target_include_directories(
 )
 target_link_libraries(
     ${PROJECT_NAME}
-<<<<<<< Updated upstream
-    "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/lib/*.lib"
-)
-=======
     "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>/cecs.lib"
 )
 
+set(CECS_GRAPHICS OFF)
+if(CECS_GRAPHICS)
+    project(cecs_graphics C)
+    add_subdirectory(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/webgpu"
+    )
+    add_subdirectory(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw"
+    )
 
-project(cecs_graphics C)
-add_subdirectory(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/webgpu"
-)
-add_subdirectory(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw"
-)
+    add_executable(
+        ${PROJECT_NAME}
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/main.c"
+    )
+    target_include_directories(
+        ${PROJECT_NAME}
+        PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/src/"
+    )
 
-add_executable(
-    ${PROJECT_NAME}
-    "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/main.c"
-)
-target_include_directories(
-    ${PROJECT_NAME}
-    PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/src/"
-)
-
-target_link_libraries(
-    ${PROJECT_NAME}
-    PRIVATE
-    webgpu
-    glfw
-)
-target_copy_webgpu_binaries(${PROJECT_NAME})
->>>>>>> Stashed changes
+    target_link_libraries(
+        ${PROJECT_NAME}
+        PRIVATE
+        webgpu
+        glfw
+    )
+    target_copy_webgpu_binaries(${PROJECT_NAME})
+endif()
