@@ -28,10 +28,6 @@ cecs_dynamic_array cecs_dynamic_array_create(void);
 cecs_dynamic_array cecs_dynamic_array_create_with_capacity(cecs_arena *a, size_t capacity);
 #define CECS_DYNAMIC_ARRAY_CREATE_WITH_CAPACITY(type, arena_ref, capacity) cecs_dynamic_array_create_with_capacity(arena_ref, (capacity) * sizeof(type))
 
-static void cecs_dynamic_array_grow(cecs_dynamic_array *l, cecs_arena *a, size_t new_capacity);
-
-static void cecs_dynamic_array_shrink(cecs_dynamic_array *l, cecs_arena *a, size_t new_capacity);
-
 void *cecs_dynamic_array_add(cecs_dynamic_array *l, cecs_arena *a, const void *element, size_t size);
 #define CECS_DYNAMIC_ARRAY_ADD(type, cecs_dynamic_array_ref, arena_ref, element_ref) \
     ((type *)cecs_dynamic_array_add(cecs_dynamic_array_ref, arena_ref, element_ref, sizeof(type)))

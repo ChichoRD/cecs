@@ -43,12 +43,6 @@ typedef struct cecs_arena {
 
 cecs_arena cecs_arena_create(void);
 
-static cecs_linked_block *cecs_arena_prepend(cecs_arena *a, cecs_block b);
-
-static cecs_block *cecs_arena_add_block_exact(cecs_arena *a, size_t capacity);
-
-static cecs_block *cecs_arena_add_block(cecs_arena *a, size_t size);
-
 cecs_arena cecs_arena_create_with_capacity(size_t capacity);
 
 void *cecs_arena_alloc(cecs_arena *a, size_t size);
@@ -60,17 +54,6 @@ typedef enum cecs_arena_reallocation_strategy {
     arena_reallocate_fit,
     arena_reallocate_new
 } cecs_arena_reallocation_strategy;
-
-static cecs_arena_reallocation_strategy arena_realloc_find_fit(
-    cecs_arena *a,
-    void *data_block,
-    size_t current_size,
-    size_t new_size,
-    cecs_linked_block **out_old_data_block,
-    cecs_linked_block **out_fit
-);
-
-static bool cecs_arena_split_block_at(void *split, cecs_linked_block *block, cecs_linked_block **out_split_block);
 
 void *cecs_arena_realloc(cecs_arena *a, void *data_block, size_t current_size, size_t new_size);
 

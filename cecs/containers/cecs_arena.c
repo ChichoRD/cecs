@@ -108,7 +108,7 @@ cecs_linked_block cecs_linked_block_create(cecs_block b, cecs_linked_block* next
     return lb;
 }
 
-cecs_linked_block* cecs_arena_prepend(cecs_arena* a, cecs_block b) {
+static cecs_linked_block* cecs_arena_prepend(cecs_arena* a, cecs_block b) {
     cecs_linked_block* new = (cecs_linked_block*)malloc(sizeof(cecs_linked_block));
     *new = cecs_linked_block_create(b, a->first_block);
 
@@ -119,12 +119,12 @@ cecs_linked_block* cecs_arena_prepend(cecs_arena* a, cecs_block b) {
     return new;
 }
 
-cecs_block* cecs_arena_add_block_exact(cecs_arena* a, size_t capacity) {
+static cecs_block* cecs_arena_add_block_exact(cecs_arena* a, size_t capacity) {
     cecs_block b = cecs_block_create(capacity);
     return &cecs_arena_prepend(a, b)->b;
 }
 
-cecs_block* cecs_arena_add_block(cecs_arena* a, size_t size) {
+static cecs_block* cecs_arena_add_block(cecs_arena* a, size_t size) {
     if (a->last_block == NULL) {
         return cecs_arena_add_block_exact(a, size > CECS_DEFAULT_BLOCK_CAPACITY ? size : CECS_DEFAULT_BLOCK_CAPACITY);
     }
@@ -139,7 +139,7 @@ cecs_arena cecs_arena_create_with_capacity(size_t capacity) {
     return a;
 }
 
-cecs_arena_reallocation_strategy arena_realloc_find_fit(cecs_arena* a, void* data_block, size_t current_size, size_t new_size, cecs_linked_block** out_old_data_block, cecs_linked_block** out_fit) {
+static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(cecs_arena* a, void* data_block, size_t current_size, size_t new_size, cecs_linked_block** out_old_data_block, cecs_linked_block** out_fit) {
     *out_fit = NULL;
     cecs_linked_block* old_data_block = NULL;
     cecs_linked_block* current = a->first_block;
@@ -183,7 +183,7 @@ cecs_arena_reallocation_strategy arena_realloc_find_fit(cecs_arena* a, void* dat
     return strategy;
 }
 
-bool cecs_arena_split_block_at(void* split, cecs_linked_block* block, cecs_linked_block** out_split_block) {
+static bool cecs_arena_split_block_at(void* split, cecs_linked_block* block, cecs_linked_block** out_split_block) {
     assert(block != NULL && "error: block must not be NULL");
     ptrdiff_t split_bytes = (uint8_t*)split - block->b.data;
 
@@ -223,7 +223,7 @@ void* cecs_arena_realloc(cecs_arena* a, void* data_block, size_t current_size, s
 
     cecs_linked_block* old_data_block;
     cecs_linked_block* fit;
-    switch (arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &fit)) {
+    switch (cecs_arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &fit)) {
     case arena_reallocate_in_place: {
         assert(old_data_block != NULL && "error: no data block found in arena");
         old_data_block->b.size += (ptrdiff_t)new_size - (ptrdiff_t)current_size;
