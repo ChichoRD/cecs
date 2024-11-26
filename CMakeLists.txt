@@ -83,7 +83,7 @@ target_link_libraries(
     "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>/cecs.lib"
 )
 
-set(CECS_GRAPHICS OFF)
+set(CECS_GRAPHICS ON)
 if(CECS_GRAPHICS)
     project(cecs_graphics C)
     add_subdirectory(
