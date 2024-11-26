@@ -35,7 +35,7 @@ void *cecs_world_get_component(const cecs_world *w, cecs_entity_id entity_id, ce
 
 bool cecs_world_try_get_component(const cecs_world *w, cecs_entity_id entity_id, cecs_component_id component_id, void **out_component);
 #define CECS_WORLD_TRY_GET_COMPONENT(type, world_ref, entity_id0, out_component_ref) \
-    (cecs_world_try_get_component(world_ref, entity_id0, CECS_COMPONENT_ID(type), out_component_ref))
+    (cecs_world_try_get_component(world_ref, entity_id0, CECS_COMPONENT_ID(type), ((void **)out_component_ref)))
 
 cecs_entity_flags cecs_world_get_entity_flags(const cecs_world *w, cecs_entity_id entity_id);
 
@@ -43,11 +43,11 @@ void *cecs_world_set_component(cecs_world *w, cecs_entity_id id, cecs_component_
 #define CECS_WORLD_SET_COMPONENT(type, world_ref, entity_id0, component_ref) \
     ((type *)cecs_world_set_component(world_ref, entity_id0, CECS_COMPONENT_ID(type), component_ref, sizeof(type)))
 
-const bool cecs_world_remove_component(cecs_world *w, cecs_entity_id id, cecs_component_id component_id, void *out_removed_component);
+bool cecs_world_remove_component(cecs_world *w, cecs_entity_id id, cecs_component_id component_id, void *out_removed_component);
 #define CECS_WORLD_REMOVE_COMPONENT(type, world_ref, entity_id0, out_removed_component_ref) \
     (cecs_world_remove_component(world_ref, entity_id0, CECS_COMPONENT_ID(type), out_removed_component_ref))
 
-inline cecs_entity_flags *cecs_world_set_entity_flags(cecs_world *w, cecs_entity_id id, cecs_entity_flags flags) {
+static inline cecs_entity_flags *cecs_world_set_entity_flags(cecs_world *w, cecs_entity_id id, cecs_entity_flags flags) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     return CECS_WORLD_SET_COMPONENT(cecs_entity_flags, w, id, &flags);
 }

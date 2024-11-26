@@ -114,7 +114,7 @@ typedef struct cecs_hibitset {
     cecs_bitset bitsets[CECS_BIT_LAYER_COUNT];
 } cecs_hibitset;
 
-inline const cecs_hibitset cecs_hibitset_empty(void) {
+inline cecs_hibitset cecs_hibitset_empty(void) {
     return (cecs_hibitset){0};
 }
 

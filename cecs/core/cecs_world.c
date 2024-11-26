@@ -59,7 +59,7 @@ void* cecs_world_set_component(cecs_world* w, cecs_entity_id id, cecs_component_
     );
 }
 
-const bool cecs_world_remove_component(cecs_world* w, cecs_entity_id id, cecs_component_id component_id, void* out_removed_component) {
+bool cecs_world_remove_component(cecs_world* w, cecs_entity_id id, cecs_component_id component_id, void* out_removed_component) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     assert(
         !cecs_world_get_entity_flags(w, id).is_inmutable

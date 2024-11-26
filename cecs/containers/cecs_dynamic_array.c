@@ -24,7 +24,7 @@ cecs_dynamic_array cecs_dynamic_array_create_with_capacity(cecs_arena* a, size_t
     }
 }
 
-void cecs_dynamic_array_grow(cecs_dynamic_array* l, cecs_arena* a, size_t new_capacity) {
+static void cecs_dynamic_array_grow(cecs_dynamic_array* l, cecs_arena* a, size_t new_capacity) {
     assert(new_capacity > l->capacity && "Attempted to grow dynamic array to smaller capacity");
     size_t current_capacity = l->capacity;
     if (l->capacity == 0)
@@ -36,7 +36,7 @@ void cecs_dynamic_array_grow(cecs_dynamic_array* l, cecs_arena* a, size_t new_ca
     l->elements = cecs_arena_realloc(a, l->elements, current_capacity, l->capacity);
 }
 
-void cecs_dynamic_array_shrink(cecs_dynamic_array* l, cecs_arena* a, size_t new_capacity) {
+static void cecs_dynamic_array_shrink(cecs_dynamic_array* l, cecs_arena* a, size_t new_capacity) {
     assert(new_capacity < l->capacity && "Attempted to shrink dynamic array to larger capacity");
     if (new_capacity < l->capacity / 4) {
         size_t current_capacity = l->capacity;

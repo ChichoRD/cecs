@@ -37,7 +37,7 @@ typedef struct cecs_unit_component_storage {
     uint_least8_t phantom_data;
 } cecs_unit_component_storage;
 
-const cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_component_storage *self);
+cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_component_storage *self);
 
 cecs_optional_component cecs_unit_component_storage_get(const cecs_unit_component_storage *self, cecs_entity_id id, size_t size);
 
@@ -59,7 +59,7 @@ typedef struct cecs_indirect_component_storgage {
     cecs_displaced_set component_references;
 } cecs_indirect_component_storage;
 
-const cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage *self);
+cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage *self);
 
 cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_component_storage *self, cecs_entity_id id, size_t size);
 
@@ -81,7 +81,7 @@ typedef struct cecs_sparse_component_storage {
     cecs_displaced_set components;
 } cecs_sparse_component_storage;
 
-const cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component_storage *self);
+cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component_storage *self);
 
 cecs_optional_component cecs_sparse_component_storage_get(const cecs_sparse_component_storage *self, cecs_entity_id id, size_t size);
 
@@ -125,7 +125,7 @@ bool cecs_component_storage_has(const cecs_component_storage *self, cecs_entity_
 
 const cecs_dynamic_array *cecs_component_storage_components(const cecs_component_storage *self);
 
-inline cecs_component_storage_functions cecs_component_storage_get_functions(const cecs_component_storage *self) {
+static inline cecs_component_storage_functions cecs_component_storage_get_functions(const cecs_component_storage *self) {
     CECS_UNION_MATCH(self->storage) {
         case CECS_UNION_VARIANT(cecs_sparse_component_storage, cecs_component_storage_union):
             return sparse_component_storage_functions;
@@ -142,7 +142,7 @@ inline cecs_component_storage_functions cecs_component_storage_get_functions(con
     }
 }
 
-const cecs_storage_info cecs_component_storage_info(const cecs_component_storage *self);
+cecs_storage_info cecs_component_storage_info(const cecs_component_storage *self);
 
 cecs_optional_component cecs_component_storage_get(const cecs_component_storage *self, cecs_entity_id id, size_t size);
 #define CECS_COMPONENT_STORAGE_GET(type, component_storage_ref, entity_id) \

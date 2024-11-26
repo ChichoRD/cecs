@@ -2,7 +2,8 @@
 
 #include "cecs_component_storage.h"
 
-const cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_component_storage* self) {
+cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_component_storage* self) {
+    (void)self;
     return (cecs_storage_info) {
         .is_index_stable = true,
             .is_dense = true,
@@ -11,14 +12,25 @@ const cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_compone
 }
 
 cecs_optional_component cecs_unit_component_storage_get(const cecs_unit_component_storage* self, cecs_entity_id id, size_t size) {
+    (void)self;
+    (void)id;
+    (void)size;
     return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
 }
 
 cecs_optional_component cecs_unit_component_storage_set(const cecs_unit_component_storage* self, cecs_arena* a, cecs_entity_id id, void* component, size_t size) {
+    (void)self;
+    (void)a;
+    (void)id;
+    (void)component;
+    (void)size;
     return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
 }
 
 bool cecs_unit_component_storage_remove(const cecs_unit_component_storage* self, cecs_arena* a, cecs_entity_id id, void* out_removed_component, size_t size) {
+    (void)self;
+    (void)a;
+    (void)id;
     memset(out_removed_component, 0, size);
     return false;
 }
@@ -29,7 +41,8 @@ cecs_unit_component_storage cecs_unit_component_storage_create(void) {
     };
 }
 
-const cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage* self) {
+cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage* self) {
+    (void)self;
     return (cecs_storage_info) {
         .is_dense = false,
             .is_index_stable = true,
@@ -38,15 +51,16 @@ const cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect
 }
 
 cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_component_storage* self, cecs_entity_id id, size_t size) {
+    (void)size;
     if (!cecs_displaced_set_contains(&self->component_references, (size_t)id, &(void*){0}, sizeof(void*))) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
-    }
-    else {
+    } else {
         return CECS_OPTION_CREATE_SOME_STRUCT(cecs_optional_component, *CECS_DISPLACED_SET_GET(void*, &self->component_references, (size_t)id));
     }
 }
 
 cecs_optional_component cecs_indirect_component_storage_set(cecs_indirect_component_storage* self, cecs_arena* a, cecs_entity_id id, void* component, size_t size) {
+    (void)size;
     return CECS_OPTION_CREATE_SOME_STRUCT(
         cecs_optional_component,
         *CECS_DISPLACED_SET_SET(
@@ -60,6 +74,7 @@ cecs_optional_component cecs_indirect_component_storage_set(cecs_indirect_compon
 }
 
 bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* self, cecs_arena* a, cecs_entity_id id, void* out_removed_component, size_t size) {
+    (void)a;
     void* removed_component = NULL;
     if (cecs_displaced_set_remove_out(
         &self->component_references,
@@ -83,7 +98,8 @@ cecs_indirect_component_storage cecs_indirect_component_storage_create(void) {
     };
 }
 
-const cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component_storage* self) {
+cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component_storage* self) {
+    (void)self;
     return (cecs_storage_info) {
         .is_index_stable = true,
             .is_dense = false,
@@ -108,11 +124,11 @@ cecs_optional_component cecs_sparse_component_storage_set(cecs_sparse_component_
 }
 
 bool cecs_sparse_component_storage_remove(cecs_sparse_component_storage* self, cecs_arena* a, cecs_entity_id id, void* out_removed_component, size_t size) {
+    (void)a;
     if (cecs_displaced_set_contains_index(&self->components, (size_t)id)) {
         memcpy(out_removed_component, cecs_displaced_set_get(&self->components, (size_t)id, size), size);
         return true;
-    }
-    else {
+    } else {
         memset(out_removed_component, 0, size);
         return false;
     }
@@ -179,7 +195,7 @@ const cecs_dynamic_array* cecs_component_storage_components(const cecs_component
     }
 }
 
-const cecs_storage_info cecs_component_storage_info(const cecs_component_storage* self) {
+cecs_storage_info cecs_component_storage_info(const cecs_component_storage* self) {
     return cecs_component_storage_get_functions(self).info(&self->storage);
 }
 
