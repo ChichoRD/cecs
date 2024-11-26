@@ -47,6 +47,63 @@ WGPUAdapter request_adapter_sync(
     return userdata.adapter;
 }
 
+struct device_request_userdata {
+    bool device_request_completed;
+    WGPUDevice device;
+};
+
+void on_device_request_completed(
+    WGPURequestDeviceStatus status,
+    WGPUDevice device,
+    const char *message,
+    void *userdata
+) {
+    struct device_request_userdata *device_request_userdata = userdata;
+    if (status == WGPURequestDeviceStatus_Success) {
+        device_request_userdata->device = device;
+        device_request_userdata->device_request_completed = true;
+        printf("Got WebGPU device: %p\n", device);
+    } else {
+        device_request_userdata->device_request_completed = true;
+        device_request_userdata->device = NULL;
+        printf("Could not get WebGPU device: %s\n", message);
+    }
+}
+
+WGPUDevice request_device_sync(
+    WGPUAdapter adapter,
+    const WGPUDeviceDescriptor *descriptor
+) {
+    struct device_request_userdata userdata = {
+        .device_request_completed = false,
+        .device = NULL
+    };
+    wgpuAdapterRequestDevice(
+        adapter,
+        descriptor,
+        on_device_request_completed,
+        &userdata
+    );
+    while (!userdata.device_request_completed) { }
+    return userdata.device;
+}
+
+void on_device_lost(
+    WGPUDeviceLostReason reason,
+    const char *message,
+    void *userdata
+) {
+    printf("WebGPU device lost; due to WGPUDeviceLostReason (0x%X): %s\n", reason, message);
+}
+
+void on_device_error(
+    WGPUErrorType type,
+    const char *message,
+    void *userdata
+) {
+    printf("WebGPU device error (0x%X): %s\n", type, message);
+}
+
 int main(void) {
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
@@ -119,14 +176,36 @@ int main(void) {
 
     // TODO: move creation and dbg logging to a separate function
 
+
+    WGPUDeviceDescriptor device_descriptor = {
+        .nextInChain = NULL,
+        .label = "Learn WGPU Device",
+        .requiredFeatureCount = 0,
+        .requiredLimits = NULL,
+
+        .defaultQueue.nextInChain = NULL,
+        .defaultQueue.label = "Learn WGPU Queue",
+
+        .deviceLostCallback = on_device_lost,
+        .deviceLostUserdata = NULL,
+    };
+    WGPUDevice device = request_device_sync(adapter, &device_descriptor);
+    wgpuAdapterRelease(adapter);
+
+    wgpuDeviceSetUncapturedErrorCallback(device, on_device_error, NULL);
+
+
+    WGPUQueue queue = wgpuDeviceGetQueue(device);
+
     while (!glfwWindowShouldClose(window)) {
         // Check whether the user clicked on the close button (and any other
         // mouse/key event, which we don't use so far)
         glfwPollEvents();
     }
 
+    wgpuQueueRelease(queue);
+    wgpuDeviceRelease(device);
     free(features);
-    wgpuAdapterRelease(adapter);
     wgpuInstanceRelease(instance);
     glfwDestroyWindow(window);
     glfwTerminate();
