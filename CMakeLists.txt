@@ -92,6 +92,9 @@ if(CECS_GRAPHICS)
     add_subdirectory(
         "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw"
     )
+    add_subdirectory(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw3webgpu"
+    )
 
     add_executable(
         ${PROJECT_NAME}
@@ -108,6 +111,7 @@ if(CECS_GRAPHICS)
         PRIVATE
         webgpu
         glfw
+        glfw3webgpu
     )
     target_copy_webgpu_binaries(${PROJECT_NAME})
 endif()

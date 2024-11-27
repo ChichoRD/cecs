@@ -5,6 +5,7 @@
 #include <webgpu/webgpu.h>
 #include <webgpu/wgpu.h>
 #include <GLFW/glfw3.h>
+#include <glfw3webgpu.h>
 
 struct adpater_request_userdata {
     bool adapter_request_completed;
@@ -93,6 +94,7 @@ void on_device_lost(
     const char *message,
     void *userdata
 ) {
+    (void)userdata;
     printf("WebGPU device lost; due to WGPUDeviceLostReason (0x%X): %s\n", reason, message);
 }
 
@@ -101,8 +103,18 @@ void on_device_error(
     const char *message,
     void *userdata
 ) {
+    (void)userdata;
     printf("WebGPU device error (0x%X): %s\n", type, message);
 }
+
+void on_queue_work_done(
+    WGPUQueueWorkDoneStatus status,
+    void *userdata
+) {
+    *(bool *)userdata = true;
+    printf("WebGPU queue work done status: 0x%X\n", status);
+}
+
 
 int main(void) {
     if (!glfwInit()) {
@@ -119,11 +131,6 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    WGPUInstanceExtras instance_extras = {
-        .chain = { .next = NULL, .sType = WGPUSType_InstanceExtras },
-        .backends = WGPUBackendType_Vulkan,
-    };
-    // unused: instance_extras
     WGPUInstanceDescriptor instance_descriptor = {
         .nextInChain = NULL,
     };
@@ -134,10 +141,17 @@ int main(void) {
     }
     printf("WGPU Instance: %p\n", instance);
 
+    WGPUSurface surface = glfwGetWGPUSurface(instance, window);
+    printf("WGPU Surface: %p\n", surface);
+    int window_width;
+    int window_height;
+    glfwGetWindowSize(window, &window_width, &window_height);
+
 
     WGPURequestAdapterOptions adapter_options = {
         .nextInChain = NULL,
-        .powerPreference = WGPUPowerPreference_HighPerformance
+        .powerPreference = WGPUPowerPreference_HighPerformance,
+        .compatibleSurface = surface,
     };
     WGPUAdapter adapter = request_adapter_sync(instance, &adapter_options);
     WGPUSupportedLimits supported_limits = { .nextInChain = NULL };
@@ -148,6 +162,7 @@ int main(void) {
 #else 
     adapter_limits_success = wgpuAdapterGetLimits(adapter, &supported_limits);
 #endif
+    (void)adapter_limits_success;
 
     WGPUFeatureName *features;
     size_t feature_count = wgpuAdapterEnumerateFeatures(adapter, NULL);
@@ -173,8 +188,8 @@ int main(void) {
     printf("\t- Backend type: 0x%X\n", adapter_properties.backendType);
     printf("\t- Adapter type: 0x%X\n", adapter_properties.adapterType);
     printf("\t- Driver description: %s\n", adapter_properties.driverDescription);
-
     // TODO: move creation and dbg logging to a separate function
+
 
 
     WGPUDeviceDescriptor device_descriptor = {
@@ -190,12 +205,68 @@ int main(void) {
         .deviceLostUserdata = NULL,
     };
     WGPUDevice device = request_device_sync(adapter, &device_descriptor);
+
+    WGPUSurfaceConfiguration surface_configuration = {
+        .nextInChain = NULL,
+        .width = (uint32_t)window_width,
+        .height = (uint32_t)window_height,
+        .format = wgpuSurfaceGetPreferredFormat(surface, adapter),
+        .viewFormatCount = 0,
+        .viewFormats = NULL,
+        .usage = WGPUTextureUsage_RenderAttachment,
+        .device = device,
+        .presentMode = WGPUPresentMode_Fifo,
+        .alphaMode = WGPUCompositeAlphaMode_Auto
+    };
+    wgpuSurfaceConfigure(surface, &surface_configuration);
+
     wgpuAdapterRelease(adapter);
+    adapter = NULL;
 
     wgpuDeviceSetUncapturedErrorCallback(device, on_device_error, NULL);
 
 
     WGPUQueue queue = wgpuDeviceGetQueue(device);
+    printf("Got WGPU queue: %p\n", queue);
+
+    size_t command_count = 3;
+    WGPUCommandBuffer *commands = calloc(command_count, sizeof(WGPUCommandBuffer));
+
+    WGPUCommandEncoderDescriptor command_encoder_descriptor = {
+        .nextInChain = NULL,
+        .label = "Learn WGPU Command Encoder",
+    };
+    WGPUCommandEncoder command_encoder = wgpuDeviceCreateCommandEncoder(device, &command_encoder_descriptor);
+    wgpuCommandEncoderInsertDebugMarker(command_encoder, "Learn WGPU Command Encoder Debug Marker");
+
+    WGPUCommandBufferDescriptor command_buffer_descriptor = {
+        .nextInChain = NULL,
+        .label = "Learn WGPU Command Buffer",
+    };
+    for (size_t i = 0; i < command_count; i++) {
+        commands[i] = wgpuCommandEncoderFinish(command_encoder, &command_buffer_descriptor);
+        wgpuCommandEncoderRelease(command_encoder);
+        command_encoder = wgpuDeviceCreateCommandEncoder(device, &command_encoder_descriptor);
+    }
+
+    bool queue_work_done = false;
+    wgpuQueueOnSubmittedWorkDone(queue, on_queue_work_done, &queue_work_done);
+    wgpuQueueSubmit(queue, command_count, commands);
+    size_t tick_count = 0;
+    while (!queue_work_done) {
+        printf("Polling for queue work done...\t ticks: %zi\n", tick_count++);
+#if defined(WEBGPU_BACKEND_DAWN)
+        wgpuDeviceTick(device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+        wgpuDevicePoll(device, false, NULL);
+#endif
+    }
+    for (size_t i = 0; i < command_count; i++) {
+        wgpuCommandBufferRelease(commands[i]);
+    }
+    free(commands);
+    commands = NULL;
+    command_count = 0;
 
     while (!glfwWindowShouldClose(window)) {
         // Check whether the user clicked on the close button (and any other
@@ -206,6 +277,8 @@ int main(void) {
     wgpuQueueRelease(queue);
     wgpuDeviceRelease(device);
     free(features);
+    wgpuSurfaceUnconfigure(surface);
+    wgpuSurfaceRelease(surface);
     wgpuInstanceRelease(instance);
     glfwDestroyWindow(window);
     glfwTerminate();
