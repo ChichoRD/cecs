@@ -1,4 +1,4 @@
-#include "cecs.h"
+#include "cecs_core.h"
 
 cecs_prefab_id cecs_world_set_prefab(cecs_world* w, cecs_entity_id prefab) {
     CECS_WORLD_ADD_TAG(cecs_is_prefab, w, prefab);

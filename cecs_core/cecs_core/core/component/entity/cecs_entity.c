@@ -72,10 +72,8 @@ cecs_entity_id_range cecs_world_entities_add_entity_range(cecs_world_entities* w
             cecs_entity_id,
             &we->entity_ids,
             &we->entity_ids_arena,
-            ((size_t)(range.start + i)),
-            &(cecs_entity_id) {
-            i
-        }
+            (size_t)i,
+            &(cecs_entity_id){i}
         );
     }
 
