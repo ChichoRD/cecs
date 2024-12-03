@@ -2,7 +2,7 @@
 #define CECS_MESH_H
 
 #include <stddef.h>
-#include <cecs/cecs.h>
+#include <cecs_core/cecs_core.h>
 #include "cecs_vertex.h"
 
 typedef struct cecs_mesh {

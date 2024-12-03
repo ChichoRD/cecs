@@ -2,7 +2,7 @@
 #define CECS_VERTEX_H
 
 #include <webgpu/webgpu.h>
-#include <cecs/cecs.h>
+#include <cecs_core/cecs_core.h>
 
 typedef uint64_t cecs_buffer_offset_u64;
 typedef uint32_t cecs_buffer_offset_u32;

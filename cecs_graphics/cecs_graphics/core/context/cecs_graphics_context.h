@@ -5,7 +5,7 @@
 #include <webgpu/wgpu.h>
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
-#include <cecs/containers/cecs_union.h>
+#include <cecs_core/containers/cecs_union.h>
 //#include <cecs/containers/cecs_dynamic_array.h>
 
 typedef struct cecs_surface_context {

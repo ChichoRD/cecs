@@ -1,7 +1,7 @@
 #ifndef CECS_GRAPHICS_WORLD_H
 #define CECS_GRAPHICS_WORLD_H
 
-#include <cecs/cecs.h>
+#include <cecs_core/cecs_core.h>
 
 typedef	struct cecs_graphics_world {
     cecs_world world;
