@@ -80,7 +80,7 @@ void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component
 }
 
 void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
-    return cecs_world_components_get_component_storage_attachments(
+    return cecs_world_components_get_component_storage_attachments_unchecked(
         &w->components,
         component_id
     );
