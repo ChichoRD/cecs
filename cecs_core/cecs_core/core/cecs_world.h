@@ -78,6 +78,9 @@ cecs_entity_id cecs_world_copy_entity(cecs_world *w, cecs_entity_id destination,
 
 cecs_entity_id cecs_world_add_entity_copy(cecs_world *w, cecs_entity_id source);
 
+cecs_entity_id_range cecs_world_add_entity_range(cecs_world *w, size_t count);
+cecs_entity_id_range cecs_world_remove_entity_range(cecs_world *w, cecs_entity_id_range range);
+
 void *cecs_world_copy_entity_onto_and_grab(cecs_world *w, cecs_entity_id destination, cecs_entity_id source, cecs_component_id grab_component_id);
 #define CECS_WORLD_COPY_ENTITY_ONTO_AND_GRAB(type, world_ref, destination, source) \
     ((type *)cecs_world_copy_entity_onto_and_grab(world_ref, destination, source, CECS_COMPONENT_ID(type)))

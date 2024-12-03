@@ -35,11 +35,20 @@ else()
     )
 endif()
 
+set(
+    CECS_CORE_DIRECTORY
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs_core/"
+)
+set(
+    CECS_CORE_SRC_DIRECTORY
+    "${CECS_CORE_DIRECTORY}/cecs_core/"
+)
+
 file(
     GLOB_RECURSE
     CECS_SOURCES
     CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/*.c"
+    ${CECS_CORE_SRC_DIRECTORY}/*.c
 )
 
 
@@ -52,7 +61,7 @@ add_executable(
 target_include_directories(
     ${PROJECT_NAME}
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
+    ${CECS_CORE_DIRECTORY}
 )
 
 
@@ -65,7 +74,7 @@ add_library(
 target_include_directories(
     cecs
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
+    ${CECS_CORE_DIRECTORY}
 )
 
 project(cecs_app_lib_only C)
@@ -76,7 +85,7 @@ add_executable(
 target_include_directories(
     ${PROJECT_NAME}
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
+    ${CECS_CORE_DIRECTORY}
 )
 target_link_libraries(
     ${PROJECT_NAME}

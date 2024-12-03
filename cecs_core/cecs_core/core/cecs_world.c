@@ -190,6 +190,30 @@ cecs_entity_id cecs_world_add_entity_copy(cecs_world* w, cecs_entity_id source) 
     return cecs_world_copy_entity_onto(w, cecs_world_add_entity(w), source);
 }
 
+cecs_entity_id_range cecs_world_add_entity_range(cecs_world *w, size_t count) {
+    cecs_entity_id_range range = cecs_world_entities_add_entity_range(&w->entities, count);
+#if CECS_WORLD_FLAG_ALL_ENTITIES
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        cecs_world_set_entity_flags(w, e, cecs_entity_flags_default());
+    }
+#endif
+    return range;
+}
+
+cecs_entity_id_range cecs_world_remove_entity_range(cecs_world *w, cecs_entity_id_range range) {
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        assert(
+            !cecs_world_get_entity_flags(w, e).is_permanent
+            && "entity with given ID is permanent and cannot be removed"
+        );
+
+        cecs_world_set_entity_flags(w, e, cecs_entity_flags_default());
+        cecs_world_clear_entity(w, e);
+    }
+    
+    return cecs_world_entities_remove_entity_range(&w->entities, range);
+}
+
 void* cecs_world_copy_entity_onto_and_grab(cecs_world* w, cecs_entity_id destination, cecs_entity_id source, cecs_component_id grab_component_id) {
     assert(
         !cecs_world_get_entity_flags(w, destination).is_inmutable
