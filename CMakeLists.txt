@@ -39,7 +39,7 @@ file(
     GLOB_RECURSE
     CECS_SOURCES
     CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/cecs/*.c"
 )
 
 
@@ -65,7 +65,7 @@ add_library(
 target_include_directories(
     cecs
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs/cecs/"
 )
 
 project(cecs_app_lib_only C)
@@ -86,6 +86,13 @@ target_link_libraries(
 set(CECS_GRAPHICS ON)
 if(CECS_GRAPHICS)
     project(cecs_graphics C)
+    file(
+        GLOB_RECURSE
+        CECS_GRAPHICS_SOURCES
+        CMAKE_CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/cecs_graphics/*.c"
+    )
+
     add_subdirectory(
         "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/webgpu"
     )
@@ -99,13 +106,20 @@ if(CECS_GRAPHICS)
     add_executable(
         ${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/main.c"
+        ${CECS_GRAPHICS_SOURCES}
     )
     target_include_directories(
         ${PROJECT_NAME}
         PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/src/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/cecs_graphics/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs/"
     )
-
+    target_link_libraries(
+        ${PROJECT_NAME}
+        PUBLIC
+        cecs
+    )
+    
     target_link_libraries(
         ${PROJECT_NAME}
         PRIVATE

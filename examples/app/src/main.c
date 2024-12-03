@@ -6,7 +6,7 @@
 #include <time.h>
 #include <conio.h>
 
-#include <cecs.h>
+#include <cecs/cecs.h>
 #include "color.h"
 
 
@@ -575,8 +575,8 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
     printf("%s", (char *)screen.elements);
     cecs_arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / CECS_WORLD_GET_RESOURCE(cecs_game_time, w)->averaged_delta_time_seconds);
-    //arena_dbg_info dbg = arena_get_dbg_info_compare_size(&w->entities.entity_ids_arena);
-    //printf(
+    // cecs_arena_dbg_info dbg = cecs_arena_get_dbg_info_compare_size(&w->entities.entity_ids_arena);
+    // printf(
     //    "arena (%d owned / %d blocks): %d / %d\n"
     //    "\tminimums: %d / %d\n"
     //    "\tmaximums: %d / %d\n"
@@ -585,7 +585,7 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
     //    dbg.smallest_block_size, dbg.smallest_block_capacity,
     //    dbg.largest_block_size, dbg.largest_block_capacity,
     //    dbg.largest_remaining_capacity
-    //);
+    // );
 
     *cb = new_console_buffer;
     return EXIT_SUCCESS;
