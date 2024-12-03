@@ -1,3 +1,4 @@
+#include <memory.h>
 #include "cecs_world.h"
 
 cecs_world cecs_world_create(size_t entity_capacity, size_t component_type_capacity, size_t resource_capacity) {
@@ -67,6 +68,38 @@ bool cecs_world_remove_component(cecs_world* w, cecs_entity_id id, cecs_componen
     );
 
     return cecs_world_components_remove_component(&w->components, id, component_id, out_removed_component);
+}
+
+void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *attachments, size_t size) {
+    return cecs_world_components_set_component_storage_attachments(
+        &w->components,
+        component_id,
+        attachments,
+        size
+    );
+}
+
+void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
+    return cecs_world_components_get_component_storage_attachments(
+        &w->components,
+        component_id
+    );
+}
+
+bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *out_removed_attachments) {
+    cecs_component_storage_attachments removed_attachments;
+    if (!cecs_world_components_remove_component_storage_attachments(
+        &w->components,
+        component_id,
+        &removed_attachments
+    )) {
+        return false;
+    }
+    
+    if (out_removed_attachments != NULL) {
+        memcpy(out_removed_attachments, &removed_attachments, removed_attachments.attachments_size);
+    }
+    return true;
 }
 
 cecs_entity_flags* cecs_world_get_or_set_default_entity_flags(cecs_world* w, cecs_entity_id id) {

@@ -26,10 +26,16 @@ typedef struct cecs_component_discard {
 } cecs_component_discard;
 
 typedef CECS_OPTION_STRUCT(size_t *, cecs_optional_component_size) cecs_optional_component_size;
+typedef struct cecs_component_storage_attachments {
+    void *user_attachments;
+    size_t attachments_size;
+} cecs_component_storage_attachments;
+
 typedef struct cecs_world_components {
     cecs_arena storages_arena;
     cecs_arena components_arena;
     cecs_paged_sparse_set component_storages;
+    cecs_paged_sparse_set component_storages_attachments;
     cecs_paged_sparse_set component_sizes;
     cecs_world_components_checksum checksum;
     cecs_component_discard discard;
@@ -92,6 +98,21 @@ bool cecs_world_components_remove_component(
     cecs_entity_id entity_id,
     cecs_component_id component_id,
     void *out_removed_component
+);
+
+void *cecs_world_components_set_component_storage_attachments(
+    cecs_world_components *wc,
+    cecs_component_id component_id,
+    void *attachments,
+    size_t size
+);
+
+void *cecs_world_components_get_component_storage_attachments_unchecked(const cecs_world_components *wc, cecs_component_id component_id);
+
+bool cecs_world_components_remove_component_storage_attachments(
+    cecs_world_components *wc,
+    cecs_component_id component_id,
+    cecs_component_storage_attachments *out_removed_attachments
 );
 
 

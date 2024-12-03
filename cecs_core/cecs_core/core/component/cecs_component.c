@@ -1,5 +1,5 @@
 #include <assert.h>
-
+#include <memory.h>
 #include "cecs_component.h"
 
 cecs_world_components_checksum cecs_world_components_checksum_hash(cecs_world_components_checksum current) {
@@ -15,6 +15,7 @@ cecs_world_components cecs_world_components_create(size_t component_type_capacit
         ),
             .components_arena = cecs_arena_create(),
             .component_storages = cecs_paged_sparse_set_create(),
+            .component_storages_attachments = cecs_paged_sparse_set_create(),
             .component_sizes = cecs_paged_sparse_set_create(),
             .checksum = 0,
             .discard = (cecs_component_discard){ 0 }
@@ -25,6 +26,7 @@ void cecs_world_components_free(cecs_world_components* wc) {
     cecs_arena_free(&wc->components_arena);
     cecs_arena_free(&wc->storages_arena);
     wc->component_storages = (cecs_paged_sparse_set){ 0 };
+    wc->component_storages_attachments = (cecs_paged_sparse_set){ 0 };
     wc->component_sizes = (cecs_paged_sparse_set){ 0 };
     wc->discard = (cecs_component_discard){ 0 };
 }
@@ -181,6 +183,81 @@ bool cecs_world_components_remove_component(cecs_world_components* wc, cecs_enti
             *CECS_OPTION_GET(cecs_optional_component_size, stored_size)
         );
     }
+}
+
+void *cecs_world_components_set_component_storage_attachments(
+    cecs_world_components *wc,
+    cecs_component_id component_id,
+    void *attachments,
+    size_t size
+) {
+    assert(attachments != NULL && "error: attachments must not be NULL");
+    assert(size > 0 && "error: attachments size must be greater than zero");
+
+    if (size > wc->discard.size) {
+        wc->discard.handle = cecs_arena_realloc(&wc->components_arena, wc->discard.handle, wc->discard.size, size);
+        wc->discard.size = size;
+    }
+    cecs_optional_element stored_attachments =
+        CECS_PAGED_SPARSE_SET_GET(cecs_component_storage_attachments, &wc->component_storages_attachments, (size_t)component_id);
+    if (CECS_OPTION_IS_NONE(cecs_optional_element, stored_attachments)) {
+        cecs_component_storage_attachments new_attachments = {
+            .user_attachments = cecs_arena_alloc(&wc->storages_arena, size),
+            .attachments_size = size,
+        };
+        memcpy(new_attachments.user_attachments, attachments, size);
+        return CECS_PAGED_SPARSE_SET_SET(
+            cecs_component_storage_attachments,
+            &wc->component_storages_attachments,
+            &wc->storages_arena,
+            (size_t)component_id,
+            &new_attachments
+        )->user_attachments;
+    } else {
+        cecs_component_storage_attachments *current_attachments =
+            CECS_OPTION_GET_UNCHECKED(cecs_optional_element, stored_attachments);
+        if (current_attachments->attachments_size < size) {
+            current_attachments->user_attachments = cecs_arena_realloc(
+                &wc->storages_arena,
+                current_attachments->user_attachments,
+                current_attachments->attachments_size,
+                size
+            );
+        }
+        current_attachments->attachments_size = size;
+        memcpy(current_attachments->user_attachments, attachments, size);
+        return current_attachments->user_attachments;
+    }
+}
+
+void *cecs_world_components_get_component_storage_attachments_unchecked(const cecs_world_components *wc, cecs_component_id component_id) {
+    cecs_optional_element stored_attachments =
+        CECS_PAGED_SPARSE_SET_GET(cecs_component_storage_attachments, &wc->component_storages_attachments, (size_t)component_id);
+    CECS_OPTION_IS_SOME_ASSERT(cecs_optional_element, stored_attachments);
+    cecs_component_storage_attachments *attachments = CECS_OPTION_GET_UNCHECKED(cecs_optional_element, stored_attachments);
+    if (attachments->user_attachments == NULL) {
+        assert(false && "unreachable: attachments must not be NULL");
+        exit(EXIT_FAILURE);
+    }
+    if (attachments->attachments_size == 0) {
+        assert(false && "unreachable: attachments size must be greater than zero");
+        exit(EXIT_FAILURE);
+    }
+    return attachments->user_attachments;
+}
+
+bool cecs_world_components_remove_component_storage_attachments(
+    cecs_world_components *wc,
+    cecs_component_id component_id,
+    cecs_component_storage_attachments *out_removed_attachments
+) {
+    return CECS_SPARSE_SET_REMOVE(
+        cecs_component_storage_attachments,
+        &wc->component_storages_attachments,
+        &wc->storages_arena,
+        (size_t)component_id,
+        out_removed_attachments
+    );
 }
 
 cecs_world_components_iterator cecs_world_components_iterator_create(const cecs_world_components* components) {
