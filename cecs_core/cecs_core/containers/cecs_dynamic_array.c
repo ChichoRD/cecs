@@ -112,6 +112,31 @@ void* cecs_dynamic_array_set_range(cecs_dynamic_array* l, size_t index, void* el
     return memcpy((uint8_t*)l->elements + index * size, elements, count * size);
 }
 
+void *cecs_dynamic_array_set_copy_range(cecs_dynamic_array *l, size_t index, void *single_src, size_t count, size_t size) {
+    assert((index * size < l->count) && "Attempted to set elements with starting index out of bounds");
+    assert(((index + count) * size <= l->count) && "Attempted to set elements with end out of bounds");
+    uint8_t* destination = (uint8_t*)l->elements + index * size;
+
+    assert(
+        (((uint8_t*)single_src + size <= destination)
+            || (destination + count * size <= (uint8_t*)single_src))
+        && "Should not set range with elements overlapping said range"
+    );
+    memcpy(destination, single_src, size);
+
+    size_t copied = size;
+    size_t total = count * size;
+    while ((copied << 1) < total) {
+        memcpy(destination + copied, destination, copied);
+        copied <<= 1;
+    }
+    assert(copied >= total / 2 && "error: copied bytes should be at least half of total bytes");
+    assert(copied <= total && "error: copied bytes should be less than or equal to total bytes");
+    
+    memcpy(destination + copied, destination, total - copied);
+    return destination;
+}
+
 void* cecs_dynamic_array_append_empty(cecs_dynamic_array* l, cecs_arena* a, size_t count, size_t size) {
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)

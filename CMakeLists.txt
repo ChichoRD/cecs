@@ -9,7 +9,6 @@ enable_language(C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-set(C_STANDARD 17)
 if (MSVC)
     add_compile_options(
         /Zc:preprocessor

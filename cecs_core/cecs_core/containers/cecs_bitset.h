@@ -28,6 +28,7 @@
 #define CECS_BIT_WORD_TYPE size_t
 
 typedef CECS_BIT_WORD_TYPE cecs_bit_word;
+#define CECS_BIT_WORD_MAX ((cecs_bit_word)SIZE_MAX)
 #define CECS_BIT_WORD_BIT_COUNT (8 * sizeof(cecs_bit_word))
 static_assert(CECS_BIT_WORD_BITS == CECS_BIT_WORD_BIT_COUNT, "CECS_BIT_WORD_BITS != CECS_BIT_WORD_BIT_COUNT");
 
@@ -72,8 +73,22 @@ void cecs_bitset_unset_all(cecs_bitset *b);
 cecs_word_range cecs_bitset_expand(cecs_bitset *b, cecs_arena *a, size_t word_index);
 
 cecs_bit_word cecs_bitset_set(cecs_bitset *b, cecs_arena *a, size_t bit_index);
+size_t cecs_bitset_set_range(
+    cecs_bitset *b,
+    cecs_arena *a,
+    size_t bit_index,
+    size_t count,
+    const cecs_bit_word **out_set_words
+);
 
 cecs_bit_word cecs_bitset_unset(cecs_bitset *b, cecs_arena *a, size_t bit_index);
+size_t cecs_bitset_unset_range(
+    cecs_bitset *b,
+    cecs_arena *a,
+    size_t bit_index,
+    size_t count,
+    const cecs_bit_word **out_unset_words
+);
 
 cecs_bit_word cecs_bitset_get_word(const cecs_bitset *b, size_t bit_index);
 
@@ -127,8 +142,10 @@ cecs_hibitset cecs_hibitset_create(cecs_arena *a);
 void cecs_hibitset_unset_all(cecs_hibitset *b);
 
 void cecs_hibitset_set(cecs_hibitset *b, cecs_arena *a, size_t bit_index);
+void cecs_hibitset_set_range(cecs_hibitset *b, cecs_arena *a, size_t bit_index, size_t count);
 
 void cecs_hibitset_unset(cecs_hibitset *b, cecs_arena *a, size_t bit_index);
+void cecs_hibitset_unset_range(cecs_hibitset *b, cecs_arena *a, size_t bit_index, size_t count);
 
 bool cecs_hibitset_is_set(const cecs_hibitset *b, size_t bit_index);
 

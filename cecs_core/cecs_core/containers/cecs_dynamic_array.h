@@ -68,6 +68,10 @@ void *cecs_dynamic_array_set_range(cecs_dynamic_array *l, size_t index, void *el
 #define CECS_DYNAMIC_ARRAY_SET_RANGE(type, dynamic_array_ref, index, elements_ref, count) \
     cecs_dynamic_array_set_range(dynamic_array_ref, index, elements_ref, count, sizeof(type))
 
+void *cecs_dynamic_array_set_copy_range(cecs_dynamic_array *l, size_t index, void *single_src, size_t count, size_t size);
+#define CECS_DYNAMIC_ARRAY_SET_COPY_RANGE(type, dynamic_array_ref, index, single_src, count) \
+    cecs_dynamic_array_set_copy_range(dynamic_array_ref, index, single_src, count, sizeof(type))
+
 void *cecs_dynamic_array_insert(cecs_dynamic_array *l, cecs_arena *a, size_t index, void *element, size_t size);
 #define CECS_DYNAMIC_ARRAY_INSERT(type, dynamic_array_ref, arena_ref, index, element_ref) \
     ((type *)cecs_dynamic_array_insert(dynamic_array_ref, arena_ref, index, element_ref, sizeof(type)))
