@@ -16,7 +16,7 @@ typedef struct cecs_relation_id_descriptor {
     cecs_relation_target target;
 } cecs_relation_id_descriptor;
 
-inline cecs_relation_id_descriptor cecs_relation_id_descriptor_create_entity(cecs_component_id component_id, cecs_entity_id entity_target) {
+static inline cecs_relation_id_descriptor cecs_relation_id_descriptor_create_entity(cecs_component_id component_id, cecs_entity_id entity_target) {
     return (cecs_relation_id_descriptor) {
         .component_id = component_id,
         .target = (cecs_relation_target) {
@@ -24,7 +24,7 @@ inline cecs_relation_id_descriptor cecs_relation_id_descriptor_create_entity(cec
         }
     };
 }
-inline cecs_relation_id_descriptor cecs_relation_id_descriptor_create_tag(cecs_component_id component_id, cecs_tag_id tag_target) {
+static inline cecs_relation_id_descriptor cecs_relation_id_descriptor_create_tag(cecs_component_id component_id, cecs_tag_id tag_target) {
     return (cecs_relation_id_descriptor) {
         .component_id = component_id,
         .target = (cecs_relation_target) {
@@ -53,7 +53,7 @@ inline cecs_relation_id_descriptor cecs_relation_id_descriptor_create_tag(cecs_c
 #endif
 
 typedef cecs_component_id cecs_relation_id;
-inline cecs_relation_id cecs_relation_id_create(cecs_relation_id_descriptor descriptor) {
+static inline cecs_relation_id cecs_relation_id_create(cecs_relation_id_descriptor descriptor) {
     return ((descriptor.component_id + 1) << CECS_COMPONENT_ID_RELATION_SHIFT) + descriptor.target.tag_id;
 }
 #define CECS_RELATION_ID(component_type, target_id) \

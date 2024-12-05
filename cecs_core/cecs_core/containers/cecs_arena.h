@@ -48,11 +48,11 @@ cecs_arena cecs_arena_create_with_capacity(size_t capacity);
 void *cecs_arena_alloc(cecs_arena *a, size_t size);
 
 typedef enum cecs_arena_reallocation_strategy {
-    arena_reallocate_none,
-    arena_reallocate_in_place,
-    arena_reallocate_split,
-    arena_reallocate_fit,
-    arena_reallocate_new
+    cecs_arena_reallocate_none,
+    cecs_arena_reallocate_in_place,
+    cecs_arena_reallocate_split,
+    cecs_arena_reallocate_fit,
+    cecs_arena_reallocate_new
 } cecs_arena_reallocation_strategy;
 
 void *cecs_arena_realloc(cecs_arena *a, void *data_block, size_t current_size, size_t new_size);

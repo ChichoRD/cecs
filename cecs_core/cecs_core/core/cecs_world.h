@@ -25,7 +25,7 @@ cecs_world cecs_world_create(size_t entity_capacity, size_t component_type_capac
 
 void cecs_world_free(cecs_world *w);
 
-inline size_t cecs_world_entity_count(const cecs_world* w) {
+static inline size_t cecs_world_entity_count(const cecs_world* w) {
     return cecs_world_entities_count(&w->entities);
 }
 

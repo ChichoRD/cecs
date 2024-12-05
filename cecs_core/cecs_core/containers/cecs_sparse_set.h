@@ -64,20 +64,20 @@ cecs_sparse_set cecs_sparse_set_create_with_capacity(cecs_arena *a, size_t eleme
 
 cecs_sparse_set cecs_sparse_set_create_of_integers_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-inline void *cecs_sparse_set_data(const cecs_sparse_set *s) {
+static inline void *cecs_sparse_set_data(const cecs_sparse_set *s) {
     return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements).elements;
 }
 
 
-inline size_t *cecs_sparse_set_keys(const cecs_sparse_set *s) {
+static inline size_t *cecs_sparse_set_keys(const cecs_sparse_set *s) {
     return s->keys.elements;
 }
 
-inline size_t cecs_sparse_set_count_of_size(const cecs_sparse_set *s, size_t element_size) {
+static inline size_t cecs_sparse_set_count_of_size(const cecs_sparse_set *s, size_t element_size) {
     return cecs_dynamic_array_count_of_size(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), element_size);
 }
 
-inline bool cecs_sparse_set_contains(const cecs_sparse_set *s, size_t key) {
+static inline bool cecs_sparse_set_contains(const cecs_sparse_set *s, size_t key) {
     return cecs_displaced_set_contains_index(&s->indices, key)
         && CECS_OPTION_IS_SOME(cecs_dense_index, *CECS_DISPLACED_SET_GET(cecs_dense_index, &s->indices, key));
 }
@@ -128,7 +128,7 @@ typedef struct cecs_paged_sparse_set {
     cecs_displaced_set indices[CECS_PAGED_SPARSE_SET_PAGE_COUNT];
 } cecs_paged_sparse_set;
 
-inline uint8_t cecs_paged_sparse_set_log2(size_t n) {
+static inline uint8_t cecs_paged_sparse_set_log2(size_t n) {
 #if (SIZE_MAX == 0xFFFF)
     return (uint8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n));
 
@@ -145,11 +145,11 @@ inline uint8_t cecs_paged_sparse_set_log2(size_t n) {
 #endif
 }
 
-inline uint8_t cecs_paged_sparse_set_page_index(size_t key) {
+static inline uint8_t cecs_paged_sparse_set_page_index(size_t key) {
     return cecs_paged_sparse_set_log2(key) >> CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
 }
 
-inline size_t cecs_paged_sparse_set_page_key(size_t key, uint8_t page_index) {
+static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint8_t page_index) {
     const size_t mask_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE * (size_t)page_index;
     return (key >> mask_size) + (key & (((size_t)1 << mask_size) - 1));
 }
@@ -162,19 +162,19 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_with_capacity(cecs_arena *a, 
 
 cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-inline void *cecs_paged_sparse_set_data(const cecs_paged_sparse_set *s) {
+static inline void *cecs_paged_sparse_set_data(const cecs_paged_sparse_set *s) {
     return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements).elements;
 }
 
-inline size_t *cecs_paged_sparse_set_keys(const cecs_paged_sparse_set *s) {
+static inline size_t *cecs_paged_sparse_set_keys(const cecs_paged_sparse_set *s) {
     return s->keys.elements;
 }
 
-inline size_t cecs_paged_sparse_set_count_of_size(const cecs_paged_sparse_set *s, size_t element_size) {
+static inline size_t cecs_paged_sparse_set_count_of_size(const cecs_paged_sparse_set *s, size_t element_size) {
     return cecs_dynamic_array_count_of_size(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), element_size);
 }
 
-inline bool cecs_paged_sparse_set_contains(const cecs_paged_sparse_set *s, size_t key) {
+static inline bool cecs_paged_sparse_set_contains(const cecs_paged_sparse_set *s, size_t key) {
     uint8_t page_index = cecs_paged_sparse_set_page_index(key);
     const cecs_displaced_set *indices = &s->indices[page_index];
     size_t page_key = cecs_paged_sparse_set_page_key(key, page_index);

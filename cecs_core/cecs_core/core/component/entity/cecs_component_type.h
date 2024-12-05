@@ -38,7 +38,7 @@ typedef struct cecs_components_type_info {
     size_t component_count;
 } cecs_components_type_info;
 
-inline cecs_components_type_info cecs_components_type_info_create(cecs_component_id *component_ids, size_t component_count) {
+static inline cecs_components_type_info cecs_components_type_info_create(cecs_component_id *component_ids, size_t component_count) {
     return (cecs_components_type_info) {
         .component_ids = component_ids,
         .component_count = component_count

@@ -10,7 +10,7 @@ typedef struct cecs_world_system {
     cecs_components_search_groups const search_groups;
 } cecs_world_system;
 
-inline cecs_world_system cecs_world_system_create(cecs_components_search_groups search_groups) {
+static inline cecs_world_system cecs_world_system_create(cecs_components_search_groups search_groups) {
     return (cecs_world_system){ 
         .search_groups = search_groups
     };
@@ -32,23 +32,23 @@ typedef CECS_UNION_STRUCT(
     user_data
 ) cecs_system_predicate_data;
 
-inline cecs_system_predicate_data cecs_system_predicate_data_create_none() {
+static inline cecs_system_predicate_data cecs_system_predicate_data_create_none() {
     return (cecs_system_predicate_data)CECS_UNION_CREATE(cecs_none, cecs_system_predicate_data, CECS_NONE);
 }
 
-inline cecs_system_predicate_data cecs_system_predicate_data_create_delta_time(double delta_time_seconds) {
+static inline cecs_system_predicate_data cecs_system_predicate_data_create_delta_time(double delta_time_seconds) {
     return (cecs_system_predicate_data)CECS_UNION_CREATE(delta_time, cecs_system_predicate_data, delta_time_seconds);
 }
 
-inline cecs_system_predicate_data cecs_system_predicate_data_create_user_data(void *data) {
+static inline cecs_system_predicate_data cecs_system_predicate_data_create_user_data(void *data) {
     return (cecs_system_predicate_data)CECS_UNION_CREATE(user_data, cecs_system_predicate_data, data);
 }
 
-inline double cecs_system_predicate_data_delta_time(cecs_system_predicate_data data) {
+static inline double cecs_system_predicate_data_delta_time(cecs_system_predicate_data data) {
     return CECS_UNION_GET_UNCHECKED(delta_time, data);
 }
 
-inline void *cecs_system_predicate_data_user_data(cecs_system_predicate_data data) {
+static inline void *cecs_system_predicate_data_user_data(cecs_system_predicate_data data) {
     return CECS_UNION_GET_UNCHECKED(user_data, data);
 }
 

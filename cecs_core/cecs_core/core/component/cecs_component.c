@@ -94,6 +94,9 @@ cecs_component_storage cecs_component_storage_descriptor_build(cecs_component_st
     }
 }
 
+extern inline cecs_world_components_checksum cecs_world_components_checksum_add(cecs_world_components_checksum current, cecs_component_id component_id);
+extern inline cecs_world_components_checksum cecs_world_components_checksum_remove(cecs_world_components_checksum current, cecs_component_id component_id);
+
 cecs_optional_component cecs_world_components_set_component(cecs_world_components* wc, cecs_entity_id entity_id, cecs_component_id component_id, void* component, size_t size, cecs_component_storage_descriptor additional_storage_descriptor) {
     if (size > wc->discard.size) {
         wc->discard.handle = cecs_arena_realloc(&wc->components_arena, wc->discard.handle, wc->discard.size, size);

@@ -54,15 +54,54 @@ void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t ind
 void* cecs_displaced_set_set(cecs_displaced_set* s, cecs_arena* a, size_t index, void* element, size_t size) {
     if (!cecs_displaced_set_contains_index(s, index)) {
         return memcpy(cecs_displaced_set_expand(s, a, index, size), element, size);
-    }
-    else {
+    } else {
         return cecs_dynamic_array_set(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, index), element, size);
     }
+}
+
+void *cecs_displaced_set_set_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *elements, size_t size) {
+    if (!cecs_displaced_set_contains_index(s, range.start)) {
+        cecs_displaced_set_expand(s, a, range.start, size);
+    }
+    if (!cecs_displaced_set_contains_index(s, range.end)) {
+        cecs_displaced_set_expand(s, a, range.end, size);
+    }
+
+    return cecs_dynamic_array_set_range(
+        &s->elements,
+        cecs_displaced_set_cecs_dynamic_array_index(s, range.start),
+        elements,
+        cecs_inclusive_range_length(range),
+        size
+    );
+}
+
+void *cecs_displaced_set_set_copy_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *single_src, size_t size) {
+    if (!cecs_displaced_set_contains_index(s, range.start)) {
+        cecs_displaced_set_expand(s, a, range.start, size);
+    }
+    if (!cecs_displaced_set_contains_index(s, range.end)) {
+        cecs_displaced_set_expand(s, a, range.end, size);
+    }
+
+    return cecs_dynamic_array_set_copy_range(
+        &s->elements,
+        cecs_displaced_set_cecs_dynamic_array_index(s, range.start),
+        single_src,
+        cecs_inclusive_range_length(range),
+        size
+    );
 }
 
 void* cecs_displaced_set_get(const cecs_displaced_set* s, size_t index, size_t size) {
     assert(cecs_displaced_set_contains_index(s, index) && "index out of bounds");
     return cecs_dynamic_array_get(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, index), size);
+}
+
+void *cecs_displaced_set_get_range(const cecs_displaced_set *s, cecs_inclusive_range range, size_t size) {
+    assert(cecs_displaced_set_contains_index(s, range.start) && "error: range start out of bounds");
+    assert(cecs_displaced_set_contains_index(s, range.end) && "error: range end out of bounds");
+    return cecs_dynamic_array_get_range(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, range.start), cecs_inclusive_range_length(range), size);
 }
 
 bool cecs_displaced_set_remove(cecs_displaced_set* s, size_t index, size_t size, void* null_bit_pattern) {
