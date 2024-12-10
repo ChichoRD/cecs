@@ -667,19 +667,6 @@ bool finalize(cecs_world *w) {
 }
 
 int main(void) {
-    cecs_arena test_arena = cecs_arena_create();
-    cecs_hibitset b = cecs_hibitset_create(&test_arena);
-    cecs_hibitset_set_range(&b, &test_arena, 50, 50);
-    cecs_hibitset_unset_range(&b, &test_arena, 68, 2 + 15);
-
-    for (
-        cecs_hibitset_iterator it = cecs_hibitset_iterator_create_borrowed_at_first(&b);
-        !cecs_hibitset_iterator_done(&it);
-        cecs_hibitset_iterator_next_set(&it)
-    ) {
-        printf("bit %zi is set: %d\n", cecs_hibitset_iterator_current(&it), cecs_hibitset_iterator_current_is_set(&it));
-    }
-    return 0;
     cecs_world w = cecs_world_create(1024, 32, 4);
 
     bool quitting = false;
@@ -687,6 +674,7 @@ int main(void) {
     if (init(&w)) {
         app_error = true;
     }
+    //return EXIT_SUCCESS;
 
     cecs_game_time* t = CECS_WORLD_GET_RESOURCE(cecs_game_time, &w);
     timespec_get(&t->frame_start, TIME_UTC);

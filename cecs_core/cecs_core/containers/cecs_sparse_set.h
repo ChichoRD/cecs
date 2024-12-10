@@ -150,8 +150,10 @@ inline uint8_t cecs_paged_sparse_set_page_index(size_t key) {
 }
 
 inline size_t cecs_paged_sparse_set_page_key(size_t key, uint8_t page_index) {
-    const size_t mask_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE * (size_t)page_index;
-    return (key >> mask_size) + (key & (((size_t)1 << mask_size) - 1));
+    const size_t mask_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE * ((size_t)page_index + 1);
+    size_t page_key = (key & (((size_t)1 << (mask_size)) - 1))
+        >> (mask_size - CECS_PAGED_SPARSE_SET_PAGE_SIZE);
+    return page_key;
 }
 
 cecs_paged_sparse_set cecs_paged_sparse_set_create(void);
