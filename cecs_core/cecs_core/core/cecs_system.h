@@ -32,7 +32,7 @@ typedef CECS_UNION_STRUCT(
     user_data
 ) cecs_system_predicate_data;
 
-static inline cecs_system_predicate_data cecs_system_predicate_data_create_none() {
+static inline cecs_system_predicate_data cecs_system_predicate_data_create_none(void) {
     return (cecs_system_predicate_data)CECS_UNION_CREATE(cecs_none, cecs_system_predicate_data, CECS_NONE);
 }
 

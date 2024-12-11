@@ -30,6 +30,9 @@ else()
         -Wall
         -Wextra
         -Wpedantic
+
+        -Wno-gnu-zero-variadic-macro-arguments
+        -Wno-newline-eof
         #-Werror
     )
 endif()

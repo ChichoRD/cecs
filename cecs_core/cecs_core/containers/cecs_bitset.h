@@ -102,7 +102,7 @@ typedef struct cecs_bitset_iterator {
     size_t current_bit_index;
 } cecs_bitset_iterator;
 
-cecs_bitset_iterator cecs_bitset_iterator_create(const cecs_bitset *b);;
+cecs_bitset_iterator cecs_bitset_iterator_create(const cecs_bitset *b);
 
 static inline bool cecs_bitset_iterator_done(const cecs_bitset_iterator *it) {
     return !cecs_bitset_bit_in_range(it->bitset, it->current_bit_index);

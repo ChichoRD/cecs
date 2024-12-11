@@ -3,7 +3,7 @@
 
 #include "cecs_dynamic_array.h"
 
-cecs_dynamic_array cecs_dynamic_array_create() {
+cecs_dynamic_array cecs_dynamic_array_create(void) {
     cecs_dynamic_array l;
     l.count = 0;
     l.capacity = 0;

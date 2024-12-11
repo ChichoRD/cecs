@@ -674,7 +674,6 @@ int main(void) {
     if (init(&w)) {
         app_error = true;
     }
-    //return EXIT_SUCCESS;
 
     cecs_game_time* t = CECS_WORLD_GET_RESOURCE(cecs_game_time, &w);
     timespec_get(&t->frame_start, TIME_UTC);
