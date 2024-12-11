@@ -322,79 +322,92 @@ void *cecs_component_storage_get_or_null(const cecs_component_storage* self, cec
     return CECS_OPTION_GET_OR_NULL(cecs_optional_component, component);
 }
 
-void *cecs_component_storage_set(cecs_component_storage* self, cecs_arena* a, cecs_entity_id id, void* component, size_t size) {
+cecs_optional_component cecs_component_storage_set(cecs_component_storage* self, cecs_arena* a, cecs_entity_id id, void* component, size_t size) {
     cecs_hibitset_set(&self->entity_bitset, a, (size_t)id);
 
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
     if (cecs_component_storage_function_type_from_info(storage_functions.info(&self->storage))) {
-        return storage_functions.set(&self->storage, a, id, component, size);
+        return CECS_OPTION_CREATE_SOME_STRUCT(
+            cecs_optional_component,
+            storage_functions.set(&self->storage, a, id, component, size)
+        );
     } else {
-        return component;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
     }
 }
 
-void *cecs_component_storage_set_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *components, size_t count, size_t size) {
+cecs_optional_component_array cecs_component_storage_set_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *components, size_t count, size_t size) {
     cecs_hibitset_set_range(&self->entity_bitset, a, (size_t)id, count);
 
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
     switch (cecs_component_storage_function_type_from_info(storage_functions.info(&self->storage))) {
     case cecs_component_storage_function_type_none:
-        return components;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
     case cecs_component_storage_function_type_functions: {
         if (count == 0) {
-            return NULL;
+            return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
         }
 
-        void *first = set(&self->storage, a, id, components, size);
+        void *first = storage_functions.set(&self->storage, a, id, components, size);
         for (size_t i = 1; i < count; ++i) {
             storage_functions.set(&self->storage, a, id + i, ((uint8_t *)components) + i * size, size);
         }
-        return first;
+        return CECS_OPTION_CREATE_SOME_STRUCT(cecs_optional_component_array, first);
     }
-    case cecs_component_storage_function_type_array_functions:
-        return cecs_component_storage_get_array_functions(self).set(&self->storage, a, id, components, count, size);
+    case cecs_component_storage_function_type_array_functions: {
+        return CECS_OPTION_CREATE_SOME_STRUCT(
+            cecs_optional_component_array,
+            cecs_component_storage_get_array_functions(self).set(&self->storage, a, id, components, count, size)
+        );
+    }
     case cecs_component_storage_function_type_custom: {
+        // TODO
         assert(false && "unimplemented: custom storage functions");
         exit(EXIT_FAILURE);
-        return NULL;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
     }
     default: {
         assert(false && "unreachable: invalid component storage function type");
         exit(EXIT_FAILURE);
-        return NULL;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
     }
     }
 }
 
-void *cecs_component_storage_set_copy_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component_single_src, size_t count, size_t size) {
+cecs_optional_component_array cecs_component_storage_set_copy_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component_single_src, size_t count, size_t size) {
     cecs_hibitset_set_range(&self->entity_bitset, a, (size_t)id, count);
 
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
     switch (cecs_component_storage_function_type_from_info(storage_functions.info(&self->storage))) {
     case cecs_component_storage_function_type_none:
-        return component_single_src;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
     case cecs_component_storage_function_type_functions: {
         if (count == 0) {
-            return NULL;
+            return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
         }
 
         void *first = storage_functions.set(&self->storage, a, id, component_single_src, size);
         for (size_t i = 1; i < count; ++i) {
             storage_functions.set(&self->storage, a, id + i, component_single_src, size);
         }
-        return first;
+        return CECS_OPTION_CREATE_SOME_STRUCT(cecs_optional_component_array, first);
     }
-    case cecs_component_storage_function_type_array_functions:
-        return cecs_component_storage_get_array_functions(self).set_copy(&self->storage, a, id, component_single_src, count, size);
+    case cecs_component_storage_function_type_array_functions: {
+        return CECS_OPTION_CREATE_SOME_STRUCT(
+            cecs_optional_component_array,
+            cecs_component_storage_get_array_functions(self).set_copy(&self->storage, a, id, component_single_src, count, size)
+        );
+    }
     case cecs_component_storage_function_type_custom: {
+        // TODO
         assert(false && "unimplemented: custom storage functions");
         exit(EXIT_FAILURE);
-        return NULL;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
     }
     default: {
         assert(false && "unreachable: invalid component storage function type");
         exit(EXIT_FAILURE);
-        return NULL;
+        return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component_array);
     }
     }
 }

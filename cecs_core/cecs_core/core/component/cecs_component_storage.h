@@ -22,6 +22,7 @@ typedef struct cecs_storage_info {
 
 
 typedef CECS_OPTION_STRUCT(void *, cecs_optional_component) cecs_optional_component;
+typedef CECS_OPTION_STRUCT(void *, cecs_optional_component_array) cecs_optional_component_array;
 
 typedef cecs_storage_info cecs_info(const void *self);
 typedef cecs_optional_component cecs_get_component(const void *self, cecs_entity_id id, size_t size);
@@ -172,11 +173,11 @@ size_t cecs_component_storage_get_array(const cecs_component_storage *self, cecs
 void *cecs_component_storage_get_unchecked(const cecs_component_storage *self, cecs_entity_id id, size_t size);
 void *cecs_component_storage_get_or_null(const cecs_component_storage *self, cecs_entity_id id, size_t size);
 
-void *cecs_component_storage_set(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component, size_t size);
+cecs_optional_component cecs_component_storage_set(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component, size_t size);
 #define CECS_COMPONENT_STORAGE_SET(type, component_storage_ref, arena_ref, entity_id, component_ref) \
     ((type *)cecs_component_storage_set(component_storage_ref, arena_ref, entity_id, component_ref, sizeof(type)))
-void *cecs_component_storage_set_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *components, size_t count, size_t size);
-void *cecs_component_storage_set_copy_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component_single_src, size_t count, size_t size);
+cecs_optional_component_array cecs_component_storage_set_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *components, size_t count, size_t size);
+cecs_optional_component_array cecs_component_storage_set_copy_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component_single_src, size_t count, size_t size);
 
 bool cecs_component_storage_remove(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *out_removed_component, size_t size);
 #define CECS_COMPONENT_STORAGE_REMOVE(type, component_storage_ref, arena_ref, entity_id) \

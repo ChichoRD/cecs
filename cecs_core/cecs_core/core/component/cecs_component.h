@@ -45,10 +45,14 @@ cecs_world_components cecs_world_components_create(size_t component_type_capacit
 
 void cecs_world_components_free(cecs_world_components *wc);
 
-size_t cecs_world_components_get_component_storage_count(const cecs_world_components *wc);
+static inline size_t cecs_world_components_get_component_storage_count(const cecs_world_components *wc) {
+    return cecs_paged_sparse_set_count_of_size(&wc->component_storages, sizeof(cecs_component_storage));
+}
 
 cecs_optional_component_size cecs_world_components_get_component_size(const cecs_world_components *wc, cecs_component_id component_id);
-size_t cecs_world_components_get_component_size_unchecked(const cecs_world_components *wc, cecs_component_id component_id);
+static inline size_t cecs_world_components_get_component_size_unchecked(const cecs_world_components *wc, cecs_component_id component_id) {
+    return *CECS_OPTION_GET(cecs_optional_component_size, cecs_world_components_get_component_size(wc, component_id));
+}
 
 typedef CECS_OPTION_STRUCT(cecs_component_storage *, cecs_optional_component_storage) cecs_optional_component_storage;
 cecs_optional_component_storage cecs_world_components_get_component_storage(const cecs_world_components *wc, cecs_component_id component_id);
@@ -78,26 +82,106 @@ cecs_optional_component cecs_world_components_set_component(
     cecs_component_storage_descriptor additional_storage_descriptor
 );
 
-void *cecs_world_components_set_component_unchecked(
+cecs_optional_component_array cecs_world_components_set_component_array(
+    cecs_world_components* wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id,
+    void* components,
+    size_t count,
+    size_t size,
+    cecs_component_storage_descriptor additional_storage_descriptor
+);
+
+cecs_optional_component_array cecs_world_components_set_component_copy_array(
+    cecs_world_components *wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id,
+    void *component_single_src,
+    size_t count,
+    size_t size,
+    cecs_component_storage_descriptor additional_storage_descriptor
+);
+
+static inline void *cecs_world_components_set_component_unchecked(
     cecs_world_components *wc,
     cecs_entity_id entity_id,
     cecs_component_id component_id,
     void *component,
     size_t size,
     cecs_component_storage_descriptor additional_storage_descriptor
-);
+) {
+    return CECS_OPTION_GET(
+        cecs_optional_component,
+        cecs_world_components_set_component(wc, entity_id, component_id, component, size, additional_storage_descriptor)
+    );
+}
+
+static inline void *cecs_world_components_set_component_array_unchecked(
+    cecs_world_components *wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id,
+    void *components,
+    size_t count,
+    size_t size,
+    cecs_component_storage_descriptor additional_storage_descriptor
+) {
+    return CECS_OPTION_GET(
+        cecs_optional_component_array,
+        cecs_world_components_set_component_array(wc, entity_id, component_id, components, count, size, additional_storage_descriptor)
+    );
+}
+
+static inline void *cecs_world_components_set_component_copy_array_unchecked(
+    cecs_world_components *wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id,
+    void *component_single_src,
+    size_t count,
+    size_t size,
+    cecs_component_storage_descriptor additional_storage_descriptor
+) {
+    return CECS_OPTION_GET(
+        cecs_optional_component_array,
+        cecs_world_components_set_component_copy_array(wc, entity_id, component_id, component_single_src, count, size, additional_storage_descriptor)
+    );
+}
 
 bool cecs_world_components_has_component(const cecs_world_components *wc, cecs_entity_id entity_id, cecs_component_id component_id);
 
-cecs_optional_component cecs_world_components_get_component(const cecs_world_components *wc, cecs_entity_id entity_id, cecs_component_id component_id);
+cecs_optional_component cecs_world_components_get_component(
+    const cecs_world_components *wc,
+    cecs_entity_id entity_id, 
+    cecs_component_id component_id
+);
+size_t cecs_world_components_get_component_array(
+    const cecs_world_components* wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id,
+    void** out_components,
+    size_t count
+);
 
-void *cecs_world_components_get_component_unchecked(const cecs_world_components *wc, cecs_entity_id entity_id, cecs_component_id component_id);
+static inline void *cecs_world_components_get_component_unchecked(
+    const cecs_world_components *wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id
+) {
+    return CECS_OPTION_GET(cecs_optional_component, cecs_world_components_get_component(wc, entity_id, component_id));
+}
 
 bool cecs_world_components_remove_component(
     cecs_world_components *wc,
     cecs_entity_id entity_id,
     cecs_component_id component_id,
     void *out_removed_component
+);
+
+size_t cecs_world_components_remove_component_array(
+    cecs_world_components *wc,
+    cecs_entity_id entity_id,
+    cecs_component_id component_id,
+    void *out_removed_components,
+    size_t count
 );
 
 void *cecs_world_components_set_component_storage_attachments(
