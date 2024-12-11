@@ -82,19 +82,18 @@ cecs_component_storage cecs_component_storage_descriptor_build(cecs_component_st
             return cecs_component_storage_create_indirect(
                 &wc->components_arena
             );
-        }
-        else {
+        } else {
+            // TODO: keep an eye on indirect storages, and allow customization
             cecs_component_storage other_storage = cecs_component_storage_descriptor_build((cecs_component_storage_descriptor) {
                 .is_size_known = false,
-                    .capacity = descriptor.capacity,
-                    .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
+                .capacity = descriptor.capacity,
+                .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
             }, wc, 0);
             return cecs_component_storage_create_indirect(
                 &wc->components_arena
             );
         }
-    }
-    else {
+    } else {
         return cecs_component_storage_create_sparse(&wc->components_arena, descriptor.capacity, component_size);
     }
 }

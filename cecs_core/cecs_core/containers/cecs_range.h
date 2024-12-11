@@ -75,6 +75,10 @@ static inline cecs_exclusive_range cecs_exclusive_range_from(const cecs_range ra
     return (cecs_exclusive_range) { .range = range };
 }
 
+static inline cecs_exclusive_range cecs_exclusive_range_from_inclusive(const cecs_range range) {
+    return (cecs_exclusive_range) { .start = range.start, .end = range.end + 1 };
+}
+
 static inline cecs_exclusive_range cecs_exclusive_range_singleton(cecs_ssize_t index) {
     return (cecs_exclusive_range) { .start = index, .end = index + 1 };
 }
@@ -115,6 +119,10 @@ typedef union cecs_inclusive_range {
 
 static inline cecs_inclusive_range cecs_inclusive_range_from(const cecs_range range) {
     return (cecs_inclusive_range) { .range = range };
+}
+
+static inline cecs_inclusive_range cecs_inclusive_range_from_exclusive(const cecs_range range) {
+    return (cecs_inclusive_range) { .start = range.start, .end = range.end - 1 };
 }
 
 static inline cecs_inclusive_range cecs_inclusive_range_singleton(cecs_ssize_t index) {

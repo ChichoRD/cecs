@@ -13,16 +13,17 @@ if (MSVC)
     add_compile_options(
         /Zc:preprocessor
         /we\"4022\"
-        /GS
+
         /W4
         /wd\"5045\"
         /wd\"4115\"
         /wd\"4255\"
         /wd\"4668\"
+
         /Zc:wchar_t
         /Zi
 
-        /EHsc
+        # /EHsc
         /nologo
     )
 else()
@@ -33,6 +34,8 @@ else()
 
         -Wno-gnu-zero-variadic-macro-arguments
         -Wno-newline-eof
+        -Wno-unused-function
+        -Wno-extra-semi
         #-Werror
     )
 endif()

@@ -10,10 +10,11 @@ extern cecs_type_id cecs_type_id_count;
 #define CECS_PASTE(x, y) x##y
 #define CECS_PASTE3(x, y, z) x##y##z
 
+// TODO: figure out comfortable way to ensure correct linkage
 #define CECS_TYPE_ID_IMPLEMENT_COUNTER(type, counter) \
     static bool cecs_##type##_initialized_type_id = false; \
     static cecs_type_id cecs_##type##_id = 0; \
-    static cecs_type_id CECS_TYPE_ID_VOID(type); \
+    static inline cecs_type_id CECS_TYPE_ID_VOID(type); \
     cecs_type_id CECS_TYPE_ID_VOID(type) { \
         if (!cecs_##type##_initialized_type_id) { \
             cecs_##type##_initialized_type_id = true; \

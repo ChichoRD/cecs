@@ -134,7 +134,7 @@ const cecs_component_storage_functions sparse_component_storage_functions = {
 };
 
 size_t cecs_sparse_component_storage_get_array(const cecs_sparse_component_storage *self, cecs_entity_id id, void **out_components, size_t count, size_t size) {
-    cecs_inclusive_range range = cecs_inclusive_range_from(cecs_range_intersection(
+    cecs_inclusive_range range = cecs_inclusive_range_from_exclusive(cecs_range_intersection(
         cecs_exclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count).range,
         self->components.index_range.range
     ));
@@ -172,7 +172,8 @@ void *cecs_sparse_component_storage_set_copy_array(cecs_sparse_component_storage
 }
 
 size_t cecs_sparse_component_storage_remove_array(cecs_sparse_component_storage *self, cecs_arena *a, cecs_entity_id id, void *out_removed_components, size_t count, size_t size) {
-    cecs_inclusive_range range = cecs_inclusive_range_from(cecs_range_intersection(
+    (void)a;
+    cecs_inclusive_range range = cecs_inclusive_range_from_exclusive(cecs_range_intersection(
         cecs_exclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count).range,
         self->components.index_range.range
     ));
