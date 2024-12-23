@@ -40,6 +40,9 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
     WGPUIndexFormat index_format
 );
 
+cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder);
+cecs_mesh *cecs_mesh_builder_build_into_and_clear(cecs_world *world, cecs_mesh_builder *builder, cecs_graphics_context *context);
+
 // TODO: custom data attatched per storage
 
 #endif

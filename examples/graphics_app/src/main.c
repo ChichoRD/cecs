@@ -51,9 +51,9 @@ int main(void) {
                 .loadOp = WGPULoadOp_Clear,
                 .storeOp = WGPUStoreOp_Store,
                 .clearValue = clear_color,
-#ifndef WEBGPU_BACKEND_WGPU
-                .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
-#endif // NOT WEBGPU_BACKEND_WGPU
+//#ifndef WEBGPU_BACKEND_WGPU
+//                .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
+//#endif // NOT WEBGPU_BACKEND_WGPU
             };
             WGPURenderPassDescriptor render_pass_descriptor = {
                 .nextInChain = NULL,
