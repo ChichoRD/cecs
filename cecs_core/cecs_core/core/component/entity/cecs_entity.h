@@ -33,6 +33,7 @@ cecs_entity_id cecs_world_entities_add_entity(cecs_world_entities *we);
 
 cecs_entity_id cecs_world_entities_remove_entity(cecs_world_entities *we, cecs_entity_id id);
 
+// TODO: add a free queue for entity ranges
 typedef cecs_exclusive_range cecs_entity_id_range;
 cecs_entity_id_range cecs_world_entities_add_entity_range(cecs_world_entities *we, size_t count);
 

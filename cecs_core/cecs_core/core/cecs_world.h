@@ -104,6 +104,7 @@ size_t cecs_world_remove_tag_array(cecs_world *w, cecs_entity_id_range range, ce
 cecs_entity_id cecs_world_add_entity(cecs_world *w);
 cecs_entity_id cecs_world_clear_entity(cecs_world *w, cecs_entity_id entity_id);
 
+// TODO: ensure relation are accounted for
 cecs_entity_id cecs_world_remove_entity(cecs_world *w, cecs_entity_id entity_id);
 
 cecs_entity_id cecs_world_copy_entity_onto(cecs_world *w, cecs_entity_id destination, cecs_entity_id source);
