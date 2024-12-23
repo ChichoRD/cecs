@@ -38,7 +38,14 @@ cecs_sparse_set cecs_sparse_set_create_of_integers_with_capacity(cecs_arena* a, 
     };
 }
 
-cecs_optional_element cecs_sparse_set_get(const cecs_sparse_set* s, size_t key, size_t element_size) {
+void cecs_sparse_set_clear(cecs_sparse_set *s) {
+    cecs_displaced_set_clear(&s->indices);
+    cecs_dynamic_array_clear(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements));
+    cecs_dynamic_array_clear(&s->keys);
+}
+
+cecs_optional_element cecs_sparse_set_get(const cecs_sparse_set *s, size_t key, size_t element_size)
+{
     if (!cecs_displaced_set_contains_index(&s->indices, key)) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_element);
     }
