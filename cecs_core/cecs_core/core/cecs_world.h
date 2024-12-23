@@ -71,9 +71,15 @@ static inline cecs_entity_flags *cecs_world_set_entity_flags(cecs_world *w, cecs
 void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *attachments, size_t size);
 #define CECS_WORLD_SET_COMPONENT_STORAGE_ATTACHMENTS(type, attachment_type, world_ref, attachments_ref) \
     ((attachment_type *)cecs_world_set_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type), attachments_ref, sizeof(type)))
+bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_component_id component_id);
+#define CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(type, world_ref) \
+    cecs_world_has_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type))
 void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id);
 #define CECS_WORLD_GET_COMPONENT_STORAGE_ATTACHMENTS(type, attachment_type, world_ref) \
     ((attachment_type *)cecs_world_get_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type)))
+void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *default_attachments, size_t size);
+#define CECS_WORLD_GET_OR_SET_COMPONENT_STORAGE_ATTACHMENTS(type, attachment_type, world_ref, default_attachments_ref) \
+    ((attachment_type *)cecs_world_get_or_set_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type), default_attachments_ref, sizeof(type)))
 bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *out_removed_attachments);
 #define CECS_WORLD_REMOVE_COMPONENT_STORAGE_ATTACHMENTS(type, world_ref, out_removed_attachments_ref) \
     cecs_world_remove_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type), out_removed_attachments_ref)

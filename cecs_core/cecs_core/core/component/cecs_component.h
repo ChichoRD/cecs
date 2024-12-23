@@ -191,7 +191,15 @@ void *cecs_world_components_set_component_storage_attachments(
     size_t size
 );
 
+bool cecs_world_components_has_component_storage_attachments(const cecs_world_components *wc, cecs_component_id component_id);
 void *cecs_world_components_get_component_storage_attachments_unchecked(const cecs_world_components *wc, cecs_component_id component_id);
+
+void *cecs_world_components_get_or_set_component_storage_attachments(
+    cecs_world_components *wc,
+    cecs_component_id component_id,
+    void *attachments,
+    size_t size
+);
 
 bool cecs_world_components_remove_component_storage_attachments(
     cecs_world_components *wc,

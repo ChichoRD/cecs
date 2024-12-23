@@ -82,6 +82,8 @@ static inline bool cecs_sparse_set_contains(const cecs_sparse_set *s, size_t key
         && CECS_OPTION_IS_SOME(cecs_dense_index, *CECS_DISPLACED_SET_GET(cecs_dense_index, &s->indices, key));
 }
 
+void cecs_sparse_set_clear(cecs_sparse_set *s);
+
 cecs_optional_element cecs_sparse_set_get(const cecs_sparse_set *s, size_t key, size_t element_size);
 #define CECS_SPARSE_SET_GET(type, sparse_set_ref, key) \
     cecs_sparse_set_get(sparse_set_ref, key, sizeof(type))

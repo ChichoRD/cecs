@@ -155,10 +155,23 @@ void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component
     );
 }
 
+bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
+    return cecs_world_components_has_component_storage_attachments(&w->components, component_id);
+}
+
 void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
     return cecs_world_components_get_component_storage_attachments_unchecked(
         &w->components,
         component_id
+    );
+}
+
+void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *default_attachments, size_t size) {
+    return cecs_world_components_get_or_set_component_storage_attachments(
+        &w->components,
+        component_id,
+        default_attachments,
+        size
     );
 }
 
@@ -385,11 +398,15 @@ cecs_entity_id_range cecs_world_remove_entity_range(cecs_world *w, cecs_entity_i
             !cecs_world_get_entity_flags(w, e).is_permanent
             && "entity with given ID is permanent and cannot be removed"
         );
-
-        cecs_world_set_entity_flags(w, e, cecs_entity_flags_default());
-        cecs_world_clear_entity(w, e);
     }
     
+    CECS_WORLD_SET_COMPONENT_COPY_ARRAY(
+        cecs_entity_flags,
+        w,
+        range,
+        &CECS_ENTITY_FLAGS_DEFAULT
+    );
+    cecs_world_clear_entity_range(w, range, range.start);
     return cecs_world_entities_remove_entity_range(&w->entities, range);
 }
 
