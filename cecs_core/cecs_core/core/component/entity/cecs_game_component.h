@@ -29,7 +29,7 @@ typedef struct cecs_entity_flags {
 CECS_COMPONENT_IMPLEMENT(cecs_entity_flags);
 
 #define CECS_ENTITY_FLAGS_DEFAULT ((cecs_entity_flags){0})
-inline cecs_entity_flags cecs_entity_flags_default(void) {
+static inline cecs_entity_flags cecs_entity_flags_default(void) {
     return CECS_ENTITY_FLAGS_DEFAULT;
 }
 

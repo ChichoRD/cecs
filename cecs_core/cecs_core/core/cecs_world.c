@@ -1,3 +1,4 @@
+#include <memory.h>
 #include "cecs_world.h"
 
 cecs_world cecs_world_create(size_t entity_capacity, size_t component_type_capacity, size_t resource_capacity) {
@@ -27,6 +28,16 @@ bool cecs_world_try_get_component(const cecs_world* w, cecs_entity_id entity_id,
     }
 }
 
+size_t cecs_world_get_component_array(const cecs_world *w, cecs_entity_id_range range, cecs_component_id component_id, void **out_components) {
+    return cecs_world_components_get_component_array(
+        &w->components,
+        (cecs_entity_id)range.start,
+        component_id,
+        out_components,
+        cecs_exclusive_range_length(range)
+    );
+}
+
 cecs_entity_flags cecs_world_get_entity_flags(const cecs_world* w, cecs_entity_id entity_id) {
     assert(cecs_world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");
     cecs_entity_flags* flags = NULL;
@@ -52,10 +63,58 @@ void* cecs_world_set_component(cecs_world* w, cecs_entity_id id, cecs_component_
         component,
         size,
         (cecs_component_storage_descriptor) {
-        .capacity = 1,
+            .capacity = 1,
             .is_size_known = true,
             .indirect_component_id = { 0 }
+        }
+    );
+}
+
+void *cecs_world_set_component_array(cecs_world *w, cecs_entity_id_range range, cecs_component_id component_id, void *components, size_t size) {
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        assert(cecs_world_enities_has_entity(&w->entities, e) && "error: entity with given ID does not exist");
+        assert(
+            !cecs_world_get_entity_flags(w, e).is_inmutable
+            && "error: entity with given ID is inmutable and its components may not be set"
+        );
     }
+
+    return cecs_world_components_set_component_array_unchecked(
+        &w->components,
+        (cecs_entity_id)range.start,
+        component_id,
+        components,
+        cecs_exclusive_range_length(range),
+        size,
+        (cecs_component_storage_descriptor) {
+            .capacity = 1,
+            .is_size_known = true,
+            .indirect_component_id = { 0 }
+        }
+    );
+}
+
+void *cecs_world_set_component_copy_array(cecs_world *w, cecs_entity_id_range range, cecs_component_id component_id, void *component_single_src, size_t size) {
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        assert(cecs_world_enities_has_entity(&w->entities, e) && "error: entity with given ID does not exist");
+        assert(
+            !cecs_world_get_entity_flags(w, e).is_inmutable
+            && "error: entity with given ID is inmutable and its components may not be set"
+        );
+    }
+
+    return cecs_world_components_set_component_copy_array_unchecked(
+        &w->components,
+        (cecs_entity_id)range.start,
+        component_id,
+        component_single_src,
+        cecs_exclusive_range_length(range),
+        size,
+        (cecs_component_storage_descriptor) {
+            .capacity = 1,
+            .is_size_known = true,
+            .indirect_component_id = { 0 }
+        }
     );
 }
 
@@ -67,6 +126,56 @@ bool cecs_world_remove_component(cecs_world* w, cecs_entity_id id, cecs_componen
     );
 
     return cecs_world_components_remove_component(&w->components, id, component_id, out_removed_component);
+}
+
+size_t cecs_world_remove_component_array(cecs_world *w, cecs_entity_id_range range, cecs_component_id component_id, void *out_removed_components) {
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        assert(cecs_world_enities_has_entity(&w->entities, e) && "entity with given ID does not exist");
+        assert(
+            !cecs_world_get_entity_flags(w, e).is_inmutable
+            && "entity with given ID is inmutable and components may not be removed from it"
+        );
+    }
+
+    return cecs_world_components_remove_component_array(
+        &w->components,
+        (cecs_entity_id)range.start,
+        component_id,
+        out_removed_components,
+        cecs_exclusive_range_length(range)
+    );
+}
+
+void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *attachments, size_t size) {
+    return cecs_world_components_set_component_storage_attachments(
+        &w->components,
+        component_id,
+        attachments,
+        size
+    );
+}
+
+void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
+    return cecs_world_components_get_component_storage_attachments_unchecked(
+        &w->components,
+        component_id
+    );
+}
+
+bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *out_removed_attachments) {
+    cecs_component_storage_attachments removed_attachments;
+    if (!cecs_world_components_remove_component_storage_attachments(
+        &w->components,
+        component_id,
+        &removed_attachments
+    )) {
+        return false;
+    }
+    
+    if (out_removed_attachments != NULL) {
+        memcpy(out_removed_attachments, &removed_attachments, removed_attachments.attachments_size);
+    }
+    return true;
 }
 
 cecs_entity_flags* cecs_world_get_or_set_default_entity_flags(cecs_world* w, cecs_entity_id id) {
@@ -101,10 +210,35 @@ cecs_tag_id cecs_world_add_tag(cecs_world* w, cecs_entity_id id, cecs_tag_id tag
         NULL,
         0,
         (cecs_component_storage_descriptor) {
-        .capacity = 1,
+            .capacity = 1,
             .is_size_known = true,
             .indirect_component_id = { 0 }
+        }
+    );
+    return tag_id;
+}
+
+cecs_tag_id cecs_world_add_tag_array(cecs_world *w, cecs_entity_id_range range, cecs_tag_id tag_id) {
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        assert(cecs_world_enities_has_entity(&w->entities, e) && "error: entity with given ID does not exist");
+        assert(
+            !cecs_world_get_entity_flags(w, e).is_inmutable
+            && "error: entity with given ID is inmutable and tags may not be added to it"
+        );
     }
+
+    cecs_world_components_set_component_copy_array_unchecked(
+        &w->components,
+        (cecs_entity_id)range.start,
+        tag_id,
+        NULL,
+        cecs_exclusive_range_length(range),
+        0,
+        (cecs_component_storage_descriptor) {
+            .capacity = 1,
+            .is_size_known = true,
+            .indirect_component_id = { 0 }
+        }
     );
     return tag_id;
 }
@@ -118,6 +252,24 @@ cecs_tag_id cecs_world_remove_tag(cecs_world* w, cecs_entity_id id, cecs_tag_id 
 
     cecs_world_components_remove_component(&w->components, id, tag_id, &(cecs_optional_component){0});
     return tag_id;
+}
+
+size_t cecs_world_remove_tag_array(cecs_world *w, cecs_entity_id_range range, cecs_tag_id tag_id) {
+    for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
+        assert(cecs_world_enities_has_entity(&w->entities, e) && "error: entity with given ID does not exist");
+        assert(
+            !cecs_world_get_entity_flags(w, e).is_inmutable
+            && "error: entity with given ID is inmutable and tags may not be removed from it"
+        );
+    }
+
+    return cecs_world_components_remove_component_array(
+        &w->components,
+        (cecs_entity_id)range.start,
+        tag_id,
+        NULL,
+        cecs_exclusive_range_length(range)
+    );
 }
 
 cecs_entity_id cecs_world_add_entity(cecs_world* w) {
@@ -200,6 +352,33 @@ cecs_entity_id_range cecs_world_add_entity_range(cecs_world *w, size_t count) {
     return range;
 }
 
+size_t cecs_world_clear_entity_range(cecs_world *w, cecs_entity_id_range range, cecs_entity_id representative) {
+    assert(
+        !cecs_world_get_entity_flags(w, representative).is_inmutable
+        && "error: entity with given ID is inmutable and cannot be cleared"
+    );
+
+    size_t count = 0;
+    for (
+        cecs_world_components_entity_iterator it = cecs_world_components_entity_iterator_create(&w->components, representative);
+        !cecs_world_components_entity_iterator_done(&it);
+        cecs_world_components_entity_iterator_next(&it)
+    ) {
+        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+        // TODO: get_handle, maybe it's too small
+        cecs_component_storage_remove_array(
+            storage.storage,
+            &w->components.components_arena,
+            range.start,
+            w->components.discard.handle,
+            cecs_exclusive_range_length(range),
+            storage.component_size
+        );
+        ++count;
+    }
+    return count;
+}
+
 cecs_entity_id_range cecs_world_remove_entity_range(cecs_world *w, cecs_entity_id_range range) {
     for (cecs_entity_id e = (cecs_entity_id)range.start; e < (cecs_entity_id)range.end; ++e) {
         assert(
@@ -212,6 +391,106 @@ cecs_entity_id_range cecs_world_remove_entity_range(cecs_world *w, cecs_entity_i
     }
     
     return cecs_world_entities_remove_entity_range(&w->entities, range);
+}
+
+size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range destination, cecs_entity_id_range source, cecs_entity_id representative) {
+    assert(
+        !cecs_world_get_entity_flags(w, representative).is_inmutable
+        && "error: entity with given ID is inmutable and components may not be copied onto it"
+    );
+
+    size_t destination_count = cecs_exclusive_range_length(destination);
+    size_t source_count = cecs_exclusive_range_length(source);
+    assert(
+        destination_count >= source_count
+        && "error: destination range must be larger than source range"
+    );
+
+    size_t component_types_count = 0;
+    for (
+        cecs_world_components_entity_iterator it = cecs_world_components_entity_iterator_create(&w->components, representative);
+        !cecs_world_components_entity_iterator_done(&it);
+        cecs_world_components_entity_iterator_next(&it)
+    ) {
+        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+        void *source_components;
+        if (cecs_component_storage_info(storage.storage).is_unit_type_storage) {
+            source_components = NULL;
+        } else {
+            size_t copy_source_count = cecs_component_storage_get_array(
+                storage.storage,
+                source.start,
+                &source_components,
+                source_count,
+                storage.component_size
+            );
+
+            assert(
+                copy_source_count == source_count
+                && "error: source range does not contain enough components to copy"
+            );
+        }
+
+        cecs_component_storage_set_array(
+            storage.storage,
+            &w->components.components_arena,
+            destination.start,
+            source_components,
+            source_count,
+            storage.component_size
+        );
+
+        size_t copied_count = source_count;
+        while ((copied_count << 1) < destination_count) {
+            cecs_component_storage_set_array(
+                storage.storage,
+                &w->components.components_arena,
+                destination.start + copied_count,
+                source_components,
+                source_count,
+                storage.component_size
+            );
+            copied_count <<= 1;
+        }
+
+        assert(
+            copied_count >= destination_count / 2
+            && "error: copied components should be at least half of destination components"
+        );
+        assert(
+            copied_count <= destination_count
+            && "error: copied components should be at most the same as destination components"
+        );
+        
+        size_t remaining_count = destination_count - copied_count;
+        cecs_component_storage_set_array(
+            storage.storage,
+            &w->components.components_arena,
+            destination.start + copied_count,
+            source_components,
+            remaining_count,
+            storage.component_size
+        );
+        copied_count += remaining_count;
+
+        assert(
+            copied_count == destination_count
+            && "error: destination range does not contain enough components to copy"
+        );
+        ++component_types_count;
+    }
+    return component_types_count;
+}
+
+size_t cecs_world_copy_entity_range(
+    cecs_world *w,
+    cecs_entity_id_range destination,
+    cecs_entity_id_range source,
+    cecs_entity_id clear_representative,
+    cecs_entity_id copy_representative
+) {
+    cecs_world_clear_entity_range(w, destination, clear_representative);
+    return cecs_world_copy_entity_range_onto(w, destination, source, copy_representative);
 }
 
 void* cecs_world_copy_entity_onto_and_grab(cecs_world* w, cecs_entity_id destination, cecs_entity_id source, cecs_component_id grab_component_id) {

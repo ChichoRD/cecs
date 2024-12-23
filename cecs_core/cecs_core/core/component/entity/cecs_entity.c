@@ -64,7 +64,7 @@ cecs_entity_id_range cecs_world_entities_add_entity_range(cecs_world_entities* w
     };
 
     assert(
-        range.start >= 0 && range.end
+        range.start >= 0 && range.end >= 0
         && "error: both start and end of entity_id_range must be non-negative"
     );
     for (ptrdiff_t i = range.start; i < range.end; i++) {
@@ -82,7 +82,7 @@ cecs_entity_id_range cecs_world_entities_add_entity_range(cecs_world_entities* w
 
 cecs_entity_id_range cecs_world_entities_remove_entity_range(cecs_world_entities* we, cecs_entity_id_range range) {
     assert(
-        range.start >= 0 && range.end
+        range.start >= 0 && range.end >= 0
         && "error: both start and end of entity_id_range must be non-negative"
     );
     for (cecs_entity_id i = (cecs_entity_id)range.start; i < (cecs_entity_id)range.end; i++) {

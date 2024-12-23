@@ -49,7 +49,7 @@ typedef struct cecs_components_search_groups {
     size_t group_count;
 } cecs_components_search_groups;
 
-inline cecs_components_search_groups cecs_components_search_groups_create(
+static inline cecs_components_search_groups cecs_components_search_groups_create(
     cecs_components_search_group *groups,
     size_t group_count
 ) {
@@ -121,7 +121,7 @@ cecs_component_iterator_descriptor cecs_component_iterator_descriptor_create(
 
 
 typedef void *cecs_raw_component_reference;
-inline size_t cecs_component_iteration_handle_size(cecs_components_type_info components_type_info) {
+static inline size_t cecs_component_iteration_handle_size(cecs_components_type_info components_type_info) {
     return sizeof(cecs_entity_id)
         + cecs_padding_between(cecs_entity_id, cecs_raw_component_reference)
         + sizeof(cecs_raw_component_reference) * components_type_info.component_count;

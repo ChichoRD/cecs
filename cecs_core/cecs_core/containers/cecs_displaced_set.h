@@ -17,11 +17,11 @@ cecs_displaced_set cecs_displaced_set_create(void);
 
 cecs_displaced_set cecs_displaced_set_create_with_capacity(cecs_arena *a, size_t capacity);
 
-inline bool cecs_displaced_set_contains_index(const cecs_displaced_set *s, size_t index) {
+static inline bool cecs_displaced_set_contains_index(const cecs_displaced_set *s, size_t index) {
     return cecs_exclusive_range_contains(s->index_range, index);
 }
 
-inline size_t cecs_displaced_set_cecs_dynamic_array_index(const cecs_displaced_set *s, size_t index) {
+static inline size_t cecs_displaced_set_cecs_dynamic_array_index(const cecs_displaced_set *s, size_t index) {
     assert(cecs_displaced_set_contains_index(s, index) && "index out of bounds");
     return index - s->index_range.start;
 }
@@ -36,9 +36,21 @@ void *cecs_displaced_set_set(cecs_displaced_set *s, cecs_arena *a, size_t index,
 #define CECS_DISPLACED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
     ((type *)cecs_displaced_set_set(set_ref, arena_ref, index, element_ref, sizeof(type)))
 
+void *cecs_displaced_set_set_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *elements, size_t size);
+#define CECS_DISPLACED_SET_SET_RANGE(type, set_ref, arena_ref, range, elements_ref) \
+    ((type *)cecs_displaced_set_set_range(set_ref, arena_ref, range, elements_ref, sizeof(type)))
+
+void *cecs_displaced_set_set_copy_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *single_src, size_t size);
+#define CECS_DISPLACED_SET_SET_COPY_RANGE(type, set_ref, arena_ref, range, single_src_ref) \
+    ((type *)cecs_displaced_set_set_copy_range(set_ref, arena_ref, range, single_src_ref, sizeof(type)))
+
 void *cecs_displaced_set_get(const cecs_displaced_set *s, size_t index, size_t size);
 #define CECS_DISPLACED_SET_GET(type, set_ref, index) \
     ((type *)cecs_displaced_set_get(set_ref, index, sizeof(type)))
+    
+void *cecs_displaced_set_get_range(const cecs_displaced_set *s, cecs_inclusive_range range, size_t size);
+#define CECS_DISPLACED_SET_GET_RANGE(type, set_ref, range) \
+    ((type *)cecs_displaced_set_get_range(set_ref, range, sizeof(type)))
 
 bool cecs_displaced_set_remove(cecs_displaced_set *s, size_t index, size_t size, void *null_bit_pattern);
 
@@ -55,7 +67,7 @@ typedef struct cecs_counted_set {
     cecs_displaced_set counts;
 } cecs_counted_set;
 
-inline cecs_counted_set cecs_counted_set_empty(void) {
+static inline cecs_counted_set cecs_counted_set_empty(void) {
     return (cecs_counted_set){0};
 }
 
@@ -63,11 +75,11 @@ cecs_counted_set cecs_counted_set_create(void);
 
 cecs_counted_set cecs_counted_set_create_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-inline cecs_counted_set_counter cecs_counted_set_count_of(const cecs_counted_set *s, size_t index) {
+static inline cecs_counted_set_counter cecs_counted_set_count_of(const cecs_counted_set *s, size_t index) {
     return *CECS_DISPLACED_SET_GET(cecs_counted_set_counter, &s->counts, index);
 }
 
-inline bool cecs_counted_set_contains(const cecs_counted_set *s, size_t index) {
+static inline bool cecs_counted_set_contains(const cecs_counted_set *s, size_t index) {
     return cecs_displaced_set_contains_index(&s->counts, index)
         && (cecs_counted_set_count_of(s, index) > 0);
 }
@@ -110,7 +122,7 @@ void *cecs_counted_set_iterator_current(const cecs_counted_set_iterator *it, siz
 
 void *cecs_counted_set_iterator_first(cecs_counted_set_iterator *it, size_t size);
 
-inline size_t cecs_counted_set_iterator_current_index(const cecs_counted_set_iterator *it) {
+static inline size_t cecs_counted_set_iterator_current_index(const cecs_counted_set_iterator *it) {
     return it->current_index;
 }
 

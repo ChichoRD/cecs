@@ -143,10 +143,10 @@ static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(cecs_arena* 
     *out_fit = NULL;
     cecs_linked_block* old_data_block = NULL;
     cecs_linked_block* current = a->first_block;
-    cecs_arena_reallocation_strategy strategy = arena_reallocate_none;
+    cecs_arena_reallocation_strategy strategy = cecs_arena_reallocate_none;
     while (
         current != NULL
-        && (strategy == arena_reallocate_none || old_data_block == NULL)
+        && (strategy == cecs_arena_reallocate_none || old_data_block == NULL)
         ) {
         bool in_data_block = ((uint8_t*)data_block >= current->b.data)
             && ((uint8_t*)data_block + current_size <= (current->b.data + current->b.size));
@@ -159,24 +159,24 @@ static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(cecs_arena* 
                 data_is_last_in_block
                 && (new_size <= current_size || cecs_block_can_alloc(&current->b, new_size - current_size))
                 ) {
-                strategy = arena_reallocate_in_place;
+                strategy = cecs_arena_reallocate_in_place;
             }
         }
 
-        if (cecs_block_can_alloc(&current->b, new_size) && strategy == arena_reallocate_none) {
+        if (cecs_block_can_alloc(&current->b, new_size) && strategy == cecs_arena_reallocate_none) {
             *out_fit = current;
 
             if (current_size >= current->b.capacity / 4) {
-                strategy = arena_reallocate_split;
+                strategy = cecs_arena_reallocate_split;
             }
             else {
-                strategy = arena_reallocate_fit;
+                strategy = cecs_arena_reallocate_fit;
             }
         }
         current = current->next;
     }
-    if (current == NULL && strategy == arena_reallocate_none) {
-        strategy = arena_reallocate_new;
+    if (current == NULL && strategy == cecs_arena_reallocate_none) {
+        strategy = cecs_arena_reallocate_new;
     }
 
     *out_old_data_block = old_data_block;
@@ -224,13 +224,13 @@ void* cecs_arena_realloc(cecs_arena* a, void* data_block, size_t current_size, s
     cecs_linked_block* old_data_block;
     cecs_linked_block* fit;
     switch (cecs_arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &fit)) {
-    case arena_reallocate_in_place: {
+    case cecs_arena_reallocate_in_place: {
         assert(old_data_block != NULL && "error: no data block found in arena");
         old_data_block->b.size += (ptrdiff_t)new_size - (ptrdiff_t)current_size;
         assert(old_data_block->b.size <= old_data_block->b.capacity && "error: reallocation exceeds block capacity");
         return data_block;
     }
-    case arena_reallocate_split: {
+    case cecs_arena_reallocate_split: {
         assert(old_data_block != NULL && "error: no data block found in arena");
         assert(fit != NULL && "error: no fit block found in arena");
 
@@ -260,14 +260,14 @@ void* cecs_arena_realloc(cecs_arena* a, void* data_block, size_t current_size, s
             memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
-    case arena_reallocate_fit: {
+    case cecs_arena_reallocate_fit: {
         assert(fit != NULL && "error: no fit block found in arena");
         uint8_t* new_data_block = cecs_block_alloc(&fit->b, new_size);
         if (new_data_block != data_block)
             memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;
     }
-    case arena_reallocate_new: {
+    case cecs_arena_reallocate_new: {
         uint8_t* new_data_block = cecs_block_alloc(cecs_arena_add_block(a, new_size), new_size);
         memcpy(new_data_block, data_block, transfer_size);
         return new_data_block;

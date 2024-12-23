@@ -21,11 +21,11 @@ cecs_world_entities cecs_world_entities_create(size_t entity_capacity);
 
 void cecs_world_entities_free(cecs_world_entities *we);
 
-inline size_t cecs_world_entities_count(const cecs_world_entities *we) {
+static inline size_t cecs_world_entities_count(const cecs_world_entities *we) {
     return cecs_sparse_set_count_of_size(&we->entity_ids, sizeof(cecs_entity_id));
 }
 
-inline bool cecs_world_enities_has_entity(const cecs_world_entities *we, cecs_entity_id id) {
+static inline bool cecs_world_enities_has_entity(const cecs_world_entities *we, cecs_entity_id id) {
     return cecs_sparse_set_contains(&we->entity_ids, (size_t)id);
 }
 
@@ -33,6 +33,7 @@ cecs_entity_id cecs_world_entities_add_entity(cecs_world_entities *we);
 
 cecs_entity_id cecs_world_entities_remove_entity(cecs_world_entities *we, cecs_entity_id id);
 
+// TODO: add a free queue for entity ranges
 typedef cecs_exclusive_range cecs_entity_id_range;
 cecs_entity_id_range cecs_world_entities_add_entity_range(cecs_world_entities *we, size_t count);
 

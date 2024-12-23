@@ -12,11 +12,11 @@ typedef struct cecs_dynamic_array {
     void *elements;
 } cecs_dynamic_array;
 
-inline size_t cecs_dynamic_array_count_of_size(const cecs_dynamic_array *l, size_t size) {
+static inline size_t cecs_dynamic_array_count_of_size(const cecs_dynamic_array *l, size_t size) {
     return l->count / size;
 }
 
-inline size_t cecs_dynamic_array_capacity_of_size(const cecs_dynamic_array *l, size_t size) {
+static inline size_t cecs_dynamic_array_capacity_of_size(const cecs_dynamic_array *l, size_t size) {
     return l->capacity / size;
 }
 
@@ -47,7 +47,7 @@ void *cecs_dynamic_array_set(cecs_dynamic_array *l, size_t index, void *element,
 #define CECS_DYNAMIC_ARRAY_SET(type, dynamic_array_ref, index, element_ref) \
     ((type *)cecs_dynamic_array_set(dynamic_array_ref, index, element_ref, sizeof(type)))
 
-inline void *cecs_dynamic_array_last(const cecs_dynamic_array *l, size_t size) {
+static inline void *cecs_dynamic_array_last(const cecs_dynamic_array *l, size_t size) {
     assert(l->count > 0 && "Attempted to get last element of empty cecs_dynamic_array");
     return (uint8_t *)l->elements + (l->count - size);
 }
@@ -67,6 +67,10 @@ void *cecs_dynamic_array_get_range(const cecs_dynamic_array *l, size_t index, si
 void *cecs_dynamic_array_set_range(cecs_dynamic_array *l, size_t index, void *elements, size_t count, size_t size);
 #define CECS_DYNAMIC_ARRAY_SET_RANGE(type, dynamic_array_ref, index, elements_ref, count) \
     cecs_dynamic_array_set_range(dynamic_array_ref, index, elements_ref, count, sizeof(type))
+
+void *cecs_dynamic_array_set_copy_range(cecs_dynamic_array *l, size_t index, void *single_src, size_t count, size_t size);
+#define CECS_DYNAMIC_ARRAY_SET_COPY_RANGE(type, dynamic_array_ref, index, single_src, count) \
+    cecs_dynamic_array_set_copy_range(dynamic_array_ref, index, single_src, count, sizeof(type))
 
 void *cecs_dynamic_array_insert(cecs_dynamic_array *l, cecs_arena *a, size_t index, void *element, size_t size);
 #define CECS_DYNAMIC_ARRAY_INSERT(type, dynamic_array_ref, arena_ref, index, element_ref) \

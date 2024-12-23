@@ -16,7 +16,7 @@ cecs_queue cecs_queue_create(void);
 
 cecs_queue cecs_queue_create_with_capacity(cecs_arena *a, size_t capacity);
 
-inline size_t cecs_queue_count_of_size(const cecs_queue *q, size_t size) {
+static inline size_t cecs_queue_count_of_size(const cecs_queue *q, size_t size) {
     return cecs_dynamic_array_count_of_size(&q->elements, size) - q->first;
 }
 #define CECS_QUEUE_COUNT(type, queue_ref) cecs_queue_count_of_size(queue_ref, sizeof(type))
@@ -24,13 +24,13 @@ inline size_t cecs_queue_count_of_size(const cecs_queue *q, size_t size) {
 void *cecs_queue_get(cecs_queue *q, size_t index, size_t size);
 #define CECS_QUEUE_GET(type, queue_ref, index) ((type *)cecs_queue_get(queue_ref, index, sizeof(type)))
 
-inline void *cecs_queue_first(const cecs_queue *q, size_t size) {
+static inline void *cecs_queue_first(const cecs_queue *q, size_t size) {
     assert(q->first < cecs_dynamic_array_count_of_size(&q->elements, size) && "Attempted to get first element of empty queue");
     return cecs_dynamic_array_get(&q->elements, q->first, size);
 }
 #define CECS_QUEUE_FIRST(type, queue_ref) ((type *)cecs_queue_first(queue_ref, sizeof(type)))
 
-inline void *cecs_queue_last(const cecs_queue *q, size_t size) {
+static inline void *cecs_queue_last(const cecs_queue *q, size_t size) {
     assert(cecs_dynamic_array_count_of_size(&q->elements, size) > 0 && "Attempted to get last element of empty queue");
     return cecs_dynamic_array_last(&q->elements, size);
 }

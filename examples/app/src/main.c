@@ -153,7 +153,7 @@ typedef struct console_buffer {
 } console_buffer;
 CECS_RESOURCE_IMPLEMENT(console_buffer);
 
-bool create_duck(cecs_world *w, v2_i16 initial_position, const cecs_entity_id *const threats, size_t threats_count) {
+cecs_entity_id create_duck(cecs_world *w, v2_i16 initial_position, const cecs_entity_id *const threats, size_t threats_count) {
     cecs_entity_id e = cecs_world_add_entity(w);
     CECS_WORLD_SET_COMPONENT(
         position,
@@ -176,7 +176,7 @@ bool create_duck(cecs_world *w, v2_i16 initial_position, const cecs_entity_id *c
     for (size_t i = 0; i < threats_count; i++) {
         CECS_WORLD_SET_COMPONENT_RELATION(dies_by, w, e, &(dies_by){ threats[i] }, threats[i]);
     }
-    return EXIT_SUCCESS;
+    return e;
 }
 
 bool create_slime(cecs_world *w, v2_i16 initial_position, cecs_entity_id parent) {
@@ -278,7 +278,6 @@ cecs_prefab_id create_wall_prefab(cecs_world *w) {
 bool create_map(cecs_world *w, cecs_prefab_id prefab) {
     for (uint16_t x = 0; x < BOARD_WIDTH; x++) {
         for (uint16_t y = 0; y < BOARD_HEIGHT; y++) {
-            cecs_entity_id e = cecs_world_add_entity(w);
             if (x == 0 || x == BOARD_WIDTH - 1 || y == 0 || y == BOARD_HEIGHT - 1) {
                 cecs_entity_id wall = cecs_world_add_entity_from_prefab(w, prefab);
                 CECS_WORLD_SET_COMPONENT(position, w, wall, (&(position){x, y}));
@@ -317,9 +316,24 @@ bool init(cecs_world *w) {
     // CECS_WORLD_COPY_ENTITY_ONTO_AND_GRAB(controllable, w, lonk2, lonk);//->active = false;
 
     create_map(w, create_wall_prefab(w));
-    for (size_t i = 0; i < 2; i++) {
-        create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (cecs_entity_id[]){lonk}, 1);
-    }
+    cecs_entity_id duck = create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (cecs_entity_id[]){lonk}, 1);
+    cecs_world_copy_entity_range_onto(
+        w,
+        cecs_world_add_entity_range(w, 10 - 1),
+        cecs_exclusive_range_singleton(duck),
+        duck
+    );
+
+    // 2 test lonks
+    cecs_entity_id_range lonk_range = cecs_world_add_entity_range(w, 2);
+    size_t copied_component_types =
+        cecs_world_copy_entity_range_onto(w, lonk_range, cecs_exclusive_range_singleton(lonk), lonk);
+    CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start, &((position){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 2}));
+    CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start + 1, &((position){BOARD_WIDTH / 2 + 2, BOARD_HEIGHT / 2 + 4}));
+
+    // for (size_t i = 0; i < 2; i++) {
+    //     create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (cecs_entity_id[]){lonk}, 1);
+    // }
     create_slime(w, (v2_i16){BOARD_WIDTH / 4, BOARD_HEIGHT / 4 + 2}, lonk);
     create_slime(w, (v2_i16){BOARD_WIDTH / 4 * 3, BOARD_HEIGHT / 4 + 2}, cecs_world_add_entity(w));
 
@@ -482,7 +496,7 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
         cecs_scene_world_system_get_with(&s, iteration_arena, CECS_COMPONENTS_ALL(velocity, controllable)),
         w,
         iteration_arena,
-        ((cecs_entity_id_range){0, 2}),
+        ((cecs_entity_id_range){0, 512}),
         cecs_system_predicate_data_create_none(),
         update_controllables
     );
@@ -646,6 +660,7 @@ bool finalize(cecs_world *w) {
     cecs_arena a = cecs_arena_create();
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
     //size_t count = 0;
+    // TODO: we kaboom here
     for (
         cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
             &w->components,
@@ -667,7 +682,6 @@ bool finalize(cecs_world *w) {
 }
 
 int main(void) {
-    // TODO: maybe prefix everything with "cecs_"
     cecs_world w = cecs_world_create(1024, 32, 4);
 
     bool quitting = false;
