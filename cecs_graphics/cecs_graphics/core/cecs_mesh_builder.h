@@ -7,6 +7,7 @@
 typedef struct cecs_mesh_builder_descriptor {
     cecs_entity_id mesh_id;
     size_t vertex_attributes_expected_count;
+    WGPUIndexFormat index_format;
     bool remove_on_build;
 } cecs_mesh_builder_descriptor;
 
@@ -36,8 +37,7 @@ cecs_mesh_builder *cecs_mesh_builder_clear_indices(cecs_mesh_builder *builder);
 cecs_mesh_builder *cecs_mesh_builder_set_indices(
     cecs_mesh_builder *builder,
     void *indices_data,
-    size_t indices_count,
-    WGPUIndexFormat index_format
+    size_t indices_count
 );
 
 cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder);

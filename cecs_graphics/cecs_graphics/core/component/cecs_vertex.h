@@ -3,9 +3,7 @@
 
 #include <webgpu/webgpu.h>
 #include <cecs_core/cecs_core.h>
-
-typedef uint64_t cecs_buffer_offset_u64;
-typedef uint32_t cecs_buffer_offset_u32;
+#include "cecs_graphics/containers/cecs_dynamic_wgpu_buffer.h"
 
 typedef struct cecs_vertex_stream {
     cecs_buffer_offset_u64 offset;
@@ -52,6 +50,15 @@ typedef CECS_UNION_STRUCT(
     cecs_index_storage_attachment,
     cecs_index_storage_attachment
 ) cecs_stream_storage_attachment;
+
+typedef struct cecs_buffer_storage_attachment {
+    cecs_stream_storage_attachment stream;
+    cecs_dynamic_wgpu_buffer buffer;
+    enum cecs_buffer_storage_attachment_flags {
+        cecs_buffer_flags_none = 0,
+        cecs_buffer_flags_initialized = 1 << 0,
+    } buffer_flags;
+} cecs_buffer_storage_attachment;
 
 // TODO: change attachments to also contain vertex buffer
 
