@@ -1,5 +1,6 @@
 #include <memory.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "cecs_mesh_builder.h"
 
 cecs_mesh_builder cecs_mesh_builder_create(cecs_world *graphics_world, cecs_mesh_builder_descriptor descriptor) {
@@ -149,15 +150,22 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
     if (index_count > 0) {
         size_t index_format_size;
         cecs_vertex_index_id index_id;
-        if (builder->descriptor.index_format == WGPUIndexFormat_Uint16) {
+        switch (builder->descriptor.index_format) {
+        case WGPUIndexFormat_Uint16: {
             index_format_size = sizeof(cecs_vertex_index_u16);
             index_id = CECS_COMPONENT_ID(cecs_vertex_index_u16);
-        } else if (builder->descriptor.index_format == WGPUIndexFormat_Uint32) {
+            break;
+        }
+        case WGPUIndexFormat_Uint32: {
             index_format_size = sizeof(cecs_vertex_index_u32);
             index_id = CECS_COMPONENT_ID(cecs_vertex_index_u32);
-        } else {
+            break;
+        }
+        default: {
             assert(false && "fatal error: index format not set");
             exit(EXIT_FAILURE);
+            break;
+        }
         }
 
         cecs_mesh_builder_build_indices(builder, context, index_id, index_format_size);
@@ -282,16 +290,22 @@ cecs_mesh_builder *cecs_mesh_builder_set_vertex_attribute(
 cecs_mesh_builder *cecs_mesh_builder_clear_indices(cecs_mesh_builder *builder) {
     size_t index_count = cecs_exclusive_range_length(builder->index_range);
     cecs_vertex_index_id index_id = 0;
-    if (builder->descriptor.index_format == WGPUIndexFormat_Uint16) {
+    switch (builder->descriptor.index_format) {
+    case WGPUIndexFormat_Uint16: {
         index_id = CECS_COMPONENT_ID(cecs_vertex_index_u16);
-    } else if (builder->descriptor.index_format == WGPUIndexFormat_Uint32) {
+        break;
+    }
+    case WGPUIndexFormat_Uint32: {
         index_id = CECS_COMPONENT_ID(cecs_vertex_index_u32);
-    } else {
+        break;
+    }
+    default: {
         assert(index_count == 0 && "fatal error: index format not set");
         return builder;
     }
+    }
 
-    if (index_count != 0) {
+    if (index_count > 0) {
         cecs_buffer_storage_attachment *storage_index_info = cecs_world_get_component_storage_attachments(
             builder->graphics_world,
             index_id

@@ -62,6 +62,4 @@ typedef struct cecs_buffer_storage_attachment {
     } buffer_flags;
 } cecs_buffer_storage_attachment;
 
-// TODO: change attachments to also contain vertex buffer
-
 #endif
