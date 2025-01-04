@@ -1,8 +1,14 @@
 #include <stdbool.h>
 #include <assert.h>
+#include <webgpu/wgpu.h>
 #include "cecs_dynamic_wgpu_buffer.h"
 
 cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(WGPUDevice device, const WGPUBufferDescriptor *descriptor) {
+    assert(descriptor->size > 0 && "error: buffer size must be greater than zero");
+    assert(
+        descriptor->usage & WGPUBufferUsage_CopySrc
+        && "error: buffer must be able to be used as a copy source, else it cannot be resized"
+    );
     return (cecs_dynamic_wgpu_buffer){
         .buffer = wgpuDeviceCreateBuffer(
             device,
@@ -20,7 +26,7 @@ void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
     buffer->usage = WGPUBufferUsage_None;
 }
 
-static cecs_dynamic_wgpu_buffer_resize(cecs_dynamic_wgpu_buffer *buffer, WGPUDevice device, WGPUQueue queue, size_t size) {
+static void cecs_dynamic_wgpu_buffer_resize(cecs_dynamic_wgpu_buffer *buffer, WGPUDevice device, WGPUQueue queue, size_t size) {
     WGPUBufferDescriptor descriptor = {
         .label = "resized buffer",
         .mappedAtCreation = false,

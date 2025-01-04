@@ -3,18 +3,20 @@
 
 #include <webgpu/webgpu.h>
 #include <cecs_core/cecs_core.h>
-#include "cecs_graphics/containers/cecs_dynamic_wgpu_buffer.h"
+#include "../../containers/cecs_dynamic_wgpu_buffer.h"
 
 typedef struct cecs_vertex_stream {
     cecs_buffer_offset_u64 offset;
     cecs_buffer_offset_u64 size;
 } cecs_vertex_stream;
+CECS_COMPONENT_IMPLEMENT(cecs_vertex_stream);
 
 typedef struct cecs_index_stream {
     cecs_buffer_offset_u64 offset;
     WGPUIndexFormat format;
     size_t index_count;
 } cecs_index_stream;
+CECS_COMPONENT_IMPLEMENT(cecs_index_stream);
 
 
 typedef cecs_component_id cecs_vertex_attribute_id;

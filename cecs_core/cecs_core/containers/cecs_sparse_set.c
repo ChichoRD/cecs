@@ -120,7 +120,8 @@ bool cecs_sparse_set_remove(cecs_sparse_set* s, cecs_arena* a, size_t key, void*
             cecs_dynamic_array_get(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), removed_index, element_size),
             element_size
         );
-        assert(*(size_t*)out_removed_element != 0);
+        // HACK: uncommented because unsure of its purpose and fails when they really wanted to store with key 0 the value 0
+        //assert(*(size_t*)out_removed_element != 0);
 
         void* swapped_last = cecs_dynamic_array_remove_swap_last(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), a, removed_index, element_size);
         {

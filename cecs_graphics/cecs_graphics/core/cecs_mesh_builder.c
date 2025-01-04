@@ -36,7 +36,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
             .mappedAtCreation = false,
             .nextInChain = NULL,
             .size = vertex_info->max_vertex_count * vertex_info->attribute_size,
-            .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
+            .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Vertex,
         };
         storage->buffer = cecs_dynamic_wgpu_buffer_create(context->device, &buffer_descriptor);
         storage->buffer_flags |= cecs_buffer_flags_initialized;
@@ -92,7 +92,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
             .mappedAtCreation = false,
             .nextInChain = NULL,
             .size = index_info->max_index_count * index_format_size,
-            .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index,
+            .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Index,
         };
         storage->buffer = cecs_dynamic_wgpu_buffer_create(context->device, &buffer_descriptor);
         storage->buffer_flags |= cecs_buffer_flags_initialized;
@@ -173,7 +173,7 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
         );
     }
 
-    CECS_WORLD_SET_COMPONENT(
+    return CECS_WORLD_SET_COMPONENT(
         cecs_mesh,
         world,
         builder->descriptor.mesh_id,
@@ -183,7 +183,6 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
             .bounding_radius = builder->bounding_radius,
         })
     );
-    return NULL;
 }
 
 cecs_mesh_builder *cecs_mesh_builder_clear_vertex_attribute(cecs_mesh_builder *builder, cecs_vertex_attribute_id attribute_id) {
@@ -304,7 +303,7 @@ cecs_mesh_builder *cecs_mesh_builder_clear_indices(cecs_mesh_builder *builder) {
         *stored_index_count -= index_count;
 
         cecs_world_remove_entity_range(builder->graphics_world, builder->index_range);
-        builder->index_range = (cecs_entity_id_range){0, 0}; // TODO: index buffer !!HERE
+        builder->index_range = (cecs_entity_id_range){0, 0}; // TODO: index buffer
     }
     return builder;
 }
@@ -379,8 +378,8 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
 cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder) {
     size_t atribute_count = cecs_sparse_set_count_of_size(&builder->vertex_attribute_ids, sizeof(cecs_component_id));
     cecs_component_id *remove_ids = calloc(
-        cecs_sparse_set_count_of_size(&builder->vertex_attribute_ids, sizeof(cecs_component_id)),
-        atribute_count
+        atribute_count,
+        sizeof(cecs_component_id)
     );
     memcpy(
         remove_ids,
@@ -394,6 +393,8 @@ cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder) {
         cecs_sparse_set_count_of_size(&builder->vertex_attribute_ids, sizeof(cecs_component_id)) == 0
         && "error: vertex attributes not cleared"
     );
+    free(remove_ids);
+
     cecs_mesh_builder_clear_indices(builder);
     return builder;
 }
