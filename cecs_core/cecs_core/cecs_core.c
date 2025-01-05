@@ -57,6 +57,8 @@ void* cecs_world_set_components_from_prefab_and_grab(cecs_world* w, cecs_entity_
     return cecs_world_copy_entity_onto_and_grab(w, destination, prefab, grab_component_id);
 }
 
+CECS_RESOURCE_DEFINE(cecs_game_time);
+
 double cecs_game_time_update_delta_time(cecs_game_time* t) {
     t->delta_time_seconds =
         ((t->frame_end.tv_sec - t->frame_start.tv_sec) + (t->frame_end.tv_nsec - t->frame_start.tv_nsec) / 1000000000.0);
@@ -70,6 +72,8 @@ double cecs_game_time_update_time_since_start(cecs_game_time* t) {
     return (t->time_since_start_seconds =
         ((t->frame_end.tv_sec - t->game_start.tv_sec) + (t->frame_end.tv_nsec - t->game_start.tv_nsec) / 1000000000.0));
 }
+
+CECS_COMPONENT_DEFINE(cecs_is_child_of);
 
 bool cecs_world_get_entity_with(const cecs_world* w, cecs_entity_id* out_entity_id, cecs_components_search_groups search_groups) {
     cecs_arena temporary_arena = cecs_arena_create();
@@ -89,6 +93,8 @@ bool cecs_world_get_entity_with(const cecs_world* w, cecs_entity_id* out_entity_
         return false;
     }
 }
+
+CECS_TAG_DEFINE(cecs_is_scene_member_of);
 
 cecs_scene_id cecs_world_add_entity_to_scene(cecs_world* w, cecs_entity_id id, cecs_scene_id scene) {
     return CECS_WORLD_ADD_TAG_RELATION(
