@@ -3,9 +3,14 @@
 
 #include "cecs_resource.h"
 
-cecs_resource_id cecs_resource_id_count = 0;
+static cecs_resource_id cecs_resource_id_count = 0;
 
-cecs_world_resources cecs_world_resources_create(size_t resource_capactity, size_t resource_default_size) {
+cecs_resource_id *cecs_resource_id_counter(void) {
+    return &cecs_resource_id_count;
+}
+
+cecs_world_resources cecs_world_resources_create(size_t resource_capactity, size_t resource_default_size)
+{
     cecs_world_resources wr;
     wr.resources_arena = cecs_arena_create_with_capacity(resource_capactity * (resource_default_size + sizeof(cecs_resource_handle)));
     wr.resource_handles = cecs_displaced_set_create_with_capacity(&wr.resources_arena, sizeof(cecs_resource_handle) * resource_capactity);

@@ -8,11 +8,15 @@
 #include "../../types/cecs_macro_utils.h"
 
 typedef uint64_t cecs_resource_id;
-extern cecs_resource_id cecs_resource_id_count;
+extern cecs_resource_id *cecs_resource_id_counter(void);
 
 #define CECS_RESOURCE(type) type##_resource
-#define _CECS_RESOURCE_IMPLEMENT(resource) CECS_TYPE_ID_IMPLEMENT_COUNTER(resource, cecs_resource_id_count)
-#define CECS_RESOURCE_IMPLEMENT(type) _CECS_RESOURCE_IMPLEMENT(CECS_RESOURCE(type))
+
+#define _CECS_RESOURCE_DECLARE(resource) CECS_TYPE_ID_DECLARE(resource)
+#define CECS_RESOURCE_DECLARE(type) _CECS_RESOURCE_DECLARE(CECS_RESOURCE(type))
+
+#define _CECS_RESOURCE_DEFINE(resource) CECS_TYPE_ID_DEFINE_WITH_COUNTER(resource, cecs_resource_id_counter())
+#define CECS_RESOURCE_DEFINE(type) _CECS_RESOURCE_DEFINE(CECS_RESOURCE(type))
 
 #define CECS_RESOURCE_ID(type) ((cecs_resource_id)CECS_TYPE_ID(CECS_RESOURCE(type)))
 #define CECS_RESOURCE_ID_ARRAY(...) ((cecs_resource_id[]){ CECS_MAP(CECS_RESOURCE_ID, COMMA, __VA_ARGS__) })

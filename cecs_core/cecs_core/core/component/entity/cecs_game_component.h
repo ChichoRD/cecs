@@ -6,16 +6,16 @@
 #include "cecs_tag.h"
 
 typedef cecs_entity_id cecs_entity_reference;
-CECS_COMPONENT_IMPLEMENT(cecs_entity_reference);
+CECS_COMPONENT_DECLARE(cecs_entity_reference);
 
 typedef struct cecs_relation_entity_reference {
     cecs_entity_reference original_entity;
 } cecs_relation_entity_reference;
-CECS_COMPONENT_IMPLEMENT(cecs_relation_entity_reference);
+CECS_COMPONENT_DECLARE(cecs_relation_entity_reference);
 
 
 typedef bool cecs_is_prefab;
-CECS_TAG_IMPLEMENT(cecs_is_prefab);
+CECS_TAG_DECLARE(cecs_is_prefab);
 
 
 typedef struct cecs_entity_flags {
@@ -26,7 +26,7 @@ typedef struct cecs_entity_flags {
     bool has_event_on_remove : 1;
     bool has_event_on_mutate : 1;
 } cecs_entity_flags;
-CECS_COMPONENT_IMPLEMENT(cecs_entity_flags);
+CECS_COMPONENT_DECLARE(cecs_entity_flags);
 
 #define CECS_ENTITY_FLAGS_DEFAULT ((cecs_entity_flags){0})
 static inline cecs_entity_flags cecs_entity_flags_default(void) {

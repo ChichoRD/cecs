@@ -29,7 +29,7 @@ typedef struct cecs_game_time {
     double averaged_delta_time_seconds;
     double time_since_start_seconds;
 } cecs_game_time;
-CECS_RESOURCE_IMPLEMENT(cecs_game_time);
+CECS_RESOURCE_DECLARE(cecs_game_time);
 
 double cecs_game_time_update_delta_time(cecs_game_time *t);
 
@@ -38,7 +38,7 @@ double cecs_game_time_update_time_since_start(cecs_game_time *t);
 typedef struct cecs_is_child_of {
     cecs_entity_id parent;
 } cecs_is_child_of;
-CECS_COMPONENT_IMPLEMENT(cecs_is_child_of);
+CECS_COMPONENT_DECLARE(cecs_is_child_of);
 
 bool cecs_world_get_entity_with(const cecs_world *w, cecs_entity_id *out_entity_id, cecs_components_search_groups search_groups);
 #define CECS_WORLD_GET_ENTITY_WITH(world_ref, out_entity_id_ref, ...) \
@@ -47,7 +47,7 @@ bool cecs_world_get_entity_with(const cecs_world *w, cecs_entity_id *out_entity_
 typedef cecs_tag_id cecs_scene_id;
 
 typedef bool cecs_is_scene_member_of;
-CECS_TAG_IMPLEMENT(cecs_is_scene_member_of);
+CECS_TAG_DECLARE(cecs_is_scene_member_of);
 
 cecs_scene_id cecs_world_add_entity_to_scene(cecs_world *w, cecs_entity_id id, cecs_scene_id scene);
 
