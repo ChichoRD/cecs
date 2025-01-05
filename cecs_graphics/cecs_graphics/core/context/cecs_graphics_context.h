@@ -12,7 +12,7 @@ typedef struct cecs_surface_context {
     WGPUSurface surface;
     WGPUSurfaceConfiguration configuration;
 } cecs_surface_context;
-typedef CECS_OPTION_STRUCT(cecs_surface_context, optional_cecs_surface_context) optional_cecs_surface_context;
+typedef CECS_OPTION_STRUCT(cecs_surface_context, cecs_optional_surface_context) cecs_optional_surface_context;
 
 inline cecs_surface_context cecs_surface_context_create(WGPUSurface surface, WGPUSurfaceConfiguration configuration) {
     return (cecs_surface_context){
@@ -21,6 +21,12 @@ inline cecs_surface_context cecs_surface_context_create(WGPUSurface surface, WGP
     };
 }
 void cecs_surface_context_free(cecs_surface_context *sc);
+
+typedef struct cecs_render_target_info {
+    WGPUTextureFormat format;
+    uint32_t sample_count;
+    float aspect_ratio;
+} cecs_render_target_info;
 
 typedef struct cecs_render_target {
     WGPUTextureView view;
@@ -36,7 +42,7 @@ typedef struct cecs_graphics_context {
     WGPUInstance instance;
     WGPUDevice device;
     WGPUQueue queue;
-    optional_cecs_surface_context surface_context;
+    cecs_optional_surface_context surface_context;
     // TODO: cecs_render_target render_target;
 } cecs_graphics_context;
 

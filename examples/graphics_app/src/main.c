@@ -6,9 +6,11 @@
 #include <webgpu/wgpu.h>
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
-#include <cecs_graphics.h>
+#include <cecs_graphics/cecs_graphics.h>
 #include <math.h>
 #include <time.h>
+
+#include "test_pass.h"
 
 int main(void) {
     if (!glfwInit()) {
@@ -32,35 +34,33 @@ int main(void) {
         .index_format = WGPUIndexFormat_Uint16,
         .mesh_id = cecs_world_add_entity(&world),
     });
-    const cecs_component_id position_id = 4;
-    float positions[] = {
-        -0.5f, -0.5f,
-         0.5f, -0.5f,
-         0.0f,  0.5f,
-    };
-    const cecs_component_id color_id = 5;
-    float colors[] = {
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-    };
-    uint16_t indices[] = { 0, 1, 2, 1, 2, 0 };
-    cecs_mesh_builder_set_vertex_attribute(
-        cecs_mesh_builder_set_vertex_attribute(
-            cecs_mesh_builder_set_indices(
-                &builder, indices, 6
-            ),
-            color_id, colors, 3, sizeof(float) * 3
-        ),
-        position_id, positions, 3, sizeof(float) * 2
+    cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(position2_f32_attribute),
+        (position2_f32_attribute[]) {
+            { .x = -0.5f, .y = -0.5f },
+            { .x = 0.5f, .y = -0.5f },
+            { .x = 0.0f, .y = 0.5f },
+        },
+        3,
+        sizeof(position2_f32_attribute)
     );
-    cecs_mesh *mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
-    printf("Mesh built with %zu vertices\n", cecs_exclusive_range_length(mesh->vertex_entities));
-    printf("Mesh built with %zu attributes\n", cecs_exclusive_range_length(mesh->vertex_attribute_references));
+    cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(color3_f32_attribute),
+        (color3_f32_attribute[]) {
+            { .r = 1.0f, .g = 0.0f, .b = 0.0f },
+            { .r = 0.0f, .g = 1.0f, .b = 0.0f },
+            { .r = 0.0f, .g = 0.0f, .b = 1.0f },
+        },
+        3,
+        sizeof(color3_f32_attribute)
+    );
+    cecs_mesh_builder_set_indices(&builder, (cecs_vertex_index_u16[]) { 0, 1, 2 }, 3);
 
-    cecs_index_stream *index_stream = NULL;
-    assert(cecs_world_try_get_component(&world, builder.descriptor.mesh_id, 3, &index_stream));
-    //wgpuBufferMapAsync
+    cecs_mesh *mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
+
+    test_pass pass = test_pass_create(&system.context, (cecs_render_target_info){
+        .format = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration.format,
+        .sample_count = 1,
+        .aspect_ratio = 640.0f / 480.0f,
+    }, &system.world.world.resources.resources_arena);
 
     WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
     bool render_error = false;
@@ -69,61 +69,7 @@ int main(void) {
 
         cecs_surface_render_target surface_target;
         if (cecs_graphics_context_get_surface_render_target(&system.context, &surface_target)) {
-            
-            WGPUCommandEncoderDescriptor render_pass_encoder_descriptor = {
-                .nextInChain = NULL,
-                .label = "Learn WGPU Render Pass Encoder",
-            };
-            WGPUCommandEncoder render_pass_encoder = wgpuDeviceCreateCommandEncoder(
-                system.context.device,
-                &render_pass_encoder_descriptor
-            );
-
-            WGPURenderPassColorAttachment color_attachment = {
-                .nextInChain = NULL,
-                .view = surface_target.view,
-                .resolveTarget = NULL,
-                .loadOp = WGPULoadOp_Clear,
-                .storeOp = WGPUStoreOp_Store,
-                .clearValue = clear_color,
-//#ifndef WEBGPU_BACKEND_WGPU
-//                .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
-//#endif // NOT WEBGPU_BACKEND_WGPU
-            };
-            WGPURenderPassDescriptor render_pass_descriptor = {
-                .nextInChain = NULL,
-                .label = "Learn WGPU Render Pass",
-                .colorAttachmentCount = 1,
-                .colorAttachments = &color_attachment,
-                .depthStencilAttachment = NULL,
-                .timestampWrites = NULL,
-            };
-            WGPURenderPassEncoder render_pass =
-                wgpuCommandEncoderBeginRenderPass(render_pass_encoder, &render_pass_descriptor);
-            
-            // TODO: pipeline
-            
-
-            wgpuRenderPassEncoderEnd(render_pass);
-            wgpuRenderPassEncoderRelease(render_pass);
-
-
-            WGPUCommandBufferDescriptor render_command_buffer_descriptor = {
-                .nextInChain = NULL,
-                .label = "Learn WGPU Render Command Buffer",
-            };
-            WGPUCommandBuffer render_command_buffer =
-                wgpuCommandEncoderFinish(render_pass_encoder, &render_command_buffer_descriptor);
-            wgpuCommandEncoderRelease(render_pass_encoder);
-
-            wgpuQueueSubmit(system.context.queue, 1, &render_command_buffer);
-#if defined(WEBGPU_BACKEND_DAWN)
-            wgpuDeviceTick(system.context.device);
-#elif defined(WEBGPU_BACKEND_WGPU)
-            wgpuDevicePoll(system.context.device, false, NULL);
-#endif
-            wgpuCommandBufferRelease(render_command_buffer);
-            
+            test_pass_draw(&pass, &world, &system, &surface_target);
             cecs_graphics_context_present_surface_render_target(&system.context, &surface_target);
         } else {
             render_error = true;

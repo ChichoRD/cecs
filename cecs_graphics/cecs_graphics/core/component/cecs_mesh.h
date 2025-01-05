@@ -13,6 +13,6 @@ typedef struct cecs_mesh {
     cecs_entity_id_range vertex_attribute_references;
     float bounding_radius; 
 } cecs_mesh;
-CECS_COMPONENT_IMPLEMENT(cecs_mesh);
+CECS_COMPONENT_DECLARE(cecs_mesh);
 
 #endif

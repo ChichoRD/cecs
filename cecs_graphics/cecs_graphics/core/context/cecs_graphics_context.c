@@ -149,7 +149,7 @@ cecs_graphics_context cecs_graphics_context_create(GLFWwindow *window)
         .instance = instance,
         .device = device,
         .queue = queue,
-        .surface_context = CECS_OPTION_CREATE_SOME(optional_cecs_surface_context, cecs_surface_context_create(
+        .surface_context = CECS_OPTION_CREATE_SOME(cecs_optional_surface_context, cecs_surface_context_create(
             surface,
             surface_configuration
         )),
@@ -191,31 +191,31 @@ cecs_graphics_context cecs_graphics_context_create_offscreen(void) {
         .instance = instance,
         .device = device,
         .queue = queue,
-        .surface_context = CECS_OPTION_CREATE_NONE(optional_cecs_surface_context),
+        .surface_context = CECS_OPTION_CREATE_NONE(cecs_optional_surface_context),
     };
 }
 
 void cecs_graphics_context_free(cecs_graphics_context *context) {
     wgpuQueueRelease(context->queue);
     wgpuDeviceRelease(context->device);
-    if (CECS_OPTION_IS_SOME(optional_cecs_surface_context, context->surface_context)) {
+    if (CECS_OPTION_IS_SOME(cecs_optional_surface_context, context->surface_context)) {
         cecs_surface_context_free(
-            &CECS_OPTION_GET_UNCHECKED(optional_cecs_surface_context, context->surface_context)
+            &CECS_OPTION_GET_UNCHECKED(cecs_optional_surface_context, context->surface_context)
         );
     }
     wgpuInstanceRelease(context->instance);
     context->queue = NULL;
     context->device = NULL;
     context->instance = NULL;
-    context->surface_context = CECS_OPTION_CREATE_NONE_STRUCT(optional_cecs_surface_context);
+    context->surface_context = CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_surface_context);
 }
 
 bool cecs_graphics_context_get_surface_render_target(
     cecs_graphics_context *context,
     cecs_surface_render_target *out_surface_render_target
 ) {
-    CECS_OPTION_IS_SOME_ASSERT(optional_cecs_surface_context, context->surface_context);
-    cecs_surface_context surface_context = CECS_OPTION_GET_UNCHECKED(optional_cecs_surface_context, context->surface_context);
+    CECS_OPTION_IS_SOME_ASSERT(cecs_optional_surface_context, context->surface_context);
+    cecs_surface_context surface_context = CECS_OPTION_GET_UNCHECKED(cecs_optional_surface_context, context->surface_context);
 
     WGPUSurfaceTexture surface_texture;
     wgpuSurfaceGetCurrentTexture(surface_context.surface, &surface_texture);
@@ -258,8 +258,8 @@ void cecs_graphics_context_present_surface_render_target(
     cecs_graphics_context *context,
     cecs_surface_render_target *surface_render_target
 ) {
-    CECS_OPTION_IS_SOME_ASSERT(optional_cecs_surface_context, context->surface_context);
-    cecs_surface_context surface_context = CECS_OPTION_GET_UNCHECKED(optional_cecs_surface_context, context->surface_context);
+    CECS_OPTION_IS_SOME_ASSERT(cecs_optional_surface_context, context->surface_context);
+    cecs_surface_context surface_context = CECS_OPTION_GET_UNCHECKED(cecs_optional_surface_context, context->surface_context);
 
     wgpuTextureViewRelease(surface_render_target->view);
     wgpuSurfacePresent(surface_context.surface);
