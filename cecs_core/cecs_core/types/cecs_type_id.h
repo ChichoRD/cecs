@@ -18,10 +18,10 @@ typedef struct cecs_type_id_meta {
 
 #define CECS_TYPE_ID_META(type) CECS_PASTE3(cecs_, type, _type_id_meta)
 #define CECS_TYPE_ID_FUNC_NAME(type) CECS_PASTE3(cecs_, type, _type_id)
-#define CECS_TYPE_ID_FUNC(type) CECS_PASTE(CECS_TYPE_ID_FUNC_NAME(type), (void))
+#define CECS_TYPE_ID_FUNC(type) CECS_TYPE_ID_FUNC_NAME(type)(void)
 
 #define CECS_TYPE_ID_DECLARE(type) \
-    extern cecs_type_id CECS_TYPE_ID_FUNC(type);
+    extern cecs_type_id CECS_TYPE_ID_FUNC(type)
 
 #define CECS_TYPE_ID_DEFINE_WITH_COUNTER(type, counter_ref) \
     static cecs_type_id_meta CECS_TYPE_ID_META(type) = { .initialized = false, .id = 0 }; \
@@ -35,6 +35,6 @@ typedef struct cecs_type_id_meta {
 
 #define CECS_TYPE_ID_DEFINE(type) CECS_TYPE_ID_DEFINE_WITH_COUNTER(type, cecs_type_id_counter())
 
-#define CECS_TYPE_ID(type) CECS_PASTE(CECS_TYPE_ID_FUNC_NAME(type), ())
+#define CECS_TYPE_ID(type) CECS_TYPE_ID_FUNC_NAME(type)()
 
 #endif

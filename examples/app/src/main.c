@@ -20,30 +20,37 @@ typedef struct v2_i16 {
 } v2_i16;
 
 typedef v2_i16 position;
-CECS_COMPONENT_IMPLEMENT(position);
+CECS_COMPONENT_DECLARE(position);
+CECS_COMPONENT_DEFINE(position);
 
 typedef v2_i16 velocity;
-CECS_COMPONENT_IMPLEMENT(velocity);
+CECS_COMPONENT_DECLARE(velocity);
+CECS_COMPONENT_DEFINE(velocity);
 
 typedef struct velocity_register {
     v2_i16 velocity;
 } velocity_register;
-CECS_COMPONENT_IMPLEMENT(velocity_register);
+CECS_COMPONENT_DECLARE(velocity_register);
+CECS_COMPONENT_DEFINE(velocity_register);
 
 typedef struct box {
     position corner_position;
     v2_i16 size;
 } box;
-CECS_COMPONENT_IMPLEMENT(box);
+CECS_COMPONENT_DECLARE(box);
+CECS_COMPONENT_DEFINE(box);
 
 typedef bool is_solid;
-CECS_TAG_IMPLEMENT(is_solid);
+CECS_TAG_DECLARE(is_solid);
+CECS_TAG_DEFINE(is_solid);
 
 typedef bool is_duck;
-CECS_TAG_IMPLEMENT(is_duck);
+CECS_TAG_DECLARE(is_duck);
+CECS_TAG_DEFINE(is_duck);
 
 typedef bool is_shockwave;
-CECS_TAG_IMPLEMENT(is_shockwave);
+CECS_TAG_DECLARE(is_shockwave);
+CECS_TAG_DEFINE(is_shockwave);
 
 typedef struct controllable {
     #define CONTROLLABLE_BUFFER_SIZE 32
@@ -51,22 +58,26 @@ typedef struct controllable {
     uint8_t buffer_count;
     char buffer[CONTROLLABLE_BUFFER_SIZE];
 } controllable;
-CECS_COMPONENT_IMPLEMENT(controllable);
+CECS_COMPONENT_DECLARE(controllable);
+CECS_COMPONENT_DEFINE(controllable);
 
 typedef struct renderable {
     v2_i16 offset;
     v2_i16 size;
     char **sprite;
 } renderable;
-CECS_COMPONENT_IMPLEMENT(renderable);
+CECS_COMPONENT_DECLARE(renderable);
+CECS_COMPONENT_DEFINE(renderable);
 
 typedef bool owns_renderable;
-CECS_TAG_IMPLEMENT(owns_renderable);
+CECS_TAG_DECLARE(owns_renderable);
+CECS_TAG_DEFINE(owns_renderable);
 
 typedef struct dies_by {
     cecs_entity_id cause;
 } dies_by;
-CECS_COMPONENT_IMPLEMENT(dies_by);
+CECS_COMPONENT_DECLARE(dies_by);
+CECS_COMPONENT_DEFINE(dies_by);
 
 static renderable renderable_create_alloc(char **sprite, v2_i16 offset, v2_i16 size) {
 	renderable r = (renderable) {
@@ -151,7 +162,8 @@ static renderable renderable_create_duck_alloc(char *color) {
 typedef struct console_buffer {
     char *buffer[BOARD_WIDTH][BOARD_HEIGHT];
 } console_buffer;
-CECS_RESOURCE_IMPLEMENT(console_buffer);
+CECS_RESOURCE_DECLARE(console_buffer);
+CECS_RESOURCE_DEFINE(console_buffer);
 
 cecs_entity_id create_duck(cecs_world *w, v2_i16 initial_position, const cecs_entity_id *const threats, size_t threats_count) {
     cecs_entity_id e = cecs_world_add_entity(w);
