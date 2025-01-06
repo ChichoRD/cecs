@@ -12,10 +12,13 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
     fseek(shader_file, 0, SEEK_SET);
 
     char *shader_code = cecs_arena_alloc(arena, shader_size + 1);
-    assert(fread(shader_code, 1, shader_size, shader_file) == shader_size && "fatal error: failed to read shader file");
-    shader_code[shader_size] = '\0';
-
+    const size_t readed_bytes = fread(shader_code, sizeof(char), shader_size, shader_file);
+    assert(!ferror(shader_file) && "fatal error: failed to read shader file");
+    assert(readed_bytes <= shader_size && "fatal error: readed bytes mismatch");
     fclose(shader_file);
+    
+    shader_code[readed_bytes] = '\0';
+
 
     const WGPUShaderModuleWGSLDescriptor shader_code_descriptor = {
         .chain = {
@@ -29,12 +32,12 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
         .label = "Test Pass Shader",
         .nextInChain = &shader_code_descriptor.chain,
 #ifdef WEBGPU_BACKEND_WGPU
-        .hintCount = 0;
-        .hints = nullptr;
+        .hintCount = 0,
+        .hints = NULL,
 #endif
     };
 
-    const shader_module = wgpuDeviceCreateShaderModule(context->device, &shader_module_descriptor);
+    const WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(context->device, &shader_module_descriptor);
 
     const WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(context->device, &(WGPUPipelineLayoutDescriptor) {
         .label = "Test Pass Pipeline Layout",
@@ -50,17 +53,17 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .label = "Test Pass Pipeline",
                 .layout = pipeline_layout,
                 .vertex = (WGPUVertexState) {
-                    .module = shader_module,
                     .entryPoint = "vs_main",
+                    .module = shader_module,
                     .bufferCount = 2,
                     .buffers = (WGPUVertexBufferLayout[]) {
-                        position2_f32_attribute_layout(0),
-                        color3_f32_attribute_layout(1),
+                        position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
+                        color3_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
                     },
                 },
                 .fragment = &(WGPUFragmentState) {
-                    .module = shader_module,
                     .entryPoint = "fs_main",
+                    .module = shader_module,
                     .targetCount = 1,
                     .targets = (WGPUColorTargetState[]) {
                         {
@@ -128,8 +131,10 @@ static void test_pass_draw_inner(
         cecs_component_iterator_current(&it, &handle);
         cecs_entity_id_range vertices = handle.cecs_mesh_component->vertex_entities;
 
-        uint64_t position_offset = vertices.start * sizeof(position2_f32_attribute);
-        uint64_t color_offset = vertices.start * sizeof(color3_f32_attribute);
+        uint64_t position_offset =
+            cecs_dynamic_wgpu_buffer_get_offset(&position_buffer->buffer, vertices.start * sizeof(position2_f32_attribute));
+        uint64_t color_offset =
+            cecs_dynamic_wgpu_buffer_get_offset(&color_buffer->buffer, vertices.start * sizeof(color3_f32_attribute));
 
         uint64_t vertex_count = cecs_exclusive_range_length(vertices);
         uint64_t position_size = vertex_count * sizeof(position2_f32_attribute);
@@ -196,42 +201,51 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
 
     wgpuQueueSubmit(system->context.queue, 1, &render_command_buffer);
 #if defined(WEBGPU_BACKEND_DAWN)
-    wgpuDeviceTick(context->device);
+    wgpuDeviceTick(system->context.device);
 #elif defined(WEBGPU_BACKEND_WGPU)
-    wgpuDevicePoll(context->device, false, NULL);
+    wgpuDevicePoll(system->context.device, false, NULL);
 #endif
     wgpuCommandBufferRelease(render_command_buffer);
 }
 
 CECS_COMPONENT_DEFINE(position2_f32_attribute);
-WGPUVertexBufferLayout position2_f32_attribute_layout(uint32_t shader_location)
-{
+WGPUVertexBufferLayout position2_f32_attribute_layout(
+    uint32_t shader_location,
+    WGPUVertexAttribute out_attributes[],
+    size_t out_attributes_capacity
+) {
+    assert(out_attributes_capacity >= 1 && "error: out attributes capacity must be at least 1");
+    out_attributes[0] = (WGPUVertexAttribute) {
+        .format = WGPUVertexFormat_Float32x2,
+        .offset = 0,
+        .shaderLocation = shader_location,
+    };
+
     return (WGPUVertexBufferLayout) {
         .arrayStride = sizeof(position2_f32_attribute),
         .stepMode = WGPUVertexStepMode_Vertex,
         .attributeCount = 1,
-        .attributes = (WGPUVertexAttribute[]) {
-            {
-                .format = WGPUVertexFormat_Float32x2,
-                .offset = 0,
-                .shaderLocation = shader_location,
-            },
-        },
+        .attributes = out_attributes,
     };
 }
 
 CECS_COMPONENT_DEFINE(color3_f32_attribute);
-WGPUVertexBufferLayout color3_f32_attribute_layout(uint32_t shader_location) {
+WGPUVertexBufferLayout color3_f32_attribute_layout(
+    uint32_t shader_location,
+    WGPUVertexAttribute out_attributes[],
+    size_t out_attributes_capacity
+) {
+    assert(out_attributes_capacity >= 1 && "error: out attributes capacity must be at least 1");
+    out_attributes[0] = (WGPUVertexAttribute) {
+        .format = WGPUVertexFormat_Float32x3,
+        .offset = 0,
+        .shaderLocation = shader_location,
+    };
+
     return (WGPUVertexBufferLayout) {
         .arrayStride = sizeof(color3_f32_attribute),
         .stepMode = WGPUVertexStepMode_Vertex,
         .attributeCount = 1,
-        .attributes = (WGPUVertexAttribute[]) {
-            {
-                .format = WGPUVertexFormat_Float32x3,
-                .offset = 0,
-                .shaderLocation = shader_location,
-            },
-        },
+        .attributes = out_attributes,
     };
 }

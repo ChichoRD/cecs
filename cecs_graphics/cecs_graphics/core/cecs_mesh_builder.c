@@ -32,14 +32,9 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
         &CECS_UNION_GET_UNCHECKED(cecs_vertex_attribute_storage_attachment, storage->stream);
 
     if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
-        WGPUBufferDescriptor buffer_descriptor = {
-            .label = "vertex buffer",
-            .mappedAtCreation = false,
-            .nextInChain = NULL,
-            .size = vertex_info->max_vertex_count * vertex_info->attribute_size,
-            .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Vertex,
-        };
-        storage->buffer = cecs_dynamic_wgpu_buffer_create(context->device, &buffer_descriptor);
+        uint64_t size = vertex_info->max_vertex_count * vertex_info->attribute_size;
+        WGPUBufferUsageFlags usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Vertex;
+        storage->buffer = cecs_dynamic_wgpu_buffer_create(context->device, &builder->graphics_world->resources.resources_arena, usage, size);
         storage->buffer_flags |= cecs_buffer_flags_initialized;
     }
     
@@ -61,6 +56,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
         &storage->buffer,
         context->device,
         context->queue,
+        &builder->graphics_world->resources.resources_arena,
         builder->vertex_range.start * attribute_size,
         attributes,
         vertex_count * attribute_size
@@ -88,14 +84,9 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
     assert(index_info->index_format == builder->descriptor.index_format && "error: index format mismatch");
 
     if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
-        WGPUBufferDescriptor buffer_descriptor = {
-            .label = "index buffer",
-            .mappedAtCreation = false,
-            .nextInChain = NULL,
-            .size = index_info->max_index_count * index_format_size,
-            .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Index,
-        };
-        storage->buffer = cecs_dynamic_wgpu_buffer_create(context->device, &buffer_descriptor);
+        uint64_t size = index_info->max_index_count * index_format_size;
+        WGPUBufferUsageFlags usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Index;
+        storage->buffer = cecs_dynamic_wgpu_buffer_create(context->device, &builder->graphics_world->resources.resources_arena, usage, size);
         storage->buffer_flags |= cecs_buffer_flags_initialized;
     }
 
@@ -114,6 +105,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
         &storage->buffer,
         context->device,
         context->queue,
+        &builder->graphics_world->resources.resources_arena,
         builder->index_range.start * index_format_size,
         indices,
         index_count * index_format_size
@@ -137,6 +129,7 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
             .attribute_id = id,
             .stride = vertex_info->attribute_size,
         };
+        // TODO: maybe add too an array of cecs_vertex_stream
     }
     cecs_entity_id_range attribute_entities = cecs_world_add_entity_range(world, vertex_attributes_count);
     CECS_WORLD_SET_COMPONENT_ARRAY(

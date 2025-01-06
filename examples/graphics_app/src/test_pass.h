@@ -2,7 +2,7 @@
 #define TEST_PASS_H
 
 #include <webgpu/webgpu.h>
-#include <cecs_graphics/cecs_graphics.h>
+#include <cecs_graphics.h>
 
 typedef struct test_pass {
     WGPURenderPipeline pipeline;
@@ -18,7 +18,11 @@ typedef struct position2_f32_attribute {
     float y;
 } position2_f32_attribute;
 CECS_COMPONENT_DECLARE(position2_f32_attribute);
-WGPUVertexBufferLayout position2_f32_attribute_layout(uint32_t shader_location);
+WGPUVertexBufferLayout position2_f32_attribute_layout(
+    uint32_t shader_location,
+    WGPUVertexAttribute out_attributes[],
+    size_t out_attributes_capacity
+);
 
 typedef struct color3_f32_attribute {
     float r;
@@ -26,6 +30,10 @@ typedef struct color3_f32_attribute {
     float b;
 } color3_f32_attribute;
 CECS_COMPONENT_DECLARE(color3_f32_attribute);
-WGPUVertexBufferLayout color3_f32_attribute_layout(uint32_t shader_location);
+WGPUVertexBufferLayout color3_f32_attribute_layout(
+    uint32_t shader_location,
+    WGPUVertexAttribute out_attributes[],
+    size_t out_attributes_capacity
+);
 
 #endif

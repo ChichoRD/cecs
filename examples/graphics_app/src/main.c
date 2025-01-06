@@ -6,7 +6,7 @@
 #include <webgpu/wgpu.h>
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
-#include <cecs_graphics/cecs_graphics.h>
+#include <cecs_graphics.h>
 #include <math.h>
 #include <time.h>
 
@@ -29,6 +29,7 @@ int main(void) {
 
     cecs_world world = cecs_world_create(64, 16, 4);
     cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
+
     cecs_mesh_builder builder = cecs_mesh_builder_create(&system.world, (cecs_mesh_builder_descriptor){
         .vertex_attributes_expected_count = 2,
         .index_format = WGPUIndexFormat_Uint16,

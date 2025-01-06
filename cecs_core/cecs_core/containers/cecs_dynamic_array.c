@@ -141,8 +141,10 @@ void* cecs_dynamic_array_append_empty(cecs_dynamic_array* l, cecs_arena* a, size
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
         cecs_dynamic_array_grow(l, a, new_count);
+
+    void *ptr = (uint8_t*)l->elements + l->count;
     l->count = new_count;
-    return cecs_dynamic_array_last(l, size);
+    return ptr;
 }
 
 void* cecs_dynamic_array_prepend_empty(cecs_dynamic_array* l, cecs_arena* a, size_t count, size_t size) {
