@@ -7,6 +7,7 @@
 #include "../../containers/cecs_union.h"
 #include "../../containers/cecs_sparse_set.h"
 #include "../../containers/cecs_arena.h"
+#include "../../containers/cecs_discard.h"
 #include "entity/cecs_entity.h"
 #include "cecs_component_storage.h"
 
@@ -19,11 +20,7 @@ inline cecs_world_components_checksum cecs_world_components_checksum_remove(cecs
     return cecs_world_components_checksum_hash(current - (cecs_world_components_checksum)component_id);
 }
 
-
-typedef struct cecs_component_discard {
-    void *handle;
-    size_t size;
-} cecs_component_discard;
+typedef cecs_discard cecs_component_discard;
 
 typedef CECS_OPTION_STRUCT(size_t *, cecs_optional_component_size) cecs_optional_component_size;
 typedef struct cecs_component_storage_attachments {

@@ -4,8 +4,11 @@
 #include "test_pass.h"
 
 test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena) {
-    FILE *shader_file = fopen("../../examples/graphics_app/src/test_pass.wgsl", "r");
-    assert(shader_file != NULL && "fatal error: failed to open shader file");
+    FILE *shader_file = NULL;
+    assert(
+        fopen_s(&shader_file, "../../examples/graphics_app/src/test_pass.wgsl", "r") == 0
+        && "fatal error: failed to open shader file"
+    );
 
     fseek(shader_file, 0, SEEK_END);
     size_t shader_size = ftell(shader_file);
@@ -97,6 +100,7 @@ static void test_pass_draw_inner(
     cecs_render_target *target,
     WGPURenderPassEncoder render_pass
 ) {
+    (void)target;
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
 
     cecs_buffer_storage_attachment *position_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
@@ -108,14 +112,7 @@ static void test_pass_draw_inner(
         &system->world
     );
 
-    // cecs_buffer_storage_attachment *index_buffer_u16 = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
-    //     cecs_vertex_index_u16,
-    //     &system->world
-    // );
-    // cecs_buffer_storage_attachment *index_buffer_u32 = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
-    //     cecs_vertex_index_u32,
-    //     &system->world
-    // );
+    cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
 
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream) handle;
     cecs_arena arena = cecs_arena_create();
@@ -145,9 +142,21 @@ static void test_pass_draw_inner(
 
         if (handle.cecs_index_stream_component == NULL) {
             wgpuRenderPassEncoderDraw(render_pass, vertex_count, 1, 0, 0);
-        } else {
-            wgpuRenderPassEncoderDraw(render_pass, vertex_count, 1, 0, 0);
-            // TODO: index buffer
+        } else  {
+            cecs_dynamic_wgpu_buffer *index_buffer = NULL;
+            cecs_raw_stream index_stream = cecs_raw_stream_from_index(
+                *handle.cecs_index_stream_component,
+                index_buffers,
+                &index_buffer
+            );
+
+            wgpuRenderPassEncoderSetIndexBuffer(render_pass, index_buffer->buffer, handle.cecs_index_stream_component->format, index_stream.offset, index_stream.size);
+            wgpuRenderPassEncoderDrawIndexed(
+                render_pass,
+                handle.cecs_index_stream_component->index_count, 1,
+                0, handle.cecs_mesh_component->vertex_entities.start,
+                0
+            );
         }
     }
     cecs_arena_free(&arena);

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "../../containers/cecs_arena.h"
 #include "../../containers/cecs_displaced_set.h"
+#include "../../containers/cecs_discard.h"
 #include "../../types/cecs_type_id.h"
 #include "../../types/cecs_macro_utils.h"
 
@@ -22,10 +23,7 @@ extern cecs_resource_id *cecs_resource_id_counter(void);
 #define CECS_RESOURCE_ID_ARRAY(...) ((cecs_resource_id[]){ CECS_MAP(CECS_RESOURCE_ID, COMMA, __VA_ARGS__) })
 
 typedef void *cecs_resource_handle;
-typedef struct cecs_resource_discard {
-    cecs_resource_handle handle;
-    size_t size;
-} cecs_resource_discard;
+typedef cecs_discard cecs_resource_discard;
 
 typedef struct cecs_world_resources {
     cecs_arena resources_arena;

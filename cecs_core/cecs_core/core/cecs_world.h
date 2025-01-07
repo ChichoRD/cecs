@@ -107,6 +107,9 @@ size_t cecs_world_remove_tag_array(cecs_world *w, cecs_entity_id_range range, ce
 #define CECS_WORLD_REMOVE_TAG_ARRAY(type, world_ref, entity_id_range) \
     cecs_world_remove_tag_array(world_ref, entity_id_range, CECS_TAG_ID(type))
 
+void *cecs_world_use_component_discard(cecs_world *w, size_t size);
+void *cecs_world_use_resource_discard(cecs_world *w, size_t size);
+
 cecs_entity_id cecs_world_add_entity(cecs_world *w);
 cecs_entity_id cecs_world_clear_entity(cecs_world *w, cecs_entity_id entity_id);
 

@@ -285,6 +285,14 @@ size_t cecs_world_remove_tag_array(cecs_world *w, cecs_entity_id_range range, ce
     );
 }
 
+void *cecs_world_use_component_discard(cecs_world *w, size_t size)  {
+    return cecs_discard_use(&w->components.discard, &w->components.components_arena, size);
+}
+
+void *cecs_world_use_resource_discard(cecs_world *w, size_t size) {
+    return cecs_discard_use(&w->resources.discard, &w->resources.resources_arena, size);
+}
+
 cecs_entity_id cecs_world_add_entity(cecs_world* w) {
     cecs_entity_id e = cecs_world_entities_add_entity(&w->entities);
 #if CECS_WORLD_FLAG_ALL_ENTITIES
@@ -309,7 +317,7 @@ cecs_entity_id cecs_world_clear_entity(cecs_world* w, cecs_entity_id entity_id) 
             storage.storage,
             &w->components.components_arena,
             entity_id,
-            w->components.discard.handle,
+            cecs_world_use_component_discard(w, storage.component_size),
             storage.component_size
         );
     }
@@ -378,12 +386,11 @@ size_t cecs_world_clear_entity_range(cecs_world *w, cecs_entity_id_range range, 
         cecs_world_components_entity_iterator_next(&it)
     ) {
         cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
-        // TODO: get_handle, maybe it's too small
         cecs_component_storage_remove_array(
             storage.storage,
             &w->components.components_arena,
             range.start,
-            w->components.discard.handle,
+            cecs_world_use_component_discard(w, storage.component_size),
             cecs_exclusive_range_length(range),
             storage.component_size
         );

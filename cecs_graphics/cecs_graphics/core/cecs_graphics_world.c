@@ -13,3 +13,11 @@ cecs_graphics_world cecs_graphics_world_create(size_t vertex_capacity, size_t ve
 void cecs_graphics_world_free(cecs_graphics_world *w) {
     cecs_world_free(&w->world);
 }
+
+cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world) {
+    cecs_buffer_storage_attachment uninitialized_buffer = cecs_buffer_storage_attachment_uninitialized();
+    return (cecs_exclusive_index_buffer_pair){
+        .u16 = &CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(cecs_vertex_index_u16, graphics_world, &uninitialized_buffer)->buffer,
+        .u32 = &CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(cecs_vertex_index_u32, graphics_world, &uninitialized_buffer)->buffer
+    };
+}

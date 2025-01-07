@@ -37,23 +37,29 @@ int main(void) {
     });
     cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(position2_f32_attribute),
         (position2_f32_attribute[]) {
+            // quad 4 verts
             { .x = -0.5f, .y = -0.5f },
             { .x = 0.5f, .y = -0.5f },
-            { .x = 0.0f, .y = 0.5f },
+            { .x = 0.5f, .y = 0.5f },
+            { .x = -0.5f, .y = 0.5f },
         },
-        3,
+        4,
         sizeof(position2_f32_attribute)
     );
     cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(color3_f32_attribute),
         (color3_f32_attribute[]) {
+            // quad 4 colors
             { .r = 1.0f, .g = 0.0f, .b = 0.0f },
             { .r = 0.0f, .g = 1.0f, .b = 0.0f },
             { .r = 0.0f, .g = 0.0f, .b = 1.0f },
+            { .r = 1.0f, .g = 1.0f, .b = 1.0f },
         },
-        3,
+        4,
         sizeof(color3_f32_attribute)
     );
-    cecs_mesh_builder_set_indices(&builder, (cecs_vertex_index_u16[]) { 0, 1, 2 }, 3);
+    cecs_mesh_builder_set_indices(&builder, (cecs_vertex_index_u16[]) {
+        0, 1, 2, 2, 3, 0
+    }, 6);
 
     cecs_mesh *mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
 
