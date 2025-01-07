@@ -70,7 +70,6 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(
     };
 }
 
-// TODO: loop freeing buffers in graphics world
 void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
     wgpuBufferRelease(buffer->buffer);
     buffer->buffer = NULL;

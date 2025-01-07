@@ -10,7 +10,21 @@ cecs_graphics_world cecs_graphics_world_create(size_t vertex_capacity, size_t ve
     };
 }
 
-void cecs_graphics_world_free(cecs_graphics_world *w) {
+void cecs_graphics_world_free(cecs_graphics_world *w) { 
+    for (
+        cecs_world_components_iterator it = cecs_world_components_iterator_create(&w->world.components);
+        !cecs_world_components_iterator_done(&it);
+        cecs_world_components_iterator_next(&it)
+    ) {
+        cecs_sized_component_storage storage = cecs_world_components_iterator_current(&it);
+        cecs_buffer_storage_attachment *buffer_attachment = cecs_world_get_component_storage_attachments(
+            &w->world,
+            storage.component_id
+        );
+        if (buffer_attachment->buffer_flags & cecs_buffer_flags_initialized) {
+            cecs_dynamic_wgpu_buffer_free(&buffer_attachment->buffer);
+        }
+    }
     cecs_world_free(&w->world);
 }
 
