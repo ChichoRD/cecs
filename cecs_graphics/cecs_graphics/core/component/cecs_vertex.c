@@ -115,7 +115,6 @@ void cecs_buffer_storage_attachment_initialize(
     );
     storage->buffer = cecs_dynamic_wgpu_buffer_create(device, arena, usage, buffer_size);
     storage->buffer_flags |= cecs_buffer_flags_initialized;
-    return *storage;
 }
 
 void cecs_buffer_storage_attachment_free(cecs_buffer_storage_attachment *storage) {

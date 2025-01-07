@@ -48,12 +48,6 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(
 ) {
     assert(size != 0 && "error: buffer size must be non-zero");
 
-    // TODO: see if we can remove this requirement
-    assert(
-        usage & WGPUBufferUsage_CopySrc
-        && "error: buffer must be able to be used as a copy source, else it cannot be resized"
-    );
-
     uint64_t aligned_size = cecs_align_to_wgpu_copy_buffer_alignment(size);
     return (cecs_dynamic_wgpu_buffer){
         .buffer = wgpuDeviceCreateBuffer(
@@ -66,8 +60,10 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(
                 .usage = usage
             }
         ),
-        .staging = cecs_displaced_set_create_with_capacity(arena, aligned_size),
+        .stage = cecs_dynamic_array_create_with_capacity(arena, aligned_size * sizeof(cecs_buffer_stage_element)),
+        .stage_offsets = cecs_displaced_set_create(),
         .uploaded_size = aligned_size,
+        .current_padding = 0,
         .usage = usage
     };
 }
@@ -75,17 +71,19 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(
 void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
     wgpuBufferRelease(buffer->buffer);
     buffer->buffer = NULL;
-    cecs_displaced_set_clear(&buffer->staging);
+    cecs_dynamic_array_clear(&buffer->stage);
+    cecs_displaced_set_clear(&buffer->stage_offsets);
     buffer->uploaded_size = 0;
+    buffer->current_padding = 0;
     buffer->usage = WGPUBufferUsage_None;
 }
 
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset) {
     assert(
-        cecs_displaced_set_contains_index(&buffer->staging, offset)
-        && "error: staging buffer does not contain requested offset"
+        cecs_displaced_set_contains_index(&buffer->stage_offsets, offset)
+        && "error: stage buffer does not contain requested offset"
     );
-    return cecs_displaced_set_cecs_dynamic_array_index(&buffer->staging, offset);
+    return *CECS_DISPLACED_SET_GET(cecs_buffer_offset_u64, &buffer->stage_offsets, offset);
 }
 
 typedef struct cecs_buffer_staging_parameters {
@@ -101,16 +99,23 @@ static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_stage(
     void *data,
     cecs_dynamic_buffer_offset size
 ) {
-    cecs_displaced_set_set_range(
-        &buffer->staging, arena, cecs_inclusive_range_index_count(offset, size), data, sizeof(cecs_buffer_staging_element)
+    const size_t stage_size = buffer->stage.count;
+    cecs_buffer_offset_u64 stage_offset = stage_size - buffer->current_padding;
+    cecs_dynamic_array_insert_range(
+        &buffer->stage, arena, stage_offset, data, size, sizeof(cecs_buffer_stage_element)
     );
-    const cecs_buffer_offset_u64 aligned_size = cecs_align_to_wgpu_copy_buffer_alignment(size);
-    const size_t aligned_last = offset + aligned_size - sizeof(cecs_buffer_staging_element);
+    cecs_displaced_set_set(
+        &buffer->stage_offsets, arena, offset, &stage_offset, sizeof(cecs_buffer_offset_u64)
+    );
 
-    cecs_displaced_set_expand(&buffer->staging, arena, aligned_last, sizeof(cecs_buffer_staging_element));
-    const cecs_buffer_offset_u64 stage_size = cecs_exclusive_range_length(buffer->staging.index_range);
+    const cecs_buffer_offset_u64 aligned_size = cecs_align_to_wgpu_copy_buffer_alignment(size);
+    const size_t padding = aligned_size - size;
+    cecs_dynamic_array_append_empty(&buffer->stage, arena, padding, sizeof(cecs_buffer_stage_element));
+    buffer->current_padding = padding;
+
+    const cecs_buffer_offset_u64 new_stage_size = buffer->stage.count;
     assert(
-        (stage_size & (cecs_webgpu_copy_buffer_alignment - 1)) == 0
+        (new_stage_size & (cecs_webgpu_copy_buffer_alignment - 1)) == 0
         && "error: staging buffer size must be aligned to copy buffer alignment"
     );
 
@@ -120,7 +125,7 @@ static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_stage(
     return (cecs_buffer_staging_parameters) {
         .aligned_requested_offset = aligned_offset,
         .aligned_requested_size = aligned_size,
-        .aligned_total_size = stage_size
+        .aligned_total_size = new_stage_size
     };
 }
 
@@ -139,23 +144,24 @@ cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
 
     cecs_buffer_staging_parameters staging = cecs_dynamic_wgpu_buffer_stage(buffer, arena, offset, data, size);
     if (buffer->uploaded_size < staging.aligned_requested_size) {
+        const uint64_t new_buffer_size = staging.aligned_total_size * 2;
         WGPUBuffer new_buffer = cecs_wgpu_buffer_create_with_data(
             device,
             buffer->usage,
-            staging.aligned_total_size,
-            cecs_displaced_set_get(&buffer->staging, 0, sizeof(cecs_buffer_staging_element)),
+            new_buffer_size,
+            buffer->stage.elements,
             staging.aligned_total_size
         );
         wgpuBufferRelease(buffer->buffer);
         buffer->buffer = new_buffer;
-        buffer->uploaded_size = staging.aligned_total_size;
+        buffer->uploaded_size = new_buffer_size;
     } else {
         wgpuQueueWriteBuffer(
             queue,
             buffer->buffer,
             staging.aligned_requested_offset,
-            cecs_displaced_set_get_range(
-                &buffer->staging, cecs_inclusive_range_index_count(offset, size), sizeof(cecs_buffer_staging_element)
+            cecs_dynamic_array_get_range(
+                &buffer->stage, cecs_dynamic_wgpu_buffer_get_offset(buffer, offset), size, sizeof(cecs_buffer_stage_element)
             ),
             staging.aligned_requested_size
         );

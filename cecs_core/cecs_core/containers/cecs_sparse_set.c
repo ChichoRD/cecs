@@ -50,7 +50,7 @@ cecs_optional_element cecs_sparse_set_get(const cecs_sparse_set *s, size_t key, 
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_element);
     }
 
-    cecs_dense_index index = *CECS_DISPLACED_SET_GET(cecs_dense_index, &s->indices, key);
+    cecs_dense_index index = cecs_sparse_set_index(s, key);
     if (CECS_OPTION_IS_SOME(cecs_dense_index, index)) {
         return CECS_OPTION_CREATE_SOME_STRUCT(
             cecs_optional_element,
@@ -103,6 +103,11 @@ void* cecs_sparse_set_set(cecs_sparse_set* s, cecs_arena* a, size_t key, void* e
             CECS_DYNAMIC_ARRAY_ADD(size_t, &s->keys, a, &key);
         return cecs_dynamic_array_add(&CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements), a, element, element_size);
     }
+}
+
+void *cecs_sparse_set_set_range(cecs_sparse_set *s, cecs_arena *a, cecs_inclusive_range key_range, void *elements, size_t element_size) {
+    assert(false && "unimplemented");
+    return NULL;
 }
 
 bool cecs_sparse_set_remove(cecs_sparse_set* s, cecs_arena* a, size_t key, void* out_removed_element, size_t element_size) {

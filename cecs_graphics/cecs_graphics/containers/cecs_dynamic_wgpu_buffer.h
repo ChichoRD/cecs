@@ -31,20 +31,23 @@ WGPUBuffer cecs_wgpu_buffer_create_with_data(
     size_t data_size
 );
 
-typedef uint8_t cecs_buffer_staging_element;
-
+typedef uint8_t cecs_buffer_stage_element;
 typedef struct cecs_dynamic_wgpu_buffer {
     WGPUBuffer buffer;
-    cecs_displaced_set staging;
+    cecs_dynamic_array stage;
+    cecs_displaced_set stage_offsets;
     size_t uploaded_size;
-    WGPUBufferUsageFlags usage;
+    size_t current_padding;
+    WGPUBufferUsage usage;
 } cecs_dynamic_wgpu_buffer;
 
 static inline cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_uninitialized(void) {
     return (cecs_dynamic_wgpu_buffer){
         .buffer = NULL,
-        .staging = cecs_displaced_set_create(),
+        .stage = cecs_dynamic_array_create(),
+        .stage_offsets = cecs_displaced_set_create(),
         .uploaded_size = 0,
+        .current_padding = 0,
         .usage = WGPUBufferUsage_None
     };
 }

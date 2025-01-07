@@ -68,9 +68,16 @@ static inline void *cecs_sparse_set_data(const cecs_sparse_set *s) {
     return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->elements).elements;
 }
 
-
 static inline size_t *cecs_sparse_set_keys(const cecs_sparse_set *s) {
     return s->keys.elements;
+}
+
+static inline cecs_dense_index cecs_sparse_set_index(const cecs_sparse_set *s, size_t key) {
+    return *CECS_DISPLACED_SET_GET(cecs_dense_index, &s->indices, key);
+}
+
+static inline size_t cecs_sparse_set_index_unchecked(const cecs_sparse_set *s, size_t key) {
+    return CECS_OPTION_GET(cecs_dense_index, cecs_sparse_set_index(s, key));
 }
 
 static inline size_t cecs_sparse_set_count_of_size(const cecs_sparse_set *s, size_t element_size) {
@@ -79,7 +86,7 @@ static inline size_t cecs_sparse_set_count_of_size(const cecs_sparse_set *s, siz
 
 static inline bool cecs_sparse_set_contains(const cecs_sparse_set *s, size_t key) {
     return cecs_displaced_set_contains_index(&s->indices, key)
-        && CECS_OPTION_IS_SOME(cecs_dense_index, *CECS_DISPLACED_SET_GET(cecs_dense_index, &s->indices, key));
+        && CECS_OPTION_IS_SOME(cecs_dense_index, cecs_sparse_set_index(s, key));
 }
 
 void cecs_sparse_set_clear(cecs_sparse_set *s);
@@ -97,6 +104,12 @@ bool cecs_sparse_set_is_empty(const cecs_sparse_set *s);
 void *cecs_sparse_set_set(cecs_sparse_set *s, cecs_arena *a, size_t key, void *element, size_t element_size);
 #define CECS_SPARSE_SET_SET(type, sparse_set_ref, arena_ref, key, element_ref) \
     ((type *)cecs_sparse_set_set(sparse_set_ref, arena_ref, key, element_ref, sizeof(type)))
+
+void *cecs_sparse_set_set_range(cecs_sparse_set *s, cecs_arena *a, cecs_inclusive_range key_range, void *elements, size_t element_size);
+#define CECS_SPARSE_SET_SET_RANGE(type, sparse_set_ref, arena_ref, key_range, elements_ref) \
+    ((type *)cecs_sparse_set_set_range(sparse_set_ref, arena_ref, key_range, elements_ref, sizeof(type)))
+
+// TODO: other range operations !!HERE
 
 bool cecs_sparse_set_remove(cecs_sparse_set *s, cecs_arena *a, size_t key, void *out_removed_element, size_t element_size);
 #define CECS_SPARSE_SET_REMOVE(type, sparse_set_ref, arena_ref, key, out_removed_element_ref) \
