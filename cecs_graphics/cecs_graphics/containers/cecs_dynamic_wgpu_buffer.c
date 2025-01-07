@@ -47,6 +47,8 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(
     cecs_dynamic_buffer_offset size
 ) {
     assert(size != 0 && "error: buffer size must be non-zero");
+
+    // TODO: see if we can remove this requirement
     assert(
         usage & WGPUBufferUsage_CopySrc
         && "error: buffer must be able to be used as a copy source, else it cannot be resized"
@@ -78,7 +80,7 @@ void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
     buffer->usage = WGPUBufferUsage_None;
 }
 
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset) {
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset) {
     assert(
         cecs_displaced_set_contains_index(&buffer->staging, offset)
         && "error: staging buffer does not contain requested offset"

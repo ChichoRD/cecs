@@ -154,8 +154,7 @@ static void test_pass_draw_inner(
             wgpuRenderPassEncoderDrawIndexed(
                 render_pass,
                 handle.cecs_index_stream_component->index_count, 1,
-                0, handle.cecs_mesh_component->vertex_entities.start,
-                0
+                handle.cecs_index_stream_component->first_index, handle.cecs_mesh_component->vertex_entities.start, 0
             );
         }
     }

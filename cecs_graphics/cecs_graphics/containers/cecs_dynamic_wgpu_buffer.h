@@ -52,7 +52,7 @@ static inline cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_uninitialized(vo
 cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(WGPUDevice device, cecs_arena *arena, WGPUBufferUsageFlags usage, cecs_dynamic_buffer_offset size);
 void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer);
 
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset);
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset);
 
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
     cecs_dynamic_wgpu_buffer *buffer,

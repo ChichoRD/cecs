@@ -19,4 +19,6 @@ void cecs_graphics_world_free(cecs_graphics_world *w);
 
 cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world);
 
+cecs_arena *cecs_graphics_world_buffer_arena(cecs_graphics_world *graphics_world);
+
 #endif

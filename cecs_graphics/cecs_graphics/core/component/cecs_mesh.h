@@ -15,4 +15,15 @@ typedef struct cecs_mesh {
 } cecs_mesh;
 CECS_COMPONENT_DECLARE(cecs_mesh);
 
+static inline cecs_vertex_stream cecs_mesh_get_vertex_stream(cecs_mesh mesh, size_t stride) {
+    return (cecs_vertex_stream){
+        .offset = mesh.vertex_entities.start * stride,
+        .size = cecs_exclusive_range_length(mesh.vertex_entities) * stride
+    };
+}
+
+static inline cecs_raw_stream cecs_mesh_get_raw_vertex_stream(cecs_mesh mesh, size_t stride, const cecs_vertex_buffer *vertex_buffer) {
+    return cecs_raw_stream_from_vertex(cecs_mesh_get_vertex_stream(mesh, stride), vertex_buffer);
+}
+
 #endif

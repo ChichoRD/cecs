@@ -30,11 +30,12 @@ int main(void) {
     cecs_world world = cecs_world_create(64, 16, 4);
     cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
 
+    cecs_arena builder_arena = cecs_arena_create();
     cecs_mesh_builder builder = cecs_mesh_builder_create(&system.world, (cecs_mesh_builder_descriptor){
         .vertex_attributes_expected_count = 2,
         .index_format = WGPUIndexFormat_Uint16,
         .mesh_id = cecs_world_add_entity(&world),
-    });
+    }, &builder_arena);
     cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(position2_f32_attribute),
         (position2_f32_attribute[]) {
             // quad 4 verts
@@ -62,6 +63,7 @@ int main(void) {
     }, 6);
 
     cecs_mesh *mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
+    cecs_arena_free(&builder_arena);
 
     test_pass pass = test_pass_create(&system.context, (cecs_render_target_info){
         .format = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration.format,
