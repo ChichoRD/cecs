@@ -126,22 +126,22 @@ static void test_pass_draw_inner(
         // TODO: check for attributes tags too
         // TODO: jump by batches instead of by mesh
         cecs_component_iterator_current(&it, &handle);
-        cecs_entity_id_range vertices = handle.cecs_mesh_component->vertex_entities;
+        cecs_raw_stream position = cecs_mesh_get_raw_vertex_stream(
+            *handle.cecs_mesh_component, sizeof(position2_f32_attribute), &position_buffer->buffer
+        );
+        cecs_raw_stream color = cecs_mesh_get_raw_vertex_stream(
+            *handle.cecs_mesh_component, sizeof(color3_f32_attribute), &color_buffer->buffer
+        );
 
-        uint64_t position_offset =
-            cecs_dynamic_wgpu_buffer_get_offset(&position_buffer->buffer, vertices.start * sizeof(position2_f32_attribute));
-        uint64_t color_offset =
-            cecs_dynamic_wgpu_buffer_get_offset(&color_buffer->buffer, vertices.start * sizeof(color3_f32_attribute));
-
-        uint64_t vertex_count = cecs_exclusive_range_length(vertices);
-        uint64_t position_size = vertex_count * sizeof(position2_f32_attribute);
-        uint64_t color_size = vertex_count * sizeof(color3_f32_attribute);
-
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position_offset, position_size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, color_buffer->buffer.buffer, color_offset, color_size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position.offset, position.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, color_buffer->buffer.buffer, color.offset, color.size);
 
         if (handle.cecs_index_stream_component == NULL) {
-            wgpuRenderPassEncoderDraw(render_pass, vertex_count, 1, 0, 0);
+            wgpuRenderPassEncoderDraw(
+                render_pass,
+                cecs_mesh_vertex_count(*handle.cecs_mesh_component), 1,
+                0, 0
+            );
         } else  {
             cecs_dynamic_wgpu_buffer *index_buffer = NULL;
             cecs_raw_stream index_stream = cecs_raw_stream_from_index(
@@ -150,11 +150,12 @@ static void test_pass_draw_inner(
                 &index_buffer
             );
 
-            wgpuRenderPassEncoderSetIndexBuffer(render_pass, index_buffer->buffer, handle.cecs_index_stream_component->format, index_stream.offset, index_stream.size);
+            WGPUIndexFormat format = handle.cecs_index_stream_component->format;
+            wgpuRenderPassEncoderSetIndexBuffer(render_pass, index_buffer->buffer, format, index_stream.offset, index_stream.size);
             wgpuRenderPassEncoderDrawIndexed(
                 render_pass,
                 handle.cecs_index_stream_component->index_count, 1,
-                handle.cecs_index_stream_component->first_index, handle.cecs_mesh_component->vertex_entities.start, 0
+                0, 0, 0
             );
         }
     }

@@ -47,6 +47,9 @@ int main(void) {
         4,
         sizeof(position2_f32_attribute)
     );
+    cecs_mesh_builder_set_indices(&builder, (cecs_vertex_index_u16[]) {
+        0, 1, 2, 2, 3, 0
+    }, 6);
     cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(color3_f32_attribute),
         (color3_f32_attribute[]) {
             // quad 4 colors
@@ -58,11 +61,9 @@ int main(void) {
         4,
         sizeof(color3_f32_attribute)
     );
-    cecs_mesh_builder_set_indices(&builder, (cecs_vertex_index_u16[]) {
-        0, 1, 2, 2, 3, 0
-    }, 6);
 
     cecs_mesh *mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
+    (void)mesh;
     cecs_arena_free(&builder_arena);
 
     test_pass pass = test_pass_create(&system.context, (cecs_render_target_info){

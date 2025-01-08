@@ -28,7 +28,7 @@ static inline cecs_vertex_stream cecs_vertex_stream_create(size_t first_vertex, 
 typedef cecs_dynamic_wgpu_buffer cecs_vertex_buffer;
 cecs_raw_stream cecs_raw_stream_from_vertex(
     cecs_vertex_stream stream,
-    cecs_vertex_buffer *vertex_buffer
+    const cecs_vertex_buffer *vertex_buffer
 );
 
 typedef struct cecs_index_stream {

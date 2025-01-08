@@ -9,7 +9,7 @@ CECS_COMPONENT_DEFINE(cecs_vertex_attribute_reference);
 CECS_COMPONENT_DEFINE(cecs_vertex_index_u16);
 CECS_COMPONENT_DEFINE(cecs_vertex_index_u32);
 
-cecs_raw_stream cecs_raw_stream_from_vertex(cecs_vertex_stream stream, cecs_vertex_buffer *vertex_buffer) {
+cecs_raw_stream cecs_raw_stream_from_vertex(cecs_vertex_stream stream, const cecs_vertex_buffer *vertex_buffer) {
     return (cecs_raw_stream){
         .offset = cecs_dynamic_wgpu_buffer_get_offset(vertex_buffer, stream.offset),
         .size = stream.size,
@@ -27,8 +27,8 @@ cecs_buffer_stream cecs_buffer_stream_from_index(cecs_index_stream stream)
 cecs_raw_stream cecs_raw_stream_from_index(
     cecs_index_stream stream,
     cecs_exclusive_index_buffer_pair in_buffers,
-    cecs_dynamic_wgpu_buffer **out_index_buffer)
-{
+    cecs_dynamic_wgpu_buffer **out_index_buffer
+) {
     cecs_buffer_stream index_stream;
     switch (stream.format) {
     case WGPUIndexFormat_Uint16: {

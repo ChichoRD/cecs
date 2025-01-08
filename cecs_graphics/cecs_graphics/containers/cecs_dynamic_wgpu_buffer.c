@@ -107,6 +107,7 @@ static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_stage(
     cecs_displaced_set_set(
         &buffer->stage_offsets, arena, offset, &stage_offset, sizeof(cecs_buffer_offset_u64)
     );
+    // TODO: check if already binded to another offset
 
     const cecs_buffer_offset_u64 aligned_size = cecs_align_to_wgpu_copy_buffer_alignment(size);
     const size_t padding = aligned_size - size;
