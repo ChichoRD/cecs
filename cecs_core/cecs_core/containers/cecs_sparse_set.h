@@ -191,11 +191,11 @@ static inline bool cecs_paged_sparse_set_is_empty(const cecs_paged_sparse_set *s
     return cecs_sparse_set_base_is_empty(&s->base);
 }
 
-cecs_optional_element cecs_paged_sparse_set_get(const cecs_paged_sparse_set *s, size_t key, size_t element_size);
+cecs_optional_element cecs_paged_sparse_set_get(cecs_paged_sparse_set *s, size_t key, size_t element_size);
 #define CECS_PAGED_SPARSE_SET_GET(type, paged_sparse_set_ref, key) \
     cecs_paged_sparse_set_get(paged_sparse_set_ref, key, sizeof(type))
 
-void *cecs_paged_sparse_set_get_unchecked(const cecs_paged_sparse_set *s, size_t key, size_t element_size);
+void *cecs_paged_sparse_set_get_unchecked(cecs_paged_sparse_set *s, size_t key, size_t element_size);
 #define CECS_PAGED_SPARSE_SET_GET_UNCHECKED(type, paged_sparse_set_ref, key) \
     ((type *)cecs_paged_sparse_set_get_unchecked(paged_sparse_set_ref, key, sizeof(type)))
 
