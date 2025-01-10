@@ -34,8 +34,7 @@ WGPUBuffer cecs_wgpu_buffer_create_with_data(
 typedef uint8_t cecs_buffer_stage_element;
 typedef struct cecs_dynamic_wgpu_buffer {
     WGPUBuffer buffer;
-    cecs_dynamic_array stage;
-    cecs_displaced_set stage_offsets;
+    cecs_sparse_set stage;
     size_t uploaded_size;
     size_t current_padding;
     WGPUBufferUsage usage;
@@ -44,8 +43,7 @@ typedef struct cecs_dynamic_wgpu_buffer {
 static inline cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_uninitialized(void) {
     return (cecs_dynamic_wgpu_buffer){
         .buffer = NULL,
-        .stage = cecs_dynamic_array_create(),
-        .stage_offsets = cecs_displaced_set_create(),
+        .stage = cecs_sparse_set_create(),
         .uploaded_size = 0,
         .current_padding = 0,
         .usage = WGPUBufferUsage_None
