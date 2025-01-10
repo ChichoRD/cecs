@@ -19,6 +19,10 @@ cecs_mesh_builder cecs_mesh_builder_create(cecs_graphics_world *graphics_world, 
     };
 }
 
+cecs_mesh_builder cecs_mesh_builder_create_from(const cecs_mesh_builder *builder, cecs_mesh_builder_descriptor descriptor) {
+    return cecs_mesh_builder_create(builder->graphics_world, descriptor, builder->builder_arena);
+}
+
 static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
     cecs_mesh_builder *builder,
     cecs_graphics_context *context,
@@ -35,7 +39,9 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
     if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
         uint64_t size = vertex_info->max_vertex_count * vertex_info->attribute_size;
         WGPUBufferUsageFlags usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
-        cecs_buffer_storage_attachment_initialize(storage, context->device, builder->builder_arena, usage, size);
+        cecs_buffer_storage_attachment_initialize(
+            storage, context->device, cecs_graphics_world_buffer_arena(&builder->graphics_world), usage, size
+        );
     }
     
     const size_t vertex_count = cecs_exclusive_range_length(builder->vertex_range);
@@ -89,7 +95,9 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
     if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
         uint64_t size = index_info->max_index_count * index_format_size;
         WGPUBufferUsageFlags usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
-        cecs_buffer_storage_attachment_initialize(storage, context->device, builder->builder_arena, usage, size);
+        cecs_buffer_storage_attachment_initialize(
+            storage, context->device, cecs_graphics_world_buffer_arena(&builder->graphics_world), usage, size
+        );
     }
 
     void *indices = NULL;
@@ -131,7 +139,7 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
         sizeof(cecs_vertex_attribute_reference)
     );
     for (size_t i = 0; i < vertex_attributes_count; i++) {
-        cecs_vertex_attribute_id id = ((cecs_vertex_attribute_id *)cecs_sparse_set_data(&builder->vertex_attribute_ids))[i];
+        cecs_vertex_attribute_id id = ((cecs_vertex_attribute_id *)cecs_sparse_set_values(&builder->vertex_attribute_ids))[i];
         cecs_buffer_storage_attachment *storage = cecs_mesh_builder_build_vertex_attribute(builder, context, id);
 
         const cecs_vertex_storage_attachment *vertex_info =
@@ -180,7 +188,18 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
     );
 }
 
-cecs_mesh_builder *cecs_mesh_builder_clear_vertex_attribute(cecs_mesh_builder *builder, cecs_vertex_attribute_id attribute_id) {
+bool cecs_mesh_builder_is_clear(const cecs_mesh_builder *builder) {
+    bool clear = cecs_exclusive_range_is_empty(builder->vertex_range)
+        && cecs_exclusive_range_is_empty(builder->index_range);
+    assert(
+        (!clear || cecs_sparse_set_count_of_size(&builder->vertex_attribute_ids, sizeof(cecs_vertex_attribute_id)))
+        && "fatal error: builder clear range and attributes mismatch"
+    );
+    return clear;
+}
+
+cecs_mesh_builder *cecs_mesh_builder_clear_vertex_attribute(cecs_mesh_builder *builder, cecs_vertex_attribute_id attribute_id)
+{
     cecs_vertex_attribute_id id;
     if (CECS_SPARSE_SET_REMOVE(
         cecs_component_id,
@@ -342,7 +361,7 @@ cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder) {
     );
     memcpy(
         remove_ids,
-        cecs_sparse_set_data(&builder->vertex_attribute_ids),
+        cecs_sparse_set_values(&builder->vertex_attribute_ids),
         atribute_count * sizeof(cecs_component_id)
     );
     for (size_t i = 0; i < atribute_count; i++) {
