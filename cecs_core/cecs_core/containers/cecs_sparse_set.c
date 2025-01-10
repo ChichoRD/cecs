@@ -135,7 +135,7 @@ cecs_optional_element cecs_sparse_set_get(cecs_sparse_set *s, size_t key, size_t
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_element);
     }
 
-    cecs_dense_index index = *CECS_DISPLACED_SET_GET(cecs_dense_index, &s->indices, key);
+    cecs_dense_index index = cecs_sparse_set_index(s, key);
     if (CECS_OPTION_IS_SOME(cecs_dense_index, index)) {
         return CECS_OPTION_CREATE_SOME_STRUCT(
             cecs_optional_element,
@@ -316,8 +316,8 @@ bool cecs_sparse_set_remove_range(
             && "fatal error: invalidated keys - integer mode mismatch"
         );
 
-        size_t last_value_index = cecs_sparse_set_count_of_size(s, element_size) - 1;
-        size_t last_value_key = cecs_sparse_set_key_unchecked(s, last_value_index);
+        // size_t last_value_index = cecs_sparse_set_count_of_size(s, element_size) - 1;
+        // size_t last_value_key = cecs_sparse_set_key_unchecked(s, last_value_index);
 
         typedef cecs_any_elements *elements;
         const elements values = cecs_sparse_set_base_values_array_any_unchecked(&s->base);
@@ -448,8 +448,7 @@ bool cecs_paged_sparse_set_contains(const cecs_paged_sparse_set *s, size_t key) 
         && CECS_OPTION_IS_SOME(cecs_dense_index, *CECS_DISPLACED_SET_GET(cecs_dense_index, key_to_index, page_key));
 }
 
-cecs_optional_element cecs_paged_sparse_set_get(const cecs_paged_sparse_set *s, size_t key, size_t element_size)
-{
+cecs_optional_element cecs_paged_sparse_set_get(cecs_paged_sparse_set *s, size_t key, size_t element_size) {
     size_t page_key;
     const cecs_displaced_set* key_to_index = cecs_paged_sparse_set_key_to_index(s, key, &page_key);
     if (!cecs_displaced_set_contains_index(key_to_index, page_key)) {
@@ -471,7 +470,7 @@ cecs_optional_element cecs_paged_sparse_set_get(const cecs_paged_sparse_set *s, 
     }
 }
 
-void* cecs_paged_sparse_set_get_unchecked(const cecs_paged_sparse_set* s, size_t key, size_t element_size) {
+void* cecs_paged_sparse_set_get_unchecked(cecs_paged_sparse_set* s, size_t key, size_t element_size) {
     return CECS_OPTION_GET(cecs_optional_element, cecs_paged_sparse_set_get(s, key, element_size));
 }
 
