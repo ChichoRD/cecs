@@ -53,10 +53,9 @@ void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t ind
 
 void* cecs_displaced_set_set(cecs_displaced_set* s, cecs_arena* a, size_t index, void* element, size_t size) {
     if (!cecs_displaced_set_contains_index(s, index)) {
-        return memcpy(cecs_displaced_set_expand(s, a, index, size), element, size);
-    } else {
-        return cecs_dynamic_array_set(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, index), element, size);
+        cecs_displaced_set_expand(s, a, index, size);
     }
+    return cecs_dynamic_array_set(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, index), element, size);
 }
 
 void *cecs_displaced_set_set_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *elements, size_t size) {
