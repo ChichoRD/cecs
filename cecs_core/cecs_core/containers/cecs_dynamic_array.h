@@ -51,6 +51,7 @@ static inline void *cecs_dynamic_array_last(const cecs_dynamic_array *l, size_t 
     assert(l->count > 0 && "Attempted to get last element of empty cecs_dynamic_array");
     return (uint8_t *)l->elements + (l->count - size);
 }
+#define CECS_DYNAMIC_ARRAY_LAST(type, dynamic_array_ref) ((type *)cecs_dynamic_array_last(dynamic_array_ref, sizeof(type)))
 
 void *cecs_dynamic_array_remove_swap_last(cecs_dynamic_array *l, cecs_arena *a, size_t index, size_t size);
 #define CECS_DYNAMIC_ARRAY_REMOVE_SWAP_LAST(type, dynamic_array_ref, arena_ref, index) ((type *)cecs_dynamic_array_remove_swap_last(dynamic_array_ref, arena_ref, index, sizeof(type)))
