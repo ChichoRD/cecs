@@ -40,7 +40,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
         uint64_t size = vertex_info->max_vertex_count * vertex_info->attribute_size;
         WGPUBufferUsageFlags usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
         cecs_buffer_storage_attachment_initialize(
-            storage, context->device, cecs_graphics_world_buffer_arena(&builder->graphics_world), usage, size
+            storage, context->device, cecs_graphics_world_default_buffer_arena(builder->graphics_world), usage, size, cecs_webgpu_copy_buffer_alignment
         );
     }
     
@@ -61,11 +61,12 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
         ) == vertex_count
         && "error: vertex attribute count mismatch"
     );
+    // TODO: use function to lower the key (offset) instead of indexing bytes
     cecs_dynamic_wgpu_buffer_upload(
         &storage->buffer,
         context->device,
         context->queue,
-        cecs_graphics_world_buffer_arena(builder->graphics_world),
+        cecs_graphics_world_default_buffer_arena(builder->graphics_world),
         vertex_stream.offset,
         attributes,
         vertex_stream.size
@@ -96,7 +97,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
         uint64_t size = index_info->max_index_count * index_format_size;
         WGPUBufferUsageFlags usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
         cecs_buffer_storage_attachment_initialize(
-            storage, context->device, cecs_graphics_world_buffer_arena(&builder->graphics_world), usage, size
+            storage, context->device, cecs_graphics_world_default_buffer_arena(builder->graphics_world), usage, size, cecs_webgpu_copy_buffer_alignment
         );
     }
 
@@ -123,7 +124,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
         &storage->buffer,
         context->device,
         context->queue,
-        cecs_graphics_world_buffer_arena(builder->graphics_world),
+        cecs_graphics_world_default_buffer_arena(builder->graphics_world),
         index_stream.offset,
         indices,
         index_stream.size
@@ -131,9 +132,13 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
     return storage;
 }
 
-cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *builder, cecs_graphics_context *context) {
+cecs_mesh cecs_mesh_builder_build_into(
+    cecs_world *world,
+    cecs_mesh_builder *builder,
+    cecs_graphics_context *context,
+    cecs_index_stream *out_index_stream
+) {
     size_t vertex_attributes_count = cecs_sparse_set_count_of_size(&builder->vertex_attribute_ids, sizeof(cecs_vertex_attribute_id));
-
     cecs_vertex_attribute_reference *vertex_attribute_references = calloc(
         vertex_attributes_count,
         sizeof(cecs_vertex_attribute_reference)
@@ -160,32 +165,24 @@ cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *bu
     free(vertex_attribute_references);
 
     size_t index_count = cecs_exclusive_range_length(builder->index_range);
-    if (index_count > 0) {
+    bool has_index_stream = index_count > 0;
+    assert((out_index_stream != NULL) == has_index_stream && "error: index stream - out_component mismatch");
+    if (has_index_stream) {
         cecs_index_format_info format_info = cecs_index_format_info_from(builder->descriptor.index_format);
 
         cecs_mesh_builder_build_indices(builder, context, format_info.id, format_info.size);
-        CECS_WORLD_SET_COMPONENT(
-            cecs_index_stream,
-            world,
-            builder->descriptor.mesh_id,
-            (&(cecs_index_stream){
-                .format = builder->descriptor.index_format,
-                .index_count = index_count,
-                .first_index = builder->index_range.start,
-            })
-        );
+        *out_index_stream = (cecs_index_stream){
+            .format = builder->descriptor.index_format,
+            .index_count = index_count,
+            .first_index = builder->index_range.start,
+        };
     }
 
-    return CECS_WORLD_SET_COMPONENT(
-        cecs_mesh,
-        world,
-        builder->descriptor.mesh_id,
-        (&(cecs_mesh){
-            .vertex_entities = builder->vertex_range,
-            .vertex_attribute_references = attribute_entities,
-            .bounding_radius = builder->bounding_radius,
-        })
-    );
+    return (cecs_mesh){
+        .vertex_entities = builder->vertex_range,
+        .vertex_attribute_references = attribute_entities,
+        .bounding_radius = builder->bounding_radius,
+    };
 }
 
 bool cecs_mesh_builder_is_clear(const cecs_mesh_builder *builder) {
@@ -377,8 +374,13 @@ cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder) {
     return builder;
 }
 
-cecs_mesh *cecs_mesh_builder_build_into_and_clear(cecs_world *world, cecs_mesh_builder *builder, cecs_graphics_context *context) {
-    cecs_mesh *mesh = cecs_mesh_builder_build_into(world, builder, context);
+cecs_mesh cecs_mesh_builder_build_into_and_clear(
+    cecs_world *world,
+    cecs_mesh_builder *builder,
+    cecs_graphics_context *context,
+    cecs_index_stream *out_index_stream
+) {
+    cecs_mesh mesh = cecs_mesh_builder_build_into(world, builder, context, out_index_stream);
     cecs_mesh_builder_clear(builder);
     return mesh;
 }

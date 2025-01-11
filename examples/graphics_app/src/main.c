@@ -9,6 +9,7 @@
 #include <cecs_graphics.h>
 #include <math.h>
 #include <time.h>
+#include <assert.h>
 
 #include "test_pass.h"
 
@@ -58,22 +59,33 @@ int main(void) {
 
     cecs_world world = cecs_world_create(64, 16, 4);
     cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
+    WGPUSupportedLimits limits;
+    wgpuDeviceGetLimits(system.context.device, &limits);
+    printf("maxBindingsPerBindGroup: %u\n", limits.limits.maxBindingsPerBindGroup);
 
     cecs_arena builder_arena = cecs_arena_create();
     
     cecs_mesh_builder builder = cecs_mesh_builder_create(&system.world, (cecs_mesh_builder_descriptor){
         .vertex_attributes_expected_count = 2,
-        .mesh_id = cecs_world_add_entity(&world),
         .index_format = WGPUIndexFormat_Uint16,
     }, &builder_arena);
     mesh_builder_configure_sqaure(&builder);
-    cecs_mesh *mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
+    cecs_index_stream index_stream;
+    cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
+    cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
     
-    builder.descriptor.mesh_id = cecs_world_add_entity(&world);
-    builder = cecs_mesh_builder_create_from(&builder, builder.descriptor);
-    mesh_builder_configure_sqaure(&builder);
-    mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context);
-    (void)mesh;
+    const cecs_uniform_raw_stream *stream = CECS_WORLD_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &world, &system.context, id, &((color4_f32_uniform){
+        .r = 0.5f,
+        .g = 0.5f,
+        .b = 0.5f,
+        .a = 1.0f,
+    }));
+    (void)stream;
+
+    // builder = cecs_mesh_builder_create_from(&builder, builder.descriptor);
+    // mesh_builder_configure_sqaure(&builder);
+    // mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
+    // cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
     cecs_arena_free(&builder_arena);
 
     test_pass pass = test_pass_create(&system.context, (cecs_render_target_info){

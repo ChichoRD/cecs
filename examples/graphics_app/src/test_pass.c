@@ -114,11 +114,13 @@ static void test_pass_draw_inner(
 
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
 
-    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream) handle;
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream, cecs_uniform_raw_stream) handle;
     cecs_arena arena = cecs_arena_create();
     for (
         cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, &arena,
-            CECS_COMPONENTS_ALL(cecs_mesh), CECS_COMPONENTS_AND_ANY(cecs_index_stream)
+            CECS_COMPONENTS_ALL(cecs_mesh),
+            CECS_COMPONENTS_AND_ANY(cecs_index_stream),
+            CECS_COMPONENTS_ALL_IDS(CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(color4_f32_uniform)))
         );
         !cecs_component_iterator_done(&it);
         cecs_component_iterator_next(&it)
@@ -258,3 +260,5 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
         .attributes = out_attributes,
     };
 }
+
+CECS_COMPONENT_DEFINE(color4_f32_uniform);

@@ -93,12 +93,18 @@ typedef struct cecs_index_storage_attachment {
     WGPUIndexFormat index_format;
 } cecs_index_storage_attachment;
 
+typedef struct cecs_uniform_storage_attachment {
+    size_t uniform_stride;
+} cecs_uniform_storage_attachment;
+
 typedef CECS_UNION_STRUCT(
     cecs_stream_storage_attachment,
     cecs_vertex_storage_attachment,
     cecs_vertex_storage_attachment,
     cecs_index_storage_attachment,
-    cecs_index_storage_attachment
+    cecs_index_storage_attachment,
+    cecs_uniform_storage_attachment,
+    cecs_uniform_storage_attachment
 ) cecs_stream_storage_attachment;
 
 typedef struct cecs_buffer_storage_attachment {
@@ -112,11 +118,14 @@ typedef struct cecs_buffer_storage_attachment {
 
 cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_vertex_uninitialized(cecs_vertex_storage_attachment stream);
 cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_index_uninitialized(cecs_index_storage_attachment stream);
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_uniform_uninitialized(cecs_uniform_storage_attachment stream);
 
 #define CECS_STREAM_STORAGE_VERTEX_VARIANT \
     (CECS_UNION_VARIANT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment))
 #define CECS_STREAM_STORAGE_INDEX_VARIANT \
     (CECS_UNION_VARIANT(cecs_index_storage_attachment, cecs_stream_storage_attachment))
+#define CECS_STREAM_STORAGE_UNIFORM_VARIANT \
+    (CECS_UNION_VARIANT(cecs_uniform_storage_attachment, cecs_stream_storage_attachment))
 
 inline cecs_buffer_storage_attachment cecs_buffer_storage_attachment_uninitialized(size_t variant) {
     return (cecs_buffer_storage_attachment){
@@ -135,7 +144,18 @@ void cecs_buffer_storage_attachment_initialize(
     WGPUDevice device,
     cecs_arena *arena,
     WGPUBufferUsageFlags usage,
-    size_t buffer_size
+    size_t buffer_size,
+    uint16_t buffer_alignment
+);
+
+void cecs_buffer_storage_attachment_initialize_shared(
+    cecs_buffer_storage_attachment *storage,
+    WGPUDevice device,
+    cecs_arena *arena,
+    WGPUBufferUsageFlags usage,
+    size_t buffer_size,
+    uint16_t buffer_alignment,
+    cecs_sparse_set *shared_stage
 );
 
 void cecs_buffer_storage_attachment_free(cecs_buffer_storage_attachment *storage);

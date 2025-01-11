@@ -102,18 +102,48 @@ cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_index_unini
     };
 }
 
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_uniform_uninitialized(cecs_uniform_storage_attachment stream) {
+    return (cecs_buffer_storage_attachment){
+        .stream = CECS_UNION_CREATE(
+            cecs_uniform_storage_attachment,
+            cecs_stream_storage_attachment,
+            stream
+        ),
+        .buffer = cecs_dynamic_wgpu_buffer_uninitialized(),
+        .buffer_flags = cecs_buffer_flags_none
+    };
+}
+
 void cecs_buffer_storage_attachment_initialize(
     cecs_buffer_storage_attachment *storage,
     WGPUDevice device,
     cecs_arena *arena,
     WGPUBufferUsageFlags usage,
-    size_t buffer_size
+    size_t buffer_size,
+    uint16_t buffer_alignment
 ){
     assert(
         !(storage->buffer_flags & cecs_buffer_flags_initialized)
         && "error: buffer already initialized"
     );
-    storage->buffer = cecs_dynamic_wgpu_buffer_create(device, arena, usage, buffer_size);
+    storage->buffer = cecs_dynamic_wgpu_buffer_create_owned(device, arena, usage, buffer_size, buffer_alignment);
+    storage->buffer_flags |= cecs_buffer_flags_initialized;
+}
+
+void cecs_buffer_storage_attachment_initialize_shared(
+    cecs_buffer_storage_attachment *storage,
+    WGPUDevice device,
+    cecs_arena *arena,
+    WGPUBufferUsageFlags usage,
+    size_t buffer_size,
+    uint16_t buffer_alignment,
+    cecs_sparse_set *shared_stage
+) {
+    assert(
+        !(storage->buffer_flags & cecs_buffer_flags_initialized)
+        && "error: buffer already initialized"
+    );
+    storage->buffer = cecs_dynamic_wgpu_buffer_create_borrowed(device, shared_stage, usage, buffer_size, buffer_alignment);
     storage->buffer_flags |= cecs_buffer_flags_initialized;
 }
 

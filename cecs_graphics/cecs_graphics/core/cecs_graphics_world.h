@@ -3,6 +3,8 @@
 
 #include <cecs_core/cecs_core.h>
 #include "component/cecs_vertex.h"
+#include "component/cecs_mesh.h"
+#include "context/cecs_graphics_context.h"
 
 typedef	struct cecs_graphics_world {
     cecs_world world;
@@ -19,6 +21,30 @@ void cecs_graphics_world_free(cecs_graphics_world *w);
 
 cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world);
 
-cecs_arena *cecs_graphics_world_buffer_arena(cecs_graphics_world *graphics_world);
+cecs_arena *cecs_graphics_world_default_buffer_arena(cecs_graphics_world *graphics_world);
+
+cecs_entity_id cecs_world_add_entity_with_mesh(
+    cecs_world *world,
+    cecs_mesh *mesh
+);
+cecs_entity_id cecs_world_add_entity_with_indexed_mesh(
+    cecs_world *world,
+    cecs_mesh *mesh,
+    cecs_index_stream *index_stream
+);
+
+typedef cecs_raw_stream cecs_uniform_raw_stream;
+CECS_COMPONENT_DECLARE(cecs_uniform_raw_stream);
+
+const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
+    cecs_world *world,
+    cecs_graphics_context *context,
+    cecs_entity_id entity,
+    cecs_component_id component_id,
+    void *component,
+    size_t size
+);
+#define CECS_WORLD_SET_COMPONENT_AS_UNIFORM(type, world_ref, context_ref, entity, component_ref) \
+    (cecs_world_set_component_as_uniform(world_ref, context_ref, entity, CECS_COMPONENT_ID(type), component_ref, sizeof(type)))
 
 #endif

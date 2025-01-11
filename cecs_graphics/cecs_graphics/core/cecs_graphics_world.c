@@ -41,6 +41,90 @@ cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_grap
     };
 }
 
-cecs_arena *cecs_graphics_world_buffer_arena(cecs_graphics_world *graphics_world) {
-    return &graphics_world->world.resources.resources_arena;
+static inline cecs_arena *cecs_world_default_buffer_arena(cecs_world *world) {
+    return &world->resources.resources_arena;
+}
+
+cecs_arena *cecs_graphics_world_default_buffer_arena(cecs_graphics_world *graphics_world) {
+    return cecs_world_default_buffer_arena(&graphics_world->world);
+}
+
+cecs_entity_id cecs_world_add_entity_with_mesh(cecs_world *world, cecs_mesh *mesh) {
+    cecs_entity_id entity = cecs_world_add_entity(world);
+    CECS_WORLD_SET_COMPONENT(cecs_mesh, world, entity, mesh);
+    return entity;
+}
+cecs_entity_id cecs_world_add_entity_with_indexed_mesh(cecs_world *world, cecs_mesh *mesh, cecs_index_stream *index_stream) {
+    cecs_entity_id entity = cecs_world_add_entity(world);
+    CECS_WORLD_SET_COMPONENT(cecs_mesh, world, entity, mesh);
+    CECS_WORLD_SET_COMPONENT(cecs_index_stream, world, entity, index_stream);
+    return entity;
+}
+
+CECS_COMPONENT_DEFINE(cecs_uniform_raw_stream);
+
+const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
+    cecs_world *world,
+    cecs_graphics_context *context,
+    cecs_entity_id entity,
+    cecs_component_id component_id,
+    void *component,
+    size_t size
+) {
+    assert(
+        CECS_UNIFORM_IS_ALIGNED_SIZE(size)
+        && "error: uniform size must be aligned to uniform buffer alignment"
+        && CECS_WGPU_UNIFORM_BUFFER_ALIGNMENT_VALUE
+    );
+
+    cecs_buffer_storage_attachment default_attachment = cecs_buffer_storage_attachment_create_uniform_uninitialized(
+        (cecs_uniform_storage_attachment){
+            .uniform_stride = size
+        }
+    );
+    // FIXME: prevent or share with the user storage attachments
+    cecs_buffer_storage_attachment *storage = cecs_world_get_or_set_component_storage_attachments(
+        world,
+        component_id,
+        &default_attachment,
+        sizeof(cecs_buffer_storage_attachment)
+    );
+
+    if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
+        // TODO: check if storage is dense so that is shared
+        cecs_buffer_storage_attachment_initialize(
+            storage,
+            context->device,
+            cecs_world_default_buffer_arena(world),
+            WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
+            size,
+            cecs_webgpu_uniform_buffer_alignment
+        );
+    } else {
+        assert(
+            storage->buffer.alignment == cecs_webgpu_uniform_buffer_alignment
+            && "fatal error: uniform buffer alignment mismatch"
+        );
+    }
+
+    cecs_uniform_raw_stream stream = (cecs_uniform_raw_stream){
+        .offset = cecs_dynamic_wgpu_buffer_upload(
+            &storage->buffer,
+            context->device,
+            context->queue,
+            cecs_world_default_buffer_arena(world),
+            entity * size,
+            component,
+            size
+        ),
+        .size = size
+    };
+    // TODO: necessary to set component itself? probably
+    return CECS_WORLD_SET_COMPONENT_RELATION(
+        cecs_uniform_raw_stream,
+        world,
+        entity,
+        &stream,
+        component_id
+    );
 }

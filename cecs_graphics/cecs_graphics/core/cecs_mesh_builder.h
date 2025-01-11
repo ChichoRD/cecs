@@ -6,7 +6,6 @@
 #include "cecs_graphics_world.h"
 
 typedef struct cecs_mesh_builder_descriptor {
-    cecs_entity_id mesh_id;
     size_t vertex_attributes_expected_count;
     WGPUIndexFormat index_format;
     bool remove_on_build;
@@ -27,7 +26,12 @@ typedef struct cecs_mesh_builder {
 cecs_mesh_builder cecs_mesh_builder_create(cecs_graphics_world *graphics_world, cecs_mesh_builder_descriptor descriptor, cecs_arena *builder_arena);
 cecs_mesh_builder cecs_mesh_builder_create_from(const cecs_mesh_builder *builder, cecs_mesh_builder_descriptor descriptor);
 
-cecs_mesh *cecs_mesh_builder_build_into(cecs_world *world, cecs_mesh_builder *builder, cecs_graphics_context *context);
+cecs_mesh cecs_mesh_builder_build_into(
+    cecs_world *world,
+    cecs_mesh_builder *builder,
+    cecs_graphics_context *context,
+    cecs_index_stream *out_index_stream
+);
 
 bool cecs_mesh_builder_is_clear(const cecs_mesh_builder *builder);
 cecs_mesh_builder *cecs_mesh_builder_clear_vertex_attribute(cecs_mesh_builder *builder, cecs_vertex_attribute_id attribute_id);
@@ -39,7 +43,7 @@ cecs_mesh_builder *cecs_mesh_builder_set_vertex_attribute(
     size_t attributes_count,
     size_t attribute_size
 );
-// TODO: clears should just allow ovewrite
+
 cecs_mesh_builder *cecs_mesh_builder_clear_indices(cecs_mesh_builder *builder);
 cecs_mesh_builder *cecs_mesh_builder_set_indices(
     cecs_mesh_builder *builder,
@@ -48,6 +52,11 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
 );
 
 cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder);
-cecs_mesh *cecs_mesh_builder_build_into_and_clear(cecs_world *world, cecs_mesh_builder *builder, cecs_graphics_context *context);
+cecs_mesh cecs_mesh_builder_build_into_and_clear(
+    cecs_world *world,
+    cecs_mesh_builder *builder,
+    cecs_graphics_context *context,
+    cecs_index_stream *out_index_stream
+);
 
 #endif

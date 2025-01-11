@@ -146,7 +146,7 @@ void *cecs_world_copy_entity_and_grab(cecs_world *w, cecs_entity_id destination,
 
 void *cecs_world_set_component_relation(cecs_world *w, cecs_entity_id id, cecs_component_id component_id, void *component, size_t size, cecs_tag_id tag_id);
 #define CECS_WORLD_SET_COMPONENT_RELATION(component_type, world_ref, entity_id0, component_ref, target_id) \
-    cecs_world_set_component_relation(world_ref, entity_id0, CECS_COMPONENT_ID(component_type), component_ref, sizeof(component_type), target_id)
+    ((component_type *)cecs_world_set_component_relation(world_ref, entity_id0, CECS_COMPONENT_ID(component_type), component_ref, sizeof(component_type), target_id))
 
 void *cecs_world_get_component_relation(const cecs_world *w, cecs_entity_id id, cecs_component_id component_id, cecs_tag_id tag_id);
 #define CECS_WORLD_GET_COMPONENT_RELATION(component_type, world_ref, entity_id0, target_id) \

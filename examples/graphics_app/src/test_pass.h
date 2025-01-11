@@ -36,4 +36,17 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
     size_t out_attributes_capacity
 );
 
+typedef union color4_f32_uniform {
+    struct {
+        float r;
+        float g;
+        float b;
+        float a;
+    };
+    float values[4];
+} color4_f32_uniform;
+CECS_COMPONENT_DECLARE(color4_f32_uniform);
+CECS_UNIFORM_IS_ALIGNED_STATIC_ASSERT(color4_f32_uniform);
+
+
 #endif
