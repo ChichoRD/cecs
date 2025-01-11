@@ -22,8 +22,7 @@ WGPUBuffer cecs_wgpu_buffer_create_with_data(
     assert(buffer_size >= data_size && "error: buffer size must be greater than or equal to data size");
     assert(buffer_size != 0 && "error: buffer size must be non-zero");
 
-    const uint64_t max_size = max(buffer_size, (uint64_t)data_size);
-    const uint64_t aligned_size = cecs_align_to_wgpu_copy_buffer_alignment(max_size);
+    const uint64_t aligned_size = cecs_align_to_wgpu_copy_buffer_alignment(buffer_size);
 
     const WGPUBufferDescriptor descriptor = {
         .label = "wgpu buffer",

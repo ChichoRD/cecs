@@ -8,6 +8,7 @@ struct vertex_output {
     @location(0) color: vec3<f32>,
 };
 
+@group(0) @binding(0) var<uniform> view_proj: mat4x4<f32>;
 @vertex
 fn vs_main(input: vertex_input) -> vertex_output {
     var out: vertex_output;
@@ -48,7 +49,10 @@ fn hsv_from_rgb(color: vec3f) -> vec3f {
     return vec3f(h, s, v);
 }
 
+@group(1) @binding(0) var<uniform> color: vec4<f32>;
+
 @fragment
 fn fs_main(input: vertex_output) -> @location(0) vec4<f32> {
-    return vec4<f32>(hsv_from_rgb(input.color).r / 360.0);
+    return vec4<f32>(color.rgb, 1.0);
+    //return vec4<f32>(hsv_from_rgb(color.rgb) / 360.0, 1.0);
 }

@@ -407,6 +407,7 @@ void* cecs_arena_alloc(cecs_arena* a, size_t size) {
     return cecs_block_alloc(cecs_arena_add_block(a, size), size);
 }
 
+// TODO: join right unowned blocks
 cecs_arena cecs_arena_create(void) {
     cecs_arena a;
     a.first_block = NULL;

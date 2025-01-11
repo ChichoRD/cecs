@@ -6,9 +6,13 @@
 
 typedef struct test_pass {
     WGPURenderPipeline pipeline;
+    WGPUBindGroupLayout local_bgl;
+    WGPUBindGroup global_bg;
+    WGPUBuffer global_uniform_buffer;
 } test_pass;
 
 test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena);
+void test_pass_free(test_pass *pass);
 
 // TODO: array of targets
 void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *system, cecs_render_target *target);
@@ -35,6 +39,10 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
     WGPUVertexAttribute out_attributes[],
     size_t out_attributes_capacity
 );
+
+typedef float camera_matrix_uniform[4][4];
+CECS_COMPONENT_DECLARE(camera_matrix_uniform);
+CECS_UNIFORM_IS_ALIGNED_STATIC_ASSERT(camera_matrix_uniform);
 
 typedef union color4_f32_uniform {
     struct {

@@ -41,56 +41,143 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
     };
 
     const WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(context->device, &shader_module_descriptor);
+    WGPUBuffer global_uniform_buffer = cecs_wgpu_buffer_create_with_data(
+        context->device,
+        WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
+        sizeof(camera_matrix_uniform),
+        &(camera_matrix_uniform){0},
+        sizeof(camera_matrix_uniform)
+    );
+
+    WGPUBindGroupLayout local_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
+        .label = "Test Pass Local Bind Group Layout",
+        .nextInChain = NULL,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupLayoutEntry[]) {
+            {
+                .binding = 0,
+                .visibility = WGPUShaderStage_Fragment,
+                .buffer = (WGPUBufferBindingLayout) {
+                    .type = WGPUBufferBindingType_Uniform,
+                    .hasDynamicOffset = true,
+                    .minBindingSize = sizeof(color4_f32_uniform),
+                    .nextInChain = NULL,
+                },
+            },
+        },
+    });
+    WGPUBindGroupLayout global_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
+        .label = "Test Pass Global Bind Group Layout",
+        .nextInChain = NULL,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupLayoutEntry[]) {
+            {
+                .binding = 0,
+                .visibility = WGPUShaderStage_Vertex,
+                .buffer = (WGPUBufferBindingLayout) {
+                    .type = WGPUBufferBindingType_Uniform,
+                    .hasDynamicOffset = false,
+                    .minBindingSize = sizeof(camera_matrix_uniform),
+                    .nextInChain = NULL,
+                },
+            },
+        },
+    });
+    WGPUBindGroup global_bg = wgpuDeviceCreateBindGroup(context->device, &(WGPUBindGroupDescriptor) {
+        .label = "Test Pass Global Bind Group",
+        .layout = global_bgl,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupEntry[]) {
+            {
+                .binding = 0,
+                .buffer = global_uniform_buffer,
+                .offset = 0,
+                .size = sizeof(camera_matrix_uniform),
+            },
+        },
+    });
 
     const WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(context->device, &(WGPUPipelineLayoutDescriptor) {
         .label = "Test Pass Pipeline Layout",
         .nextInChain = NULL,
-        .bindGroupLayoutCount = 0,
-        .bindGroupLayouts = NULL,
+        .bindGroupLayoutCount = 2,
+        .bindGroupLayouts = (WGPUBindGroupLayout[]){global_bgl, local_bgl},
     });
+    WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(
+        context->device,
+        &((WGPURenderPipelineDescriptor) {
+            .label = "Test Pass Pipeline",
+            .layout = pipeline_layout,
+            .vertex = (WGPUVertexState) {
+                .entryPoint = "vs_main",
+                .module = shader_module,
+                .bufferCount = 2,
+                .buffers = (WGPUVertexBufferLayout[]) {
+                    position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
+                    color3_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
+                },
+            },
+            .fragment = &(WGPUFragmentState) {
+                .entryPoint = "fs_main",
+                .module = shader_module,
+                .targetCount = 1,
+                .targets = (WGPUColorTargetState[]) {
+                    {
+                        .format = target_info.format,
+                        .blend = NULL,
+                        .writeMask = WGPUColorWriteMask_All,
+                    },
+                },
+            },
+            .primitive = (WGPUPrimitiveState) {
+                .topology = WGPUPrimitiveTopology_TriangleList,
+                .stripIndexFormat = WGPUIndexFormat_Undefined,
+                .frontFace = WGPUFrontFace_CCW,
+                .cullMode = WGPUCullMode_None,
+            },
+            .depthStencil = NULL, // TODO: when depth buffer is implemented
+            .multisample = (WGPUMultisampleState) {
+                .count = target_info.sample_count,
+                .mask = ~0u,
+                .alphaToCoverageEnabled = false,
+            },
+        })
+    );
+    wgpuBindGroupLayoutRelease(global_bgl);
+    wgpuPipelineLayoutRelease(pipeline_layout);
 
     return (test_pass){
-        .pipeline = wgpuDeviceCreateRenderPipeline(
-            context->device,
-            &((WGPURenderPipelineDescriptor) {
-                .label = "Test Pass Pipeline",
-                .layout = pipeline_layout,
-                .vertex = (WGPUVertexState) {
-                    .entryPoint = "vs_main",
-                    .module = shader_module,
-                    .bufferCount = 2,
-                    .buffers = (WGPUVertexBufferLayout[]) {
-                        position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
-                        color3_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
-                    },
-                },
-                .fragment = &(WGPUFragmentState) {
-                    .entryPoint = "fs_main",
-                    .module = shader_module,
-                    .targetCount = 1,
-                    .targets = (WGPUColorTargetState[]) {
-                        {
-                            .format = target_info.format,
-                            .blend = NULL,
-                            .writeMask = WGPUColorWriteMask_All,
-                        },
-                    },
-                },
-                .primitive = (WGPUPrimitiveState) {
-                    .topology = WGPUPrimitiveTopology_TriangleList,
-                    .stripIndexFormat = WGPUIndexFormat_Undefined,
-                    .frontFace = WGPUFrontFace_CCW,
-                    .cullMode = WGPUCullMode_None,
-                },
-                .depthStencil = NULL, // TODO: when depth buffer is implemented
-                .multisample = (WGPUMultisampleState) {
-                    .count = target_info.sample_count,
-                    .mask = ~0u,
-                    .alphaToCoverageEnabled = false,
-                },
-            })
-        )
+        .pipeline = pipeline,
+        .local_bgl = local_bgl,
+        .global_bg = global_bg,
     };
+}
+
+void test_pass_free(test_pass *pass) {
+    wgpuBindGroupLayoutRelease(pass->local_bgl);
+    wgpuBindGroupRelease(pass->global_bg);
+    wgpuBufferRelease(pass->global_uniform_buffer);
+    wgpuRenderPipelineRelease(pass->pipeline);
+}
+
+static WGPUBindGroup test_pass_create_local_bind_group(
+    test_pass *pass,
+    WGPUDevice device,
+    cecs_buffer_storage_attachment *color_uniform_buffer
+) {
+    return wgpuDeviceCreateBindGroup(device, &(WGPUBindGroupDescriptor) {
+        .label = "Test Pass Local Bind Group",
+        .layout = pass->local_bgl,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupEntry[]) {
+            {
+                .binding = 0,
+                .buffer = color_uniform_buffer->buffer.buffer,
+                .offset = 0,
+                .size = color_uniform_buffer->buffer.uploaded_size,
+            }
+        },
+    });
 }
 
 static void test_pass_draw_inner(
@@ -98,7 +185,10 @@ static void test_pass_draw_inner(
     cecs_world *world,
     cecs_graphics_system *system,
     cecs_render_target *target,
-    WGPURenderPassEncoder render_pass
+    WGPURenderPassEncoder render_pass,
+    WGPUBindGroup out_local_bind_groups[],
+    size_t in_local_bind_groups_capacity,
+    size_t *out_local_bind_groups_count
 ) {
     (void)target;
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
@@ -111,8 +201,18 @@ static void test_pass_draw_inner(
         color3_f32_attribute,
         &system->world
     );
-
+    cecs_buffer_storage_attachment *color_uniform_buffer = CECS_WORLD_GET_COMPONENT_STORAGE_ATTACHMENTS(
+        color4_f32_uniform,
+        cecs_buffer_storage_attachment,
+        world
+    );
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
+
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
+
+    assert(in_local_bind_groups_capacity >= 1 && "error: out local bind groups capacity must be at least 1");
+    out_local_bind_groups[0] = test_pass_create_local_bind_group(pass, system->context.device, color_uniform_buffer);
+    *out_local_bind_groups_count = 1;
 
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream, cecs_uniform_raw_stream) handle;
     cecs_arena arena = cecs_arena_create();
@@ -134,6 +234,8 @@ static void test_pass_draw_inner(
         cecs_raw_stream color = cecs_mesh_get_raw_vertex_stream(
             *handle.cecs_mesh_component, sizeof(color3_f32_attribute), &color_buffer->buffer
         );
+
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, out_local_bind_groups[0], 1, &(uint32_t){handle.cecs_uniform_raw_stream_component->offset});
 
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position.offset, position.size);
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, color_buffer->buffer.buffer, color.offset, color.size);
@@ -197,9 +299,14 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
     WGPURenderPassEncoder render_pass =
         wgpuCommandEncoderBeginRenderPass(render_pass_encoder, &render_pass_descriptor);
     
-    test_pass_draw_inner(pass, world, system, target, render_pass);
+    WGPUBindGroup local_bind_groups[1];
+    size_t local_bind_groups_count;
+    test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
 
     wgpuRenderPassEncoderEnd(render_pass);
+    for (size_t i = 0; i < local_bind_groups_count; ++i) {
+        wgpuBindGroupRelease(local_bind_groups[i]);
+    }
     wgpuRenderPassEncoderRelease(render_pass);
 
     WGPUCommandBufferDescriptor render_command_buffer_descriptor = {
@@ -261,4 +368,5 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
     };
 }
 
+CECS_COMPONENT_DEFINE(camera_matrix_uniform);
 CECS_COMPONENT_DEFINE(color4_f32_uniform);
