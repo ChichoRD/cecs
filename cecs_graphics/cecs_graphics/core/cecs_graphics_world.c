@@ -63,12 +63,10 @@ cecs_entity_id cecs_world_add_entity_with_indexed_mesh(cecs_world *world, cecs_m
 
 CECS_COMPONENT_DEFINE(cecs_uniform_raw_stream);
 
-const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
+static cecs_buffer_storage_attachment *cecs_world_get_or_init_uniform_buffer(
     cecs_world *world,
     cecs_graphics_context *context,
-    cecs_entity_id entity,
     cecs_component_id component_id,
-    void *component,
     size_t size
 ) {
     assert(
@@ -107,19 +105,58 @@ const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
         );
     }
 
-    cecs_uniform_raw_stream stream = (cecs_uniform_raw_stream){
-        .offset = cecs_dynamic_wgpu_buffer_upload(
-            &storage->buffer,
-            context->device,
-            context->queue,
-            cecs_world_default_buffer_arena(world),
-            entity * size,
+    return storage;
+}
+
+const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
+    cecs_world *world,
+    cecs_graphics_context *context,
+    cecs_entity_id entity,
+    cecs_component_id component_id,
+    void *component,
+    size_t size
+) {
+    cecs_buffer_storage_attachment *storage = cecs_world_get_or_init_uniform_buffer(
+        world,
+        context,
+        component_id,
+        size
+    );
+    cecs_uniform_raw_stream stream;
+    if (cecs_dynamic_wgpu_buffer_is_shared(&storage->buffer)) {
+        cecs_world_set_component(
+            world,
+            entity,
+            component_id,
             component,
             size
-        ),
-        .size = size
-    };
-    // TODO: necessary to set component itself? probably
+        );
+        stream = (cecs_uniform_raw_stream){
+            .offset = cecs_dynamic_wgpu_buffer_get_offset(&storage->buffer, entity),
+            .size = size
+        };
+        storage->buffer_flags |= cecs_buffer_flags_dirty;
+    } else {
+        cecs_world_set_component(
+            world,
+            entity,
+            component_id,
+            component,
+            size
+        );
+        stream = (cecs_uniform_raw_stream){
+            .offset = cecs_dynamic_wgpu_buffer_stage(
+                &storage->buffer,
+                cecs_world_default_buffer_arena(world),
+                entity * size,
+                component,
+                size
+            ),
+            .size = size
+        };
+        storage->buffer_flags |= cecs_buffer_flags_dirty;
+    }
+
     return CECS_WORLD_SET_COMPONENT_RELATION(
         cecs_uniform_raw_stream,
         world,
@@ -127,4 +164,31 @@ const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
         &stream,
         component_id
     );
+}
+
+cecs_buffer_storage_attachment *cecs_world_sync_uniform_components(
+    cecs_world *world,
+    cecs_graphics_context *context,
+    cecs_component_id component_id
+) {
+    cecs_buffer_storage_attachment *storage = cecs_world_get_component_storage_attachments(
+        world,
+        component_id
+    );
+    // TODO: maybe iter and update the cecs_uniform_raw_stream of those that have this component
+
+    assert(
+        storage->buffer_flags & cecs_buffer_flags_initialized
+        && "error: uniform buffer must be initialized"
+    );
+    if (storage->buffer_flags & cecs_buffer_flags_dirty) {
+        cecs_dynamic_wgpu_buffer_upload_all(
+            &storage->buffer,
+            context->device,
+            context->queue,
+            cecs_world_default_buffer_arena(world)
+        );
+        storage->buffer_flags &= ~cecs_buffer_flags_dirty;
+    }
+    return storage;
 }

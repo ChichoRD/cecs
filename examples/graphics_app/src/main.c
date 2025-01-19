@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
 #include <cecs_graphics.h>
+
 #include <math.h>
 #include <time.h>
 #include <assert.h>
@@ -80,6 +81,12 @@ int main(void) {
         .b = 0.5f,
         .a = 1.0f,
     }));
+    // CECS_WORLD_SET_COMPONENT_AS_UNIFORM(position4_f32_uniform, &world, &system.context, id, &((position4_f32_uniform){
+    //     .x = 0.0f,
+    //     .y = 0.0f,
+    //     .z = 0.0f,
+    //     .w = 0.0f,
+    // }));
     (void)stream;
 
     // builder = cecs_mesh_builder_create_from(&builder, builder.descriptor);
@@ -95,9 +102,22 @@ int main(void) {
     }, &system.world.world.resources.resources_arena);
 
     WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
+    (void)clear_color;
+
     bool render_error = false;
     while (!glfwWindowShouldClose(window) && !render_error) {
         glfwPollEvents();
+
+        struct timespec t;
+        timespec_get(&t, TIME_UTC);
+        double t_sec = (double)t.tv_sec + (double)t.tv_nsec / 1e9;
+        clear_color = (WGPUColor){ sin(t_sec), cos(t_sec), cos(sin(t_sec)), 1.0f };
+        CECS_WORLD_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &world, &system.context, id, &((color4_f32_uniform){
+            .r = clear_color.r,
+            .g = clear_color.g,
+            .b = clear_color.b,
+            .a = clear_color.a,
+        }));
 
         cecs_surface_render_target surface_target;
         if (cecs_graphics_context_get_surface_render_target(&system.context, &surface_target)) {
@@ -106,11 +126,6 @@ int main(void) {
         } else {
             render_error = true;
         }
-
-        struct timespec t;
-        timespec_get(&t, TIME_UTC);
-        double t_sec = (double)t.tv_sec + (double)t.tv_nsec / 1e9;
-        clear_color = (WGPUColor){ sin(t_sec), cos(t_sec), cos(sin(t_sec)), 1.0f };
     }
 
     cecs_graphics_system_free(&system);

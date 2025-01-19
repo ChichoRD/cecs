@@ -62,7 +62,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
         && "error: vertex attribute count mismatch"
     );
     // TODO: use function to lower the key (offset) instead of indexing bytes
-    cecs_dynamic_wgpu_buffer_upload(
+    cecs_dynamic_wgpu_buffer_stage_and_upload(
         &storage->buffer,
         context->device,
         context->queue,
@@ -120,7 +120,7 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
         },
         index_format_size
     );
-    cecs_dynamic_wgpu_buffer_upload(
+    cecs_dynamic_wgpu_buffer_stage_and_upload(
         &storage->buffer,
         context->device,
         context->queue,

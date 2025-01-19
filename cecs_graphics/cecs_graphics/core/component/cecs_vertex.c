@@ -139,6 +139,7 @@ void cecs_buffer_storage_attachment_initialize_shared(
     uint16_t buffer_alignment,
     cecs_sparse_set *shared_stage
 ) {
+    (void)arena;
     assert(
         !(storage->buffer_flags & cecs_buffer_flags_initialized)
         && "error: buffer already initialized"

@@ -118,7 +118,7 @@ void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
 }
 
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset) {
-    return cecs_sparse_set_index_unchecked(&buffer->stage, offset);
+    return cecs_sparse_set_index_unchecked(cecs_dynamic_wgpu_buffer_get_stage((cecs_dynamic_wgpu_buffer *)buffer), offset);
 }
 
 typedef struct cecs_buffer_staging_parameters {
@@ -130,7 +130,7 @@ typedef struct cecs_buffer_staging_parameters {
 
 static size_t cecs_dynamic_wgpu_buffer_unpad(cecs_dynamic_wgpu_buffer *buffer, cecs_arena *arena, size_t current_stage_size) {
     if (buffer->current_padding > 0) {
-        cecs_dynamic_array *stage_values = &cecs_dynamic_wgpu_buffer_get_stage(buffer)->base.values;
+        cecs_dynamic_array *stage_values = (cecs_dynamic_array *)&cecs_dynamic_wgpu_buffer_get_stage(buffer)->base.values;
         cecs_dynamic_array_remove_range(
             stage_values, arena, current_stage_size - buffer->current_padding, buffer->current_padding, sizeof(cecs_buffer_stage_element)
         );
@@ -140,55 +140,76 @@ static size_t cecs_dynamic_wgpu_buffer_unpad(cecs_dynamic_wgpu_buffer *buffer, c
 
 static size_t cecs_dynamic_wgpu_buffer_pad(cecs_dynamic_wgpu_buffer *buffer, cecs_arena *arena, size_t padding) {
     if (padding > 0) {
-        cecs_dynamic_array *stage_values = &cecs_dynamic_wgpu_buffer_get_stage(buffer)->base.values;
+        cecs_dynamic_array *stage_values = (cecs_dynamic_array *)&cecs_dynamic_wgpu_buffer_get_stage(buffer)->base.values;
         cecs_dynamic_array_append_empty(stage_values, arena, padding, sizeof(cecs_buffer_stage_element));
     }
-    return padding;
+    return buffer->current_padding + padding;
 }
 
-static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_stage(
+static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_align_stage_raw_range(
+    cecs_dynamic_wgpu_buffer *buffer,
+    cecs_arena *arena,
+    size_t stage_size,
+    cecs_buffer_offset_u64 offset,
+    cecs_buffer_offset_u32 size
+) {
+    assert(offset + size <= stage_size && "error: range to stage must be within the bounds of the staging buffer");
+
+    const cecs_buffer_offset_u64 aligned_size = cecs_align_to_pow2(size, buffer->alignment);
+    const cecs_buffer_offset_u64 aligned_offset =
+        cecs_align_to_pow2(offset + 1, buffer->alignment) - buffer->alignment;
+
+    cecs_buffer_offset_u64 aligned_total_size;
+    const cecs_dynamic_buffer_offset required_aligned_size = offset + aligned_size;
+    if (required_aligned_size > stage_size) {
+        const size_t padding = aligned_size - size;
+        buffer->current_padding = cecs_dynamic_wgpu_buffer_pad(buffer, arena, padding);
+        aligned_total_size = stage_size + padding;
+    } else {
+        aligned_total_size = stage_size;
+    }
+
+    assert(
+        (aligned_total_size & (buffer->alignment - 1)) == 0
+        && "error: staging buffer size must be aligned to buffer alignment"
+    );
+
+    return (cecs_buffer_staging_parameters) {
+        .requested_offset = offset,
+        .aligned_requested_offset = aligned_offset,
+        .aligned_requested_size = aligned_size,
+        .aligned_total_size = aligned_total_size
+    };
+}
+
+static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_align_stage_range(
+    cecs_dynamic_wgpu_buffer *buffer,
+    cecs_arena *arena,
+    cecs_sparse_set *stage,
+    cecs_dynamic_buffer_offset offset,
+    cecs_dynamic_buffer_offset size
+) {
+    const size_t stage_size = cecs_sparse_set_count_of_size(stage, sizeof(cecs_buffer_stage_element));
+    const cecs_buffer_offset_u64 requested_offset = cecs_dynamic_wgpu_buffer_get_offset(buffer, offset);
+    return cecs_dynamic_wgpu_buffer_align_stage_raw_range(buffer, arena, stage_size, requested_offset, size);
+}
+
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage(
     cecs_dynamic_wgpu_buffer *buffer,
     cecs_arena *arena,
     cecs_dynamic_buffer_offset offset,
     void *data,
-    cecs_dynamic_buffer_offset size,
-    cecs_sparse_set **out_stage
-) {
+    cecs_dynamic_buffer_offset size
+){
     cecs_sparse_set *stage = cecs_dynamic_wgpu_buffer_get_stage(buffer);
     const size_t stage_size = cecs_sparse_set_count_of_size(stage, sizeof(cecs_buffer_stage_element));
     buffer->current_padding = cecs_dynamic_wgpu_buffer_unpad(buffer, arena, stage_size);
 
     cecs_sparse_set_set_range(stage, arena, offset, data, size, sizeof(cecs_buffer_stage_element));
-    const size_t new_stage_size = cecs_sparse_set_count_of_size(stage, sizeof(cecs_buffer_stage_element));
-    const cecs_buffer_offset_u64 aligned_size = cecs_align_to_pow2(size, buffer->alignment);
-    if (new_stage_size > stage_size) {
-        const size_t padding = aligned_size - size;
-        buffer->current_padding = cecs_dynamic_wgpu_buffer_pad(buffer, arena, padding);
-    } else {
-        assert(new_stage_size == stage_size && "error: staging buffer size must be aligned to copy buffer alignment");
-    }
-
-    const cecs_buffer_offset_u64 new_padded_stage_size =
-        cecs_sparse_set_count_of_size(stage, sizeof(cecs_buffer_stage_element));
-    assert(
-        (new_padded_stage_size & (cecs_webgpu_copy_buffer_alignment - 1)) == 0
-        && "error: staging buffer size must be aligned to copy buffer alignment"
-    );
-
-    const cecs_buffer_offset_u64 requested_offset = cecs_dynamic_wgpu_buffer_get_offset(buffer, offset);
-    const cecs_buffer_offset_u64 aligned_offset =
-        cecs_align_to_pow2(requested_offset + 1, buffer->alignment) - cecs_webgpu_copy_buffer_alignment;
-
-    *out_stage = stage;
-    return (cecs_buffer_staging_parameters) {
-        .requested_offset = requested_offset,
-        .aligned_requested_offset = aligned_offset,
-        .aligned_requested_size = aligned_size,
-        .aligned_total_size = new_padded_stage_size
-    };
+    return cecs_dynamic_wgpu_buffer_get_offset(buffer, offset);
 }
 
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage_and_upload(
     cecs_dynamic_wgpu_buffer *buffer,
     WGPUDevice device,
     WGPUQueue queue,
@@ -201,16 +222,26 @@ cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
         assert(false && "error: buffer must be initialized with non-zero size before uploading data");
     }
 
-    cecs_sparse_set *stage;
-    cecs_buffer_staging_parameters staging = cecs_dynamic_wgpu_buffer_stage(buffer, arena, offset, data, size, &stage);
-    if (buffer->uploaded_size < staging.aligned_requested_offset + staging.aligned_requested_size) {
-        const uint64_t new_buffer_size = staging.aligned_total_size * 2;
+    cecs_dynamic_wgpu_buffer_stage(buffer, arena, offset, data, size);
+    return cecs_dynamic_wgpu_buffer_upload(buffer, device, queue, arena, offset, size);
+}
+
+// TODO: choose best list of parameters
+static void cecs_dynamic_wgpu_buffer_upload_staged(
+    cecs_dynamic_wgpu_buffer *buffer,
+    cecs_sparse_set *stage,
+    WGPUDevice device,
+    WGPUQueue queue,
+    const cecs_buffer_staging_parameters *staging
+) {
+    if (buffer->uploaded_size < staging->aligned_requested_offset + staging->aligned_requested_size) {
+        const uint64_t new_buffer_size = staging->aligned_total_size * 2;
         WGPUBuffer new_buffer = cecs_wgpu_buffer_create_with_data(
             device,
             buffer->usage,
             new_buffer_size,
             cecs_sparse_set_values(stage),
-            staging.aligned_total_size
+            staging->aligned_total_size
         );
         wgpuBufferRelease(buffer->buffer);
         buffer->buffer = new_buffer;
@@ -219,14 +250,54 @@ cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
         wgpuQueueWriteBuffer(
             queue,
             buffer->buffer,
-            staging.aligned_requested_offset,
-            cecs_sparse_set_get_unchecked(stage, offset, sizeof(cecs_buffer_stage_element)),
-            staging.aligned_requested_size
+            staging->aligned_requested_offset,
+            (cecs_buffer_stage_element *)cecs_sparse_set_values(stage) + staging->requested_offset,
+            staging->aligned_requested_size
         );
     }
+}
+
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
+    cecs_dynamic_wgpu_buffer *buffer,
+    WGPUDevice device,
+    WGPUQueue queue,
+    cecs_arena *arena,
+    cecs_dynamic_buffer_offset offset,
+    cecs_dynamic_buffer_offset size
+) {
+    if (buffer->uploaded_size == 0) {
+        assert(false && "error: buffer must be initialized with non-zero size before uploading data");
+    }
+
+    cecs_sparse_set *stage = cecs_dynamic_wgpu_buffer_get_stage(buffer);
+    cecs_buffer_staging_parameters staging = cecs_dynamic_wgpu_buffer_align_stage_range(buffer, arena, stage, offset, size);
+    cecs_dynamic_wgpu_buffer_upload_staged(buffer, stage, device, queue, &staging);
 
     if (CECS_COW_IS_BORROWED(cecs_buffer_stage, buffer->stage)) {
         buffer->current_padding = cecs_dynamic_wgpu_buffer_unpad(buffer, arena, staging.aligned_total_size);
     }
     return staging.requested_offset;
 }
+
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload_all(
+    cecs_dynamic_wgpu_buffer *buffer,
+    WGPUDevice device,
+    WGPUQueue queue,
+    cecs_arena *arena
+) {
+    if (buffer->uploaded_size == 0) {
+        assert(false && "error: buffer must be initialized with non-zero size before uploading data");
+    }
+
+    cecs_sparse_set *stage = cecs_dynamic_wgpu_buffer_get_stage(buffer);
+    const size_t stage_size = cecs_sparse_set_count_of_size(stage, sizeof(cecs_buffer_stage_element));
+    cecs_buffer_staging_parameters staging =
+        cecs_dynamic_wgpu_buffer_align_stage_raw_range(buffer, arena, stage_size, 0, stage_size);
+    cecs_dynamic_wgpu_buffer_upload_staged(buffer, stage, device, queue, &staging);
+
+    if (CECS_COW_IS_BORROWED(cecs_buffer_stage, buffer->stage)) {
+        buffer->current_padding = cecs_dynamic_wgpu_buffer_unpad(buffer, arena, staging.aligned_total_size);
+    }
+    return staging.requested_offset;
+}
+

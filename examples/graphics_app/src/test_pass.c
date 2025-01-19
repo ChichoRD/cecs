@@ -52,7 +52,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
     WGPUBindGroupLayout local_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
         .label = "Test Pass Local Bind Group Layout",
         .nextInChain = NULL,
-        .entryCount = 1,
+        .entryCount = 2,
         .entries = (WGPUBindGroupLayoutEntry[]) {
             {
                 .binding = 0,
@@ -64,6 +64,16 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                     .nextInChain = NULL,
                 },
             },
+            {
+                .binding = 1,
+                .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,
+                .buffer = (WGPUBufferBindingLayout) {
+                    .type = WGPUBufferBindingType_Uniform,
+                    .hasDynamicOffset = true,
+                    .minBindingSize = sizeof(position4_f32_uniform),
+                    .nextInChain = NULL,
+                },
+            }
         },
     });
     WGPUBindGroupLayout global_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
@@ -163,20 +173,27 @@ void test_pass_free(test_pass *pass) {
 static WGPUBindGroup test_pass_create_local_bind_group(
     test_pass *pass,
     WGPUDevice device,
-    cecs_buffer_storage_attachment *color_uniform_buffer
+    cecs_buffer_storage_attachment *color_uniform_buffer,
+    cecs_buffer_storage_attachment *position_uniform_buffer
 ) {
     return wgpuDeviceCreateBindGroup(device, &(WGPUBindGroupDescriptor) {
         .label = "Test Pass Local Bind Group",
         .layout = pass->local_bgl,
-        .entryCount = 1,
+        .entryCount = 2,
         .entries = (WGPUBindGroupEntry[]) {
             {
                 .binding = 0,
                 .buffer = color_uniform_buffer->buffer.buffer,
                 .offset = 0,
                 .size = color_uniform_buffer->buffer.uploaded_size,
+            },
+            {
+                .binding = 1,
+                .buffer = position_uniform_buffer->buffer.buffer,
+                .offset = 0,
+                .size = position_uniform_buffer->buffer.uploaded_size,
             }
-        },
+        }
     });
 }
 
@@ -201,26 +218,36 @@ static void test_pass_draw_inner(
         color3_f32_attribute,
         &system->world
     );
-    cecs_buffer_storage_attachment *color_uniform_buffer = CECS_WORLD_GET_COMPONENT_STORAGE_ATTACHMENTS(
-        color4_f32_uniform,
-        cecs_buffer_storage_attachment,
-        world
-    );
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
-
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
+    cecs_buffer_storage_attachment *color_uniform_buffer = CECS_WORLD_SYNC_UNIFORM_COMPONENTS(
+        color4_f32_uniform,
+        world,
+        &system->context
+    );
+    cecs_buffer_storage_attachment *position_uniform_buffer = CECS_WORLD_SYNC_UNIFORM_COMPONENTS(
+        position4_f32_uniform,
+        world,
+        &system->context
+    );
     assert(in_local_bind_groups_capacity >= 1 && "error: out local bind groups capacity must be at least 1");
-    out_local_bind_groups[0] = test_pass_create_local_bind_group(pass, system->context.device, color_uniform_buffer);
+    out_local_bind_groups[0] =
+        test_pass_create_local_bind_group(pass, system->context.device, color_uniform_buffer, position_uniform_buffer);
     *out_local_bind_groups_count = 1;
 
-    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream, cecs_uniform_raw_stream) handle;
+    typedef cecs_uniform_raw_stream cecs_raw_color_stream;
+    typedef cecs_uniform_raw_stream cecs_raw_position_stream;
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream) handle;
     cecs_arena arena = cecs_arena_create();
     for (
         cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, &arena,
             CECS_COMPONENTS_ALL(cecs_mesh),
             CECS_COMPONENTS_AND_ANY(cecs_index_stream),
-            CECS_COMPONENTS_ALL_IDS(CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(color4_f32_uniform)))
+            CECS_COMPONENTS_ALL_IDS(
+                CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(color4_f32_uniform)),
+                CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(position4_f32_uniform))
+            ),
         );
         !cecs_component_iterator_done(&it);
         cecs_component_iterator_next(&it)
@@ -235,7 +262,10 @@ static void test_pass_draw_inner(
             *handle.cecs_mesh_component, sizeof(color3_f32_attribute), &color_buffer->buffer
         );
 
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, out_local_bind_groups[0], 1, &(uint32_t){handle.cecs_uniform_raw_stream_component->offset});
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 1, out_local_bind_groups[0], 2, (const uint32_t[]){
+            handle.cecs_raw_color_stream_component->offset,
+            handle.cecs_raw_position_stream_component->offset
+        });
 
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position.offset, position.size);
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, color_buffer->buffer.buffer, color.offset, color.size);
@@ -267,6 +297,8 @@ static void test_pass_draw_inner(
 }
 
 void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *system, cecs_render_target *target) {
+    // TODO: make check and sync procedure
+
     const WGPUCommandEncoderDescriptor render_pass_encoder_descriptor = {
         .nextInChain = NULL,
         .label = "Learn WGPU Render Pass Encoder",
@@ -299,15 +331,22 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
     WGPURenderPassEncoder render_pass =
         wgpuCommandEncoderBeginRenderPass(render_pass_encoder, &render_pass_descriptor);
     
+
     WGPUBindGroup local_bind_groups[1];
     size_t local_bind_groups_count;
-    test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
-
+    bool uniforms_exist = CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(color4_f32_uniform, world)
+        && CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(position4_f32_uniform, world);
+    if (uniforms_exist) {
+        test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
+    }
     wgpuRenderPassEncoderEnd(render_pass);
-    for (size_t i = 0; i < local_bind_groups_count; ++i) {
-        wgpuBindGroupRelease(local_bind_groups[i]);
+    if (uniforms_exist) {
+        for (size_t i = 0; i < local_bind_groups_count; ++i) {
+            wgpuBindGroupRelease(local_bind_groups[i]);
+        }
     }
     wgpuRenderPassEncoderRelease(render_pass);
+    
 
     WGPUCommandBufferDescriptor render_command_buffer_descriptor = {
         .nextInChain = NULL,
@@ -370,3 +409,5 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
 
 CECS_COMPONENT_DEFINE(camera_matrix_uniform);
 CECS_COMPONENT_DEFINE(color4_f32_uniform);
+
+CECS_COMPONENT_DEFINE(position4_f32_uniform);

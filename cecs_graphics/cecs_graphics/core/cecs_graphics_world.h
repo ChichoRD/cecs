@@ -47,4 +47,12 @@ const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
 #define CECS_WORLD_SET_COMPONENT_AS_UNIFORM(type, world_ref, context_ref, entity, component_ref) \
     (cecs_world_set_component_as_uniform(world_ref, context_ref, entity, CECS_COMPONENT_ID(type), component_ref, sizeof(type)))
 
+cecs_buffer_storage_attachment *cecs_world_sync_uniform_components(
+    cecs_world *world,
+    cecs_graphics_context *context,
+    cecs_component_id component_id
+);
+#define CECS_WORLD_SYNC_UNIFORM_COMPONENTS(type, world_ref, context_ref) \
+    (cecs_world_sync_uniform_components(world_ref, context_ref, CECS_COMPONENT_ID(type)))
+
 #endif

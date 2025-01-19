@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include "cecs_graphics_context.h"
+//#include <stdio.h>
 
 typedef struct cecs_adpater_request_userdata {
     bool adapter_request_completed;
@@ -249,6 +250,7 @@ bool cecs_graphics_context_get_surface_render_target(
         };
         return true;
     } else {
+        //printf("error: failed to get surface texture. Status: %X\n", surface_texture.status);
         *out_surface_render_target = (cecs_surface_render_target){0};
         return false;
     }

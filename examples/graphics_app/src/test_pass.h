@@ -56,5 +56,16 @@ typedef union color4_f32_uniform {
 CECS_COMPONENT_DECLARE(color4_f32_uniform);
 CECS_UNIFORM_IS_ALIGNED_STATIC_ASSERT(color4_f32_uniform);
 
+typedef union position4_f32_uniform {
+    struct {
+        float x;
+        float y;
+        float z;
+        float w;
+    };
+    float values[4];
+} position4_f32_uniform;
+CECS_COMPONENT_DECLARE(position4_f32_uniform);
+CECS_UNIFORM_IS_ALIGNED_STATIC_ASSERT(position4_f32_uniform);
 
 #endif

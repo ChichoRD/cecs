@@ -113,6 +113,7 @@ typedef struct cecs_buffer_storage_attachment {
     enum cecs_buffer_storage_attachment_flags {
         cecs_buffer_flags_none = 0,
         cecs_buffer_flags_initialized = 1 << 0,
+        cecs_buffer_flags_dirty = 1 << 1
     } buffer_flags;
 } cecs_buffer_storage_attachment;
 

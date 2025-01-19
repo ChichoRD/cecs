@@ -107,11 +107,36 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_borrowed(
     uint16_t alignment
 );
 
+static inline bool cecs_dynamic_wgpu_buffer_is_shared(const cecs_dynamic_wgpu_buffer *buffer) {
+    return CECS_COW_IS_BORROWED(cecs_buffer_stage, buffer->stage);
+}
+
 void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer);
 
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset);
 
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage(
+    cecs_dynamic_wgpu_buffer *buffer,
+    cecs_arena *arena,
+    cecs_dynamic_buffer_offset offset,
+    void *data,
+    cecs_dynamic_buffer_offset size
+);
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
+    cecs_dynamic_wgpu_buffer *buffer,
+    WGPUDevice device,
+    WGPUQueue queue,
+    cecs_arena *arena,
+    cecs_dynamic_buffer_offset offset,
+    cecs_dynamic_buffer_offset size
+);
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload_all(
+    cecs_dynamic_wgpu_buffer *buffer,
+    WGPUDevice device,
+    WGPUQueue queue,
+    cecs_arena *arena
+);
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage_and_upload(
     cecs_dynamic_wgpu_buffer *buffer,
     WGPUDevice device,
     WGPUQueue queue,
