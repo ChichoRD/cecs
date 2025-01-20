@@ -13,7 +13,7 @@ struct vertex_output {
 @vertex
 fn vs_main(input: vertex_input) -> vertex_output {
     var out: vertex_output;
-    out.position = vec4<f32>(input.position, 0.0, 1.0);
+    out.position = vec4<f32>(input.position + position.xy, 0.0, 1.0);
     out.color = input.color;
 
     return out;

@@ -87,7 +87,8 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
         component_id
     );
     // TODO: maybe iter and update the cecs_uniform_raw_stream of those that have this component
-
+    (void)world;
+    
     assert(
         storage->buffer_flags & cecs_buffer_flags_initialized
         && "error: uniform buffer must be initialized"
@@ -102,4 +103,28 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
         storage->buffer_flags &= ~cecs_buffer_flags_dirty;
     }
     return storage;
+}
+
+bool cecs_graphics_system_sync_uniform_components_all(
+    cecs_graphics_system *system,
+    cecs_world *world,
+    const cecs_component_id components[],
+    size_t components_count,
+    cecs_buffer_storage_attachment *out_uniform_buffers[]
+) {
+    bool all_found = true;
+    size_t i = 0;
+    while (i < components_count && all_found) {
+        if (cecs_world_has_component_storage_attachments(&system->world.world, components[i])) {
+            out_uniform_buffers[i] = cecs_graphics_system_sync_uniform_components(
+                system,
+                world,
+                components[i]
+            );
+            ++i;
+        } else {
+            all_found = false;
+        }
+    }
+    return all_found;
 }

@@ -60,9 +60,9 @@ int main(void) {
 
     cecs_world world = cecs_world_create(64, 16, 4);
     cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
-    WGPUSupportedLimits limits;
-    wgpuDeviceGetLimits(system.context.device, &limits);
-    printf("maxBindingsPerBindGroup: %u\n", limits.limits.maxBindingsPerBindGroup);
+    // WGPUSupportedLimits limits;
+    // wgpuDeviceGetLimits(system.context.device, &limits);
+    // printf("maxBindingsPerBindGroup: %u\n", limits.limits.maxBindingsPerBindGroup);
 
     cecs_arena builder_arena = cecs_arena_create();
     
@@ -111,12 +111,18 @@ int main(void) {
         struct timespec t;
         timespec_get(&t, TIME_UTC);
         double t_sec = (double)t.tv_sec + (double)t.tv_nsec / 1e9;
-        clear_color = (WGPUColor){ sin(t_sec), cos(t_sec), cos(sin(t_sec)), 1.0f };
+        clear_color = (WGPUColor){ sin(t_sec) * 0.5f + 0.5f, cos(t_sec) * 0.5f + 0.5f, 0.0f, 1.0f };
         CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, id, &((color4_f32_uniform){
             .r = clear_color.r,
             .g = clear_color.g,
             .b = clear_color.b,
             .a = clear_color.a,
+        }));
+        CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(position4_f32_uniform, &system, &world, id, &((position4_f32_uniform){
+            .x = 0.5f * sin(t_sec),
+            .y = 0.5f * cos(t_sec),
+            .z = 0.0f,
+            .w = 0.0f,
         }));
 
         cecs_surface_render_target surface_target;

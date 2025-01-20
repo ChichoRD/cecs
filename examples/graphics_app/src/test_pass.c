@@ -207,6 +207,17 @@ static void test_pass_draw_inner(
     size_t in_local_bind_groups_capacity,
     size_t *out_local_bind_groups_count
 ) {
+    struct ubos {
+        cecs_buffer_storage_attachment *color;
+        cecs_buffer_storage_attachment *position;
+    } ubos;
+    if (!CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(
+        system, world, &ubos, color4_f32_uniform, position4_f32_uniform
+    )) {
+        *out_local_bind_groups_count = 0;
+        return;
+    }
+
     (void)target;
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
 
@@ -221,19 +232,9 @@ static void test_pass_draw_inner(
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
-    cecs_buffer_storage_attachment *color_uniform_buffer = CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS(
-        color4_f32_uniform,
-        system,
-        world
-    );
-    cecs_buffer_storage_attachment *position_uniform_buffer = CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS(
-        position4_f32_uniform,
-        system,
-        world
-    );
     assert(in_local_bind_groups_capacity >= 1 && "error: out local bind groups capacity must be at least 1");
     out_local_bind_groups[0] =
-        test_pass_create_local_bind_group(pass, system->context.device, color_uniform_buffer, position_uniform_buffer);
+        test_pass_create_local_bind_group(pass, system->context.device, ubos.color, ubos.position);
     *out_local_bind_groups_count = 1;
 
     typedef cecs_uniform_raw_stream cecs_raw_color_stream;
@@ -334,16 +335,11 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
 
     WGPUBindGroup local_bind_groups[1];
     size_t local_bind_groups_count;
-    bool uniforms_exist = CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(color4_f32_uniform, &system->world)
-        && CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(position4_f32_uniform, &system->world);
-    if (uniforms_exist) {
-        test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
-    }
+    test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
+
     wgpuRenderPassEncoderEnd(render_pass);
-    if (uniforms_exist) {
-        for (size_t i = 0; i < local_bind_groups_count; ++i) {
-            wgpuBindGroupRelease(local_bind_groups[i]);
-        }
+    for (size_t i = 0; i < local_bind_groups_count; ++i) {
+        wgpuBindGroupRelease(local_bind_groups[i]);
     }
     wgpuRenderPassEncoderRelease(render_pass);
     
