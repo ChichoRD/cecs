@@ -17,6 +17,42 @@ cecs_buffer_storage_attachment *cecs_graphics_world_get_buffer_attachments(cecs_
 #define CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(type, graphics_world_ref) \
     cecs_graphics_world_get_buffer_attachments(graphics_world_ref, CECS_COMPONENT_ID(type))
 
+static inline cecs_vertex_storage_attachment *cecs_graphics_world_get_vertex_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_vertex_attribute_id attribute_id
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_buffer_attachments(graphics_world, attribute_id);
+    CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_vertex_storage_attachment,
+        buffer->stream
+    );
+}
+
+static inline cecs_index_storage_attachment *cecs_graphics_world_get_index_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_vertex_index_id index_id
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_buffer_attachments(graphics_world, index_id);
+    CECS_UNION_IS_ASSERT(cecs_index_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_index_storage_attachment,
+        buffer->stream
+    );
+}
+
+static inline cecs_uniform_storage_attachment *cecs_graphics_world_get_uniform_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_component_id component_id
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_buffer_attachments(graphics_world, component_id);
+    CECS_UNION_IS_ASSERT(cecs_uniform_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_uniform_storage_attachment,
+        buffer->stream
+    );
+}
+
 cecs_buffer_storage_attachment *cecs_graphics_world_get_or_set_buffer_attachments(
     cecs_graphics_world *graphics_world,
     cecs_component_id component_id,
@@ -24,6 +60,45 @@ cecs_buffer_storage_attachment *cecs_graphics_world_get_or_set_buffer_attachment
 );
 #define CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(type, graphics_world_ref, default_attachments_ref) \
     cecs_graphics_world_get_or_set_buffer_attachments(graphics_world_ref, CECS_COMPONENT_ID(type), default_attachments_ref)
+
+static inline cecs_vertex_storage_attachment *cecs_graphics_world_get_or_set_vertex_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_vertex_attribute_id attribute_id,
+    cecs_buffer_storage_attachment *default_attachment
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, attribute_id, default_attachment);
+    CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_vertex_storage_attachment,
+        buffer->stream
+    );
+}
+
+static inline cecs_index_storage_attachment *cecs_graphics_world_get_or_set_index_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_vertex_index_id index_id,
+    cecs_buffer_storage_attachment *default_attachment
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, index_id, default_attachment);
+    CECS_UNION_IS_ASSERT(cecs_index_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_index_storage_attachment,
+        buffer->stream
+    );
+}
+
+static inline cecs_uniform_storage_attachment *cecs_graphics_world_get_or_set_uniform_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_component_id component_id,
+    cecs_buffer_storage_attachment *default_attachment
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, component_id, default_attachment);
+    CECS_UNION_IS_ASSERT(cecs_uniform_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_uniform_storage_attachment,
+        buffer->stream
+    );
+}
 
 cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world);
 

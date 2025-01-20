@@ -217,7 +217,7 @@ static void test_pass_draw_inner(
         *out_local_bind_groups_count = 0;
         return;
     }
-
+    
     (void)target;
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
 

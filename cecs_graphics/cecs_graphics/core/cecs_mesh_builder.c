@@ -267,7 +267,7 @@ cecs_mesh_builder *cecs_mesh_builder_set_vertex_attribute(
             .attribute_size = attribute_size,
         }
     );
-    cecs_vertex_storage_attachment *storage_vertex_info = cecs_graphics_world_get_or_set_buffer_attachments(
+    cecs_vertex_storage_attachment *storage_vertex_info = cecs_graphics_world_get_or_set_vertex_buffer_attachments(
         builder->graphics_world,
         attribute_id,
         &default_attachment
@@ -329,8 +329,8 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
             .index_format = builder->descriptor.index_format,
         }
     );
-    cecs_index_storage_attachment *storage_index_info = cecs_graphics_world_get_or_set_buffer_attachments(
-        &builder->graphics_world->world,
+    cecs_index_storage_attachment *storage_index_info = cecs_graphics_world_get_or_set_index_buffer_attachments(
+        builder->graphics_world,
         format_info.id,
         &default_attachment
     );
