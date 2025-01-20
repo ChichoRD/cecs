@@ -18,17 +18,51 @@ void cecs_graphics_world_free(cecs_graphics_world *w) {
     ) {
         cecs_sized_component_storage storage = cecs_world_components_iterator_current(&it);
         if (cecs_world_has_component_storage_attachments(&w->world, storage.component_id)) {
-            cecs_buffer_storage_attachment *buffer_attachment = cecs_world_get_component_storage_attachments(
-                &w->world,
+            const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_unchecked(
+                &w->world.components,
                 storage.component_id
             );
             
-            if (buffer_attachment->buffer_flags & cecs_buffer_flags_initialized) {
-                cecs_buffer_storage_attachment_free(buffer_attachment);
+            if (attachments->flags & cecs_component_storage_attachment_usage_graphics_buffer) {
+                cecs_buffer_storage_attachment *buffer_attachment = attachments->user_attachments;
+                if (buffer_attachment->buffer_flags & cecs_buffer_flags_initialized) {
+                    cecs_buffer_storage_attachment_free(buffer_attachment);
+                }
             }
         }
     }
     cecs_world_free(&w->world);
+}
+
+cecs_buffer_storage_attachment *cecs_graphics_world_get_buffer_attachments(cecs_graphics_world *graphics_world, cecs_component_id component_id) {
+    const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_unchecked(
+        &graphics_world->world.components,
+        component_id
+    );
+    assert(
+        attachments->flags & cecs_component_storage_attachment_usage_graphics_buffer
+        && "error: attachments of component must be flagged for graphics buffer usage"
+    );
+    return attachments->user_attachments;
+}
+
+cecs_buffer_storage_attachment *cecs_graphics_world_get_or_set_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_component_id component_id,
+    cecs_buffer_storage_attachment *default_attachments
+) {
+    const cecs_component_storage_attachments *attachments = cecs_world_components_get_or_set_component_storage_attachments(
+        &graphics_world->world.components,
+        component_id,
+        default_attachments,
+        sizeof(cecs_buffer_storage_attachment),
+        cecs_component_storage_attachment_usage_graphics_buffer
+    );
+    assert(
+        attachments->flags & cecs_component_storage_attachment_usage_graphics_buffer
+        && "error: attachments of component must be flagged for graphics buffer usage"
+    );
+    return attachments->user_attachments;
 }
 
 cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world) {
@@ -49,27 +83,13 @@ cecs_arena *cecs_graphics_world_default_buffer_arena(cecs_graphics_world *graphi
     return cecs_world_default_buffer_arena(&graphics_world->world);
 }
 
-cecs_entity_id cecs_world_add_entity_with_mesh(cecs_world *world, cecs_mesh *mesh) {
-    cecs_entity_id entity = cecs_world_add_entity(world);
-    CECS_WORLD_SET_COMPONENT(cecs_mesh, world, entity, mesh);
-    return entity;
-}
-cecs_entity_id cecs_world_add_entity_with_indexed_mesh(cecs_world *world, cecs_mesh *mesh, cecs_index_stream *index_stream) {
-    cecs_entity_id entity = cecs_world_add_entity(world);
-    CECS_WORLD_SET_COMPONENT(cecs_mesh, world, entity, mesh);
-    CECS_WORLD_SET_COMPONENT(cecs_index_stream, world, entity, index_stream);
-    return entity;
-}
-
-CECS_COMPONENT_DEFINE(cecs_uniform_raw_stream);
-
-static cecs_buffer_storage_attachment *cecs_world_get_or_init_uniform_buffer(
-    cecs_world *world,
+cecs_buffer_storage_attachment *cecs_graphics_world_get_or_init_uniform_buffer(
+    cecs_graphics_world *world,
     cecs_graphics_context *context,
     cecs_component_id component_id,
     size_t size
 ) {
-    assert(
+        assert(
         CECS_UNIFORM_IS_ALIGNED_SIZE(size)
         && "error: uniform size must be aligned to uniform buffer alignment"
         && CECS_WGPU_UNIFORM_BUFFER_ALIGNMENT_VALUE
@@ -80,20 +100,26 @@ static cecs_buffer_storage_attachment *cecs_world_get_or_init_uniform_buffer(
             .uniform_stride = size
         }
     );
-    // FIXME: prevent or share with the user storage attachments
-    cecs_buffer_storage_attachment *storage = cecs_world_get_or_set_component_storage_attachments(
-        world,
+    
+    const cecs_component_storage_attachments *attachments = cecs_world_components_get_or_set_component_storage_attachments(
+        &world->world.components,
         component_id,
         &default_attachment,
-        sizeof(cecs_buffer_storage_attachment)
+        sizeof(cecs_buffer_storage_attachment),
+        cecs_component_storage_attachment_usage_graphics_buffer
     );
+    assert(
+        attachments->flags & cecs_component_storage_attachment_usage_graphics_buffer
+        && "error: attachments of component must be flagged for graphics buffer usage"
+    );
+    cecs_buffer_storage_attachment *storage = attachments->user_attachments;
 
     if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
         // TODO: check if storage is dense so that is shared
         cecs_buffer_storage_attachment_initialize(
             storage,
             context->device,
-            cecs_world_default_buffer_arena(world),
+            cecs_graphics_world_default_buffer_arena(world),
             WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
             size,
             cecs_webgpu_uniform_buffer_alignment
@@ -108,87 +134,14 @@ static cecs_buffer_storage_attachment *cecs_world_get_or_init_uniform_buffer(
     return storage;
 }
 
-const cecs_uniform_raw_stream *cecs_world_set_component_as_uniform(
-    cecs_world *world,
-    cecs_graphics_context *context,
-    cecs_entity_id entity,
-    cecs_component_id component_id,
-    void *component,
-    size_t size
-) {
-    cecs_buffer_storage_attachment *storage = cecs_world_get_or_init_uniform_buffer(
-        world,
-        context,
-        component_id,
-        size
-    );
-    cecs_uniform_raw_stream stream;
-    if (cecs_dynamic_wgpu_buffer_is_shared(&storage->buffer)) {
-        cecs_world_set_component(
-            world,
-            entity,
-            component_id,
-            component,
-            size
-        );
-        stream = (cecs_uniform_raw_stream){
-            .offset = cecs_dynamic_wgpu_buffer_get_offset(&storage->buffer, entity),
-            .size = size
-        };
-        storage->buffer_flags |= cecs_buffer_flags_dirty;
-    } else {
-        cecs_world_set_component(
-            world,
-            entity,
-            component_id,
-            component,
-            size
-        );
-        stream = (cecs_uniform_raw_stream){
-            .offset = cecs_dynamic_wgpu_buffer_stage(
-                &storage->buffer,
-                cecs_world_default_buffer_arena(world),
-                entity * size,
-                component,
-                size
-            ),
-            .size = size
-        };
-        storage->buffer_flags |= cecs_buffer_flags_dirty;
-    }
-
-    return CECS_WORLD_SET_COMPONENT_RELATION(
-        cecs_uniform_raw_stream,
-        world,
-        entity,
-        &stream,
-        component_id
-    );
+cecs_entity_id cecs_world_add_entity_with_mesh(cecs_world *world, cecs_mesh *mesh) {
+    cecs_entity_id entity = cecs_world_add_entity(world);
+    CECS_WORLD_SET_COMPONENT(cecs_mesh, world, entity, mesh);
+    return entity;
 }
-
-cecs_buffer_storage_attachment *cecs_world_sync_uniform_components(
-    cecs_world *world,
-    cecs_graphics_context *context,
-    cecs_component_id component_id
-) {
-    cecs_buffer_storage_attachment *storage = cecs_world_get_component_storage_attachments(
-        world,
-        component_id
-    );
-    // TODO: maybe iter and update the cecs_uniform_raw_stream of those that have this component
-
-    assert(
-        storage->buffer_flags & cecs_buffer_flags_initialized
-        && "error: uniform buffer must be initialized"
-    );
-    if (storage->buffer_flags & cecs_buffer_flags_dirty) {
-        cecs_dynamic_wgpu_buffer_upload_all(
-            &storage->buffer,
-            context->device,
-            context->queue,
-            cecs_world_default_buffer_arena(world)
-        );
-        storage->buffer_flags &= ~cecs_buffer_flags_dirty;
-    }
-    return storage;
+cecs_entity_id cecs_world_add_entity_with_indexed_mesh(cecs_world *world, cecs_mesh *mesh, cecs_index_stream *index_stream) {
+    cecs_entity_id entity = cecs_world_add_entity(world);
+    CECS_WORLD_SET_COMPONENT(cecs_mesh, world, entity, mesh);
+    CECS_WORLD_SET_COMPONENT(cecs_index_stream, world, entity, index_stream);
+    return entity;
 }

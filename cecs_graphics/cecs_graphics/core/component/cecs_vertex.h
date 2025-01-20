@@ -107,6 +107,10 @@ typedef CECS_UNION_STRUCT(
     cecs_uniform_storage_attachment
 ) cecs_stream_storage_attachment;
 
+typedef enum cecs_component_storage_attachment_graphics_usage {
+    cecs_component_storage_attachment_usage_graphics_buffer = 1 << 1,
+} cecs_component_storage_attachment_graphics_usage;
+
 typedef struct cecs_buffer_storage_attachment {
     cecs_stream_storage_attachment stream;
     cecs_dynamic_wgpu_buffer buffer;

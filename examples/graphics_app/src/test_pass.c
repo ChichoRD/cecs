@@ -221,15 +221,15 @@ static void test_pass_draw_inner(
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
-    cecs_buffer_storage_attachment *color_uniform_buffer = CECS_WORLD_SYNC_UNIFORM_COMPONENTS(
+    cecs_buffer_storage_attachment *color_uniform_buffer = CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS(
         color4_f32_uniform,
-        world,
-        &system->context
+        system,
+        world
     );
-    cecs_buffer_storage_attachment *position_uniform_buffer = CECS_WORLD_SYNC_UNIFORM_COMPONENTS(
+    cecs_buffer_storage_attachment *position_uniform_buffer = CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS(
         position4_f32_uniform,
-        world,
-        &system->context
+        system,
+        world
     );
     assert(in_local_bind_groups_capacity >= 1 && "error: out local bind groups capacity must be at least 1");
     out_local_bind_groups[0] =
@@ -334,8 +334,8 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
 
     WGPUBindGroup local_bind_groups[1];
     size_t local_bind_groups_count;
-    bool uniforms_exist = CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(color4_f32_uniform, world)
-        && CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(position4_f32_uniform, world);
+    bool uniforms_exist = CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(color4_f32_uniform, &system->world)
+        && CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(position4_f32_uniform, &system->world);
     if (uniforms_exist) {
         test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
     }

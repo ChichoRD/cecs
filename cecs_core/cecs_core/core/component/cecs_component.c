@@ -296,14 +296,19 @@ size_t cecs_world_components_remove_component_array(
     }
 }
 
-void *cecs_world_components_set_component_storage_attachments(
+const cecs_component_storage_attachments *cecs_world_components_set_component_storage_attachments(
     cecs_world_components *wc,
     cecs_component_id component_id,
     void *attachments,
-    size_t size
+    size_t size,
+    cecs_component_storage_attachment_usage_flags flags
 ) {
     assert(attachments != NULL && "error: attachments must not be NULL");
     assert(size > 0 && "error: attachments size must be greater than zero");
+    assert(
+        flags != cecs_component_storage_attachment_usage_none
+        && "error: attachments must be flagged for usage"
+    );
 
     cecs_discard_ensure(&wc->discard, &wc->components_arena, size);
     cecs_optional_element stored_attachments =
@@ -312,6 +317,7 @@ void *cecs_world_components_set_component_storage_attachments(
         cecs_component_storage_attachments new_attachments = {
             .user_attachments = cecs_arena_alloc(&wc->storages_arena, size),
             .attachments_size = size,
+            .flags = flags
         };
         memcpy(new_attachments.user_attachments, attachments, size);
         return CECS_PAGED_SPARSE_SET_SET(
@@ -320,7 +326,7 @@ void *cecs_world_components_set_component_storage_attachments(
             &wc->storages_arena,
             (size_t)component_id,
             &new_attachments
-        )->user_attachments;
+        );
     } else {
         cecs_component_storage_attachments *current_attachments =
             CECS_OPTION_GET_UNCHECKED(cecs_optional_element, stored_attachments);
@@ -333,8 +339,9 @@ void *cecs_world_components_set_component_storage_attachments(
             );
         }
         current_attachments->attachments_size = size;
+        current_attachments->flags = flags;
         memcpy(current_attachments->user_attachments, attachments, size);
-        return current_attachments->user_attachments;
+        return current_attachments;
     }
 }
 
@@ -345,8 +352,10 @@ bool cecs_world_components_has_component_storage_attachments(const cecs_world_co
     );
 }
 
-void *cecs_world_components_get_component_storage_attachments_unchecked(const cecs_world_components *wc, cecs_component_id component_id)
-{
+const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_unchecked(
+    const cecs_world_components *wc,
+    cecs_component_id component_id
+) {
     cecs_optional_element stored_attachments =
         CECS_PAGED_SPARSE_SET_GET(cecs_component_storage_attachments, &wc->component_storages_attachments, (size_t)component_id);
     CECS_OPTION_IS_SOME_ASSERT(cecs_optional_element, stored_attachments);
@@ -359,14 +368,19 @@ void *cecs_world_components_get_component_storage_attachments_unchecked(const ce
         assert(false && "unreachable: attachments size must be greater than zero");
         exit(EXIT_FAILURE);
     }
-    return attachments->user_attachments;
+    if (attachments->flags == cecs_component_storage_attachment_usage_none) {
+        assert(false && "unreachable: attachments must be flagged for usage");
+        exit(EXIT_FAILURE);
+    }
+    return attachments;
 }
 
-void *cecs_world_components_get_or_set_component_storage_attachments(
+const cecs_component_storage_attachments *cecs_world_components_get_or_set_component_storage_attachments(
     cecs_world_components *wc,
     cecs_component_id component_id,
     void *attachments,
-    size_t size
+    size_t size,
+    cecs_component_storage_attachment_usage_flags flags
 ) {
     cecs_optional_element stored_attachments =
         CECS_PAGED_SPARSE_SET_GET(cecs_component_storage_attachments, &wc->component_storages_attachments, (size_t)component_id);
@@ -380,6 +394,7 @@ void *cecs_world_components_get_or_set_component_storage_attachments(
         cecs_component_storage_attachments new_attachments = {
             .user_attachments = cecs_arena_alloc(&wc->storages_arena, size),
             .attachments_size = size,
+            .flags = flags
         };
         memcpy(new_attachments.user_attachments, attachments, size);
         return CECS_PAGED_SPARSE_SET_SET(
@@ -388,7 +403,7 @@ void *cecs_world_components_get_or_set_component_storage_attachments(
             &wc->storages_arena,
             (size_t)component_id,
             &new_attachments
-        )->user_attachments;
+        );
     } else {
         cecs_component_storage_attachments *attachments = CECS_OPTION_GET_UNCHECKED(cecs_optional_element, stored_attachments);
         if (attachments->user_attachments == NULL) {
@@ -399,7 +414,11 @@ void *cecs_world_components_get_or_set_component_storage_attachments(
             assert(false && "unreachable: attachments size must be greater than zero");
             exit(EXIT_FAILURE);
         }
-        return attachments->user_attachments;
+        if (attachments->flags == cecs_component_storage_attachment_usage_none) {
+            assert(false && "unreachable: attachments must be flagged for usage");
+            exit(EXIT_FAILURE);
+        }
+        return attachments;
     }
 }
 

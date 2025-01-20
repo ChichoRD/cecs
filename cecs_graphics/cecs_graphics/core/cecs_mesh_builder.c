@@ -28,8 +28,8 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_vertex_attribute(
     cecs_graphics_context *context,
     cecs_vertex_attribute_id id
 ) {
-    cecs_buffer_storage_attachment *storage = cecs_world_get_component_storage_attachments(
-        &builder->graphics_world->world,
+    cecs_buffer_storage_attachment *storage = cecs_graphics_world_get_buffer_attachments(
+        builder->graphics_world,
         id
     );
     CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, storage->stream);
@@ -83,8 +83,8 @@ static cecs_buffer_storage_attachment *cecs_mesh_builder_build_indices(
     size_t index_count = cecs_exclusive_range_length(builder->index_range);
     assert(index_count > 0 && "error: trying to build zero indices");
 
-    cecs_buffer_storage_attachment *storage = cecs_world_get_component_storage_attachments(
-        &builder->graphics_world->world,
+    cecs_buffer_storage_attachment *storage = cecs_graphics_world_get_buffer_attachments(
+        builder->graphics_world,
         id
     );
 
@@ -205,8 +205,8 @@ cecs_mesh_builder *cecs_mesh_builder_clear_vertex_attribute(cecs_mesh_builder *b
         attribute_id,
         &id
     )) {
-        cecs_buffer_storage_attachment *storage = cecs_world_get_component_storage_attachments(
-            &builder->graphics_world->world,
+        cecs_buffer_storage_attachment *storage = cecs_graphics_world_get_buffer_attachments(
+            builder->graphics_world,
             attribute_id
         );
         CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, storage->stream);
@@ -267,11 +267,10 @@ cecs_mesh_builder *cecs_mesh_builder_set_vertex_attribute(
             .attribute_size = attribute_size,
         }
     );
-    cecs_vertex_storage_attachment *storage_vertex_info = cecs_world_get_or_set_component_storage_attachments(
-        &builder->graphics_world->world,
+    cecs_vertex_storage_attachment *storage_vertex_info = cecs_graphics_world_get_or_set_buffer_attachments(
+        builder->graphics_world,
         attribute_id,
-        &default_attachment,
-        sizeof(cecs_buffer_storage_attachment)
+        &default_attachment
     );
     assert(storage_vertex_info->attribute_size == attribute_size && "error: attribute size mismatch");
     storage_vertex_info->current_vertex_count += attributes_count;
@@ -292,8 +291,8 @@ cecs_mesh_builder *cecs_mesh_builder_clear_indices(cecs_mesh_builder *builder) {
     cecs_vertex_index_id index_id = cecs_index_format_info_from(builder->descriptor.index_format).id;
 
     if (index_count > 0) {
-        cecs_buffer_storage_attachment *storage_index_info = cecs_world_get_component_storage_attachments(
-            &builder->graphics_world->world,
+        cecs_buffer_storage_attachment *storage_index_info = cecs_graphics_world_get_buffer_attachments(
+            builder->graphics_world,
             index_id
         );
         CECS_UNION_IS_ASSERT(cecs_index_storage_attachment, cecs_stream_storage_attachment, storage_index_info->stream);
@@ -330,11 +329,10 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
             .index_format = builder->descriptor.index_format,
         }
     );
-    cecs_index_storage_attachment *storage_index_info = cecs_world_get_or_set_component_storage_attachments(
+    cecs_index_storage_attachment *storage_index_info = cecs_graphics_world_get_or_set_buffer_attachments(
         &builder->graphics_world->world,
         format_info.id,
-        &default_attachment,
-        sizeof(cecs_buffer_storage_attachment)
+        &default_attachment
     );
     assert(storage_index_info->index_format == builder->descriptor.index_format && "error: index format mismatch");
     storage_index_info->current_index_count += indices_count;

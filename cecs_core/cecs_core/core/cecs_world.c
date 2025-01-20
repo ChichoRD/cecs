@@ -151,8 +151,9 @@ void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component
         &w->components,
         component_id,
         attachments,
-        size
-    );
+        size,
+        cecs_component_storage_attachment_usage_user
+    )->user_attachments;
 }
 
 bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
@@ -163,7 +164,7 @@ void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_com
     return cecs_world_components_get_component_storage_attachments_unchecked(
         &w->components,
         component_id
-    );
+    )->user_attachments;
 }
 
 void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *default_attachments, size_t size) {
@@ -171,8 +172,9 @@ void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_co
         &w->components,
         component_id,
         default_attachments,
-        size
-    );
+        size,
+        cecs_component_storage_attachment_usage_user
+    )->user_attachments;
 }
 
 bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *out_removed_attachments) {
@@ -186,7 +188,7 @@ bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_compone
     }
     
     if (out_removed_attachments != NULL) {
-        memcpy(out_removed_attachments, &removed_attachments, removed_attachments.attachments_size);
+        memcpy(out_removed_attachments, removed_attachments.user_attachments, removed_attachments.attachments_size);
     }
     return true;
 }

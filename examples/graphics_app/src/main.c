@@ -75,18 +75,18 @@ int main(void) {
     cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
     cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
     
-    const cecs_uniform_raw_stream *stream = CECS_WORLD_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &world, &system.context, id, &((color4_f32_uniform){
+    const cecs_uniform_raw_stream *stream = CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, id, &((color4_f32_uniform){
         .r = 0.5f,
         .g = 0.5f,
         .b = 0.5f,
         .a = 1.0f,
     }));
-    // CECS_WORLD_SET_COMPONENT_AS_UNIFORM(position4_f32_uniform, &world, &system.context, id, &((position4_f32_uniform){
-    //     .x = 0.0f,
-    //     .y = 0.0f,
-    //     .z = 0.0f,
-    //     .w = 0.0f,
-    // }));
+    CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(position4_f32_uniform, &system, &world, id, &((position4_f32_uniform){
+        .x = 0.0f,
+        .y = 0.0f,
+        .z = 0.0f,
+        .w = 0.0f,
+    }));
     (void)stream;
 
     // builder = cecs_mesh_builder_create_from(&builder, builder.descriptor);
@@ -112,7 +112,7 @@ int main(void) {
         timespec_get(&t, TIME_UTC);
         double t_sec = (double)t.tv_sec + (double)t.tv_nsec / 1e9;
         clear_color = (WGPUColor){ sin(t_sec), cos(t_sec), cos(sin(t_sec)), 1.0f };
-        CECS_WORLD_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &world, &system.context, id, &((color4_f32_uniform){
+        CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, id, &((color4_f32_uniform){
             .r = clear_color.r,
             .g = clear_color.g,
             .b = clear_color.b,
