@@ -17,6 +17,7 @@ size_t cecs_discard_ensure(cecs_discard *discard, cecs_arena *a, size_t size) {
 }
 
 void *cecs_discard_use(cecs_discard *discard, cecs_arena *a, size_t size) {
-    assert(cecs_discard_ensure(discard, a, size) >= size && "fatal error: discard size could not be ensured");
+    const size_t ensured_size = cecs_discard_ensure(discard, a, size);
+    assert(ensured_size >= size && "fatal error: discard size could not be ensured");
     return discard->handle;
 }

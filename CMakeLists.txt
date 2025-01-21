@@ -143,4 +143,8 @@ if(CECS_GRAPHICS)
         glfw3webgpu
     )
     target_copy_webgpu_binaries(${PROJECT_NAME})
+
+    if (MSVC)
+        target_compile_options(${PROJECT_NAME} PUBLIC /wd4244)
+    endif()
 endif()
