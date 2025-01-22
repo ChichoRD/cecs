@@ -14,7 +14,7 @@ cecs_world_resources cecs_world_resources_create(size_t resource_capactity, size
     cecs_world_resources wr;
     wr.resources_arena = cecs_arena_create_with_capacity(resource_capactity * (resource_default_size + sizeof(cecs_resource_handle)));
     wr.resource_handles = cecs_displaced_set_create_with_capacity(&wr.resources_arena, sizeof(cecs_resource_handle) * resource_capactity);
-    wr.discard = (cecs_resource_discard){ 0 };
+    wr.discard = cecs_discard_create();
     return wr;
 }
 
@@ -29,10 +29,7 @@ bool cecs_world_resources_has_resource(const cecs_world_resources* wr, cecs_reso
 }
 
 cecs_resource_handle cecs_world_resources_set_resource(cecs_world_resources* wr, cecs_resource_id id, void* resource, size_t size) {
-    if (size > wr->discard.size) {
-        wr->discard.handle = cecs_arena_realloc(&wr->resources_arena, wr->discard.handle, wr->discard.size, size);
-        wr->discard.size = size;
-    }
+    cecs_discard_ensure(&wr->discard, &wr->resources_arena, size);
 
     cecs_resource_handle handle = cecs_world_resources_has_resource(wr, id)
         ? *CECS_DISPLACED_SET_GET(cecs_resource_handle, &wr->resource_handles, (size_t)id)

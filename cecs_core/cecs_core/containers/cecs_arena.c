@@ -139,26 +139,37 @@ cecs_arena cecs_arena_create_with_capacity(size_t capacity) {
     return a;
 }
 
-static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(cecs_arena* a, void* data_block, size_t current_size, size_t new_size, cecs_linked_block** out_old_data_block, cecs_linked_block** out_fit) {
+static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(
+    cecs_arena* a,
+    void* data_block,
+    size_t current_size,
+    size_t new_size,
+    cecs_linked_block** out_old_data_block,
+    cecs_linked_block **out_previous_to_old_data_block,
+    cecs_linked_block** out_fit
+) {
     *out_fit = NULL;
+    cecs_linked_block* previous_to_old_data_block = NULL;
     cecs_linked_block* old_data_block = NULL;
+    cecs_linked_block *previous = NULL;
     cecs_linked_block* current = a->first_block;
     cecs_arena_reallocation_strategy strategy = cecs_arena_reallocate_none;
     while (
         current != NULL
         && (strategy == cecs_arena_reallocate_none || old_data_block == NULL)
-        ) {
+    ) {
         bool in_data_block = ((uint8_t*)data_block >= current->b.data)
             && ((uint8_t*)data_block + current_size <= (current->b.data + current->b.size));
         if (in_data_block) {
             assert(old_data_block == NULL && "error: data cannot be present simultaneously in multiple blocks");
+            previous_to_old_data_block = previous;
             old_data_block = current;
 
             bool data_is_last_in_block = (uint8_t*)data_block + current_size == current->b.data + current->b.size;
             if (
                 data_is_last_in_block
                 && (new_size <= current_size || cecs_block_can_alloc(&current->b, new_size - current_size))
-                ) {
+            ) {
                 strategy = cecs_arena_reallocate_in_place;
             }
         }
@@ -166,19 +177,21 @@ static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(cecs_arena* 
         if (cecs_block_can_alloc(&current->b, new_size) && strategy == cecs_arena_reallocate_none) {
             *out_fit = current;
 
-            if (current_size >= current->b.capacity / 4) {
+            if (current_size >= current->b.capacity / 8) {
                 strategy = cecs_arena_reallocate_split;
             }
             else {
                 strategy = cecs_arena_reallocate_fit;
             }
         }
+        previous = current;
         current = current->next;
     }
     if (current == NULL && strategy == cecs_arena_reallocate_none) {
         strategy = cecs_arena_reallocate_new;
     }
 
+    *out_previous_to_old_data_block = previous_to_old_data_block;
     *out_old_data_block = old_data_block;
     return strategy;
 }
@@ -221,9 +234,10 @@ void* cecs_arena_realloc(cecs_arena* a, void* data_block, size_t current_size, s
         return cecs_arena_alloc(a, new_size);
     }
 
-    cecs_linked_block* old_data_block;
-    cecs_linked_block* fit;
-    switch (cecs_arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &fit)) {
+    cecs_linked_block *previous_to_old_data_block;
+    cecs_linked_block *old_data_block;
+    cecs_linked_block *fit;
+    switch (cecs_arena_realloc_find_fit(a, data_block, current_size, new_size, &old_data_block, &previous_to_old_data_block, &fit)) {
     case cecs_arena_reallocate_in_place: {
         assert(old_data_block != NULL && "error: no data block found in arena");
         old_data_block->b.size += (ptrdiff_t)new_size - (ptrdiff_t)current_size;
@@ -254,6 +268,16 @@ void* cecs_arena_realloc(cecs_arena* a, void* data_block, size_t current_size, s
         }
         else {
             new_data_block = cecs_block_alloc(&fit->b, new_size);
+        }
+
+        if (
+            old_data_block->b.size == 0
+            && previous_to_old_data_block != NULL
+            && (previous_to_old_data_block->b.data + previous_to_old_data_block->b.size == old_data_block->b.data)
+        ) {
+            previous_to_old_data_block->b.capacity += old_data_block->b.capacity;
+            previous_to_old_data_block->next = old_data_block->next;
+            free(old_data_block);
         }
 
         if (new_data_block != data_block)

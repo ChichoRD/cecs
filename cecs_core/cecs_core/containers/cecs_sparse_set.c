@@ -352,15 +352,15 @@ bool cecs_sparse_set_remove_range(
     }
 }
 
-static inline uint8_t cecs_paged_sparse_set_log2(size_t n) {
+static inline uint_fast8_t cecs_paged_sparse_set_log2(size_t n) {
 #if (SIZE_MAX == 0xFFFF)
-    return (uint8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n));
+    return (uint_fast8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n));
 
 #elif (SIZE_MAX == 0xFFFFFFFF)
-    return (uint8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt((uint32_t)n));
+    return (uint_fast8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt((uint32_t)n));
 
 #elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
-    return (uint8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt64((uint64_t)n));
+    return (uint_fast8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt64((uint64_t)n));
 
 #else
     #error TBD code SIZE_T_BITS
@@ -369,14 +369,21 @@ static inline uint8_t cecs_paged_sparse_set_log2(size_t n) {
 #endif
 }
 
-static inline uint8_t cecs_paged_sparse_set_page_index(size_t key) {
+uint_fast8_t cecs_log2(size_t n) {
+    return cecs_paged_sparse_set_log2(n);
+}
+
+static inline uint_fast8_t cecs_paged_sparse_set_page_index(size_t key) {
     return cecs_paged_sparse_set_log2(key) >> CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
 }
 
-static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint8_t page_index) {
-    const size_t mask_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE * ((size_t)page_index + 1);
-    size_t page_key = (key & (((size_t)1 << (mask_size)) - 1))
-        >> (mask_size - CECS_PAGED_SPARSE_SET_PAGE_SIZE);
+static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint_fast8_t page_index) {
+    const size_t mask_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE * (size_t)page_index;
+    const size_t upper_mask = (SIZE_MAX << mask_size);
+
+    const size_t upper_key = key & upper_mask;
+    const size_t lower_key = key & ~upper_mask;
+    const size_t page_key = (upper_key >> mask_size) + lower_key;
     return page_key;
 }
 
@@ -436,7 +443,7 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers_with_capacity(cec
 }
 
 static cecs_sparse_set_key_to_index *cecs_paged_sparse_set_key_to_index(cecs_paged_sparse_set *s, size_t key, size_t *out_page_key) {
-    uint8_t page_index = cecs_paged_sparse_set_page_index(key);
+    uint_fast8_t page_index = cecs_paged_sparse_set_page_index(key);
     *out_page_key = cecs_paged_sparse_set_page_key(key, page_index);
     return &s->keys_to_indices[page_index];
 }

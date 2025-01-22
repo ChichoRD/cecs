@@ -154,6 +154,7 @@ cecs_component_iterator_descriptor cecs_component_iterator_descriptor_create(con
     cecs_dynamic_array sized_component_ids = CECS_DYNAMIC_ARRAY_CREATE_WITH_CAPACITY(cecs_component_id, iterator_temporary_arena, search_groups.group_count);
     size_t sized_component_count = 0;
     size_t component_count = 0;
+    (void)component_count;
     size_t max_component_count = 0;
     for (size_t i = 0; i < search_groups.group_count; i++) {
         cecs_components_type_info info = CECS_UNION_GET_UNCHECKED(CECS_COMPONENTS_ALL_ID, search_groups.groups[i]);

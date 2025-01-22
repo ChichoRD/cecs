@@ -7,6 +7,7 @@
 #include "../../containers/cecs_union.h"
 #include "../../containers/cecs_sparse_set.h"
 #include "../../containers/cecs_arena.h"
+#include "../../containers/cecs_discard.h"
 #include "entity/cecs_entity.h"
 #include "cecs_component_storage.h"
 
@@ -19,18 +20,22 @@ inline cecs_world_components_checksum cecs_world_components_checksum_remove(cecs
     return cecs_world_components_checksum_hash(current - (cecs_world_components_checksum)component_id);
 }
 
-
-typedef struct cecs_component_discard {
-    void *handle;
-    size_t size;
-} cecs_component_discard;
+typedef cecs_discard cecs_component_discard;
 
 typedef CECS_OPTION_STRUCT(size_t *, cecs_optional_component_size) cecs_optional_component_size;
+typedef enum cecs_component_storage_attachment_usage {
+    cecs_component_storage_attachment_usage_none = 0,
+    cecs_component_storage_attachment_usage_user = 1 << 0,
+} cecs_component_storage_attachment_usage;
+typedef uint32_t cecs_component_storage_attachment_usage_flags;
+
 typedef struct cecs_component_storage_attachments {
     void *user_attachments;
     size_t attachments_size;
+    cecs_component_storage_attachment_usage_flags flags;
 } cecs_component_storage_attachments;
 
+// TODO: hashmap data structure
 typedef struct cecs_world_components {
     cecs_arena storages_arena;
     cecs_arena components_arena;
@@ -184,21 +189,23 @@ size_t cecs_world_components_remove_component_array(
     size_t count
 );
 
-void *cecs_world_components_set_component_storage_attachments(
+const cecs_component_storage_attachments *cecs_world_components_set_component_storage_attachments(
     cecs_world_components *wc,
     cecs_component_id component_id,
     void *attachments,
-    size_t size
+    size_t size,
+    cecs_component_storage_attachment_usage_flags flags
 );
 
 bool cecs_world_components_has_component_storage_attachments(const cecs_world_components *wc, cecs_component_id component_id);
-void *cecs_world_components_get_component_storage_attachments_unchecked(const cecs_world_components *wc, cecs_component_id component_id);
+const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_unchecked(const cecs_world_components *wc, cecs_component_id component_id);
 
-void *cecs_world_components_get_or_set_component_storage_attachments(
+const cecs_component_storage_attachments *cecs_world_components_get_or_set_component_storage_attachments(
     cecs_world_components *wc,
     cecs_component_id component_id,
     void *attachments,
-    size_t size
+    size_t size,
+    cecs_component_storage_attachment_usage_flags flags
 );
 
 bool cecs_world_components_remove_component_storage_attachments(

@@ -59,6 +59,7 @@ static inline cecs_components_search_groups cecs_components_search_groups_create
     };
 }
 
+// TODO: count macro should map each va_arg to literal 1 and sum them
 #define CECS_COMPONENTS_SEARCH_GROUPS_CREATE_RAW(...) \
     cecs_components_search_groups_create( \
         ((cecs_components_search_group[]){ __VA_ARGS__ }), \

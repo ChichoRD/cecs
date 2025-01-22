@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include "cecs_displaced_set.h"
 
 cecs_displaced_set cecs_displaced_set_create(void) {
@@ -22,8 +23,7 @@ void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t ind
     if (cecs_displaced_set_is_empty(s)) {
         s->index_range = cecs_exclusive_range_singleton(index);
         return cecs_dynamic_array_append_empty(&s->elements, a, 1, size);
-    }
-    else {
+    } else if (!cecs_displaced_set_contains_index(s, index)) {
         cecs_exclusive_range expanded_range = cecs_exclusive_range_from(
             cecs_range_union(s->index_range.range, cecs_exclusive_range_singleton(index).range)
         );
@@ -39,15 +39,20 @@ void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t ind
         if (!cecs_exclusive_range_is_empty(range0)) {
             size_t missing_count = cecs_exclusive_range_length(range0);
             return cecs_dynamic_array_prepend_empty(&s->elements, a, missing_count, size);
-        }
-        else if (!cecs_exclusive_range_is_empty(range1)) {
+        } else if (!cecs_exclusive_range_is_empty(range1)) {
             size_t missing_count = cecs_exclusive_range_length(range1);
             return cecs_dynamic_array_append_empty(&s->elements, a, missing_count, size);
+        } else {
+            assert(false && "unreachable: range splitting error");
+            exit(EXIT_FAILURE);
         }
-        else {
-            assert(false && "unreachable: should not have called expand with an index within bounds");
-            return cecs_dynamic_array_get(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, index), size);
-        }
+    } else {
+        size_t array_index = cecs_displaced_set_cecs_dynamic_array_index(s, index);
+        assert(
+            array_index < cecs_dynamic_array_count_of_size(&s->elements, size)
+            && "error: index out of bounds"
+        );
+        return cecs_dynamic_array_get(&s->elements, array_index, size);
     }
 }
 

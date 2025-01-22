@@ -11,6 +11,8 @@
 #define CECS_ENTITY_ID_TYPE uint64_t
 typedef CECS_ENTITY_ID_TYPE cecs_entity_id;
 
+#define CECS_ENTITY_ID_MAX UINT64_MAX
+
 typedef struct cecs_world_entities {
     cecs_arena entity_ids_arena;
     cecs_sparse_set entity_ids;

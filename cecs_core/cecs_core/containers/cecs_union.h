@@ -50,7 +50,7 @@
 
 typedef uint8_t cecs_none;
 #define CECS_NONE ((cecs_none)0)
-#define CECS_OPTION(identifier) option_##identifier
+#define CECS_OPTION(identifier) cecs_option_##identifier
 #define CECS_OPTION_STRUCT(type, identifier) _CECS_UNION_STRUCT(CECS_OPTION(identifier), identifier, cecs_none, cecs_none, type, identifier)
 
 #define CECS_OPTION_CREATE_SOME(identifier, value) CECS_UNION_CREATE(identifier, identifier, value)

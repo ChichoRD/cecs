@@ -151,8 +151,9 @@ void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component
         &w->components,
         component_id,
         attachments,
-        size
-    );
+        size,
+        cecs_component_storage_attachment_usage_user
+    )->user_attachments;
 }
 
 bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
@@ -163,7 +164,7 @@ void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_com
     return cecs_world_components_get_component_storage_attachments_unchecked(
         &w->components,
         component_id
-    );
+    )->user_attachments;
 }
 
 void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *default_attachments, size_t size) {
@@ -171,8 +172,9 @@ void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_co
         &w->components,
         component_id,
         default_attachments,
-        size
-    );
+        size,
+        cecs_component_storage_attachment_usage_user
+    )->user_attachments;
 }
 
 bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *out_removed_attachments) {
@@ -186,7 +188,7 @@ bool cecs_world_remove_component_storage_attachments(cecs_world *w, cecs_compone
     }
     
     if (out_removed_attachments != NULL) {
-        memcpy(out_removed_attachments, &removed_attachments, removed_attachments.attachments_size);
+        memcpy(out_removed_attachments, removed_attachments.user_attachments, removed_attachments.attachments_size);
     }
     return true;
 }
@@ -285,6 +287,14 @@ size_t cecs_world_remove_tag_array(cecs_world *w, cecs_entity_id_range range, ce
     );
 }
 
+void *cecs_world_use_component_discard(cecs_world *w, size_t size)  {
+    return cecs_discard_use(&w->components.discard, &w->components.components_arena, size);
+}
+
+void *cecs_world_use_resource_discard(cecs_world *w, size_t size) {
+    return cecs_discard_use(&w->resources.discard, &w->resources.resources_arena, size);
+}
+
 cecs_entity_id cecs_world_add_entity(cecs_world* w) {
     cecs_entity_id e = cecs_world_entities_add_entity(&w->entities);
 #if CECS_WORLD_FLAG_ALL_ENTITIES
@@ -309,7 +319,7 @@ cecs_entity_id cecs_world_clear_entity(cecs_world* w, cecs_entity_id entity_id) 
             storage.storage,
             &w->components.components_arena,
             entity_id,
-            w->components.discard.handle,
+            cecs_world_use_component_discard(w, storage.component_size),
             storage.component_size
         );
     }
@@ -378,12 +388,11 @@ size_t cecs_world_clear_entity_range(cecs_world *w, cecs_entity_id_range range, 
         cecs_world_components_entity_iterator_next(&it)
     ) {
         cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
-        // TODO: get_handle, maybe it's too small
         cecs_component_storage_remove_array(
             storage.storage,
             &w->components.components_arena,
             range.start,
-            w->components.discard.handle,
+            cecs_world_use_component_discard(w, storage.component_size),
             cecs_exclusive_range_length(range),
             storage.component_size
         );
