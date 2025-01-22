@@ -162,6 +162,7 @@ bool cecs_sparse_set_remove(cecs_sparse_set *s, cecs_arena *a, size_t key, void 
 #endif
 #define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT (1 << CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2)
 static_assert(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT == (sizeof(size_t) * 8), "CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT != sizeof(size_t) * 8");
+extern uint_fast8_t cecs_log2(size_t n);
 
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2 (CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 - CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE (1 << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2)

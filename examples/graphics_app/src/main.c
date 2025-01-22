@@ -40,6 +40,17 @@ static cecs_mesh_builder *mesh_builder_configure_sqaure(cecs_mesh_builder *build
         4,
         sizeof(color3_f32_attribute)
     );
+    cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(uv2_f32_attribute),
+        (uv2_f32_attribute[]) {
+            // quad 4 uvs
+            { .u = 0.0f, .v = 0.0f },
+            { .u = 1.0f, .v = 0.0f },
+            { .u = 1.0f, .v = 1.0f },
+            { .u = 0.0f, .v = 1.0f },
+        },
+        4,
+        sizeof(uv2_f32_attribute)
+    );
     return builder;
 }
 
@@ -93,7 +104,6 @@ int main(void) {
     // mesh_builder_configure_sqaure(&builder);
     // mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
     // cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
-    cecs_arena_free(&builder_arena);
 
     test_pass pass = test_pass_create(&system.context, (cecs_render_target_info){
         .format = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration.format,
@@ -103,6 +113,29 @@ int main(void) {
 
     WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
     (void)clear_color;
+    
+    cecs_texture_builder texture_builder = cecs_texture_builder_create(&system.world, &builder_arena, (cecs_texture_builder_descriptor){
+        .bytes_per_texel = 4,
+        .channel_count = 4,
+        .flags = cecs_texture_builder_descriptor_config_generate_mipmaps,
+    });
+    cecs_texture_builder_load_from(
+        &texture_builder,
+        "../../examples/graphics_app/src/sample.png",
+        WGPUTextureDimension_2D,
+        WGPUTextureFormat_RGBA8Unorm,
+        WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
+    );
+    cecs_texture_reference texture_ref = cecs_texture_builder_build_into(&world, &texture_builder, &system.context, &(WGPUTextureViewDescriptor){
+        .format = WGPUTextureFormat_RGBA8Unorm,
+        .dimension = WGPUTextureViewDimension_2D,
+        .baseMipLevel = 0,
+        .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
+        .baseArrayLayer = 0,
+        .arrayLayerCount = 1,
+    });
+    CECS_WORLD_SET_COMPONENT(cecs_texture_reference, &world, id, &texture_ref);
+    cecs_arena_free(&builder_arena);
 
     bool render_error = false;
     while (!glfwWindowShouldClose(window) && !render_error) {

@@ -1,11 +1,13 @@
 struct vertex_input {
     @location(0) position: vec2<f32>,
-    @location(1) color: vec3<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) color: vec3<f32>,
 };
 
 struct vertex_output {
     @builtin(position) position: vec4<f32>,
-    @location(0) color: vec3<f32>,
+    @location(0) uv: vec2<f32>,
+    @location(1) color: vec3<f32>,
 };
 
 @group(0) @binding(0) var<uniform> view_proj: mat4x4<f32>;
@@ -15,7 +17,7 @@ fn vs_main(input: vertex_input) -> vertex_output {
     var out: vertex_output;
     out.position = vec4<f32>(input.position + position.xy, 0.0, 1.0);
     out.color = input.color;
-
+    out.uv = input.uv;
     return out;
 }
 
@@ -50,10 +52,11 @@ fn hsv_from_rgb(color: vec3f) -> vec3f {
     return vec3f(h, s, v);
 }
 
+@group(0) @binding(1) var texture_sampler: sampler;
 @group(1) @binding(0) var<uniform> color: vec4<f32>;
+@group(2) @binding(0) var albedo_texture: texture_2d<f32>;
 
 @fragment
 fn fs_main(input: vertex_output) -> @location(0) vec4<f32> {
-    return vec4<f32>(color.rgb, 1.0);
-    //return vec4<f32>(hsv_from_rgb(color.rgb) / 360.0, 1.0);
+    return textureSample(albedo_texture, texture_sampler, input.uv) * color;
 }

@@ -127,6 +127,7 @@ if(CECS_GRAPHICS)
         ${PROJECT_NAME}
         PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/cecs_graphics/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/"
         ${CECS_CORE_DIRECTORY}
     )
     target_link_libraries(

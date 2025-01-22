@@ -87,8 +87,7 @@ void* cecs_dynamic_array_remove_swap_last(cecs_dynamic_array* l, cecs_arena* a, 
     return swapped;
 }
 
-void cecs_dynamic_array_clear(cecs_dynamic_array* l)
-{
+void cecs_dynamic_array_clear(cecs_dynamic_array* l) {
     l->count = 0;
 }
 

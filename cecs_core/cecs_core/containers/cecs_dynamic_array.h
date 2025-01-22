@@ -47,6 +47,11 @@ void *cecs_dynamic_array_set(cecs_dynamic_array *l, size_t index, void *element,
 #define CECS_DYNAMIC_ARRAY_SET(type, dynamic_array_ref, index, element_ref) \
     ((type *)cecs_dynamic_array_set(dynamic_array_ref, index, element_ref, sizeof(type)))
 
+static inline void *cecs_dynamic_array_first(const cecs_dynamic_array *l) {
+    assert(l->count > 0 && "Attempted to get first element of empty cecs_dynamic_array");
+    return l->elements;
+}
+
 static inline void *cecs_dynamic_array_last(const cecs_dynamic_array *l, size_t size) {
     assert(l->count > 0 && "Attempted to get last element of empty cecs_dynamic_array");
     return (uint8_t *)l->elements + (l->count - size);

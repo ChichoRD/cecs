@@ -35,6 +35,7 @@ typedef struct cecs_component_storage_attachments {
     cecs_component_storage_attachment_usage_flags flags;
 } cecs_component_storage_attachments;
 
+// TODO: hashmap data structure
 typedef struct cecs_world_components {
     cecs_arena storages_arena;
     cecs_arena components_arena;

@@ -7,6 +7,7 @@
 typedef struct test_pass {
     WGPURenderPipeline pipeline;
     WGPUBindGroupLayout local_bgl;
+    WGPUBindGroupLayout local_texture_bgl;
     WGPUBindGroup global_bg;
     WGPUBuffer global_uniform_buffer;
 } test_pass;
@@ -23,6 +24,17 @@ typedef struct position2_f32_attribute {
 } position2_f32_attribute;
 CECS_COMPONENT_DECLARE(position2_f32_attribute);
 WGPUVertexBufferLayout position2_f32_attribute_layout(
+    uint32_t shader_location,
+    WGPUVertexAttribute out_attributes[],
+    size_t out_attributes_capacity
+);
+
+typedef struct uv2_f32_attribute {
+    float u;
+    float v;
+} uv2_f32_attribute;
+CECS_COMPONENT_DECLARE(uv2_f32_attribute);  
+WGPUVertexBufferLayout uv2_f32_attribute_layout(
     uint32_t shader_location,
     WGPUVertexAttribute out_attributes[],
     size_t out_attributes_capacity

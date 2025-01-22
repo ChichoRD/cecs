@@ -3,5 +3,6 @@
 
 #include "core/cecs_graphics_system.h"
 #include "core/cecs_mesh_builder.h" // TODO: !!TEMP
+#include "core/cecs_texture_builder.h" // TODO: !!TEMP
 
 #endif

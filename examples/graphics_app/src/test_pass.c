@@ -73,13 +73,30 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                     .minBindingSize = sizeof(position4_f32_uniform),
                     .nextInChain = NULL,
                 },
-            }
+            },
+        },
+    });
+    WGPUBindGroupLayout local_texture_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
+        .label = "Test Pass Local Texture Bind Group Layout",
+        .nextInChain = NULL,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupLayoutEntry[]) {
+            {
+                .binding = 0,
+                .visibility = WGPUShaderStage_Fragment,
+                .texture = (WGPUTextureBindingLayout) {
+                    .sampleType = WGPUTextureSampleType_Float,
+                    .viewDimension = WGPUTextureViewDimension_2D,
+                    .multisampled = false,
+                    .nextInChain = NULL,
+                },
+            },
         },
     });
     WGPUBindGroupLayout global_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
         .label = "Test Pass Global Bind Group Layout",
         .nextInChain = NULL,
-        .entryCount = 1,
+        .entryCount = 2,
         .entries = (WGPUBindGroupLayoutEntry[]) {
             {
                 .binding = 0,
@@ -91,12 +108,20 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                     .nextInChain = NULL,
                 },
             },
+            {
+                .binding = 1,
+                .visibility = WGPUShaderStage_Fragment,
+                .sampler = (WGPUSamplerBindingLayout) {
+                    .type = WGPUSamplerBindingType_Filtering,
+                    .nextInChain = NULL,
+                },
+            }
         },
     });
     WGPUBindGroup global_bg = wgpuDeviceCreateBindGroup(context->device, &(WGPUBindGroupDescriptor) {
         .label = "Test Pass Global Bind Group",
         .layout = global_bgl,
-        .entryCount = 1,
+        .entryCount = 2,
         .entries = (WGPUBindGroupEntry[]) {
             {
                 .binding = 0,
@@ -104,14 +129,31 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .offset = 0,
                 .size = sizeof(camera_matrix_uniform),
             },
+            {
+                .binding = 1,
+                .sampler = wgpuDeviceCreateSampler(context->device, &(WGPUSamplerDescriptor) {
+                    .label = "Test Pass Sampler",
+                    .nextInChain = NULL,
+                    .addressModeU = WGPUAddressMode_ClampToEdge,
+                    .addressModeV = WGPUAddressMode_ClampToEdge,
+                    .addressModeW = WGPUAddressMode_ClampToEdge,
+                    .magFilter = WGPUFilterMode_Linear,
+                    .minFilter = WGPUFilterMode_Linear,
+                    .mipmapFilter = WGPUMipmapFilterMode_Linear,
+                    .lodMinClamp = 0.0f,
+                    .lodMaxClamp = 1.0f,
+                    .compare = WGPUCompareFunction_Undefined,
+                    .maxAnisotropy = 1,
+                }),
+            }
         },
     });
 
     const WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(context->device, &(WGPUPipelineLayoutDescriptor) {
         .label = "Test Pass Pipeline Layout",
         .nextInChain = NULL,
-        .bindGroupLayoutCount = 2,
-        .bindGroupLayouts = (WGPUBindGroupLayout[]){global_bgl, local_bgl},
+        .bindGroupLayoutCount = 3,
+        .bindGroupLayouts = (WGPUBindGroupLayout[]){global_bgl, local_bgl, local_texture_bgl},
     });
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(
         context->device,
@@ -121,10 +163,11 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
             .vertex = (WGPUVertexState) {
                 .entryPoint = "vs_main",
                 .module = shader_module,
-                .bufferCount = 2,
+                .bufferCount = 3,
                 .buffers = (WGPUVertexBufferLayout[]) {
                     position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
-                    color3_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
+                    uv2_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
+                    color3_f32_attribute_layout(2, (WGPUVertexAttribute[1]){0}, 1),
                 },
             },
             .fragment = &(WGPUFragmentState) {
@@ -159,12 +202,14 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
     return (test_pass){
         .pipeline = pipeline,
         .local_bgl = local_bgl,
+        .local_texture_bgl = local_texture_bgl,
         .global_bg = global_bg,
     };
 }
 
 void test_pass_free(test_pass *pass) {
     wgpuBindGroupLayoutRelease(pass->local_bgl);
+    wgpuBindGroupLayoutRelease(pass->local_texture_bgl);
     wgpuBindGroupRelease(pass->global_bg);
     wgpuBufferRelease(pass->global_uniform_buffer);
     wgpuRenderPipelineRelease(pass->pipeline);
@@ -176,6 +221,7 @@ static WGPUBindGroup test_pass_create_local_bind_group(
     cecs_buffer_storage_attachment *color_uniform_buffer,
     cecs_buffer_storage_attachment *position_uniform_buffer
 ) {
+    // TODO: texture binding to different bind group to not swap the whole
     return wgpuDeviceCreateBindGroup(device, &(WGPUBindGroupDescriptor) {
         .label = "Test Pass Local Bind Group",
         .layout = pass->local_bgl,
@@ -192,6 +238,24 @@ static WGPUBindGroup test_pass_create_local_bind_group(
                 .buffer = position_uniform_buffer->buffer.buffer,
                 .offset = 0,
                 .size = position_uniform_buffer->buffer.uploaded_size,
+            }
+        }
+    });
+}
+
+static WGPUBindGroup test_pass_create_local_texture_bind_group(
+    test_pass *pass,
+    WGPUDevice device,
+    cecs_texture *texture
+) {
+    return wgpuDeviceCreateBindGroup(device, &(WGPUBindGroupDescriptor) {
+        .label = "Test Pass Local Texture Bind Group",
+        .layout = pass->local_texture_bgl,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupEntry[]) {
+            {
+                .binding = 0,
+                .textureView = texture->texture_view,
             }
         }
     });
@@ -217,11 +281,6 @@ static void test_pass_draw_inner(
         *out_local_bind_groups_count = 0;
         return;
     }
-    //wgpuDeviceCreateTexture
-    //WGPUTextureDescriptor
-    //WGPUSamplerDescriptor
-    //WGPUTextureViewDescriptor
-    //wgpuTextureCreateView()
     (void)target;
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
 
@@ -233,17 +292,27 @@ static void test_pass_draw_inner(
         color3_f32_attribute,
         &system->world
     );
+    cecs_buffer_storage_attachment *uv_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
+        uv2_f32_attribute,
+        &system->world
+    );
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
-    assert(in_local_bind_groups_capacity >= 1 && "error: out local bind groups capacity must be at least 1");
+    cecs_component_storage *texture_storage = cecs_world_components_get_component_storage_unchecked(
+        &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
+    );
+    assert(in_local_bind_groups_capacity >= 2 && "error: out local bind groups capacity must be at least 1");
     out_local_bind_groups[0] =
         test_pass_create_local_bind_group(pass, system->context.device, ubos.color, ubos.position);
+    out_local_bind_groups[1] = NULL;
     *out_local_bind_groups_count = 1;
 
     typedef cecs_uniform_raw_stream cecs_raw_color_stream;
     typedef cecs_uniform_raw_stream cecs_raw_position_stream;
-    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_mesh, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream) handle;
+    CECS_COMPONENT_ITERATION_HANDLE_STRUCT(
+        cecs_mesh, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream, cecs_texture_reference
+    ) handle;
     cecs_arena arena = cecs_arena_create();
     for (
         cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, &arena,
@@ -253,6 +322,7 @@ static void test_pass_draw_inner(
                 CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(color4_f32_uniform)),
                 CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(position4_f32_uniform))
             ),
+            CECS_COMPONENTS_ALL(cecs_texture_reference)
         );
         !cecs_component_iterator_done(&it);
         cecs_component_iterator_next(&it)
@@ -266,14 +336,27 @@ static void test_pass_draw_inner(
         cecs_raw_stream color = cecs_mesh_get_raw_vertex_stream(
             *handle.cecs_mesh_component, sizeof(color3_f32_attribute), &color_buffer->buffer
         );
+        cecs_raw_stream uv = cecs_mesh_get_raw_vertex_stream(
+            *handle.cecs_mesh_component, sizeof(uv2_f32_attribute), &uv_buffer->buffer
+        );
 
         wgpuRenderPassEncoderSetBindGroup(render_pass, 1, out_local_bind_groups[0], 2, (const uint32_t[]){
             handle.cecs_raw_color_stream_component->offset,
             handle.cecs_raw_position_stream_component->offset
         });
 
+        cecs_texture *texture =
+            cecs_component_storage_get_unchecked(texture_storage, handle.cecs_texture_reference_component->texture_id, sizeof(cecs_texture));
+        if (out_local_bind_groups[1] != NULL) {
+            wgpuBindGroupRelease(out_local_bind_groups[1]);
+        }
+        out_local_bind_groups[1] = test_pass_create_local_texture_bind_group(pass, system->context.device, texture);
+        *out_local_bind_groups_count = 2;
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 2, out_local_bind_groups[1], 0, NULL);
+
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position.offset, position.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, color_buffer->buffer.buffer, color.offset, color.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, uv_buffer->buffer.buffer, uv.offset, uv.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 2, color_buffer->buffer.buffer, color.offset, color.size);
 
         if (handle.cecs_index_stream_component == NULL) {
             wgpuRenderPassEncoderDraw(
@@ -337,9 +420,9 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
         wgpuCommandEncoderBeginRenderPass(render_pass_encoder, &render_pass_descriptor);
     
 
-    WGPUBindGroup local_bind_groups[1];
+    WGPUBindGroup local_bind_groups[2];
     size_t local_bind_groups_count;
-    test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 1, &local_bind_groups_count);
+    test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 2, &local_bind_groups_count);
 
     wgpuRenderPassEncoderEnd(render_pass);
     for (size_t i = 0; i < local_bind_groups_count; ++i) {
@@ -380,6 +463,27 @@ WGPUVertexBufferLayout position2_f32_attribute_layout(
 
     return (WGPUVertexBufferLayout) {
         .arrayStride = sizeof(position2_f32_attribute),
+        .stepMode = WGPUVertexStepMode_Vertex,
+        .attributeCount = 1,
+        .attributes = out_attributes,
+    };
+}
+
+CECS_COMPONENT_DEFINE(uv2_f32_attribute);
+WGPUVertexBufferLayout uv2_f32_attribute_layout(
+    uint32_t shader_location,
+    WGPUVertexAttribute out_attributes[],
+    size_t out_attributes_capacity
+) {
+    assert(out_attributes_capacity >= 1 && "error: out attributes capacity must be at least 1");
+    out_attributes[0] = (WGPUVertexAttribute) {
+        .format = WGPUVertexFormat_Float32x2,
+        .offset = 0,
+        .shaderLocation = shader_location,
+    };
+
+    return (WGPUVertexBufferLayout) {
+        .arrayStride = sizeof(uv2_f32_attribute),
         .stepMode = WGPUVertexStepMode_Vertex,
         .attributeCount = 1,
         .attributes = out_attributes,
