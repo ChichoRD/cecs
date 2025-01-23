@@ -373,8 +373,9 @@ uint_fast8_t cecs_log2(size_t n) {
     return cecs_paged_sparse_set_log2(n);
 }
 
-static inline uint_fast8_t cecs_paged_sparse_set_page_index(size_t key) {
-    return cecs_paged_sparse_set_log2(key) >> CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
+static inline uint_fast8_t cecs_paged_sparse_set_page_index(size_t key, uint_fast8_t *out_key_log2) {
+    *out_key_log2 = cecs_paged_sparse_set_log2(key);
+    return *out_key_log2 >> CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
 }
 
 static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint_fast8_t page_index) {
@@ -383,7 +384,10 @@ static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint_fast8_t pag
 
     const size_t upper_key = key & upper_mask;
     const size_t lower_key = key & ~upper_mask;
-    const size_t page_key = (upper_key >> mask_size) + lower_key;
+
+    const size_t page_key =
+        ((upper_key >> mask_size))
+        | ((lower_key) << CECS_PAGED_SPARSE_SET_PAGE_SIZE);
     return page_key;
 }
 
@@ -443,7 +447,10 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers_with_capacity(cec
 }
 
 static cecs_sparse_set_key_to_index *cecs_paged_sparse_set_key_to_index(cecs_paged_sparse_set *s, size_t key, size_t *out_page_key) {
-    uint_fast8_t page_index = cecs_paged_sparse_set_page_index(key);
+    uint_fast8_t key_log2;
+    uint_fast8_t page_index = cecs_paged_sparse_set_page_index(key, &key_log2);
+    (void)key_log2;
+    
     *out_page_key = cecs_paged_sparse_set_page_key(key, page_index);
     return &s->keys_to_indices[page_index];
 }
