@@ -118,7 +118,7 @@ void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
 }
 
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset) {
-    return cecs_sparse_set_index_unchecked(cecs_dynamic_wgpu_buffer_get_stage((cecs_dynamic_wgpu_buffer *)buffer), offset);
+    return cecs_sparse_set_get_index_expect(cecs_dynamic_wgpu_buffer_get_stage((cecs_dynamic_wgpu_buffer *)buffer), offset);
 }
 
 typedef struct cecs_buffer_staging_parameters {
