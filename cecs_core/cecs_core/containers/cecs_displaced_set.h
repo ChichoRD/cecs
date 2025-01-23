@@ -30,7 +30,7 @@ bool cecs_displaced_set_contains(const cecs_displaced_set *s, size_t index, void
 
 bool cecs_displaced_set_is_empty(cecs_displaced_set *s);
 
-void *cecs_displaced_set_expand(cecs_displaced_set *s, cecs_arena *a, size_t index, size_t size);
+void *cecs_displaced_set_expand(cecs_displaced_set *s, cecs_arena *a, size_t index, size_t size, int null_bit_pattern);
 
 void *cecs_displaced_set_set(cecs_displaced_set *s, cecs_arena *a, size_t index, void *element, size_t size);
 #define CECS_DISPLACED_SET_SET(type, set_ref, arena_ref, index, element_ref) \
