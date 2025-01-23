@@ -37,7 +37,32 @@
     }
     
 
-typedef CECS_OPTION_STRUCT(size_t, cecs_dense_index) cecs_dense_index;
+typedef struct cecs_sparse_set_index {
+    size_t value;
+} cecs_sparse_set_index;
+static_assert(sizeof(cecs_sparse_set_index) <= sizeof(size_t), "static error: cecs_sparse_set_index must be no larger than size_t");
+
+#define CECS_SPARSE_SET_INDEX_INVALID_VALUE SIZE_MAX
+#define CECS_SPARSE_SET_INDEX_INVALID_VALUE_INT ((int)((uintptr_t)CECS_SPARSE_SET_INDEX_INVALID_VALUE))
+#define CECS_SPARSE_SET_INDEX_INVALID_VALUE_U8 UINT8_MAX
+static_assert(
+    CECS_SPARSE_SET_INDEX_INVALID_VALUE_U8 == (uint8_t)CECS_SPARSE_SET_INDEX_INVALID_VALUE,
+    "static error: invalid cecs_sparse_set_index invalid uint8_t value, must be equal to SIZE_MAX when downcasted"
+);
+static_assert(
+    ((size_t)((uintptr_t)CECS_SPARSE_SET_INDEX_INVALID_VALUE_INT)) == CECS_SPARSE_SET_INDEX_INVALID_VALUE,
+    "static error: invalid cecs_sparse_set_index invalid int value, raw bytes of the constant must match SIZE_MAX's"
+);
+extern const cecs_sparse_set_index cecs_sparse_set_index_invalid;
+inline bool cecs_sparse_set_index_check(const cecs_sparse_set_index index) {
+    return index.value != cecs_sparse_set_index_invalid.value;
+}
+
+inline size_t cecs_sparse_set_index_look(const cecs_sparse_set_index index) {
+    assert(cecs_sparse_set_index_check(index) && "error: tried to access invalid cecs_sparse_set_index");
+    return index.value;
+}
+
 typedef CECS_OPTION_STRUCT(void *, cecs_optional_element) cecs_optional_element;
 
 typedef cecs_dynamic_array cecs_any_elements;
@@ -96,14 +121,14 @@ static inline size_t cecs_sparse_set_count_of_size(const cecs_sparse_set *s, siz
     return cecs_sparse_set_base_count_of_size(&s->base, element_size);
 }
 
-cecs_dense_index cecs_sparse_set_index(const cecs_sparse_set *s, size_t key);
-static inline size_t cecs_sparse_set_index_unchecked(const cecs_sparse_set *s, size_t key) {
-    return CECS_OPTION_GET(cecs_dense_index, cecs_sparse_set_index(s, key));
+cecs_sparse_set_index cecs_sparse_set_get_index(const cecs_sparse_set *s, size_t key);
+static inline size_t cecs_sparse_set_get_index_expect(const cecs_sparse_set *s, size_t key) {
+    return cecs_sparse_set_index_look(cecs_sparse_set_get_index(s, key));
 }
 
 static inline bool cecs_sparse_set_contains(const cecs_sparse_set *s, size_t key) {
     return cecs_displaced_set_contains_index(&s->key_to_index, key)
-        && CECS_OPTION_IS_SOME(cecs_dense_index, cecs_sparse_set_index(s, key));
+        && cecs_sparse_set_index_check(cecs_sparse_set_get_index(s, key));
 }
 static inline bool cecs_sparse_set_is_empty(const cecs_sparse_set *s) {
     return cecs_sparse_set_base_is_empty(&s->base);

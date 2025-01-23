@@ -19,10 +19,10 @@ bool cecs_displaced_set_is_empty(cecs_displaced_set* s) {
     return cecs_exclusive_range_is_empty(s->index_range);
 }
 
-void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t index, size_t size) {
+void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t index, size_t size, int null_bit_pattern) {
     if (cecs_displaced_set_is_empty(s)) {
         s->index_range = cecs_exclusive_range_singleton(index);
-        return cecs_dynamic_array_append_empty(&s->elements, a, 1, size);
+        return memset(cecs_dynamic_array_append_empty(&s->elements, a, 1, size), null_bit_pattern, size);
     } else if (!cecs_displaced_set_contains_index(s, index)) {
         cecs_exclusive_range expanded_range = cecs_exclusive_range_from(
             cecs_range_union(s->index_range.range, cecs_exclusive_range_singleton(index).range)
@@ -38,10 +38,10 @@ void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t ind
         s->index_range = expanded_range;
         if (!cecs_exclusive_range_is_empty(range0)) {
             size_t missing_count = cecs_exclusive_range_length(range0);
-            return cecs_dynamic_array_prepend_empty(&s->elements, a, missing_count, size);
+            return memset(cecs_dynamic_array_prepend_empty(&s->elements, a, missing_count, size), null_bit_pattern, missing_count * size);
         } else if (!cecs_exclusive_range_is_empty(range1)) {
             size_t missing_count = cecs_exclusive_range_length(range1);
-            return cecs_dynamic_array_append_empty(&s->elements, a, missing_count, size);
+            return  memset(cecs_dynamic_array_append_empty(&s->elements, a, missing_count, size), null_bit_pattern, missing_count * size);
         } else {
             assert(false && "unreachable: range splitting error");
             exit(EXIT_FAILURE);
@@ -58,17 +58,17 @@ void* cecs_displaced_set_expand(cecs_displaced_set* s, cecs_arena* a, size_t ind
 
 void* cecs_displaced_set_set(cecs_displaced_set* s, cecs_arena* a, size_t index, void* element, size_t size) {
     if (!cecs_displaced_set_contains_index(s, index)) {
-        cecs_displaced_set_expand(s, a, index, size);
+        cecs_displaced_set_expand(s, a, index, size, 0);
     }
     return cecs_dynamic_array_set(&s->elements, cecs_displaced_set_cecs_dynamic_array_index(s, index), element, size);
 }
 
 void *cecs_displaced_set_set_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *elements, size_t size) {
     if (!cecs_displaced_set_contains_index(s, range.start)) {
-        cecs_displaced_set_expand(s, a, range.start, size);
+        cecs_displaced_set_expand(s, a, range.start, size, 0);
     }
     if (!cecs_displaced_set_contains_index(s, range.end)) {
-        cecs_displaced_set_expand(s, a, range.end, size);
+        cecs_displaced_set_expand(s, a, range.end, size, 0);
     }
 
     return cecs_dynamic_array_set_range(
@@ -82,10 +82,10 @@ void *cecs_displaced_set_set_range(cecs_displaced_set *s, cecs_arena *a, cecs_in
 
 void *cecs_displaced_set_set_copy_range(cecs_displaced_set *s, cecs_arena *a, cecs_inclusive_range range, void *single_src, size_t size) {
     if (!cecs_displaced_set_contains_index(s, range.start)) {
-        cecs_displaced_set_expand(s, a, range.start, size);
+        cecs_displaced_set_expand(s, a, range.start, size, 0);
     }
     if (!cecs_displaced_set_contains_index(s, range.end)) {
-        cecs_displaced_set_expand(s, a, range.end, size);
+        cecs_displaced_set_expand(s, a, range.end, size, 0);
     }
 
     return cecs_dynamic_array_set_copy_range(
