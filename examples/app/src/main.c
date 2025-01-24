@@ -693,7 +693,31 @@ bool finalize(cecs_world *w) {
     return EXIT_SUCCESS;
 }
 
+#include "cecs_core/containers/cecs_flatmap.h"
+
 int main(void) {
+    cecs_arena a = cecs_arena_create();
+    cecs_flatmap map = cecs_flatmap_create();
+    for (size_t i = 0; i < 100; i++) {
+        void *out_value;
+        cecs_flatmap_add(&map, &a, i, &i, sizeof(size_t), &out_value);
+    }
+
+    void *o;
+    cecs_flatmap_add(&map, &a, 120, &(size_t){120}, sizeof(size_t), &o);
+
+    for (size_t i = 25; i < 50; i++) {
+        void *out_value;
+        cecs_flatmap_remove(&map, &a, i, &out_value, sizeof(size_t));
+    }
+
+    size_t *out_value;
+    if (cecs_flatmap_get(&map, 69, &out_value, sizeof(size_t))) {
+        printf("%zu\n", *out_value);
+    }
+
+    cecs_arena_free(&a);
+    return 0;
     cecs_world w = cecs_world_create(1024, 32, 4);
 
     bool quitting = false;

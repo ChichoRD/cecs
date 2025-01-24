@@ -386,9 +386,9 @@ static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint_fast8_t pag
     const size_t lower_key = key & ~upper_mask;
 
     static const uint_fast8_t key_log_mask = (1 << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2) - 1;
-    const size_t page_key =
-        (key_log2 & key_log_mask)
-        | (((upper_key >> mask_size) + lower_key) << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2);
+    const uint_fast8_t upper_key_low_bit_count = (key_log2 & key_log_mask) + 1;
+    // static_assert(false);
+    const size_t page_key = (upper_key >> mask_size) | ((lower_key) << upper_key_low_bit_count);
     return page_key;
 }
 
