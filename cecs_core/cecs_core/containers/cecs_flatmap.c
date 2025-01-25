@@ -338,3 +338,50 @@ void *cecs_flatmap_get_or_add(
     }
     return out_value;
 }
+
+cecs_flatmap_iterator cecs_flatmap_iterator_create_at(cecs_flatmap *m, size_t index) {
+    return (cecs_flatmap_iterator){
+        .m = m,
+        .index = index
+    };
+}
+
+bool cecs_flatmap_iterator_done(const cecs_flatmap_iterator *it) {
+    return it->index >= it->m->count;
+}
+
+bool cecs_flatmap_iterator_done_occupied(const cecs_flatmap_iterator *it, size_t occupied_visited) {
+    return occupied_visited >= it->m->occupied || cecs_flatmap_iterator_done(it);
+}
+
+size_t cecs_flatmap_iterator_next(cecs_flatmap_iterator *it){
+    return ++it->index;
+}
+
+size_t cecs_flatmap_iterator_next_occupied(cecs_flatmap_iterator *it) {
+    cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(it->m, it->index); 
+    bool deleted = false;
+    do {
+        deleted = ctrl->next == cecs_flatmap_ctrl_deleted.next;
+        if (deleted) {
+            ++it->index;
+            ++ctrl;
+        } else {
+            uint_fast8_t next = max(1, ctrl->next);
+            it->index += next;
+            ctrl += next;
+        }
+    } while (
+        !cecs_flatmap_iterator_done(it)
+        && (deleted || ctrl->next == cecs_flatmap_ctrl_empty.next)
+    );
+    return it->index;
+}
+
+cecs_flatmap_hash_header *cecs_flatmap_iterator_current_hash(const cecs_flatmap_iterator *it, const size_t value_size) {
+    return cecs_flatmap_hash_value_at(it->m, it->index, value_size);
+}
+
+void *cecs_flatmap_iterator_current_value(const cecs_flatmap_iterator *it, const size_t value_size) {
+    return cecs_flatmap_iterator_current_hash(it, value_size) + 1;
+}

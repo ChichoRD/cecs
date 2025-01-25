@@ -84,4 +84,21 @@ void *cecs_flatmap_get_or_add(
     const size_t value_size
 );
 
+typedef struct cecs_flatmap_iterator {
+    cecs_flatmap *m;
+    size_t index;
+} cecs_flatmap_iterator;
+
+cecs_flatmap_iterator cecs_flatmap_iterator_create_at(cecs_flatmap *m, size_t index);
+bool cecs_flatmap_iterator_done(const cecs_flatmap_iterator *it);
+bool cecs_flatmap_iterator_done_occupied(const cecs_flatmap_iterator *it, size_t occupied_visited);
+size_t cecs_flatmap_iterator_next(cecs_flatmap_iterator *it);
+size_t cecs_flatmap_iterator_next_occupied(cecs_flatmap_iterator *it);
+
+static inline size_t cecs_flatmap_iterator_current(const cecs_flatmap_iterator *it) {
+    return it->index;
+}
+cecs_flatmap_hash_header *cecs_flatmap_iterator_current_hash(const cecs_flatmap_iterator *it, const size_t value_size);
+void *cecs_flatmap_iterator_current_value(const cecs_flatmap_iterator *it, const size_t value_size);
+
 #endif
