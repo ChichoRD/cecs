@@ -698,22 +698,45 @@ bool finalize(cecs_world *w) {
 int main(void) {
     cecs_arena a = cecs_arena_create();
     cecs_flatmap map = cecs_flatmap_create();
-    for (size_t i = 0; i < 100; i++) {
-        void *out_value;
-        cecs_flatmap_add(&map, &a, i, &i, sizeof(size_t), &out_value);
+    // prepare some quick tests and assertions for the flatmap
+    // needs same sized data
+
+    struct test {
+        uint8_t a;
+        uint8_t b;
+    };
+
+    for (size_t i = 0; i < 125; i++) {
+        void *out;
+        cecs_flatmap_add(&map, &a, i, &(struct test){i, i}, sizeof(struct test), &out);
     }
 
-    void *o;
-    cecs_flatmap_add(&map, &a, 120, &(size_t){120}, sizeof(size_t), &o);
-
-    for (size_t i = 25; i < 50; i++) {
-        void *out_value;
-        cecs_flatmap_remove(&map, &a, i, &out_value, sizeof(size_t));
+    for (size_t i = 0; i < 125; i++) {
+        void *out;
+        cecs_flatmap_get(&map, i, &out, sizeof(struct test));
+        struct test *t = out;
+        assert(t->a == i);
+        assert(t->b == i);
     }
 
-    size_t *out_value;
-    if (cecs_flatmap_get(&map, 69, &out_value, sizeof(size_t))) {
-        printf("%zu\n", *out_value);
+    for (size_t i = 5; i < 120; i++) {
+        struct test out;
+        bool rm = cecs_flatmap_remove(&map, &a, i, &out, sizeof(struct test));
+        assert(rm);
+        assert(out.a == i);
+        assert(out.b == i);
+    }
+
+    for (size_t i = 0; i < 125; i++) {
+        void *out;
+        cecs_flatmap_get(&map, i, &out, sizeof(struct test));
+        struct test *t = out;
+        if (i >= 5 && i < 120) {
+            assert(t == NULL);
+        } else {
+            assert(t->a == i);
+            assert(t->b == i);
+        }
     }
 
     cecs_arena_free(&a);

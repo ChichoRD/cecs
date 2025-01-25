@@ -26,6 +26,7 @@ static_assert(
 #define CECS_FLATMAP_CTRL_NEXT_MAX ((1 << CECS_FLATMAP_CTRL_NEXT_BITS) - 1)
 extern const uint8_t cecs_flatmap_ctrl_next_max;
 extern const cecs_flatmap_ctrl cecs_flatmap_ctrl_empty;
+extern const cecs_flatmap_ctrl cecs_flatmap_ctrl_deleted;
 
 #define CECS_FLATMAP_LOW_HASH_BITS_LOG2 2
 #define CECS_FLATMAP_LOW_HASH_BITS (1 << CECS_FLATMAP_LOW_HASH_BITS_LOG2)
@@ -45,6 +46,7 @@ typedef union cecs_flatmap_hash_header {
 typedef struct cecs_flatmap {
     cecs_flatmap_ctrl *ctrl_and_hash_values;
     size_t count;
+    size_t occupied;
 } cecs_flatmap;
 
 cecs_flatmap cecs_flatmap_create(void);
