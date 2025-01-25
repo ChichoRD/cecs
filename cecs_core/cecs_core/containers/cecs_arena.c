@@ -177,7 +177,7 @@ static cecs_arena_reallocation_strategy cecs_arena_realloc_find_fit(
         if (cecs_block_can_alloc(&current->b, new_size) && strategy == cecs_arena_reallocate_none) {
             *out_fit = current;
 
-            if (current_size >= current->b.capacity / 8) {
+            if (current_size >= current->b.size / 2) {
                 strategy = cecs_arena_reallocate_split;
             }
             else {
