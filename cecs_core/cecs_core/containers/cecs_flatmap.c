@@ -79,8 +79,8 @@ static bool cecs_flatmap_find_or_next_empty(
     *out_previous_index = m->count;
     cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
     while (ctrl->next != cecs_flatmap_ctrl_empty.next) {
-        *out_previous_index = index;
         if (ctrl->next == cecs_flatmap_ctrl_deleted.next) {
+            *out_previous_index = index;
             ++index;
             ++ctrl;
             continue;
@@ -93,7 +93,8 @@ static bool cecs_flatmap_find_or_next_empty(
                 return true;
             }
         }
-
+        
+        *out_previous_index = index;
         index += ctrl->next;
         ctrl += ctrl->next;
     }
