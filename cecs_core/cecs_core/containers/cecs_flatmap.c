@@ -6,8 +6,69 @@
 const uint8_t cecs_flatmap_ctrl_next_max = CECS_FLATMAP_CTRL_NEXT_MAX;
 const cecs_flatmap_low_hash cecs_flatmap_low_hash_mask = CECS_FLATMPAP_LOW_HASH_MASK;
 
-const cecs_flatmap_ctrl cecs_flatmap_ctrl_empty = { .next = 0, .low_hash = 0 };
-const cecs_flatmap_ctrl cecs_flatmap_ctrl_deleted = { .next = CECS_FLATMAP_CTRL_NEXT_MAX, .low_hash = 0 };
+const cecs_flatmap_ctrl cecs_flatmap_ctrl_empty =
+    { .occupied = true, .next_different = 0, .low_hash = 0 };
+const cecs_flatmap_ctrl cecs_flatmap_ctrl_deleted =
+    { .occupied = true, .next_different = 1 << (CECS_FLATMAP_CTRL_NEXT_BITS - 1), .low_hash = 0 };
+
+
+const uint8_t cecs_flatmap_ctrl_non_occupied_next_max = CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX;
+const cecs_flatmap_ctrl_non_occupied cecs_flatmap_ctrl_non_occupied_empty = { .occupied = false, .next_different = 0 };
+const cecs_flatmap_ctrl_non_occupied cecs_flatmap_ctrl_non_occupied_deleted =
+    { .occupied = false, .next_different = CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX_HALF + 1 };
+
+static inline cecs_flatmap_ctrl_non_occupied *cecs_flatmap_ctrl_non_occupied_from(cecs_flatmap_ctrl *ctrl) {
+    assert(!ctrl->occupied && "error: flatmap ctrl must be non-occupied");
+    return (cecs_flatmap_ctrl_non_occupied *)ctrl;
+}
+
+static inline bool cecs_flatmap_ctrl_is_empty(cecs_flatmap_ctrl ctrl) {
+    return !ctrl.occupied
+        && cecs_flatmap_ctrl_non_occupied_from(&ctrl)->next_different < cecs_flatmap_ctrl_non_occupied_deleted.next_different;
+}
+
+static inline bool cecs_flatmap_ctrl_is_deleted(cecs_flatmap_ctrl ctrl) {
+    return !ctrl.occupied
+        && cecs_flatmap_ctrl_non_occupied_from(&ctrl)->next_different >= cecs_flatmap_ctrl_non_occupied_deleted.next_different;
+}
+
+static inline uint_fast8_t cecs_flatmap_ctrl_non_occupied_get_next_different(cecs_flatmap_ctrl_non_occupied ctrl) {
+    return (ctrl.next_different >= cecs_flatmap_ctrl_non_occupied_deleted.next_different)
+        ? ctrl.next_different - CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX_HALF - 1
+        : ctrl.next_different;
+}
+
+static inline cecs_flatmap_ctrl_non_occupied *cecs_flatmap_ctrl_set_empty(cecs_flatmap_ctrl *ctrl, uint_fast8_t next_different) {
+    assert(next_different <= CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX_HALF && "error: flatmap ctrl next different must be less or equal to half max");
+    ctrl->occupied = false;
+    cecs_flatmap_ctrl_non_occupied *non_occupied = cecs_flatmap_ctrl_non_occupied_from(ctrl);
+    non_occupied->next_different = next_different;
+    return non_occupied;
+}
+
+static inline cecs_flatmap_ctrl_non_occupied *cecs_flatmap_ctrl_set_deleted(cecs_flatmap_ctrl *ctrl, uint_fast8_t next_different) {
+    assert(next_different <= CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX_HALF && "error: flatmap ctrl next different must be less or equal to half max");
+    ctrl->occupied = false;
+    cecs_flatmap_ctrl_non_occupied *non_occupied = cecs_flatmap_ctrl_non_occupied_from(ctrl);
+    non_occupied->next_different = min(next_different + CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX_HALF + 1, CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX);
+    return non_occupied;
+}
+
+static inline cecs_flatmap_ctrl_non_occupied *cecs_flatmap_ctrl_non_occupied_set_next_different(cecs_flatmap_ctrl *ctrl, uint_fast8_t next_different) {
+    assert(next_different <= CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX && "error: flatmap ctrl next different must be less or equal to max");
+    assert(!ctrl->occupied && "error: flatmap ctrl must be non-occupied");
+    if (cecs_flatmap_ctrl_is_empty(*ctrl)) {
+        return cecs_flatmap_ctrl_set_empty(ctrl, next_different);
+    } else {
+        return cecs_flatmap_ctrl_set_deleted(ctrl, next_different);
+    }
+}
+
+static inline uint_fast8_t cecs_flatmap_ctrl_next_different(cecs_flatmap_ctrl ctrl) {
+    return ctrl.occupied
+        ? ctrl.next_different
+        : cecs_flatmap_ctrl_non_occupied_get_next_different(*cecs_flatmap_ctrl_non_occupied_from(&ctrl));
+}
 
 
 static inline cecs_flatmap_low_hash cecs_flatmap_hash_split(cecs_flatmap_hash *in_out_hash) {
@@ -78,25 +139,27 @@ static bool cecs_flatmap_find_or_next_empty(
 
     *out_previous_index = m->count;
     cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
-    while (ctrl->next != cecs_flatmap_ctrl_empty.next) {
-        if (ctrl->next == cecs_flatmap_ctrl_deleted.next) {
-            *out_previous_index = index;
-            ++index;
-            ++ctrl;
-            continue;
-        }
-
-        if (ctrl->low_hash == low_hash) {
-            const cecs_flatmap_hash_header *hash_value = cecs_flatmap_hash_value_at(m, index, value_size);
-            if (hash_value->high_hash == hash) {
-                *out_index = index;
-                return true;
+    while (!cecs_flatmap_ctrl_is_empty(*ctrl)) {
+        uint_fast8_t increment;
+        if (cecs_flatmap_ctrl_is_deleted(*ctrl)) {
+            increment = cecs_flatmap_ctrl_non_occupied_get_next_different(
+                *cecs_flatmap_ctrl_non_occupied_from(ctrl)
+            );
+        } else {
+            increment = 1;
+            if (ctrl->low_hash == low_hash) {
+                const cecs_flatmap_hash_header *hash_value = cecs_flatmap_hash_value_at(m, index, value_size);
+                if (hash_value->high_hash == hash) {
+                    *out_index = index;
+                    return true;
+                }
             }
         }
         
         *out_previous_index = index;
-        index += ctrl->next;
-        ctrl += ctrl->next;
+        increment = max(1, increment);
+        index += increment;
+        ctrl += increment;
     }
 
     *out_index = index;
@@ -120,19 +183,16 @@ static bool cecs_flatmap_find_next_empty(
 
     *out_previous_index = m->count;
     cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
-    while (ctrl->next == 1) {
+    while (ctrl->occupied) {
         *out_previous_index = index;
-        ++index;
-        ++ctrl;
+
+        uint_fast8_t increment = max(1, cecs_flatmap_ctrl_next_different(*ctrl));
+        index += increment;
+        ctrl += increment;
     }
 
-    if (ctrl->next == cecs_flatmap_ctrl_empty.next || ctrl->next == cecs_flatmap_ctrl_deleted.next) {
-        *out_index = index;
-        return true;
-    } else {
-        *out_index = index + 1;
-        return true;
-    }
+    *out_index = index + ctrl->occupied;
+    return true;
 }
 
 cecs_flatmap cecs_flatmap_create(void) {
@@ -192,22 +252,24 @@ static size_t cecs_flatmap_set_count_and_rehash(cecs_flatmap *m, cecs_arena *a, 
     m->occupied = 0;
     memset(m->ctrl_and_hash_values, 0, new_map_size);
     
-    size_t i = 0;
-    while (i < old_map.count) {
-        cecs_flatmap_ctrl old_ctrl = *cecs_flatmap_ctrl_at(&old_map, i);
-        if (old_ctrl.next != cecs_flatmap_ctrl_empty.next && old_ctrl.next != cecs_flatmap_ctrl_deleted.next) {
-            cecs_flatmap_hash_header *old_hash_value = cecs_flatmap_hash_value_at(&old_map, i, value_size);
-            cecs_flatmap_hash hash =
-                (old_hash_value->high_hash << CECS_FLATMAP_LOW_HASH_BITS) | (cecs_flatmap_hash)old_ctrl.low_hash;
+    cecs_flatmap_iterator it = cecs_flatmap_iterator_create_at(&old_map, 0);
+    if (old_map.count > 0 && !old_map.ctrl_and_hash_values[0].occupied) {
+        cecs_flatmap_iterator_next_occupied(&it);
+    }
 
-            void *out_value;
-            bool added = cecs_flatmap_add(m, a, hash, old_hash_value + 1, value_size, &out_value);
-            assert(added && "fatal error: flatmap rehash failed to add value");
+    size_t occupied_count = 0;
+    while (!cecs_flatmap_iterator_done_occupied(&it, occupied_count)) {
+        const cecs_flatmap_ctrl old_ctrl = *cecs_flatmap_ctrl_at(&old_map, it.index);
+        const cecs_flatmap_hash_header *old_hash_value = cecs_flatmap_hash_value_at(&old_map, it.index, value_size);
+        const cecs_flatmap_hash hash =
+            (old_hash_value->high_hash << CECS_FLATMAP_LOW_HASH_BITS) | (cecs_flatmap_hash)old_ctrl.low_hash;
 
-            i += old_ctrl.next;
-        } else {
-            ++i;
-        }
+        void *out_value;
+        bool added = cecs_flatmap_add(m, a, hash, old_hash_value + 1, value_size, &out_value);
+        assert(added && "fatal error: flatmap rehash failed to add value");
+        ++occupied_count;
+
+        cecs_flatmap_iterator_next_occupied(&it);
     }
 
     assert(m->occupied == old_map.occupied && "fatal error: flatmap rehash failed to maintain occupied count");
@@ -230,6 +292,7 @@ bool cecs_flatmap_add(
     size_t previous_index;
     size_t index;
     if (cecs_flatmap_find_or_next_empty(m, hash, &index, value_size, &previous_index)) {
+        *out_value = NULL;
         return false;
     }
 
@@ -240,17 +303,22 @@ bool cecs_flatmap_add(
     assert(index + 1 < m->count && "error: flatmap insertion index must be below the last value index, last is reserved for empty");
 
     cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
+    ctrl->occupied = true;
     ctrl->low_hash = cecs_flatmap_hash_split(&hash);
+    if (ctrl[1].occupied) {
+        ctrl->next_different = min(ctrl[1].next_different + 1, cecs_flatmap_ctrl_next_max);
+    } else {
+        ctrl->next_different = 1;
+    }
+
     if (previous_index < m->count) {
         cecs_flatmap_ctrl *prev_ctrl = cecs_flatmap_ctrl_at(m, previous_index);
-        if (prev_ctrl->next > 1) {
-            ctrl->next = prev_ctrl->next - 1;
-            prev_ctrl->next = 1;
+        if (prev_ctrl->occupied) {
+            prev_ctrl->next_different = min(prev_ctrl->next_different + ctrl->next_different, cecs_flatmap_ctrl_next_max);
         } else {
-            ctrl->next = 1;
+            assert(prev_ctrl->next_different >= 1 && "fatal error: flatmap previous next value must be at least 1");
+            cecs_flatmap_ctrl_non_occupied_set_next_different(prev_ctrl, max(1, prev_ctrl->next_different - 1));
         }
-    } else {
-        ctrl->next = 1;
     }
 
     cecs_flatmap_hash_header *hash_value = cecs_flatmap_hash_value_at(m, index, value_size);
@@ -277,44 +345,23 @@ bool cecs_flatmap_remove(
     assert(index + 1 < m->count && "error: flatmap removal index must be below the last value index, last is reserved for empty");
     
     cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
+    uint_fast8_t next_different;
+    if (ctrl[1].occupied) {
+        next_different = 1;
+    } else {
+        next_different = ctrl[1].next_different + 1;
+    }
+    cecs_flatmap_ctrl_non_occupied *non_occupied = cecs_flatmap_ctrl_set_deleted(ctrl, next_different);
+
     if (previous_index < m->count) {
         cecs_flatmap_ctrl *prev_ctrl = cecs_flatmap_ctrl_at(m, previous_index);
-        if (prev_ctrl->next != cecs_flatmap_ctrl_empty.next && prev_ctrl->next != cecs_flatmap_ctrl_deleted.next) {
-            uint_fast8_t new_previous_next = prev_ctrl->next + ctrl->next;
-            assert(new_previous_next >= 2 && "fatal error: flatmap previous next value must be at least 2");
-            
-            if (new_previous_next < cecs_flatmap_ctrl_next_max) {
-                prev_ctrl->next = new_previous_next;
-            } else {
-                bool has_previous = true;
-                do {
-                    cecs_flatmap_rehash(m, a, value_size);
-                    bool found = cecs_flatmap_find_or_next_empty(m, hash, &index, value_size, &previous_index);
-                    assert(found && "fatal error: flatmap rehash failed to find value after rehash");
-
-                    ctrl = cecs_flatmap_ctrl_at(m, index);
-                    new_previous_next = ctrl->next;
-
-                    has_previous = previous_index < m->count;
-                    if (has_previous) {
-                        prev_ctrl = cecs_flatmap_ctrl_at(m, previous_index);
-                        new_previous_next += prev_ctrl->next;
-                    }
-                    assert(
-                        (has_previous || new_previous_next < cecs_flatmap_ctrl_next_max)
-                        && "fatal error: in order to exceed next max, there must be a previous value to achieve this with a sum,"
-                        "else ctrl has overflowed"
-                    );
-                } while (new_previous_next >= cecs_flatmap_ctrl_next_max);
-
-                if (has_previous) {
-                    prev_ctrl->next = new_previous_next;
-                }
-            }
-            assert(new_previous_next < cecs_flatmap_ctrl_next_max && "fatal error: flatmap next value overflow");
+        if (prev_ctrl->occupied) {
+            assert(prev_ctrl->next_different >= 1 && "fatal error: flatmap previous next value must be at least 1");
+            prev_ctrl->next_different = max(1, prev_ctrl->next_different - 1);
+        } else {
+            cecs_flatmap_ctrl_non_occupied_set_next_different(prev_ctrl, prev_ctrl->next_different + ctrl->next_different);
         }
     }
-    ctrl->next = cecs_flatmap_ctrl_deleted.next;
 
     cecs_flatmap_hash_header *hash_value = cecs_flatmap_hash_value_at(m, index, value_size);
     memcpy(out_removed_value, hash_value + 1, value_size);
@@ -361,20 +408,20 @@ size_t cecs_flatmap_iterator_next(cecs_flatmap_iterator *it){
 
 size_t cecs_flatmap_iterator_next_occupied(cecs_flatmap_iterator *it) {
     cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(it->m, it->index); 
-    bool deleted = false;
     do {
-        deleted = ctrl->next == cecs_flatmap_ctrl_deleted.next;
-        if (deleted) {
-            ++it->index;
-            ++ctrl;
+        uint_fast8_t increment;
+        if (ctrl->occupied) {
+            increment = 1;
         } else {
-            uint_fast8_t next = max(1, ctrl->next);
-            it->index += next;
-            ctrl += next;
+            increment = max(1, cecs_flatmap_ctrl_non_occupied_get_next_different(
+                *cecs_flatmap_ctrl_non_occupied_from(ctrl)
+            ));
         }
+        it->index += increment;
+        ctrl += increment;
     } while (
         !cecs_flatmap_iterator_done(it)
-        && (deleted || ctrl->next == cecs_flatmap_ctrl_empty.next)
+        && !ctrl->occupied
     );
     return it->index;
 }
