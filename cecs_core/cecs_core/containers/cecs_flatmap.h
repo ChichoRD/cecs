@@ -11,49 +11,46 @@ typedef uint64_t cecs_flatmap_hash;
 typedef uint8_t cecs_flatmap_low_hash;
 typedef uint64_t cecs_flatmap_high_hash;
 
-typedef struct cecs_flatmap_ctrl {
+typedef struct cecs_flatmap_ctrl_occupied {
     bool occupied : 1;
-    uint8_t next_different : 3;
-    cecs_flatmap_low_hash low_hash : 4;
+    cecs_flatmap_low_hash low_hash : 7;
+} cecs_flatmap_ctrl_occupied;
+typedef struct cecs_flatmap_ctrl_non_occupied {
+    bool occupied : 1;
+    bool deleted : 1;
+    uint8_t last_non_occupied : 6;
+} cecs_flatmap_ctrl_non_occupied;
+typedef struct cecs_flatmap_ctrl_any {
+    bool occupied : 1;
+    uint8_t uninitialised : 7;
+} cecs_flatmap_ctrl_any;
+
+typedef union cecs_flatmap_ctrl {
+    cecs_flatmap_ctrl_occupied occupied;
+    cecs_flatmap_ctrl_non_occupied non_occupied;
+    cecs_flatmap_ctrl_any any;
 } cecs_flatmap_ctrl;
-
-#define CECS_FLATMAP_CTRL_NEXT_BITS 3
-#define CECS_FLATMAP_CTRL_NEXT_MAX ((1 << CECS_FLATMAP_CTRL_NEXT_BITS) - 1)
-
-extern const uint8_t cecs_flatmap_ctrl_next_max;
-extern const cecs_flatmap_ctrl cecs_flatmap_ctrl_empty;
-extern const cecs_flatmap_ctrl cecs_flatmap_ctrl_deleted;
-
-#define CECS_FLATMAP_LOW_HASH_BITS_LOG2 2
-#define CECS_FLATMAP_LOW_HASH_BITS (1 << CECS_FLATMAP_LOW_HASH_BITS_LOG2)
-#define CECS_FLATMAP_LOW_HASH_BITS_VALUE 4
 static_assert(
-    CECS_FLATMAP_LOW_HASH_BITS == CECS_FLATMAP_LOW_HASH_BITS_VALUE,
-    "static error: low hash bits value mismatch"
+    sizeof(cecs_flatmap_ctrl_occupied) == sizeof(cecs_flatmap_ctrl_occupied)
+    && sizeof(cecs_flatmap_ctrl_occupied) == sizeof(cecs_flatmap_ctrl_any),
+    "static error: flatmap ctrl size mismatch"
 );
+static_assert(
+    sizeof(cecs_flatmap_ctrl) == sizeof(uint8_t),
+    "static error: flatmap ctrl size must be 1 byte"
+);
+
+#define CECS_FLATMAP_LOW_HASH_BITS 7
 #define CECS_FLATMPAP_LOW_HASH_MASK ((1 << CECS_FLATMAP_LOW_HASH_BITS) - 1)
 extern const cecs_flatmap_low_hash cecs_flatmap_low_hash_mask;
 
-typedef struct cecs_flatmap_ctrl_non_occupied {
-    bool occupied : 1;
-    uint8_t next_different : 7;
-} cecs_flatmap_ctrl_non_occupied;
-static_assert(
-    sizeof(cecs_flatmap_ctrl) == sizeof(cecs_flatmap_ctrl_non_occupied),
-    "static error: flatmap ctrl size mismatch"
-);
+#define CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_BITS 6
+#define CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_MAX ((1 << CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_BITS) - 1)
 
-#define CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_BITS 7
-#define CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX ((1 << CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_BITS) - 1)
-#define CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX_HALF (CECS_FLATMAP_CTRL_NON_OCCUPIED_NEXT_MAX >> 1)
-
-extern const uint8_t cecs_flatmap_ctrl_non_occupied_next_max;
-extern const cecs_flatmap_ctrl_non_occupied cecs_flatmap_ctrl_non_occupied_empty;
-extern const cecs_flatmap_ctrl_non_occupied cecs_flatmap_ctrl_non_occupied_deleted;
-
+extern const uint8_t cecs_flatmap_ctrl_non_occupied_last_max;
 
 typedef union cecs_flatmap_hash_header {
-    cecs_flatmap_high_hash high_hash;
+    //cecs_flatmap_high_hash high_hash;
     cecs_flatmap_hash hash;
 } cecs_flatmap_hash_header;
 
@@ -68,7 +65,7 @@ cecs_flatmap cecs_flatmpa_create_with_size(cecs_arena *a, size_t capacity, size_
 
 bool cecs_flatmap_get(
     const cecs_flatmap *m,
-    cecs_flatmap_hash hash,
+    const cecs_flatmap_hash hash,
     void **out_value,
     const size_t value_size
 );
@@ -76,7 +73,7 @@ bool cecs_flatmap_get(
 bool cecs_flatmap_add(
     cecs_flatmap *m,
     cecs_arena *a,
-    cecs_flatmap_hash hash,
+    const cecs_flatmap_hash hash,
     const void *value,
     const size_t value_size,
     void **out_value
@@ -85,7 +82,7 @@ bool cecs_flatmap_add(
 bool cecs_flatmap_remove(
     cecs_flatmap *m,
     cecs_arena *a,
-    cecs_flatmap_hash hash,
+    const cecs_flatmap_hash hash,
     void *out_removed_value,
     const size_t value_size
 );
@@ -93,19 +90,19 @@ bool cecs_flatmap_remove(
 void *cecs_flatmap_get_or_add(
     cecs_flatmap *m,
     cecs_arena *a,
-    cecs_flatmap_hash hash,
+    const cecs_flatmap_hash hash,
     const void *value,
     const size_t value_size
 );
 
 typedef struct cecs_flatmap_iterator {
-    cecs_flatmap *m;
+    cecs_flatmap *map;
     size_t index;
 } cecs_flatmap_iterator;
 
-cecs_flatmap_iterator cecs_flatmap_iterator_create_at(cecs_flatmap *m, size_t index);
+cecs_flatmap_iterator cecs_flatmap_iterator_create_at(cecs_flatmap *m, const size_t index);
 bool cecs_flatmap_iterator_done(const cecs_flatmap_iterator *it);
-bool cecs_flatmap_iterator_done_occupied(const cecs_flatmap_iterator *it, size_t occupied_visited);
+bool cecs_flatmap_iterator_done_occupied(const cecs_flatmap_iterator *it, const size_t occupied_visited_count);
 size_t cecs_flatmap_iterator_next(cecs_flatmap_iterator *it);
 size_t cecs_flatmap_iterator_next_occupied(cecs_flatmap_iterator *it);
 
