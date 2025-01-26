@@ -16,6 +16,7 @@ static inline cecs_flatmap_low_hash cecs_flatmap_hash_split(const cecs_flatmap_h
     *out_high_hash = cecs_flatmap_hash_high(hash);
     return cecs_flatmap_hash_low(hash);
 }
+[[maybe_unused]]
 static inline cecs_flatmap_low_hash cecs_flatmap_hash_split_mut(cecs_flatmap_hash *in_out_hash) {
     cecs_flatmap_low_hash low_hash = cecs_flatmap_hash_low(*in_out_hash);
     *in_out_hash >>= CECS_FLATMAP_LOW_HASH_BITS;
@@ -77,7 +78,7 @@ static bool cecs_flatmap_find_or_next_empty(
         return false;
     }
 
-    const cecs_flatmap_high_hash high_hash;
+    cecs_flatmap_high_hash high_hash;
     const cecs_flatmap_low_hash low_hash = cecs_flatmap_hash_split(hash, &high_hash);
     size_t index = high_hash % m->count;
 
@@ -139,7 +140,7 @@ cecs_flatmap cecs_flatmap_create(void) {
     };
 }
 
-cecs_flatmap cecs_flatmpa_create_with_size(cecs_arena *a, size_t value_count, size_t value_size) {
+cecs_flatmap cecs_flatmap_create_with_size(cecs_arena *a, size_t value_count, size_t value_size) {
     const size_t count_pow2m1 = cecs_next_pow2(value_count) - 1;
     return (cecs_flatmap){
         .ctrl_and_hash_values = cecs_arena_alloc(a, cecs_flatmap_offset_of_values_end(count_pow2m1, value_size)),
@@ -210,6 +211,7 @@ static size_t cecs_flatmap_set_count_and_rehash(cecs_flatmap *m, cecs_arena *a, 
     return new_count;
 }
 
+[[maybe_unused]]
 static inline size_t cecs_flatmap_rehash(cecs_flatmap *m, cecs_arena *a, const size_t value_size) {
     return cecs_flatmap_set_count_and_rehash(m, a, value_size, m->count);
 }

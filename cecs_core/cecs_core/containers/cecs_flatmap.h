@@ -61,7 +61,7 @@ typedef struct cecs_flatmap {
 } cecs_flatmap;
 
 cecs_flatmap cecs_flatmap_create(void);
-cecs_flatmap cecs_flatmpa_create_with_size(cecs_arena *a, size_t capacity, size_t value_size);
+cecs_flatmap cecs_flatmap_create_with_size(cecs_arena *a, size_t capacity, size_t value_size);
 
 bool cecs_flatmap_get(
     const cecs_flatmap *m,

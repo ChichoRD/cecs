@@ -373,23 +373,14 @@ uint_fast8_t cecs_log2(size_t n) {
     return cecs_paged_sparse_set_log2(n);
 }
 
-static inline uint_fast8_t cecs_paged_sparse_set_page_index(size_t key, uint_fast8_t *out_key_log2) {
-    *out_key_log2 = cecs_paged_sparse_set_log2(key);
-    return *out_key_log2 >> CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
+const size_t cecs_paged_sparse_set_page_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE;
+
+static inline uint64_t cecs_paged_sparse_set_page_index(size_t key) {
+    return key >> CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2;
 }
 
-static inline size_t cecs_paged_sparse_set_page_key(size_t key, uint_fast8_t page_index, uint_fast8_t key_log2) {
-    const size_t mask_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE * (size_t)page_index;
-    const size_t upper_mask = (SIZE_MAX << mask_size);
-
-    const size_t upper_key = key & upper_mask;
-    const size_t lower_key = key & ~upper_mask;
-
-    static const uint_fast8_t key_log_mask = (1 << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2) - 1;
-    const uint_fast8_t upper_key_low_bit_count = (key_log2 & key_log_mask) + 1;
-    // static_assert(false);
-    const size_t page_key = (upper_key >> mask_size) | ((lower_key) << upper_key_low_bit_count);
-    return page_key;
+static inline size_t cecs_paged_sparse_set_page_key(size_t key) {
+    return key & (CECS_PAGED_SPARSE_SET_PAGE_SIZE - 1);
 }
 
 cecs_paged_sparse_set cecs_paged_sparse_set_create(void) {
@@ -398,10 +389,8 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create(void) {
             .values = CECS_UNION_CREATE(cecs_any_elements, cecs_sparse_set_elements, cecs_dynamic_array_create()),
             .index_to_key = cecs_dynamic_array_create(),
         },
+        .key_to_pagekey_to_index = cecs_flatmap_create(),
     };
-    for (size_t i = 0; i < CECS_PAGED_SPARSE_SET_PAGE_COUNT; i++) {
-        set.keys_to_indices[i] = cecs_displaced_set_create();
-    }
     return set;
 }
 cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers(void) {
@@ -410,10 +399,8 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers(void) {
             .values = CECS_UNION_CREATE(cecs_integer_elements, cecs_sparse_set_elements, cecs_dynamic_array_create()),
             .index_to_key = cecs_dynamic_array_create(),
         },
+        .key_to_pagekey_to_index = cecs_flatmap_create(),
     };
-    for (size_t i = 0; i < CECS_PAGED_SPARSE_SET_PAGE_COUNT; i++) {
-        set.keys_to_indices[i] = cecs_displaced_set_create();
-    }
     return set;
 }
 cecs_paged_sparse_set cecs_paged_sparse_set_create_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
@@ -422,13 +409,8 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_with_capacity(cecs_arena* a, 
             .values = CECS_UNION_CREATE(cecs_any_elements, cecs_sparse_set_elements, cecs_dynamic_array_create_with_capacity(a, element_capacity * element_size)),
             .index_to_key = cecs_dynamic_array_create_with_capacity(a, sizeof(size_t) * element_capacity),
         },
+        .key_to_pagekey_to_index = cecs_flatmap_create(),
     };
-    for (size_t i = 0; i < CECS_PAGED_SPARSE_SET_PAGE_COUNT; i++) {
-        set.keys_to_indices[i] = cecs_displaced_set_create_with_capacity(
-            a,
-            (sizeof(cecs_sparse_set_index) * element_capacity) >> CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2
-        );
-    }
     return set;
 }
 cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers_with_capacity(cecs_arena* a, size_t element_capacity, size_t element_size) {
@@ -437,35 +419,63 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers_with_capacity(cec
             .values = CECS_UNION_CREATE(cecs_integer_elements, cecs_sparse_set_elements, cecs_dynamic_array_create_with_capacity(a, element_capacity * element_size)),
             .index_to_key = cecs_dynamic_array_create(),
         },
+        .key_to_pagekey_to_index = cecs_flatmap_create(),
     };
-    for (size_t i = 0; i < CECS_PAGED_SPARSE_SET_PAGE_COUNT; i++) {
-        set.keys_to_indices[i] = cecs_displaced_set_create_with_capacity(
-            a,
-            (sizeof(cecs_sparse_set_index) * element_capacity) >> CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2
-        );
-    }
     return set;
 }
 
-static cecs_sparse_set_key_to_index *cecs_paged_sparse_set_key_to_index(cecs_paged_sparse_set *s, size_t key, size_t *out_page_key) {
-    uint_fast8_t key_log2;
-    uint_fast8_t page_index = cecs_paged_sparse_set_page_index(key, &key_log2);
+static bool cecs_paged_sparse_set_key_to_index(
+    cecs_paged_sparse_set *s,
+    const size_t key,
+    cecs_sparse_set_key_to_index **out_key_to_index,
+    size_t *out_page_key
+) {
+    uint64_t page_index = cecs_paged_sparse_set_page_index(key);
+    *out_page_key = cecs_paged_sparse_set_page_key(key);
     
-    *out_page_key = cecs_paged_sparse_set_page_key(key, page_index, key_log2);
-    return &s->keys_to_indices[page_index];
+    return cecs_flatmap_get(
+        &s->key_to_pagekey_to_index,
+        page_index,
+        (void **)out_key_to_index,
+        sizeof(cecs_sparse_set_key_to_index)
+    );
+}
+
+static cecs_sparse_set_key_to_index *cecs_paged_sparse_set_key_to_index_or_add(
+    cecs_paged_sparse_set *s,
+    cecs_arena *a,
+    const size_t key,
+    size_t *out_page_key
+) {
+    uint64_t page_index = cecs_paged_sparse_set_page_index(key);
+    *out_page_key = cecs_paged_sparse_set_page_key(key);
+    
+    cecs_sparse_set_key_to_index key_to_index = cecs_displaced_set_create();
+    return cecs_flatmap_get_or_add(
+        &s->key_to_pagekey_to_index,
+        a,
+        page_index,
+        &key_to_index,
+        sizeof(cecs_sparse_set_key_to_index)
+    );
 }
 
 bool cecs_paged_sparse_set_contains(const cecs_paged_sparse_set *s, size_t key) {
     size_t page_key;
-    const cecs_sparse_set_key_to_index *key_to_index = cecs_paged_sparse_set_key_to_index((cecs_paged_sparse_set *)s, key, &page_key);
-    return cecs_displaced_set_contains_index(key_to_index, page_key)
+    cecs_sparse_set_key_to_index *key_to_index;
+
+    return cecs_paged_sparse_set_key_to_index((cecs_paged_sparse_set *)s, key, &key_to_index, &page_key)
+        && cecs_displaced_set_contains_index(key_to_index, page_key)
         && cecs_sparse_set_index_check(*CECS_DISPLACED_SET_GET(cecs_sparse_set_index, key_to_index, page_key));
 }
 
 cecs_optional_element cecs_paged_sparse_set_get(cecs_paged_sparse_set *s, size_t key, size_t element_size) {
     size_t page_key;
-    const cecs_displaced_set* key_to_index = cecs_paged_sparse_set_key_to_index(s, key, &page_key);
-    if (!cecs_displaced_set_contains_index(key_to_index, page_key)) {
+    cecs_displaced_set* key_to_index;
+    if (
+        !cecs_paged_sparse_set_key_to_index(s, key, &key_to_index, &page_key)
+        || !cecs_displaced_set_contains_index(key_to_index, page_key)
+    ) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_element);
     }
 
@@ -490,7 +500,7 @@ void* cecs_paged_sparse_set_get_unchecked(cecs_paged_sparse_set* s, size_t key, 
 
 void* cecs_paged_sparse_set_set(cecs_paged_sparse_set* s, cecs_arena* a, size_t key, void* element, size_t element_size) {
     size_t page_key;
-    cecs_sparse_set_key_to_index *key_to_index = cecs_paged_sparse_set_key_to_index(s, key, &page_key);
+    cecs_sparse_set_key_to_index *key_to_index = cecs_paged_sparse_set_key_to_index_or_add(s, a, key, &page_key);
 
     bool integer = cecs_sparse_set_base_is_of_integers(&s->base);
     if (integer) {
@@ -519,8 +529,10 @@ bool cecs_paged_sparse_set_remove(cecs_paged_sparse_set* s, cecs_arena* a, size_
     assert(out_removed_element != NULL && "error: out_removed_element must not be NULL");
 
     size_t page_key;
-    cecs_sparse_set_key_to_index *key_to_index = cecs_paged_sparse_set_key_to_index(s, key, &page_key);
-    if (!cecs_displaced_set_contains_index(key_to_index, page_key)
+    cecs_sparse_set_key_to_index *key_to_index;
+    if (
+        !cecs_paged_sparse_set_key_to_index(s, key, &key_to_index, &page_key)
+        || !cecs_displaced_set_contains_index(key_to_index, page_key)
         || cecs_paged_sparse_set_is_empty(s)
     ) {
         memset(out_removed_element, 0, element_size);
@@ -555,7 +567,10 @@ bool cecs_paged_sparse_set_remove(cecs_paged_sparse_set* s, cecs_arena* a, size_
 
         if (removed_index != last_value_index) {
             size_t last_page_key;
-            cecs_sparse_set_key_to_index *last_key_to_index = cecs_paged_sparse_set_key_to_index(s, last_value_key, &last_page_key);
+            cecs_sparse_set_key_to_index *last_key_to_index;
+
+            bool exists = cecs_paged_sparse_set_key_to_index(s, last_value_key, &last_key_to_index, &last_page_key);
+            assert(exists && "fatal error: last value key must exist in the paged sparse set");
             *cecs_sparse_set_get_index_ptr(last_key_to_index, last_page_key) = (cecs_sparse_set_index){ removed_index };
         }
         return true;

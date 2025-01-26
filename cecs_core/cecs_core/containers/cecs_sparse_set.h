@@ -5,11 +5,14 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <intrin.h>
+#include <limits.h>
+
 #include "../types/cecs_macro_utils.h"
 #include "cecs_union.h"
 #include "cecs_arena.h"
 #include "cecs_dynamic_array.h"
 #include "cecs_displaced_set.h"
+#include "cecs_flatmap.h"
 
 
 #define CECS_DEREFERENCE_EQUALS(type, element_ref, value) (*((type *)(element_ref)) == (type)(value))
@@ -169,31 +172,37 @@ bool cecs_sparse_set_remove(cecs_sparse_set *s, cecs_arena *a, size_t key, void 
     cecs_sparse_set_remove(sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
 
 
-#define CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2 3
-#define CECS_PAGED_SPARSE_SET_PAGE_COUNT (1 << CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
+#if (SIZE_MAX == UINT16_MAX)
+#define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 4
 
-#if (SIZE_MAX == 0xFFFF)
-    #define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 4
+#elif (SIZE_MAX == UINT32_MAX)
+#define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 5
 
-#elif (SIZE_MAX == 0xFFFFFFFF)
-    #define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 5
-
-#elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
-    #define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 6
+#elif (SIZE_MAX == UINT64_MAX)
+#define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 6
 
 #else
     #error TBD code SIZE_T_BITS
 
 #endif
 #define CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT (1 << CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2)
-static_assert(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT == (sizeof(size_t) * 8), "CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT != sizeof(size_t) * 8");
+static_assert(
+    CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT == CHAR_BIT * sizeof(size_t),
+    "CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT != sizeof(size_t) * 8"
+);
 extern uint_fast8_t cecs_log2(size_t n);
 
-#define CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2 (CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT_LOG2 - CECS_CECS_PAGED_SPARSE_SET_PAGE_COUNT_LOG2)
+#define CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2 (CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT >> 2)
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE (1 << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2)
+static_assert(
+    ((CECS_PAGED_SPARSE_SET_PAGE_SIZE) & (CECS_PAGED_SPARSE_SET_PAGE_SIZE - 1)) == 0,
+    "static error: CECS_PAGED_SPARSE_SET_PAGE_SIZE is not a power of 2"
+);
+extern const size_t cecs_paged_sparse_set_page_size;
+
 typedef struct cecs_paged_sparse_set {
     cecs_sparse_set_base base;
-    cecs_sparse_set_key_to_index keys_to_indices[CECS_PAGED_SPARSE_SET_PAGE_COUNT];
+    cecs_flatmap key_to_pagekey_to_index;
 } cecs_paged_sparse_set;
 
 cecs_paged_sparse_set cecs_paged_sparse_set_create(void);
