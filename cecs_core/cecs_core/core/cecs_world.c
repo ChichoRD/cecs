@@ -314,13 +314,13 @@ cecs_entity_id cecs_world_clear_entity(cecs_world* w, cecs_entity_id entity_id) 
         !cecs_world_components_entity_iterator_done(&it);
         cecs_world_components_entity_iterator_next(&it)
         ) {
-        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+        cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
         cecs_component_storage_remove(
-            storage.storage,
+            &storage.storage->storage,
             &w->components.components_arena,
             entity_id,
-            cecs_world_use_component_discard(w, storage.component_size),
-            storage.component_size
+            cecs_world_use_component_discard(w, storage.storage->component_size),
+            storage.storage->component_size
         );
     }
     return entity_id;
@@ -336,20 +336,20 @@ cecs_entity_id cecs_world_copy_entity_onto(cecs_world* w, cecs_entity_id destina
         cecs_world_components_entity_iterator it = cecs_world_components_entity_iterator_create(&w->components, source);
         !cecs_world_components_entity_iterator_done(&it);
         cecs_world_components_entity_iterator_next(&it)
-        ) {
-        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+    ) {
+        cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
         cecs_component_storage_set(
-            storage.storage,
+            &storage.storage->storage,
             &w->components.components_arena,
             destination,
-            cecs_component_storage_info(storage.storage).is_unit_type_storage
+            cecs_component_storage_info(&storage.storage->storage).is_unit_type_storage
             ? NULL
             : CECS_OPTION_GET(cecs_optional_component, cecs_component_storage_get(
-                storage.storage,
+                &storage.storage->storage,
                 source,
-                storage.component_size
+                storage.storage->component_size
             )),
-            storage.component_size
+            storage.storage->component_size
         );
     }
 
@@ -387,14 +387,14 @@ size_t cecs_world_clear_entity_range(cecs_world *w, cecs_entity_id_range range, 
         !cecs_world_components_entity_iterator_done(&it);
         cecs_world_components_entity_iterator_next(&it)
     ) {
-        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+        cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
         cecs_component_storage_remove_array(
-            storage.storage,
+            &storage.storage->storage,
             &w->components.components_arena,
             range.start,
-            cecs_world_use_component_discard(w, storage.component_size),
+            cecs_world_use_component_discard(w, storage.storage->component_size),
             cecs_exclusive_range_length(range),
-            storage.component_size
+            storage.storage->component_size
         );
         ++count;
     }
@@ -438,17 +438,17 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
         !cecs_world_components_entity_iterator_done(&it);
         cecs_world_components_entity_iterator_next(&it)
     ) {
-        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+        cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
         void *source_components;
-        if (cecs_component_storage_info(storage.storage).is_unit_type_storage) {
+        if (cecs_component_storage_info(&storage.storage->storage).is_unit_type_storage) {
             source_components = NULL;
         } else {
             size_t copy_source_count = cecs_component_storage_get_array(
-                storage.storage,
+                &storage.storage->storage,
                 source.start,
                 &source_components,
                 source_count,
-                storage.component_size
+                storage.storage->component_size
             );
 
             assert(
@@ -458,23 +458,23 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
         }
 
         cecs_component_storage_set_array(
-            storage.storage,
+            &storage.storage->storage,
             &w->components.components_arena,
             destination.start,
             source_components,
             source_count,
-            storage.component_size
+            storage.storage->component_size
         );
 
         size_t copied_count = source_count;
         while ((copied_count << 1) < destination_count) {
             cecs_component_storage_set_array(
-                storage.storage,
+                &storage.storage->storage,
                 &w->components.components_arena,
                 destination.start + copied_count,
                 source_components,
                 source_count,
-                storage.component_size
+                storage.storage->component_size
             );
             copied_count <<= 1;
         }
@@ -490,12 +490,12 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
         
         size_t remaining_count = destination_count - copied_count;
         cecs_component_storage_set_array(
-            storage.storage,
+            &storage.storage->storage,
             &w->components.components_arena,
             destination.start + copied_count,
             source_components,
             remaining_count,
-            storage.component_size
+            storage.storage->component_size
         );
         copied_count += remaining_count;
 
@@ -531,19 +531,19 @@ void* cecs_world_copy_entity_onto_and_grab(cecs_world* w, cecs_entity_id destina
         !cecs_world_components_entity_iterator_done(&it);
         cecs_world_components_entity_iterator_next(&it)
         ) {
-        cecs_sized_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+        cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
         cecs_optional_component copied_component = cecs_component_storage_set(
-            storage.storage,
+            &storage.storage->storage,
             &w->components.components_arena,
             destination,
-            cecs_component_storage_info(storage.storage).is_unit_type_storage
+            cecs_component_storage_info(&storage.storage->storage).is_unit_type_storage
             ? NULL
             : CECS_OPTION_GET(cecs_optional_component, cecs_component_storage_get(
-                storage.storage,
+                &storage.storage->storage,
                 source,
-                storage.component_size
+                storage.storage->component_size
             )),
-            storage.component_size
+            storage.storage->component_size
         );
 
         if (CECS_OPTION_IS_SOME(cecs_optional_component, copied_component) && grab_component_id == storage.component_id) {

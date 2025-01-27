@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <memory.h>
+#include <stddef.h>
+
 #include "cecs_component.h"
 
 cecs_world_components_checksum cecs_world_components_checksum_hash(cecs_world_components_checksum current) {
@@ -11,56 +13,33 @@ cecs_world_components_checksum cecs_world_components_checksum_hash(cecs_world_co
 cecs_world_components cecs_world_components_create(size_t component_type_capacity) {
     return (cecs_world_components) {
         .storages_arena = cecs_arena_create_with_capacity(
-            (sizeof(cecs_component_storage) + sizeof(cecs_optional_component_size)) * component_type_capacity
+            component_type_capacity * sizeof(cecs_sized_component_storage)
         ),
-            .components_arena = cecs_arena_create(),
-            .component_storages = cecs_paged_sparse_set_create(),
-            .component_storages_attachments = cecs_paged_sparse_set_create(),
-            .component_sizes = cecs_paged_sparse_set_create(),
-            .checksum = 0,
-            .discard = cecs_discard_create()
+        .components_arena = cecs_arena_create(),
+        .component_storages = cecs_paged_sparse_set_create(),
+        .component_storages_attachments = cecs_paged_sparse_set_create(),
+        .checksum = 0,
+        .discard = cecs_discard_create()
     };
 }
-
 void cecs_world_components_free(cecs_world_components* wc) {
-    cecs_arena_free(&wc->components_arena);
-    cecs_arena_free(&wc->storages_arena);
     wc->component_storages = (cecs_paged_sparse_set){ 0 };
     wc->component_storages_attachments = (cecs_paged_sparse_set){ 0 };
-    wc->component_sizes = (cecs_paged_sparse_set){ 0 };
+    cecs_arena_free(&wc->components_arena);
+    cecs_arena_free(&wc->storages_arena);
     wc->discard = (cecs_component_discard){ 0 };
 }
 
-cecs_optional_component_size cecs_world_components_get_component_size(const cecs_world_components* wc, cecs_component_id component_id) {
-    return CECS_OPTION_MAP_REFERENCE_STRUCT(
-        cecs_optional_element,
-        CECS_PAGED_SPARSE_SET_GET(size_t, &wc->component_sizes, (size_t)component_id),
-        cecs_optional_component_size
-    );
-}
-
-static size_t cecs_world_components_get_or_set_component_size(cecs_world_components* wc, cecs_component_id component_id, size_t size) {
-    cecs_optional_component_size stored_size = cecs_world_components_get_component_size(wc, component_id);
-    if (CECS_OPTION_IS_SOME(cecs_optional_component_size, stored_size)) {
-        assert((*CECS_OPTION_GET(cecs_optional_component_size, stored_size) == size) && "error: component size mismatch");
-    } else {
-        stored_size = CECS_OPTION_CREATE_SOME_STRUCT(
-            cecs_optional_component_size,
-            CECS_PAGED_SPARSE_SET_SET(size_t, &wc->component_sizes, &wc->storages_arena, (size_t)component_id, &size)
-        );
-    }
-    return *CECS_OPTION_GET(cecs_optional_component_size, stored_size);
-}
-
+// FIXME: messed up with const qualifications
 cecs_optional_component_storage cecs_world_components_get_component_storage(const cecs_world_components* wc, cecs_component_id component_id) {
     return CECS_OPTION_MAP_REFERENCE_STRUCT(
         cecs_optional_element,
-        CECS_PAGED_SPARSE_SET_GET(cecs_component_storage, &wc->component_storages, (size_t)component_id),
+        CECS_PAGED_SPARSE_SET_GET(cecs_sized_component_storage, &wc->component_storages, (size_t)component_id),
         cecs_optional_component_storage
     );
 }
 
-cecs_component_storage* cecs_world_components_get_component_storage_unchecked(const cecs_world_components* wc, cecs_component_id component_id) {
+cecs_sized_component_storage *cecs_world_components_get_component_storage_expect(const cecs_world_components* wc, cecs_component_id component_id) {
     return CECS_OPTION_GET(cecs_optional_component_storage, cecs_world_components_get_component_storage(wc, component_id));
 }
 
@@ -68,37 +47,50 @@ bool cecs_world_components_has_storage(const cecs_world_components* wc, cecs_com
     return cecs_paged_sparse_set_contains(&wc->component_storages, (size_t)component_id);
 }
 
-cecs_component_storage cecs_component_storage_descriptor_build(cecs_component_storage_descriptor descriptor, cecs_world_components* wc, size_t component_size) {
+cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_component_storage_descriptor descriptor, cecs_world_components* wc, size_t component_size) {
     if (component_size == 0 && descriptor.is_size_known) {
-        return cecs_component_storage_create_unit(&wc->components_arena);
+        return (cecs_sized_component_storage){
+            .storage = cecs_component_storage_create_unit(&wc->components_arena),
+            .component_size = 0
+        };
     }
 
-    if (!descriptor.is_size_known)
+    if (!descriptor.is_size_known) {
         assert(component_size == 0 && "component_size must be zero if is_size_known is false");
+    }
 
     if (CECS_OPTION_IS_SOME(cecs_indirect_component_id, descriptor.indirect_component_id)) {
         cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
         if (cecs_world_components_has_storage(wc, other_id)) {
-            return cecs_component_storage_create_indirect(
-                &wc->components_arena
-            );
+            return (cecs_sized_component_storage){
+                .storage = cecs_component_storage_create_indirect(
+                    &wc->components_arena
+                ),
+                .component_size = component_size
+            };
         } else {
             // TODO: keep an eye on indirect storages, and allow customization
-            cecs_component_storage other_storage = cecs_component_storage_descriptor_build((cecs_component_storage_descriptor) {
+            cecs_sized_component_storage other_storage = cecs_component_storage_descriptor_build((cecs_component_storage_descriptor) {
                 .is_size_known = false,
                 .capacity = descriptor.capacity,
                 .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
             }, wc, 0);
-            return cecs_component_storage_create_indirect(
-                &wc->components_arena
-            );
+            return (cecs_sized_component_storage){
+                .storage =cecs_component_storage_create_indirect(
+                    &wc->components_arena
+                ),
+                .component_size = component_size
+            };
         }
     } else {
-        return cecs_component_storage_create_sparse(&wc->components_arena, descriptor.capacity, component_size);
+        return (cecs_sized_component_storage){
+            .storage = cecs_component_storage_create_sparse(&wc->components_arena, descriptor.capacity, component_size),
+            .component_size = component_size
+        };
     }
 }
 
-static cecs_component_storage *cecs_world_components_get_or_set_component_storage(
+static cecs_sized_component_storage *cecs_world_components_get_or_set_component_storage(
     cecs_world_components *wc,
     cecs_component_id component_id,
     cecs_component_storage_descriptor storage_descriptor,
@@ -106,11 +98,13 @@ static cecs_component_storage *cecs_world_components_get_or_set_component_storag
 ) {
     cecs_optional_component_storage optional_storage = cecs_world_components_get_component_storage(wc, component_id);
     if (CECS_OPTION_IS_SOME(cecs_optional_component_storage, optional_storage)) {
-        return CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, optional_storage);
+        cecs_sized_component_storage *storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, optional_storage);
+        assert(storage->component_size == size && "error: component size mismatch");
+        return storage;
     } else {
-        cecs_component_storage new_storage = cecs_component_storage_descriptor_build(storage_descriptor, wc, size);
+        cecs_sized_component_storage new_storage = cecs_component_storage_descriptor_build(storage_descriptor, wc, size);
         return CECS_PAGED_SPARSE_SET_SET(
-            cecs_component_storage,
+            cecs_sized_component_storage,
             &wc->component_storages,
             &wc->storages_arena,
             (size_t)component_id,
@@ -132,16 +126,16 @@ cecs_optional_component cecs_world_components_set_component(
 ) {
     cecs_discard_ensure(&wc->discard, &wc->components_arena, size);
     wc->checksum = cecs_world_components_checksum_add(wc->checksum, component_id);
-    size_t component_size = cecs_world_components_get_or_set_component_size(wc, component_id, size);
-    cecs_component_storage *storage = cecs_world_components_get_or_set_component_storage(
+
+    cecs_sized_component_storage *storage = cecs_world_components_get_or_set_component_storage(
         wc,
         component_id,
         additional_storage_descriptor,
-        component_size
+        size
     );
 
     return cecs_component_storage_set(
-        storage,
+        &storage->storage,
         &wc->components_arena,
         entity_id,
         component,
@@ -160,16 +154,16 @@ cecs_optional_component_array cecs_world_components_set_component_array(
 ) {
     cecs_discard_ensure(&wc->discard, &wc->components_arena, size);
     wc->checksum = cecs_world_components_checksum_add(wc->checksum, component_id);
-    size_t component_size = cecs_world_components_get_or_set_component_size(wc, component_id, size);
-    cecs_component_storage *storage = cecs_world_components_get_or_set_component_storage(
+
+    cecs_sized_component_storage *storage = cecs_world_components_get_or_set_component_storage(
         wc,
         component_id,
         additional_storage_descriptor,
-        component_size
+        size
     );
 
     return cecs_component_storage_set_array(
-        storage,
+        &storage->storage,
         &wc->components_arena,
         entity_id,
         components,
@@ -189,16 +183,16 @@ cecs_optional_component_array cecs_world_components_set_component_copy_array(
 ) {
     cecs_discard_ensure(&wc->discard, &wc->components_arena, size);
     wc->checksum = cecs_world_components_checksum_add(wc->checksum, component_id);
-    size_t component_size = cecs_world_components_get_or_set_component_size(wc, component_id, size);
-    cecs_component_storage *storage = cecs_world_components_get_or_set_component_storage(
+
+    cecs_sized_component_storage *storage = cecs_world_components_get_or_set_component_storage(
         wc,
         component_id,
         additional_storage_descriptor,
-        component_size
+        size
     );
 
     return cecs_component_storage_set_copy_array(
-        storage,
+        &storage->storage,
         &wc->components_arena,
         entity_id,
         component_single_src,
@@ -208,23 +202,24 @@ cecs_optional_component_array cecs_world_components_set_component_copy_array(
 }
 
 bool cecs_world_components_has_component(const cecs_world_components* wc, cecs_entity_id entity_id, cecs_component_id component_id) {
-    cecs_optional_component_size stored_size = cecs_world_components_get_component_size(wc, component_id);
     cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
 
-    return CECS_OPTION_IS_SOME(cecs_optional_component_size, stored_size)
-        && cecs_component_storage_has(CECS_OPTION_GET(cecs_optional_component_storage, storage), entity_id);
+    return CECS_OPTION_IS_SOME(cecs_optional_component_storage, storage)
+        && cecs_component_storage_has(&CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, storage)->storage, entity_id);
 }
 
 cecs_optional_component cecs_world_components_get_component(const cecs_world_components* wc, cecs_entity_id entity_id, cecs_component_id component_id) {
-    cecs_optional_component_size stored_size = cecs_world_components_get_component_size(wc, component_id);
     cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
-    if (!CECS_OPTION_IS_SOME(cecs_optional_component_size, stored_size)) {
+    if (CECS_OPTION_IS_NONE(cecs_optional_component_storage, storage)) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
-    } else if (cecs_component_storage_has(CECS_OPTION_GET(cecs_optional_component_storage, storage), entity_id)) {
+    }
+    
+    cecs_sized_component_storage *sized_storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, storage);
+    if (cecs_component_storage_has(&sized_storage->storage, entity_id)) {
         return cecs_component_storage_get(
-            CECS_OPTION_GET(cecs_optional_component_storage, storage),
+            &sized_storage->storage,
             entity_id,
-            *CECS_OPTION_GET(cecs_optional_component_size, stored_size)
+            sized_storage->component_size
         );
     } else {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
@@ -238,36 +233,38 @@ size_t cecs_world_components_get_component_array(
     void** out_components,
     size_t count
 ) {
-    cecs_optional_component_size stored_size = cecs_world_components_get_component_size(wc, component_id);
     cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
-    if (!CECS_OPTION_IS_SOME(cecs_optional_component_size, stored_size)) {
+    if (!CECS_OPTION_IS_SOME(cecs_optional_component_storage, storage)) {
         *out_components = NULL;
         return 0;
-    } else {
-        return cecs_component_storage_get_array(
-            CECS_OPTION_GET(cecs_optional_component_storage, storage),
-            entity_id,
-            out_components,
-            count,
-            *CECS_OPTION_GET(cecs_optional_component_size, stored_size)
-        );
     }
+
+    cecs_sized_component_storage *sized_storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, storage);
+    return cecs_component_storage_get_array(
+        &sized_storage->storage,
+        entity_id,
+        out_components,
+        count,
+        sized_storage->component_size
+    );
+    
 }
 
 bool cecs_world_components_remove_component(cecs_world_components* wc, cecs_entity_id entity_id, cecs_component_id component_id, void* out_removed_component) {
     wc->checksum = cecs_world_components_checksum_remove(wc->checksum, component_id);
-    cecs_optional_component_size stored_size = cecs_world_components_get_component_size(wc, component_id);
-    if (CECS_OPTION_IS_NONE(cecs_optional_component_size, stored_size)) {
+    cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
+
+    if (CECS_OPTION_IS_NONE(cecs_optional_component_storage, storage)) {
         assert(out_removed_component == NULL && "out_removed_component must be NULL if component size is unknown");
         return false;
-    }
-    else {
+    } else {
+        cecs_sized_component_storage *sized_storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, storage);
         return cecs_component_storage_remove(
-            CECS_OPTION_GET(cecs_optional_component_storage, cecs_world_components_get_component_storage(wc, component_id)),
+            &sized_storage->storage,
             &wc->components_arena,
             entity_id,
             out_removed_component,
-            *CECS_OPTION_GET(cecs_optional_component_size, stored_size)
+            sized_storage->component_size
         );
     }
 }
@@ -280,18 +277,20 @@ size_t cecs_world_components_remove_component_array(
     size_t count
 ) {
     wc->checksum = cecs_world_components_checksum_remove(wc->checksum, component_id);
-    cecs_optional_component_size stored_size = cecs_world_components_get_component_size(wc, component_id);
-    if (CECS_OPTION_IS_NONE(cecs_optional_component_size, stored_size)) {
+    cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
+
+    if (CECS_OPTION_IS_NONE(cecs_optional_component_storage, storage)) {
         assert(out_removed_components == NULL && "out_removed_components must be NULL if component size is unknown");
         return 0;
     } else {
+        cecs_sized_component_storage *sized_storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, storage);
         return cecs_component_storage_remove_array(
-            CECS_OPTION_GET(cecs_optional_component_storage, cecs_world_components_get_component_storage(wc, component_id)),
+            &sized_storage->storage,
             &wc->components_arena,
             entity_id,
             out_removed_components,
             count,
-            *CECS_OPTION_GET(cecs_optional_component_size, stored_size)
+            sized_storage->component_size
         );
     }
 }
@@ -451,11 +450,15 @@ size_t cecs_world_components_iterator_next(cecs_world_components_iterator* it) {
     return ++it->storage_raw_index;
 }
 
-cecs_sized_component_storage cecs_world_components_iterator_current(const cecs_world_components_iterator* it) {
-    return (cecs_sized_component_storage) {
-        .storage = ((cecs_component_storage*)cecs_paged_sparse_set_data(&it->components->component_storages)) + it->storage_raw_index,
-            .component_size = ((size_t*)cecs_paged_sparse_set_data(&it->components->component_sizes))[it->storage_raw_index],
-            .component_id = ((size_t*)cecs_paged_sparse_set_keys(&it->components->component_storages))[it->storage_raw_index]
+cecs_associated_component_storage cecs_world_components_iterator_current(const cecs_world_components_iterator* it) {
+    const cecs_sized_component_storage *current =
+        ((const cecs_sized_component_storage *)cecs_paged_sparse_set_data(&it->components->component_storages)) + it->storage_raw_index;
+    const cecs_component_id component_id =
+        (cecs_component_id)cecs_paged_sparse_set_keys(&it->components->component_storages)[it->storage_raw_index];
+
+    return (cecs_associated_component_storage) {
+        .storage = current,
+        .component_id = component_id
     };
 }
 
@@ -470,20 +473,29 @@ bool cecs_world_components_entity_iterator_done(const cecs_world_components_enti
     return cecs_world_components_iterator_done(&it->it);
 }
 
+static inline bool cecs_world_components_iterator_current_contains_entity(const cecs_world_components_entity_iterator* it) {
+    assert(!cecs_world_components_iterator_done(&it->it) && "error: iterator is done");
+
+    const cecs_component_storage *current = &((cecs_sized_component_storage *)(
+        cecs_paged_sparse_set_data(&it->it.components->component_storages)
+    ))[it->it.storage_raw_index].storage;
+    return cecs_component_storage_has(
+        current,
+        it->entity_id
+    );
+}
+
 size_t cecs_world_components_entity_iterator_next(cecs_world_components_entity_iterator* it) {
     do {
         cecs_world_components_iterator_next(&it->it);
     } while (
         !cecs_world_components_iterator_done(&it->it)
-        && !cecs_component_storage_has(
-            ((cecs_component_storage*)cecs_paged_sparse_set_data(&it->it.components->component_storages)) + it->it.storage_raw_index,
-            it->entity_id
-        )
-        );
+        && !cecs_world_components_iterator_current_contains_entity(it)
+    );
 
     return it->it.storage_raw_index;
 }
 
-cecs_sized_component_storage cecs_world_components_entity_iterator_current(const cecs_world_components_entity_iterator* it) {
+cecs_associated_component_storage cecs_world_components_entity_iterator_current(const cecs_world_components_entity_iterator* it) {
     return cecs_world_components_iterator_current(&it->it);
 }

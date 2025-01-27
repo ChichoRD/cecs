@@ -11,10 +11,10 @@ bool cecs_component_iterator_descriptor_copy_component_bitsets(const cecs_world_
             bitsets_destination[i] = cecs_hibitset_empty();
         }
         else {
-            cecs_component_storage* storage = cecs_world_components_get_component_storage_unchecked(
+            cecs_component_storage* storage = &cecs_world_components_get_component_storage_expect(
                 world_components,
                 components_type_info.component_ids[i]
-            );
+            )->storage;
             bitsets_destination[i] = storage->entity_bitset;
         }
     }
@@ -26,10 +26,10 @@ size_t cecs_component_iterator_descriptor_append_sized_component_ids(const cecs_
     for (size_t i = 0; i < components_type_info.component_count; i++) {
         if (
             cecs_world_components_has_storage(world_components, components_type_info.component_ids[i])
-            && !cecs_component_storage_info(cecs_world_components_get_component_storage_unchecked(
+            && !cecs_component_storage_info(&cecs_world_components_get_component_storage_expect(
                 world_components,
                 components_type_info.component_ids[i]
-            )).is_unit_type_storage
+            )->storage).is_unit_type_storage
             ) {
             CECS_DYNAMIC_ARRAY_ADD(cecs_component_id, sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
             ++sized_count;
@@ -236,15 +236,15 @@ cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator* it
     *handle = it->entities_iterator.current_bit_index;
 
     for (size_t i = 0; i < it->descriptor.component_count; i++) {
-        cecs_component_storage* storage = cecs_world_components_get_component_storage_unchecked(
+        cecs_sized_component_storage* storage = cecs_world_components_get_component_storage_expect(
             it->descriptor.world_components,
             it->descriptor.component_ids[i]
         );
 
         ((cecs_raw_component_reference*)(handle + 1))[i] = cecs_component_storage_get_or_null(
-            storage,
+            &storage->storage,
             it->entities_iterator.current_bit_index,
-            cecs_world_components_get_component_size_unchecked(it->descriptor.world_components, it->descriptor.component_ids[i])
+            storage->component_size
         );
     }
     return it->entities_iterator.current_bit_index;
