@@ -6,7 +6,7 @@ cecs_world_entities cecs_world_entities_create(size_t entity_capacity) {
     cecs_world_entities we;
     we.entity_ids_arena = cecs_arena_create_with_capacity(sizeof(cecs_entity_id) * entity_capacity);
     we.entity_ids = cecs_sparse_set_create_of_integers_with_capacity(&we.entity_ids_arena, entity_capacity, sizeof(cecs_entity_id));
-    we.free_entity_ids = cecs_queue_create_with_capacity(&we.entity_ids_arena, sizeof(cecs_entity_id) * entity_capacity);
+    we.free_entity_ids = cecs_queue_create_with_capacity(&we.entity_ids_arena, sizeof(cecs_entity_id) * ((entity_capacity >> 2) + 1));
     return we;
 }
 

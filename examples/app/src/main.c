@@ -708,23 +708,32 @@ int main(void) {
 
     // for (size_t i = 0; i < 125; i++) {
     //     void *out;
-    //     cecs_flatmap_add(&map, &a, i, &(struct test){i, i}, sizeof(struct test), &out);
+    //     cecs_flatmap_add(&map, &a, 124 - i, &(struct test){i, i}, sizeof(struct test), &out);
     // }
 
     // for (size_t i = 0; i < 125; i++) {
     //     void *out;
-    //     cecs_flatmap_get(&map, i, &out, sizeof(struct test));
+    //     bool added = cecs_flatmap_add(&map, &a, i, &(struct test){i, i}, sizeof(struct test), &out);
+    //     assert(!added);
     //     struct test *t = out;
-    //     assert(t->a == i);
-    //     assert(t->b == i);
+    //     assert(t == NULL);
+    // }
+
+    // for (size_t i = 0; i < 125; i++) {
+    //     void *out;
+    //     bool e = cecs_flatmap_get(&map, i, &out, sizeof(struct test));
+    //     assert(e);
+    //     struct test *t = out;
+    //     assert(t->a == 124 - i);
+    //     assert(t->b == 124 - i);
     // }
 
     // for (size_t i = 5; i < 120; i++) {
     //     struct test out;
     //     bool rm = cecs_flatmap_remove(&map, &a, i, &out, sizeof(struct test));
     //     assert(rm);
-    //     assert(out.a == i);
-    //     assert(out.b == i);
+    //     assert(out.a == 124 - i);
+    //     assert(out.b == 124 - i);
     // }
 
     // for (size_t i = 0; i < 125; i++) {
@@ -734,8 +743,8 @@ int main(void) {
     //     if (i >= 5 && i < 120) {
     //         assert(t == NULL);
     //     } else {
-    //         assert(t->a == i);
-    //         assert(t->b == i);
+    //         assert(t->a == 124 - i);
+    //         assert(t->b == 124 - i);
     //     }
     // }
 

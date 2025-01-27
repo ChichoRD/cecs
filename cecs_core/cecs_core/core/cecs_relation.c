@@ -1,11 +1,12 @@
 #include "cecs_relation.h"
 
 cecs_world_relations cecs_world_relations_create(size_t entity_capacity) {
+    const size_t initial_capacity = (entity_capacity >> 3) + 1;
     cecs_world_relations wr;
-    wr.entity_associated_ids_arena = cecs_arena_create_with_capacity(sizeof(cecs_associated_entity_ids) * entity_capacity);
+    wr.entity_associated_ids_arena = cecs_arena_create_with_capacity(sizeof(cecs_associated_entity_ids) * initial_capacity);
     wr.entity_associated_ids = cecs_sparse_set_create_with_capacity(
         &wr.entity_associated_ids_arena,
-        entity_capacity,
+        initial_capacity,
         sizeof(cecs_associated_entity_ids)
     );
     return wr;

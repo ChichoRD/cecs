@@ -111,8 +111,8 @@ typedef CECS_UNION_STRUCT(
 ) cecs_component_storage_union;
 
 typedef struct cecs_component_storage {
-    cecs_component_storage_union storage;
     cecs_hibitset entity_bitset;
+    cecs_component_storage_union storage;
 } cecs_component_storage;
 
 cecs_component_storage cecs_component_storage_create_sparse(cecs_arena *a, size_t component_capacity, size_t component_size);
