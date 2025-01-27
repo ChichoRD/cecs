@@ -43,10 +43,10 @@ static cecs_mesh_builder *mesh_builder_configure_sqaure(cecs_mesh_builder *build
     cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(uv2_f32_attribute),
         (uv2_f32_attribute[]) {
             // quad 4 uvs
-            { .u = 0.0f, .v = 0.0f },
-            { .u = 1.0f, .v = 0.0f },
-            { .u = 1.0f, .v = 1.0f },
             { .u = 0.0f, .v = 1.0f },
+            { .u = 1.0f, .v = 1.0f },
+            { .u = 1.0f, .v = 0.0f },
+            { .u = 0.0f, .v = 0.0f },
         },
         4,
         sizeof(uv2_f32_attribute)

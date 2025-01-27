@@ -16,7 +16,7 @@ void cecs_graphics_world_free(cecs_graphics_world *w) {
         !cecs_world_components_iterator_done(&it);
         cecs_world_components_iterator_next(&it)
     ) {
-        cecs_sized_component_storage storage = cecs_world_components_iterator_current(&it);
+        cecs_associated_component_storage storage = cecs_world_components_iterator_current(&it);
         if (cecs_world_has_component_storage_attachments(&w->world, storage.component_id)) {
             const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_unchecked(
                 &w->world.components,

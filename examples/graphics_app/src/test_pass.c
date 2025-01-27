@@ -299,9 +299,9 @@ static void test_pass_draw_inner(
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
-    cecs_component_storage *texture_storage = cecs_world_components_get_component_storage_unchecked(
+    cecs_component_storage *texture_storage = &cecs_world_components_get_component_storage_expect(
         &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
-    );
+    )->storage;
     assert(in_local_bind_groups_capacity >= 2 && "error: out local bind groups capacity must be at least 1");
     out_local_bind_groups[0] =
         test_pass_create_local_bind_group(pass, system->context.device, ubos.color, ubos.position);
