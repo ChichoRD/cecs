@@ -72,7 +72,7 @@ static bool cecs_world_relations_has_holder_for_target(
         !cecs_flatmap_get(
             &wr->associations.entity_to_target_holders,
             (cecs_flatmap_hash)source,
-            (void **)holders,
+            (void **)&holders,
             sizeof(cecs_entity_associated_holders)
         )
     ) {
