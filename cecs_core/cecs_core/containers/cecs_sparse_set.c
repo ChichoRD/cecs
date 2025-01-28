@@ -150,7 +150,7 @@ cecs_optional_element cecs_sparse_set_get(cecs_sparse_set *s, size_t key, size_t
     }
 }
 
-void* cecs_sparse_set_get_unchecked(cecs_sparse_set* s, size_t key, size_t element_size) {
+void* cecs_sparse_set_get_expect(cecs_sparse_set* s, size_t key, size_t element_size) {
     return CECS_OPTION_GET(cecs_optional_element, cecs_sparse_set_get(s, key, element_size));
 }
 
@@ -577,4 +577,27 @@ bool cecs_paged_sparse_set_remove(cecs_paged_sparse_set* s, cecs_arena* a, size_
     } else {
         return false;
     }
+}
+
+cecs_sparse_set_iterator cecs_sparse_set_iterator_create_at_index(cecs_sparse_set *s, size_t index) {
+    return (cecs_sparse_set_iterator){
+        .set = &s->base,
+        .index = index,
+    };
+}
+
+cecs_sparse_set_iterator cecs_sparse_set_iterator_create_at_key(cecs_sparse_set *s, size_t key) {
+    return cecs_sparse_set_iterator_create_at_index(s, cecs_sparse_set_get_index_expect(s, key));
+}
+
+bool cecs_sparse_set_iterator_done(const cecs_sparse_set_iterator *it, size_t value_size) {
+    return it->index >= cecs_sparse_set_base_count_of_size(it->set, value_size);
+}
+
+size_t cecs_sparse_set_iterator_current_key(const cecs_sparse_set_iterator *it) {
+    return cecs_sparse_set_base_key_unchecked(it->set, it->index);
+}
+
+void *cecs_sparse_set_iterator_current_value(const cecs_sparse_set_iterator *it, size_t value_size) {
+    return (uint8_t *)cecs_sparse_set_base_values(it->set) + it->index * value_size;
 }

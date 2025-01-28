@@ -183,6 +183,9 @@ void* cecs_counted_set_increment_or_set(cecs_counted_set* s, cecs_arena* a, size
     // FIXME: the if branch was taken, then in the operation cecs_counted_set_get
     // there is an assertion of this same condition, IT FAILED after just being checked
     // IDEA: maybe we have overflowed the counter, and the counter is now 0, very weird???
+
+    // SOL: this operation idea is flawed, because incrementing afterwards checking will cause the count to change and the check to change
+    // Therefore this will be removed in the future
     if (cecs_counted_set_contains(s, index)) {
         *CECS_DISPLACED_SET_GET(cecs_counted_set_counter, &s->counts, index) += 1;
         return cecs_counted_set_get(s, index, size);

@@ -559,24 +559,28 @@ void* cecs_world_copy_entity_and_grab(cecs_world* w, cecs_entity_id destination,
     return cecs_world_copy_entity_onto_and_grab(w, destination, source, grab_component_id);
 }
 
+static cecs_target_holder_id cecs_world_get_or_add_relation_target(cecs_world *w, cecs_entity_id source, cecs_relation_target target, bool *out_created_new) {
+    *out_created_new = false;
+    cecs_target_holder_id holder;
+    if (!cecs_world_relations_get_target(&w->relations, source, target, &holder)) {
+        holder = cecs_world_add_entity(w);
+        bool added = cecs_world_relations_add_target_holder(&w->relations, source, target, holder);
+        assert(added && "fatal error: failed to add relation target holder");
+        *out_created_new = true;
+    }
+    return holder;
+}
+
 void* cecs_world_set_component_relation(cecs_world* w, cecs_entity_id id, cecs_component_id component_id, void* component, size_t size, cecs_tag_id tag_id) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    cecs_entity_id extra_id = cecs_world_add_entity(w);
-    cecs_entity_id associated_id = cecs_world_relations_increment_associated_id_or_set(
-        &w->relations,
-        id,
-        (cecs_relation_target) {
-        tag_id
-    },
-        extra_id
-    );
-    if (associated_id != extra_id) {
-        cecs_world_entities_remove_entity(&w->entities, extra_id);
-    }
-    else {
+    
+    bool created_new;
+    cecs_target_holder_id holder = cecs_world_get_or_add_relation_target(w, id, (cecs_relation_target) {tag_id}, &created_new);
+    
+    if (created_new) {
         cecs_world_set_component(
             w,
-            associated_id,
+            holder,
             CECS_TYPE_ID(CECS_COMPONENT(cecs_relation_entity_reference)),
             &(cecs_relation_entity_reference){id},
             sizeof(cecs_relation_entity_reference)
@@ -603,17 +607,17 @@ void* cecs_world_set_component_relation(cecs_world* w, cecs_entity_id id, cecs_c
         cecs_relation_id_create(cecs_relation_id_descriptor_create_tag(component_id, tag_id)),
         cecs_world_set_component(
             w,
-            associated_id,
+            holder,
             component_id,
             component_source,
             size
         ),
         size,
         (cecs_component_storage_descriptor) {
-        .capacity = 1,
+            .capacity = 1,
             .indirect_component_id = CECS_OPTION_CREATE_SOME(cecs_indirect_component_id, component_id),
             .is_size_known = true,
-    }
+        }
     );
 }
 
@@ -624,13 +628,9 @@ void* cecs_world_get_component_relation(const cecs_world* w, cecs_entity_id id, 
 
 bool cecs_world_remove_component_relation(cecs_world* w, cecs_entity_id id, cecs_component_id component_id, void* out_removed_component, cecs_tag_id tag_id) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    cecs_entity_id associated_id;
-    if (!cecs_world_relations_remove_associated_id(&w->relations, id, (cecs_relation_target) { tag_id }, & associated_id)) {
+    cecs_target_holder_id holder;
+    if (!cecs_world_relations_get_target(&w->relations, id, (cecs_relation_target) { tag_id }, &holder)) {
         return false;
-    }
-    else if (!cecs_world_relations_entity_has_associated_id(&w->relations, id, (cecs_relation_target) { tag_id })) {
-        *cecs_world_get_or_set_default_entity_flags(w, id) = (cecs_entity_flags){ .is_permanent = false };
-        cecs_world_clear_entity(w, associated_id);
     }
 
     return cecs_world_remove_component(
@@ -644,7 +644,7 @@ bool cecs_world_remove_component_relation(cecs_world* w, cecs_entity_id id, cecs
 #endif
         && cecs_world_remove_component(
             w,
-            associated_id,
+            holder,
             component_id,
             out_removed_component
         );
@@ -652,22 +652,14 @@ bool cecs_world_remove_component_relation(cecs_world* w, cecs_entity_id id, cecs
 
 cecs_tag_id cecs_world_add_tag_relation(cecs_world* w, cecs_entity_id id, cecs_tag_id tag, cecs_tag_id target_tag_id) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    cecs_entity_id extra_id = cecs_world_add_entity(w);
-    cecs_entity_id associated_id = cecs_world_relations_increment_associated_id_or_set(
-        &w->relations,
-        id,
-        (cecs_relation_target) {
-        target_tag_id
-    },
-        extra_id
-    );
-    if (associated_id != extra_id) {
-        cecs_world_entities_remove_entity(&w->entities, extra_id);
-    }
-    else {
+    
+    bool created_new;
+    cecs_target_holder_id holder =
+        cecs_world_get_or_add_relation_target(w, id, (cecs_relation_target){ target_tag_id }, &created_new);
+    if (created_new) {
         cecs_world_set_component(
             w,
-            associated_id,
+            holder,
             CECS_TYPE_ID(CECS_COMPONENT(cecs_relation_entity_reference)),
             &(cecs_relation_entity_reference){id},
             sizeof(cecs_relation_entity_reference)
@@ -692,7 +684,7 @@ cecs_tag_id cecs_world_add_tag_relation(cecs_world* w, cecs_entity_id id, cecs_t
         cecs_relation_id_create(cecs_relation_id_descriptor_create_tag(
             cecs_world_add_tag(
                 w,
-                associated_id,
+                holder,
                 tag_source
             ),
             target_tag_id
@@ -702,13 +694,9 @@ cecs_tag_id cecs_world_add_tag_relation(cecs_world* w, cecs_entity_id id, cecs_t
 
 bool cecs_world_remove_tag_relation(cecs_world* w, cecs_entity_id id, cecs_tag_id tag, cecs_tag_id target_tag_id) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    cecs_entity_id associated_id;
-    if (!cecs_world_relations_remove_associated_id(&w->relations, id, (cecs_relation_target) { target_tag_id }, & associated_id)) {
+    cecs_target_holder_id holder;
+    if (!cecs_world_relations_get_target(&w->relations, id, (cecs_relation_target) { target_tag_id }, &holder)) {
         return false;
-    }
-    else if (!cecs_world_relations_entity_has_associated_id(&w->relations, id, (cecs_relation_target) { target_tag_id })) {
-        *cecs_world_get_or_set_default_entity_flags(w, id) = (cecs_entity_flags){ .is_permanent = false };
-        cecs_world_clear_entity(w, associated_id);
     }
 
     return cecs_world_remove_tag(
@@ -721,14 +709,19 @@ bool cecs_world_remove_tag_relation(cecs_world* w, cecs_entity_id id, cecs_tag_i
 #endif
         && cecs_world_remove_tag(
             w,
-            associated_id,
+            holder,
             tag
         );
 }
 
-cecs_associated_entity_ids_iterator cecs_world_get_associated_ids(cecs_world* w, cecs_entity_id id) {
+cecs_relation_targets_iterator cecs_world_get_associated_ids(cecs_world* w, cecs_entity_id id) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
-    return cecs_world_relations_get_associated_ids(&w->relations, id);
+
+    cecs_relation_targets_iterator it;
+    bool has_relations = cecs_world_relations_get_targets(&w->relations, id, &it);
+    assert(has_relations && "error: entity with given ID has no associated entities");
+
+    return it;
 }
 
 cecs_resource_handle cecs_world_set_resource(cecs_world* w, cecs_resource_id id, void* resource, size_t size) {

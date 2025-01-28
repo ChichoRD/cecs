@@ -143,7 +143,7 @@ cecs_optional_element cecs_sparse_set_get(cecs_sparse_set *s, size_t key, size_t
 #define CECS_SPARSE_SET_GET(type, sparse_set_ref, key) \
     cecs_sparse_set_get(sparse_set_ref, key, sizeof(type))
 
-void *cecs_sparse_set_get_unchecked(cecs_sparse_set *s, size_t key, size_t element_size);
+void *cecs_sparse_set_get_expect(cecs_sparse_set *s, size_t key, size_t element_size);
 #define CECS_SPARSE_SET_GET_UNCHECKED(type, sparse_set_ref, key) \
     ((type *)cecs_sparse_set_get_unchecked(sparse_set_ref, key, sizeof(type)))
 
@@ -170,6 +170,19 @@ bool cecs_sparse_set_remove_range(
 bool cecs_sparse_set_remove(cecs_sparse_set *s, cecs_arena *a, size_t key, void *out_removed_element, size_t element_size);
 #define CECS_SPARSE_SET_REMOVE(type, sparse_set_ref, arena_ref, key, out_removed_element_ref) \
     cecs_sparse_set_remove(sparse_set_ref, arena_ref, key, out_removed_element_ref, sizeof(type))
+
+typedef struct cecs_sparse_set_iterator {
+    cecs_sparse_set_base *set;
+    size_t index;
+} cecs_sparse_set_iterator;
+cecs_sparse_set_iterator cecs_sparse_set_iterator_create_at_index(cecs_sparse_set *s, size_t index);
+cecs_sparse_set_iterator cecs_sparse_set_iterator_create_at_key(cecs_sparse_set *s, size_t key);
+bool cecs_sparse_set_iterator_done(const cecs_sparse_set_iterator *it, size_t value_size);
+static inline size_t cecs_sparse_set_iterator_current_index(const cecs_sparse_set_iterator *it) {
+    return it->index;
+}
+size_t cecs_sparse_set_iterator_current_key(const cecs_sparse_set_iterator *it);
+void *cecs_sparse_set_iterator_current_value(const cecs_sparse_set_iterator *it, size_t value_size);
 
 
 #if (SIZE_MAX == UINT16_MAX)

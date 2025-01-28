@@ -672,7 +672,7 @@ bool finalize(cecs_world *w) {
     cecs_arena a = cecs_arena_create();
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
     //size_t count = 0;
-    // TODO: we kaboom here
+    // BUG: we kaboom here
     for (
         cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
             &w->components,
