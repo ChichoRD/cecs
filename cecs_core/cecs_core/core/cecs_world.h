@@ -164,7 +164,7 @@ bool cecs_world_remove_tag_relation(cecs_world *w, cecs_entity_id id, cecs_tag_i
 #define CECS_WORLD_REMOVE_TAG_RELATION(tag_type, world_ref, entity_id0, target_id) \
     cecs_world_remove_tag_relation(world_ref, entity_id0, CECS_TAG_ID(tag_type), target_id)
 
-cecs_associated_entity_ids_iterator cecs_world_get_associated_ids(cecs_world *w, cecs_entity_id id);
+cecs_relation_targets_iterator cecs_world_get_associated_ids(cecs_world *w, cecs_entity_id id);
 
 cecs_resource_handle cecs_world_set_resource(cecs_world *w, cecs_resource_id id, void *resource, size_t size);
 #define CECS_WORLD_SET_RESOURCE(type, world_ref, resource_ref) \
