@@ -203,7 +203,6 @@ static_assert(
     CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT == CHAR_BIT * sizeof(size_t),
     "CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT != sizeof(size_t) * 8"
 );
-extern uint_fast8_t cecs_log2(size_t n);
 
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2 (CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT >> 2)
 #define CECS_PAGED_SPARSE_SET_PAGE_SIZE (1 << CECS_PAGED_SPARSE_SET_PAGE_SIZE_LOG2)
