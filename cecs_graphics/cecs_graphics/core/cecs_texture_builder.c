@@ -81,9 +81,9 @@ cecs_texture_builder cecs_texture_builder_create(
 cecs_texture_builder *cecs_texture_builder_load_from(
     cecs_texture_builder *builder,
     const char *path,
-    WGPUTextureDimension dimension,
-    WGPUTextureFormat format,
-    WGPUTextureUsage usage
+    const WGPUTextureDimension dimension,
+    const WGPUTextureFormat format,
+    const WGPUTextureUsage usage
 ) {
     int width;
     int height;
@@ -107,7 +107,7 @@ cecs_texture_builder *cecs_texture_builder_load_from(
         .nextInChain = NULL,
         .dimension = dimension,
         .format = format,
-        .mipLevelCount = (uint32_t)cecs_log2((size_t)max(width, height)),
+        .mipLevelCount = 1,
         .sampleCount = 1,
         .size = size,
         .usage = usage,
@@ -115,82 +115,82 @@ cecs_texture_builder *cecs_texture_builder_load_from(
         .viewFormats = NULL,
     };
 
-    // static_assert(false, "TODO: mips and test texture load and decide TextureDescriptor when");
+    if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps) {
+        builder->descriptor.flags |= cecs_texture_builder_descriptor_config_alloc_mipmaps;
+    }
+
     //static_assert(false, "TODO: handle loading multiple (clearing builder after build); set to NULL prior");
     return cecs_texture_builder_set_data(builder, texture_data, texture_descriptor);
 }
 
-cecs_texture_builder *cecs_texture_builder_set_data(cecs_texture_builder *builder, const uint8_t *texture_data, WGPUTextureDescriptor texture_descriptor) {
+cecs_texture_builder *cecs_texture_builder_set_data(cecs_texture_builder *builder, uint8_t *texture_data, const WGPUTextureDescriptor texture_descriptor) {
     builder->texture_data = texture_data;
     builder->texture_descriptor = texture_descriptor;
     return builder;
 }
 
-static void cecs_write_mipmaps_from_level0(
-    WGPUQueue queue,
-    WGPUImageCopyTexture *destination,
-    WGPUExtent3D level_mip_size,
-    const uint8_t *level_data,
-    size_t level_size,
-    uint_fast8_t bytes_per_texel,
-    uint_fast8_t mip_level_count
+WGPUExtent3D cecs_generate_next_mip(
+    const WGPUExtent3D mip_size,
+    const uint8_t *mip_texels,
+    const uint_fast8_t bytes_per_texel,
+    uint8_t out_next_mip_texels[]
 ) {
-    cecs_arena arena = cecs_arena_create_with_capacity(level_size * 4 / 3);
-    cecs_dynamic_array previous_mip_texels = cecs_dynamic_array_create_with_capacity(&arena, level_size);
-    cecs_dynamic_array_append_empty(&previous_mip_texels, &arena, level_size, sizeof(uint8_t));
-    cecs_dynamic_array_set_range(&previous_mip_texels, 0, level_data, level_size, sizeof(uint8_t));
+    const WGPUExtent3D next_mip_size = {
+        .width = mip_size.width >> 1,
+        .height = mip_size.height >> 1,
+        .depthOrArrayLayers = 1,
+    };
 
-    for (uint32_t mip_level = 1; mip_level < mip_level_count; mip_level++) {
-        WGPUExtent3D previous_mip_size = level_mip_size;
-        level_mip_size.width >>= 1;
-        level_mip_size.height >>= 1;
+    for (uint32_t i = 0; i < next_mip_size.width; ++i) {
+        for (uint32_t j = 0; j < next_mip_size.height; ++j) {
+            uint8_t *destination_texel =
+                out_next_mip_texels + (j * next_mip_size.width + i) * bytes_per_texel;
 
-        const uint32_t mip_bytes_per_row = level_mip_size.width * bytes_per_texel;
-        const size_t mip_texture_size = level_mip_size.height * mip_bytes_per_row;
-        cecs_dynamic_array texels = cecs_dynamic_array_create_with_capacity(&arena, mip_texture_size);
-        cecs_dynamic_array_append_empty(&texels, &arena, mip_texture_size, sizeof(uint8_t));
-
-        for (uint32_t i = 0; i < level_mip_size.width; ++i) {
-            for (uint32_t j = 0; j < level_mip_size.height; ++j) {
-                uint8_t* p = cecs_dynamic_array_get(&texels, bytes_per_texel * (j * level_mip_size.width + i), sizeof(uint8_t));
-
-                // Get the corresponding 4 pixels from the previous level
-                uint8_t* p00 = cecs_dynamic_array_get(&previous_mip_texels, bytes_per_texel * ((2 * j + 0) * previous_mip_size.width + (2 * i + 0)), sizeof(uint8_t));
-                uint8_t* p01 = cecs_dynamic_array_get(&previous_mip_texels, bytes_per_texel * ((2 * j + 0) * previous_mip_size.width + (2 * i + 1)), sizeof(uint8_t));
-                uint8_t* p10 = cecs_dynamic_array_get(&previous_mip_texels, bytes_per_texel * ((2 * j + 1) * previous_mip_size.width + (2 * i + 0)), sizeof(uint8_t));
-                uint8_t* p11 = cecs_dynamic_array_get(&previous_mip_texels, bytes_per_texel * ((2 * j + 1) * previous_mip_size.width + (2 * i + 1)), sizeof(uint8_t));
-
-                for (uint_fast8_t k = 0; k < bytes_per_texel; ++k) {
-                    // Average
-                    p[k] = (p00[k] + p01[k] + p10[k] + p11[k]) / 4;
-                }
+            // Get the corresponding 4 pixels from the previous level
+            const uint8_t *texel_00 = mip_texels + bytes_per_texel * ((2 * j + 0) * mip_size.width + (2 * i + 0));
+            const uint8_t *texel_01 = mip_texels + bytes_per_texel * ((2 * j + 0) * mip_size.width + (2 * i + 1));
+            const uint8_t *texel_10 = mip_texels + bytes_per_texel * ((2 * j + 1) * mip_size.width + (2 * i + 0));
+            const uint8_t *texel_11 = mip_texels + bytes_per_texel * ((2 * j + 1) * mip_size.width + (2 * i + 1));
+            
+            for (uint_fast8_t k = 0; k < bytes_per_texel; ++k) {
+                destination_texel[k] = (texel_00[k] + texel_01[k] + texel_10[k] + texel_11[k]) / 4;
             }
         }
-
-        destination->mipLevel = mip_level;
-        WGPUTextureDataLayout source = (WGPUTextureDataLayout){
-            .nextInChain = NULL,
-            .offset = 0,
-            .bytesPerRow = mip_bytes_per_row,
-            .rowsPerImage = level_mip_size.height,
-        };
-        assert(
-            cecs_dynamic_array_count_of_size(&texels, sizeof(uint8_t)) == mip_texture_size
-            && "error: mismatch of total size of mip texels"
-        );
-        wgpuQueueWriteTexture(
-            queue,
-            destination,
-            cecs_dynamic_array_first(&texels),
-            mip_texture_size,
-            &source,
-            &level_mip_size
-        );
-
-        previous_mip_texels = texels;
     }
 
-    cecs_arena_free(&arena);
+    return next_mip_size;
+}
+
+uint_fast8_t cecs_generate_mip_chain(
+    const WGPUExtent3D mip_size,
+    const uint8_t *mip_texels,
+    const uint_fast8_t bytes_per_texel,
+    uint8_t out_mip_chain_start[restrict],
+    size_t *out_mip_chain_size
+) {
+    const uint_fast8_t mip_level_count =
+        cecs_log2((size_t)max(mip_size.width, mip_size.height)) + 1;
+    
+    WGPUExtent3D previous_mip_size = mip_size;
+    const uint8_t *previous_mips = mip_texels;
+
+    for (uint_fast8_t i = 1; i < mip_level_count; i++) {
+        const WGPUExtent3D new_mip_size = cecs_generate_next_mip(
+            previous_mip_size,
+            previous_mips,
+            bytes_per_texel,
+            out_mip_chain_start
+        );
+        const uint32_t mip_bytes_per_row = new_mip_size.width * bytes_per_texel;
+        const size_t mip_texture_size = new_mip_size.height * mip_bytes_per_row;
+
+        previous_mip_size = new_mip_size;
+        previous_mips = out_mip_chain_start;
+        out_mip_chain_start += mip_texture_size;
+    }
+
+    *out_mip_chain_size = out_mip_chain_start - mip_texels;
+    return mip_level_count;
 }
 
 void cecs_write_mipmaps(
@@ -198,44 +198,70 @@ void cecs_write_mipmaps(
     WGPUTexture texture,
     const WGPUTextureDescriptor *descriptor,
     const uint8_t *texture_data,
-    uint_fast8_t bytes_per_texel,
-    WGPUTextureAspect aspect
+    const uint_fast8_t bytes_per_texel,
+    const WGPUTextureAspect aspect,
+    const uint32_t destination_layer
 ) {
-    WGPUImageCopyTexture destination = (WGPUImageCopyTexture){
-        .nextInChain = NULL,
-        .texture = texture,
-        .mipLevel = 0,
-        .origin = (WGPUOrigin3D){0, 0, 0},
-        .aspect = aspect,
-    };
+    for (uint32_t i = 0; i < descriptor->mipLevelCount; i++) {
+        const uint32_t mip_width = descriptor->size.width >> i;
+        const uint32_t mip_height = descriptor->size.height >> i;
+        const uint32_t mip_bytes_per_row = mip_width * bytes_per_texel;
+        const size_t mip_texture_size = mip_bytes_per_row * mip_height;
 
-    const uint32_t width = descriptor->size.width;
-    const uint32_t height = descriptor->size.height;
-
-    const uint32_t bytes_per_row = width * bytes_per_texel;
-    const size_t texture_size = bytes_per_row * height;
-
-    WGPUTextureDataLayout source = (WGPUTextureDataLayout){
-        .nextInChain = NULL,
-        .offset = 0,
-        .bytesPerRow = bytes_per_row,
-        .rowsPerImage = height,
-    };
-    WGPUExtent3D mip_size = descriptor->size;
-    wgpuQueueWriteTexture(queue, &destination, texture_data, texture_size, &source, &mip_size);
-
-    if (descriptor->mipLevelCount > 1) {
-        cecs_write_mipmaps_from_level0(
-            queue,
-            &destination,
-            mip_size,
-            texture_data,
-            texture_size,
-            bytes_per_texel,
-            descriptor->mipLevelCount
-        );
-        (void)destination;
+        const WGPUImageCopyTexture destination = (WGPUImageCopyTexture){
+            .nextInChain = NULL,
+            .texture = texture,
+            .mipLevel = i,
+            .origin = (WGPUOrigin3D){0, 0, destination_layer},
+            .aspect = aspect,
+        };
+        const WGPUTextureDataLayout source = (WGPUTextureDataLayout){
+            .nextInChain = NULL,
+            .offset = 0,
+            .bytesPerRow = mip_bytes_per_row,
+            .rowsPerImage = mip_height,
+        };
+        const WGPUExtent3D mip_size = {
+            .width = mip_width,
+            .height = mip_height,
+            .depthOrArrayLayers = 1,
+        };
+        wgpuQueueWriteTexture(queue, &destination, texture_data, mip_texture_size, &source, &mip_size);
     }
+}
+
+static cecs_texture_builder *cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder) {
+    if (
+        (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps)
+        && builder->texture_descriptor.mipLevelCount == 1
+    ) {
+        const size_t texture_size = builder->texture_descriptor.size.width
+            * builder->texture_descriptor.size.height
+            * builder->descriptor.bytes_per_texel;
+        uint8_t *mip_texels;
+
+        const size_t total_mips_size = texture_size * 4 / 3;
+        if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_alloc_mipmaps) {
+            mip_texels =
+                cecs_arena_realloc(builder->texture_arena, builder->texture_data, texture_size, total_mips_size);
+        } else {
+            mip_texels = builder->texture_data;
+        }
+
+        size_t mip_chain_size;
+        builder->texture_descriptor.mipLevelCount = (uint32_t)cecs_generate_mip_chain(
+            builder->texture_descriptor.size,
+            mip_texels,
+            builder->descriptor.bytes_per_texel,
+            mip_texels + texture_size,
+            &mip_chain_size
+        );
+
+        // FIXME: assert fails by one off
+        assert(mip_chain_size == total_mips_size && "fatal error: mismatch of total size of mip chain");
+        builder->texture_data = mip_texels;
+    }
+    return builder;
 }
 
 cecs_texture_reference cecs_texture_builder_build_into(
@@ -246,9 +272,11 @@ cecs_texture_reference cecs_texture_builder_build_into(
 ) {
     assert(builder->texture_data != NULL && "error: texture data must be set");
     assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+    (void)world;
 
     WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
-    cecs_write_mipmaps(context->queue, texture, &builder->texture_descriptor, builder->texture_data, builder->descriptor.bytes_per_texel, view_descriptor->aspect);
+    cecs_texture_builder_configure_mipmaps(builder);
+    cecs_write_mipmaps(context->queue, texture, &builder->texture_descriptor, builder->texture_data, builder->descriptor.bytes_per_texel, view_descriptor->aspect, 0);
 
     texture_builder_stbi_allocator.current_arena = builder->texture_arena;
     stbi_image_free(builder->texture_data);

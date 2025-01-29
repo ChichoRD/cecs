@@ -8,8 +8,9 @@
 typedef enum cecs_texture_builder_descriptor_config {
     cecs_texture_builder_descriptor_config_none = 0,
     cecs_texture_builder_descriptor_config_generate_mipmaps = 1 << 0,
-    cecs_texture_builder_descriptor_config_is_depth = 1 << 1,
-    cecs_texture_builder_descriptor_config_is_stencil = 1 << 2,
+    cecs_texture_builder_descriptor_config_alloc_mipmaps = 1 << 1,
+    cecs_texture_builder_descriptor_config_is_depth = 1 << 2,
+    cecs_texture_builder_descriptor_config_is_stencil = 1 << 3,
 } cecs_texture_builder_descriptor_config;
 typedef uint8_t cecs_texture_builder_descriptor_config_flags;
 
@@ -24,7 +25,7 @@ typedef struct cecs_texture_builder {
     cecs_arena *texture_arena;
     WGPUTextureDescriptor texture_descriptor;
     cecs_texture_builder_descriptor descriptor;
-    const uint8_t *texture_data;
+    uint8_t *texture_data;
     //size_t texture_size;
 } cecs_texture_builder;
 
@@ -37,15 +38,30 @@ cecs_texture_builder cecs_texture_builder_create(
 cecs_texture_builder *cecs_texture_builder_load_from(
     cecs_texture_builder *builder,
     const char *path,
-    WGPUTextureDimension dimension,
-    WGPUTextureFormat format,
-    WGPUTextureUsage usage
+    const WGPUTextureDimension dimension,
+    const WGPUTextureFormat format,
+    const WGPUTextureUsage usage
 );
 
 cecs_texture_builder *cecs_texture_builder_set_data(
     cecs_texture_builder *builder,
-    const uint8_t *texture_data,
-    WGPUTextureDescriptor texture_descriptor
+    uint8_t *texture_data,
+    const WGPUTextureDescriptor texture_descriptor
+);
+
+WGPUExtent3D cecs_generate_next_mip(
+    const WGPUExtent3D mip_size,
+    const uint8_t *mip_texels,
+    const uint_fast8_t bytes_per_texel,
+    uint8_t out_next_mip_texels[]
+);
+
+uint_fast8_t cecs_generate_mip_chain(
+    const WGPUExtent3D mip_size,
+    const uint8_t *mip_texels,
+    const uint_fast8_t bytes_per_texel,
+    uint8_t out_mip_chain_start[restrict],
+    size_t *out_mip_chain_size
 );
 
 // adapted from source: https://github.com/eliemichel/LearnWebGPU-Code/tree/step075-vanilla
@@ -54,8 +70,9 @@ void cecs_write_mipmaps(
     WGPUTexture texture,
     const WGPUTextureDescriptor *descriptor,
     const uint8_t *texture_data,
-    uint_fast8_t bytes_per_texel,
-    WGPUTextureAspect aspect
+    const uint_fast8_t bytes_per_texel,
+    const WGPUTextureAspect aspect,
+    const uint32_t destination_layer
 );
 
 cecs_texture_reference cecs_texture_builder_build_into(
