@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <intrin.h>
 
 #if (SIZE_MAX == UINT16_MAX)
 #define CECS_SIZE_T_BITS_LOG2 4
