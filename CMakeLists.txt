@@ -160,6 +160,7 @@ if(CECS_GRAPHICS)
             "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/cecs_graphics/"
             "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/"
             ${CECS_CORE_DIRECTORY}
+            ${CECS_MATH_DIRECTORY}
         )
         target_link_libraries(
             ${PROJECT_NAME}

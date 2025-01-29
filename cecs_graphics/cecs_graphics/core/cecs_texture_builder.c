@@ -1,5 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
+
+#include <cecs_math/cecs_math.h>
+
 #include "cecs_texture_builder.h"
 
 typedef struct cecs_stbi_allocation_header {
@@ -168,6 +171,7 @@ uint_fast8_t cecs_generate_mip_chain(
     uint8_t out_mip_chain_start[restrict],
     size_t *out_mip_chain_size
 ) {
+    extern inline int_fast8_t cecs_log2(size_t n);
     const uint_fast8_t mip_level_count =
         cecs_log2((size_t)max(mip_size.width, mip_size.height)) + 1;
     
@@ -240,7 +244,7 @@ static cecs_texture_builder *cecs_texture_builder_configure_mipmaps(cecs_texture
             * builder->descriptor.bytes_per_texel;
         uint8_t *mip_texels;
 
-        const size_t total_mips_size = texture_size * 4 / 3;
+        const size_t total_mips_size = texture_size * 4 / 3 - 1;
         if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_alloc_mipmaps) {
             mip_texels =
                 cecs_arena_realloc(builder->texture_arena, builder->texture_data, texture_size, total_mips_size);
@@ -274,8 +278,8 @@ cecs_texture_reference cecs_texture_builder_build_into(
     assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
     (void)world;
 
-    WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
     cecs_texture_builder_configure_mipmaps(builder);
+    WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
     cecs_write_mipmaps(context->queue, texture, &builder->texture_descriptor, builder->texture_data, builder->descriptor.bytes_per_texel, view_descriptor->aspect, 0);
 
     texture_builder_stbi_allocator.current_arena = builder->texture_arena;
