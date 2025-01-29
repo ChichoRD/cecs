@@ -128,7 +128,7 @@ project(cecs_app_lib_only C)
     )
 
 
-set(CECS_GRAPHICS OFF)
+set(CECS_GRAPHICS ON)
 if(CECS_GRAPHICS)
     project(cecs_graphics C)
         add_subdirectory(
