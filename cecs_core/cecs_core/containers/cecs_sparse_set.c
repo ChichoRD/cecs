@@ -1,5 +1,6 @@
 #include <memory.h>
 
+// #include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 #include "cecs_sparse_set.h"
 
 const cecs_sparse_set_index cecs_sparse_set_index_invalid = { CECS_SPARSE_SET_INDEX_INVALID_VALUE };
@@ -350,27 +351,6 @@ bool cecs_sparse_set_remove_range(
     } else {
         return false;
     }
-}
-
-static inline uint_fast8_t cecs_paged_sparse_set_log2(size_t n) {
-#if (SIZE_MAX == 0xFFFF)
-    return (uint_fast8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt16((uint16_t)n));
-
-#elif (SIZE_MAX == 0xFFFFFFFF)
-    return (uint_fast8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt((uint32_t)n));
-
-#elif (SIZE_MAX == 0xFFFFFFFFFFFFFFFF)
-    return (uint_fast8_t)(CECS_PAGED_SPARSE_SET_KEY_BIT_COUNT - __lzcnt64((uint64_t)n));
-
-#else
-    #error TBD code SIZE_T_BITS
-    return 0;
-
-#endif
-}
-
-uint_fast8_t cecs_log2(size_t n) {
-    return cecs_paged_sparse_set_log2(n);
 }
 
 const size_t cecs_paged_sparse_set_page_size = CECS_PAGED_SPARSE_SET_PAGE_SIZE;

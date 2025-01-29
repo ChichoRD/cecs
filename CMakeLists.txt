@@ -40,112 +40,119 @@ else()
     )
 endif()
 
-set(
-    CECS_CORE_DIRECTORY
-    "${CMAKE_CURRENT_SOURCE_DIR}/cecs_core/"
-)
-set(
-    CECS_CORE_SRC_DIRECTORY
-    "${CECS_CORE_DIRECTORY}/cecs_core/"
-)
 
-file(
-    GLOB_RECURSE
-    CECS_SOURCES
-    CMAKE_CONFIGURE_DEPENDS
-    ${CECS_CORE_SRC_DIRECTORY}/*.c
-)
+project(cecs_math C)
+    set(
+        CECS_MATH_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_math/"
+    )
+    set(
+        CECS_MATH_SRC_DIRECTORY
+        "${CECS_MATH_DIRECTORY}/cecs_math/"
+    )
+
+    file(
+        GLOB_RECURSE
+        CECS_MATH_SOURCES
+        CMAKE_CONFIGURE_DEPENDS
+        ${CECS_MATH_SRC_DIRECTORY}/*.c
+    )
+    add_library(
+        ${PROJECT_NAME}
+        STATIC
+        ${CECS_MATH_SOURCES}
+    )
+
+    target_include_directories(
+        ${PROJECT_NAME}
+        PUBLIC
+        ${CECS_MATH_DIRECTORY}
+    )
 
 
 project(cecs_app C)
-add_executable(
-    ${PROJECT_NAME}
-    "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
-    ${CECS_SOURCES}
-)
-target_include_directories(
-    ${PROJECT_NAME}
-    PUBLIC
-    ${CECS_CORE_DIRECTORY}
-)
+    set(
+        CECS_CORE_DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_core/"
+    )
+    set(
+        CECS_CORE_SRC_DIRECTORY
+        "${CECS_CORE_DIRECTORY}/cecs_core/"
+    )
 
-
-project(cecs_lib C)
-add_library(
-    cecs
-    STATIC
-    ${CECS_SOURCES}
-)
-target_include_directories(
-    cecs
-    PUBLIC
-    ${CECS_CORE_DIRECTORY}
-)
-
-project(cecs_app_lib_only C)
-add_executable(
-    ${PROJECT_NAME}
-    "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
-)
-target_include_directories(
-    ${PROJECT_NAME}
-    PUBLIC
-    ${CECS_CORE_DIRECTORY}
-)
-target_link_libraries(
-    ${PROJECT_NAME}
-    "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>/cecs.lib"
-)
-
-set(CECS_GRAPHICS ON)
-if(CECS_GRAPHICS)
-    project(cecs_graphics C)
     file(
         GLOB_RECURSE
-        CECS_GRAPHICS_SOURCES
+        CECS_SOURCES
         CMAKE_CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/cecs_graphics/*.c"
-    )
-
-    add_subdirectory(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/webgpu"
-    )
-    add_subdirectory(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw"
-    )
-    add_subdirectory(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw3webgpu"
+        ${CECS_CORE_SRC_DIRECTORY}/*.c
     )
 
     add_executable(
         ${PROJECT_NAME}
-        "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/main.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/test_pass.c"
-        ${CECS_GRAPHICS_SOURCES}
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
+        ${CECS_SOURCES}
     )
     target_include_directories(
         ${PROJECT_NAME}
         PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/cecs_graphics/"
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/"
+        ${CECS_CORE_DIRECTORY}
+    )
+
+
+project(cecs_lib C)
+    add_library(
+        cecs
+        STATIC
+        ${CECS_SOURCES}
+    )
+    target_include_directories(
+        cecs
+        PUBLIC
+        ${CECS_CORE_DIRECTORY}
+    )
+
+
+project(cecs_app_lib_only C)
+    add_executable(
+        ${PROJECT_NAME}
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
+    )
+    target_include_directories(
+        ${PROJECT_NAME}
+        PUBLIC
         ${CECS_CORE_DIRECTORY}
     )
     target_link_libraries(
         ${PROJECT_NAME}
-        PUBLIC
-        cecs
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>/cecs.lib"
     )
-    
-    target_link_libraries(
-        ${PROJECT_NAME}
-        PRIVATE
-        webgpu
-        glfw
-        glfw3webgpu
-    )
-    target_copy_webgpu_binaries(${PROJECT_NAME})
 
-    if (MSVC)
-        target_compile_options(${PROJECT_NAME} PUBLIC /wd4244)
-    endif()
+
+set(CECS_GRAPHICS OFF)
+if(CECS_GRAPHICS)
+    project(cecs_graphics C)
+        add_subdirectory(
+            "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/webgpu"
+        )
+        add_subdirectory(
+            "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/lib/glfw"
+        )
+
+        add_executable(
+            ${PROJECT_NAME}
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/main.c"
+        )
+        target_include_directories(
+            ${PROJECT_NAME}
+            PUBLIC
+            "${CMAKE_CURRENT_SOURCE_DIR}/cecs_graphics/src/"
+        )
+
+        target_link_libraries(
+            ${PROJECT_NAME}
+            PRIVATE
+            webgpu
+            glfw
+        )
+        target_copy_webgpu_binaries(${PROJECT_NAME})
 endif()
