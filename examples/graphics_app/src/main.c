@@ -126,15 +126,15 @@ int main(void) {
         WGPUTextureFormat_RGBA8Unorm,
         WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
     );
-    cecs_texture_reference texture_ref = cecs_texture_builder_build_into(&world, &texture_builder, &system.context, &(WGPUTextureViewDescriptor){
+    cecs_texture texture = cecs_texture_builder_build(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
         .format = WGPUTextureFormat_RGBA8Unorm,
         .dimension = WGPUTextureViewDimension_2D,
         .baseMipLevel = 0,
         .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
         .baseArrayLayer = 0,
         .arrayLayerCount = 1,
-    });
-    CECS_WORLD_SET_COMPONENT(cecs_texture_reference, &world, id, &texture_ref);
+    }, 0);
+    CECS_GRAPHICS_SYSTEM_SET_TEXTURE(cecs_texture, &system, &world, id, &texture);
     cecs_arena_free(&builder_arena);
 
     bool render_error = false;

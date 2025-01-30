@@ -53,6 +53,8 @@ void *cecs_indirect_component_storage_set(cecs_indirect_component_storage* self,
         (size_t)id,
         &component
     );
+
+    // FIXME: bad idea to store pointer instead of handle
 }
 
 bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* self, cecs_arena* a, cecs_entity_id id, void* out_removed_component, size_t size) {

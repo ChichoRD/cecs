@@ -87,6 +87,8 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
         component_id
     );
     // TODO: maybe iter and update the cecs_uniform_raw_stream of those that have this component
+    // TODO: for that, not only the gpu buffer must have adirty flag but cecs storage must also have
+    // in order to dintinguish between just needing an upload or a stage and then upload
     (void)world;
     
     assert(
@@ -127,4 +129,36 @@ bool cecs_graphics_system_sync_uniform_components_all(
         }
     }
     return all_found;
+}
+
+cecs_texture_reference *cecs_graphics_system_set_texture(
+    cecs_graphics_system *system,
+    cecs_world *world,
+    const cecs_entity_id entity,
+    const cecs_component_id texture_component_id,
+    cecs_texture *texture
+) {
+    const cecs_relation_id texture_reference_id = CECS_RELATION_ID(cecs_texture_reference, texture_component_id);
+    cecs_texture_reference *texture_reference;
+    if (cecs_world_try_get_component(world, entity, texture_reference_id, &texture_reference)) {
+        cecs_texture *old_texture = CECS_WORLD_GET_COMPONENT(cecs_texture, &system->world.world, texture_reference->texture_id);
+        wgpuTextureViewRelease(old_texture->texture_view);
+        *old_texture = *texture;
+    } else {
+        cecs_entity_id texture_id = cecs_world_add_entity(&system->world.world);
+        CECS_WORLD_SET_COMPONENT(
+            cecs_texture,
+            &system->world.world,
+            texture_id,
+            texture
+        );
+        texture_reference = CECS_WORLD_SET_COMPONENT_RELATION(
+            cecs_texture_reference,
+            world,
+            entity,
+            &(cecs_texture_reference){texture_id},
+            texture_component_id
+        );
+    }
+    return texture_reference;
 }

@@ -88,6 +88,12 @@ cecs_texture_builder *cecs_texture_builder_load_from(
     const WGPUTextureFormat format,
     const WGPUTextureUsage usage
 ) {
+    assert(builder->texture_data == NULL && "error: texture data must be NULL");
+    assert(
+        !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
+        && "error: flags were set to generate empty texture, cannot load it from file"
+    );
+
     int width;
     int height;
     int channels;
@@ -127,7 +133,17 @@ cecs_texture_builder *cecs_texture_builder_load_from(
 }
 
 cecs_texture_builder *cecs_texture_builder_set_data(cecs_texture_builder *builder, uint8_t *texture_data, const WGPUTextureDescriptor texture_descriptor) {
+    assert(
+        !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
+        && "error: flags were set to generate empty texture, cannot set data"
+    );
+    
     builder->texture_data = texture_data;
+    builder->texture_descriptor = texture_descriptor;
+    return builder;
+}
+
+cecs_texture_builder *cecs_texture_builder_set_descriptor(cecs_texture_builder *builder, const WGPUTextureDescriptor texture_descriptor) {
     builder->texture_descriptor = texture_descriptor;
     return builder;
 }
@@ -171,6 +187,10 @@ uint_fast8_t cecs_generate_mip_chain(
     uint8_t out_mip_chain_start[restrict],
     size_t *out_mip_chain_size
 ) {
+    assert(mip_texels != NULL && "error: mip texels must be set");
+    assert(out_mip_chain_start != NULL && "error: out mip chain start must be set");
+    assert(out_mip_chain_size != NULL && "error: out mip chain size must be set");
+
     extern inline int_fast8_t cecs_log2(size_t n);
     const uint_fast8_t mip_level_count =
         cecs_log2((size_t)max(mip_size.width, mip_size.height)) + 1;
@@ -206,6 +226,8 @@ void cecs_write_mipmaps(
     const WGPUTextureAspect aspect,
     const uint32_t destination_layer
 ) {
+    assert(texture_data != NULL && "error: texture data must be set");
+
     for (uint32_t i = 0; i < descriptor->mipLevelCount; i++) {
         const uint32_t mip_width = descriptor->size.width >> i;
         const uint32_t mip_height = descriptor->size.height >> i;
@@ -235,6 +257,8 @@ void cecs_write_mipmaps(
 }
 
 static cecs_texture_builder *cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder) {
+    assert(builder->texture_data != NULL && "error: texture data must be set");
+
     if (
         (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps)
         && builder->texture_descriptor.mipLevelCount == 1
@@ -261,48 +285,58 @@ static cecs_texture_builder *cecs_texture_builder_configure_mipmaps(cecs_texture
             &mip_chain_size
         );
 
-        // FIXME: assert fails by one off
         assert(mip_chain_size == total_mips_size && "fatal error: mismatch of total size of mip chain");
         builder->texture_data = mip_texels;
     }
     return builder;
 }
 
-cecs_texture_reference cecs_texture_builder_build_into(
-    cecs_world *world,
+WGPUTexture cecs_texture_builder_build_alloc(
     cecs_texture_builder *builder,
     cecs_graphics_context *context,
-    const WGPUTextureViewDescriptor *view_descriptor
+    const WGPUTextureViewDescriptor *view_descriptor,
+    const uint32_t write_destination_layer
 ) {
-    assert(builder->texture_data != NULL && "error: texture data must be set");
-    assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
-    (void)world;
-
-    cecs_texture_builder_configure_mipmaps(builder);
-    WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
-    cecs_write_mipmaps(context->queue, texture, &builder->texture_descriptor, builder->texture_data, builder->descriptor.bytes_per_texel, view_descriptor->aspect, 0);
-
-    texture_builder_stbi_allocator.current_arena = builder->texture_arena;
-    stbi_image_free(builder->texture_data);
-    texture_builder_stbi_allocator.current_arena = NULL;
-
-    WGPUTextureView texture_view = wgpuTextureCreateView(texture, view_descriptor);
-    // TODO: watch
-    wgpuTextureRelease(texture);
-
-    // TODO: possibility for grouping in larger atlas
-    cecs_entity_id texture_id = cecs_world_add_entity(&builder->world->world);
-    CECS_WORLD_SET_COMPONENT(
-        cecs_texture,
-        &builder->world->world,
-        texture_id,
-        (&(cecs_texture){
-            .texture_view = texture_view,
-            .extent = builder->texture_descriptor.size
-        })
+    assert(
+        (builder->texture_data == NULL) == (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
+        && "error: texture data must be NULL iff flags are set to generate empty texture"
     );
-    
-    return (cecs_texture_reference){
-        .texture_id = texture_id
+    if (builder->texture_data == NULL) {
+        return wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
+    } else {
+        cecs_texture_builder_configure_mipmaps(builder);
+        WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
+
+        assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+        cecs_write_mipmaps(
+            context->queue,
+            texture,
+            &builder->texture_descriptor, 
+            builder->texture_data,
+            builder->descriptor.bytes_per_texel,
+            view_descriptor->aspect,
+            write_destination_layer
+        );
+
+        texture_builder_stbi_allocator.current_arena = builder->texture_arena;
+        stbi_image_free(builder->texture_data);
+        texture_builder_stbi_allocator.current_arena = NULL;
+
+        return texture;
+    }
+}
+
+cecs_texture cecs_texture_builder_build(
+    cecs_texture_builder *builder,
+    cecs_graphics_context *context,
+    const WGPUTextureViewDescriptor *view_descriptor,
+    const uint32_t write_destination_layer
+) {
+    WGPUTexture texture = cecs_texture_builder_build_alloc(builder, context, view_descriptor, write_destination_layer);
+    WGPUTextureView texture_view = wgpuTextureCreateView(texture, view_descriptor);
+    wgpuTextureRelease(texture);
+    return (cecs_texture){
+        .texture_view = texture_view,
+        .extent = builder->texture_descriptor.size
     };
 }

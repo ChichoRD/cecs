@@ -3,6 +3,7 @@
 
 #include "cecs_graphics_world.h"
 #include "context/cecs_graphics_context.h"
+#include "component/cecs_texture.h"
 
 typedef struct cecs_graphics_system {
     cecs_graphics_world world; 
@@ -45,5 +46,16 @@ bool cecs_graphics_system_sync_uniform_components_all(
 );
 #define CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(graphics_system_ref, world_ref, out_uniform_buffers_ref, ...) \
     (cecs_graphics_system_sync_uniform_components_all(graphics_system_ref, world_ref, CECS_COMPONENT_ID_ARRAY(__VA_ARGS__), CECS_COMPONENT_COUNT(__VA_ARGS__), (cecs_buffer_storage_attachment **)out_uniform_buffers_ref))
+
+
+cecs_texture_reference *cecs_graphics_system_set_texture(
+    cecs_graphics_system *system,
+    cecs_world *world,
+    const cecs_entity_id entity,
+    const cecs_component_id texture_component_id,
+    cecs_texture *texture
+);
+#define CECS_GRAPHICS_SYSTEM_SET_TEXTURE(texture_type, graphics_system_ref, world_ref, entity_id0, texture_ref) \
+    cecs_graphics_system_set_texture(graphics_system_ref, world_ref, entity_id0, CECS_COMPONENT_ID(texture_type), texture_ref)
 
 #endif
