@@ -137,8 +137,8 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                     .addressModeU = WGPUAddressMode_ClampToEdge,
                     .addressModeV = WGPUAddressMode_ClampToEdge,
                     .addressModeW = WGPUAddressMode_ClampToEdge,
-                    .magFilter = WGPUFilterMode_Linear,
-                    .minFilter = WGPUFilterMode_Linear,
+                    .magFilter = WGPUFilterMode_Nearest,
+                    .minFilter = WGPUFilterMode_Nearest,
                     .mipmapFilter = WGPUMipmapFilterMode_Linear,
                     .lodMinClamp = 0.0f,
                     .lodMaxClamp = 1.0f,
@@ -275,12 +275,21 @@ static void test_pass_draw_inner(
         cecs_buffer_storage_attachment *color;
         cecs_buffer_storage_attachment *position;
     } ubos;
-    if (!CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(
-        system, world, &ubos, color4_f32_uniform, position4_f32_uniform
-    )) {
+    cecs_optional_component_storage optional_texture_storage = cecs_world_components_get_component_storage(
+        &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
+    );
+    cecs_component_storage *texture_storage;
+    if (
+        !CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(
+            system, world, &ubos, color4_f32_uniform, position4_f32_uniform
+        )
+        || CECS_OPTION_IS_NONE(cecs_optional_component_storage, optional_texture_storage)
+    ) {
         *out_local_bind_groups_count = 0;
         return;
     }
+    texture_storage = &CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, optional_texture_storage)->storage;
+
     (void)target;
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
 
@@ -299,9 +308,9 @@ static void test_pass_draw_inner(
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
-    cecs_component_storage *texture_storage = &cecs_world_components_get_component_storage_expect(
-        &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
-    )->storage;
+    // cecs_component_storage *texture_storage = &cecs_world_components_get_component_storage_expect(
+    //     &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
+    // )->storage;
     assert(in_local_bind_groups_capacity >= 2 && "error: out local bind groups capacity must be at least 1");
     out_local_bind_groups[0] =
         test_pass_create_local_bind_group(pass, system->context.device, ubos.color, ubos.position);

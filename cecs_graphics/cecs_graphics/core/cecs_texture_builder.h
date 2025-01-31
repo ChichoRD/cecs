@@ -57,16 +57,16 @@ cecs_texture_builder *cecs_texture_builder_set_descriptor(
 
 WGPUExtent3D cecs_generate_next_mip(
     const WGPUExtent3D mip_size,
-    const uint8_t *mip_texels,
+    const uint8_t *restrict mip_texels,
     const uint_fast8_t bytes_per_texel,
-    uint8_t out_next_mip_texels[]
+    uint8_t out_next_mip_texels[const restrict]
 );
 
 uint_fast8_t cecs_generate_mip_chain(
     const WGPUExtent3D mip_size,
     const uint8_t *mip_texels,
     const uint_fast8_t bytes_per_texel,
-    uint8_t out_mip_chain_start[restrict],
+    uint8_t out_mip_chain_start[],
     size_t *out_mip_chain_size
 );
 

@@ -148,15 +148,18 @@ cecs_texture_builder *cecs_texture_builder_set_descriptor(cecs_texture_builder *
     return builder;
 }
 
+extern inline uint32_t cecs_max_u32(uint32_t a, uint32_t b);
+extern inline uint32_t cecs_min_u32(uint32_t a, uint32_t b);
+
 WGPUExtent3D cecs_generate_next_mip(
     const WGPUExtent3D mip_size,
-    const uint8_t *mip_texels,
+    const uint8_t *restrict mip_texels,
     const uint_fast8_t bytes_per_texel,
-    uint8_t out_next_mip_texels[]
+    uint8_t out_next_mip_texels[const restrict]
 ) {
     const WGPUExtent3D next_mip_size = {
-        .width = mip_size.width >> 1,
-        .height = mip_size.height >> 1,
+        .width = cecs_max_u32(mip_size.width >> 1, 1),
+        .height = cecs_max_u32(mip_size.height >> 1, 1),
         .depthOrArrayLayers = 1,
     };
 
@@ -180,20 +183,21 @@ WGPUExtent3D cecs_generate_next_mip(
     return next_mip_size;
 }
 
+extern inline int_fast8_t cecs_log2(size_t n);
+
 uint_fast8_t cecs_generate_mip_chain(
     const WGPUExtent3D mip_size,
     const uint8_t *mip_texels,
     const uint_fast8_t bytes_per_texel,
-    uint8_t out_mip_chain_start[restrict],
+    uint8_t out_mip_chain_start[],
     size_t *out_mip_chain_size
 ) {
     assert(mip_texels != NULL && "error: mip texels must be set");
     assert(out_mip_chain_start != NULL && "error: out mip chain start must be set");
     assert(out_mip_chain_size != NULL && "error: out mip chain size must be set");
 
-    extern inline int_fast8_t cecs_log2(size_t n);
     const uint_fast8_t mip_level_count =
-        cecs_log2((size_t)max(mip_size.width, mip_size.height)) + 1;
+        cecs_log2((size_t)cecs_max_u32(mip_size.width, mip_size.height)) + 1;
     
     WGPUExtent3D previous_mip_size = mip_size;
     const uint8_t *previous_mips = mip_texels;
@@ -229,8 +233,8 @@ void cecs_write_mipmaps(
     assert(texture_data != NULL && "error: texture data must be set");
 
     for (uint32_t i = 0; i < descriptor->mipLevelCount; i++) {
-        const uint32_t mip_width = descriptor->size.width >> i;
-        const uint32_t mip_height = descriptor->size.height >> i;
+        const uint32_t mip_width = cecs_max_u32(descriptor->size.width >> i, 1);
+        const uint32_t mip_height = cecs_max_u32(descriptor->size.height >> i, 1);
         const uint32_t mip_bytes_per_row = mip_width * bytes_per_texel;
         const size_t mip_texture_size = mip_bytes_per_row * mip_height;
 
@@ -263,15 +267,35 @@ static cecs_texture_builder *cecs_texture_builder_configure_mipmaps(cecs_texture
         (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps)
         && builder->texture_descriptor.mipLevelCount == 1
     ) {
-        const size_t texture_size = builder->texture_descriptor.size.width
-            * builder->texture_descriptor.size.height
-            * builder->descriptor.bytes_per_texel;
-        uint8_t *mip_texels;
+        const size_t texture_texels =
+            builder->texture_descriptor.size.width * builder->texture_descriptor.size.height;
+        const size_t texture_size =
+            texture_texels * builder->descriptor.bytes_per_texel;
+        // 16 * 16 + 8 * 8 + 4 * 4 + 2 * 2 + 1 = 341
+        // 16 * 16 * 4 / 3 = 341.3333
 
-        const size_t total_mips_size = texture_size * 4 / 3 - 1;
+        // 16 * 8 + 8 * 4 + 4 * 2 + 2 * 1 + 1 = 171
+        // 16 * 8 * 4 / 3 = 170.6666
+
+        // 16 * 4 + 8 * 2 + 4 * 1 + 2 * 1 + 1 = 87
+        // 16 * 4 * 4 / 3 = 85.3333
+
+        // 16 * 2 + 8 * 1 + 4 * 1 + 2 * 1 + 1 = 47
+        // 16 * 2 * 4 / 3 = 42.6666
+
+        // 22 * 7 + 11 * 3 + 5 * 1 + 2 + 1 = 195
+        // 22 * 7 * 4 / 3 = 205.3333
+        const int_fast8_t side_log2_difference =
+            cecs_log2(cecs_max_u32(builder->texture_descriptor.size.width, builder->texture_descriptor.size.height))
+            - cecs_log2(cecs_min_u32(builder->texture_descriptor.size.width, builder->texture_descriptor.size.height));
+
+        const size_t small_side_texels = ((1 << side_log2_difference) - 1) * builder->descriptor.bytes_per_texel;
+        const size_t mip_buffer_size =
+            (texture_size * 4 / 3) + (small_side_texels);
+        uint8_t *mip_texels;
         if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_alloc_mipmaps) {
             mip_texels =
-                cecs_arena_realloc(builder->texture_arena, builder->texture_data, texture_size, total_mips_size);
+                cecs_arena_realloc(builder->texture_arena, builder->texture_data, texture_size, mip_buffer_size);
         } else {
             mip_texels = builder->texture_data;
         }
@@ -285,8 +309,13 @@ static cecs_texture_builder *cecs_texture_builder_configure_mipmaps(cecs_texture
             &mip_chain_size
         );
 
-        assert(mip_chain_size == total_mips_size && "fatal error: mismatch of total size of mip chain");
-        builder->texture_data = mip_texels;
+        assert(mip_chain_size <= mip_buffer_size && "fatal error: not allocated enough memory for mip chain");
+        builder->texture_data = cecs_arena_realloc(
+            builder->texture_arena,
+            mip_texels,
+            mip_buffer_size,
+            mip_chain_size
+        );
     }
     return builder;
 }
