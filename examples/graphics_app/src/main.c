@@ -153,6 +153,14 @@ int main(void) {
         .baseArrayLayer = 0,
         .arrayLayerCount = 1,
     }, 0);
+    // cecs_texture_in_bank_bundle bundle = cecs_texture_builder_build_in_bank(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
+    //     .format = WGPUTextureFormat_RGBA8Unorm,
+    //     .dimension = WGPUTextureViewDimension_2D,
+    //     .baseMipLevel = 0,
+    //     .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
+    //     .baseArrayLayer = 0,
+    //     .arrayLayerCount = 1,
+    // });
     CECS_GRAPHICS_SYSTEM_SET_TEXTURE(cecs_texture, &system, &world, id, &texture);
     cecs_arena_free(&builder_arena);
 

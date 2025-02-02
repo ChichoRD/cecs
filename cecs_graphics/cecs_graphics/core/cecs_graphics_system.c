@@ -140,7 +140,7 @@ cecs_texture_reference *cecs_graphics_system_set_texture(
 ) {
     const cecs_relation_id texture_reference_id = CECS_RELATION_ID(cecs_texture_reference, texture_component_id);
     cecs_texture_reference *texture_reference;
-    if (cecs_world_try_get_component(world, entity, texture_reference_id, &texture_reference)) {
+    if (cecs_world_try_get_component(world, entity, texture_reference_id, (void **)&texture_reference)) {
         cecs_texture *old_texture = CECS_WORLD_GET_COMPONENT(cecs_texture, &system->world.world, texture_reference->texture_id);
         wgpuTextureViewRelease(old_texture->texture_view);
         *old_texture = *texture;

@@ -30,4 +30,10 @@ static inline cecs_raw_stream cecs_mesh_get_raw_vertex_stream(cecs_mesh mesh, si
     return cecs_raw_stream_from_vertex(cecs_mesh_get_vertex_stream(mesh, stride), vertex_buffer);
 }
 
+typedef struct cecs_instance_group {
+    cecs_entity_id_range instance_entities;
+    cecs_entity_id_range instance_attribute_references;
+} cecs_instance_group;
+CECS_COMPONENT_DECLARE(cecs_instance_group);
+
 #endif

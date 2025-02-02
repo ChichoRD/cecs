@@ -50,10 +50,19 @@ cecs_texture_builder *cecs_texture_builder_set_data(
     const WGPUTextureDescriptor texture_descriptor
 );
 
+
 cecs_texture_builder *cecs_texture_builder_set_descriptor(
     cecs_texture_builder *builder,
     const WGPUTextureDescriptor texture_descriptor
 );
+
+static inline cecs_texture_builder *cecs_texture_builder_set_descriptor_no_data(
+    cecs_texture_builder *builder,
+    const WGPUTextureDescriptor texture_descriptor
+) {
+    builder->texture_data = NULL;
+    return cecs_texture_builder_set_descriptor(builder, texture_descriptor);
+}
 
 WGPUExtent3D cecs_generate_next_mip(
     const WGPUExtent3D mip_size,
@@ -62,12 +71,12 @@ WGPUExtent3D cecs_generate_next_mip(
     uint8_t out_next_mip_texels[const restrict]
 );
 
-uint_fast8_t cecs_generate_mip_chain(
+size_t cecs_generate_mipmaps(
     const WGPUExtent3D mip_size,
     const uint8_t *mip_texels,
     const uint_fast8_t bytes_per_texel,
-    uint8_t out_mip_chain_start[],
-    size_t *out_mip_chain_size
+    const uint_fast8_t mip_level_count,
+    uint8_t out_mipmaps_start[]
 );
 
 // adapted from source: https://github.com/eliemichel/LearnWebGPU-Code/tree/step075-vanilla
@@ -93,6 +102,18 @@ cecs_texture cecs_texture_builder_build(
     cecs_graphics_context *context,
     const WGPUTextureViewDescriptor *view_descriptor,
     const uint32_t write_destination_layer
+);
+
+typedef struct cecs_texture_in_bank_bundle {
+    cecs_texture_in_bank_reference reference;
+    cecs_texture_subrect2_f32 subrect;
+    cecs_texture_in_bank_range range;
+} cecs_texture_in_bank_bundle;
+
+cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
+    cecs_texture_builder *builder,
+    cecs_graphics_context *context,
+    const WGPUTextureViewDescriptor *view_descriptor
 );
 
 #endif

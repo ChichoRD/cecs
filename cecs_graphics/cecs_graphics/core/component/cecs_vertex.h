@@ -18,8 +18,11 @@ typedef struct cecs_buffer_stream {
 typedef cecs_buffer_stream cecs_vertex_stream;
 CECS_COMPONENT_DECLARE(cecs_vertex_stream);
 
-static inline cecs_vertex_stream cecs_vertex_stream_create(size_t first_vertex, size_t vertex_count, size_t stride) {
-    return (cecs_vertex_stream){
+typedef cecs_buffer_stream cecs_instance_stream;
+CECS_COMPONENT_DECLARE(cecs_instance_stream);
+
+static inline cecs_buffer_stream cecs_buffer_stream_create(size_t first_vertex, size_t vertex_count, size_t stride) {
+    return (cecs_buffer_stream){
         .offset = first_vertex * stride,
         .size = vertex_count * stride
     };
@@ -60,13 +63,16 @@ cecs_raw_stream cecs_raw_stream_from_index(
     cecs_dynamic_wgpu_buffer **out_index_buffer
 );
 
-typedef cecs_component_id cecs_vertex_attribute_id;
-typedef cecs_component_id cecs_vertex_index_id;
-typedef struct cecs_vertex_attribute_reference {
-    cecs_vertex_attribute_id attribute_id;
+typedef cecs_component_id cecs_buffer_attribute_id;
+typedef cecs_buffer_attribute_id cecs_vertex_attribute_id;
+typedef cecs_buffer_attribute_id cecs_instance_attribute_id;
+typedef cecs_buffer_attribute_id cecs_vertex_index_id;
+
+typedef struct cecs_buffer_attribute_reference {
+    cecs_buffer_attribute_id attribute_id;
     size_t stride;
-} cecs_vertex_attribute_reference;
-CECS_COMPONENT_DECLARE(cecs_vertex_attribute_reference);
+} cecs_buffer_attribute_reference;
+CECS_COMPONENT_DECLARE(cecs_buffer_attribute_reference);
 
 typedef uint16_t cecs_vertex_index_u16;
 CECS_COMPONENT_DECLARE(cecs_vertex_index_u16);
@@ -82,10 +88,12 @@ typedef struct cecs_index_format_info {
 cecs_index_format_info cecs_index_format_info_from(WGPUIndexFormat format);
 
 typedef struct cecs_attribute_storage_attachment {
-    size_t max_vertex_count;
-    size_t current_vertex_count;
-    size_t attribute_size;
-} cecs_vertex_storage_attachment;
+    size_t max_attribute_count;
+    size_t current_attribute_count;
+    size_t attribute_stride;
+} cecs_attribute_storage_attachment;
+typedef cecs_attribute_storage_attachment cecs_vertex_storage_attachment;
+typedef cecs_attribute_storage_attachment cecs_instance_storage_attachment;
 
 typedef struct cecs_index_storage_attachment {
     size_t max_index_count;
@@ -101,6 +109,8 @@ typedef CECS_UNION_STRUCT(
     cecs_stream_storage_attachment,
     cecs_vertex_storage_attachment,
     cecs_vertex_storage_attachment,
+    cecs_instance_storage_attachment,
+    cecs_instance_storage_attachment,
     cecs_index_storage_attachment,
     cecs_index_storage_attachment,
     cecs_uniform_storage_attachment,
@@ -127,6 +137,8 @@ cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_uniform_uni
 
 #define CECS_STREAM_STORAGE_VERTEX_VARIANT \
     (CECS_UNION_VARIANT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment))
+#define CECS_STREAM_STORAGE_INSTANCE_VARIANT \
+    (CECS_UNION_VARIANT(cecs_instance_storage_attachment, cecs_stream_storage_attachment))
 #define CECS_STREAM_STORAGE_INDEX_VARIANT \
     (CECS_UNION_VARIANT(cecs_index_storage_attachment, cecs_stream_storage_attachment))
 #define CECS_STREAM_STORAGE_UNIFORM_VARIANT \
