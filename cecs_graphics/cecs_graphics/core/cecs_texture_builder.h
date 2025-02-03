@@ -80,7 +80,7 @@ size_t cecs_generate_mipmaps(
 );
 
 // adapted from source: https://github.com/eliemichel/LearnWebGPU-Code/tree/step075-vanilla
-void cecs_write_mipmaps(
+size_t cecs_write_mipmaps(
     WGPUQueue queue,
     WGPUTexture texture,
     const WGPUTextureDescriptor *descriptor,

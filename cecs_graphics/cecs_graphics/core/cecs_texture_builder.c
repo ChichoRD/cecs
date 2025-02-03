@@ -214,7 +214,7 @@ size_t cecs_generate_mipmaps(
     return out_mipmaps_start - mip_texels;
 }
 
-void cecs_write_mipmaps(
+size_t cecs_write_mipmaps(
     WGPUQueue queue,
     WGPUTexture texture,
     const WGPUTextureDescriptor *descriptor,
@@ -225,6 +225,7 @@ void cecs_write_mipmaps(
 ) {
     assert(texture_data != NULL && "error: texture data must be set");
 
+    const uint8_t *source_data = texture_data;
     for (uint32_t i = 0; i < descriptor->mipLevelCount; i++) {
         const uint32_t mip_width = cecs_max_u32(descriptor->size.width >> i, 1);
         const uint32_t mip_height = cecs_max_u32(descriptor->size.height >> i, 1);
@@ -249,8 +250,10 @@ void cecs_write_mipmaps(
             .height = mip_height,
             .depthOrArrayLayers = 1,
         };
-        wgpuQueueWriteTexture(queue, &destination, texture_data, mip_texture_size, &source, &mip_size);
+        wgpuQueueWriteTexture(queue, &destination, source_data, mip_texture_size, &source, &mip_size);
+        source_data += mip_texture_size;
     }
+    return source_data - texture_data;
 }
 
 static inline uint_fast8_t cecs_texture_builder_mip_count(const WGPUExtent3D size, uint32_t *out_largest_side_size) {
@@ -264,22 +267,22 @@ static inline cecs_texture_size_pow2 cecs_texture_builder_size_from_mip_count(co
 }
 
 extern inline bool cecs_is_pow2_u32(uint32_t n);
-static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder, const uint_fast8_t mip_count) {
+static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder, const uint_fast8_t mip_count, size_t *out_mipmaps_size) {
     assert(builder->texture_data != NULL && "error: texture data must be set");
     const uint32_t min_side = cecs_min_u32(builder->texture_descriptor.size.width, builder->texture_descriptor.size.height);
 
     // 17px -> 5 size, 5 mip, 5 log
     // 16px -> 4 size, 5 mip, 4 log
     // 15px -> 4 size, 4 mip, 4 log
+    
+    const size_t texture_texels =
+        builder->texture_descriptor.size.width * builder->texture_descriptor.size.height;
+    const size_t texture_size =
+        texture_texels * builder->descriptor.bytes_per_texel;
     if (
         (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps)
         && builder->texture_descriptor.mipLevelCount == 1
     ) {
-        const size_t texture_texels =
-            builder->texture_descriptor.size.width * builder->texture_descriptor.size.height;
-        const size_t texture_size =
-            texture_texels * builder->descriptor.bytes_per_texel;
-
         const uint_fast8_t side_log2_difference =
             mip_count
             - cecs_log2_u32(min_side)
@@ -312,6 +315,9 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_textur
             mip_buffer_size,
             mip_chain_size
         );
+        *out_mipmaps_size = mip_chain_size;
+    } else {
+        *out_mipmaps_size = texture_size;
     }
 
     const uint32_t side_sum = builder->texture_descriptor.size.width + builder->texture_descriptor.size.height;
@@ -332,11 +338,16 @@ WGPUTexture cecs_texture_builder_build_alloc(
         return wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
     } else {
         uint32_t largest_side_size;
-        cecs_texture_builder_configure_mipmaps(builder, cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size));
+        size_t mipmaps_size;
+        cecs_texture_builder_configure_mipmaps(
+            builder,
+            cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size),
+            &mipmaps_size
+        );
         WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
 
         assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
-        cecs_write_mipmaps(
+        size_t write_size = cecs_write_mipmaps(
             context->queue,
             texture,
             &builder->texture_descriptor, 
@@ -345,6 +356,7 @@ WGPUTexture cecs_texture_builder_build_alloc(
             view_descriptor->aspect,
             write_destination_layer
         );
+        assert(write_size == mipmaps_size && "error: writen size does not match mipmaps size");
 
         texture_builder_stbi_allocator.current_arena = builder->texture_arena;
         stbi_image_free(builder->texture_data);
@@ -479,9 +491,11 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
     );
     uint32_t largest_side_size;
     const uint_fast8_t mip_count = cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size);
+    
     cecs_texture_size_pow2 size_pow2;
+    size_t mipmaps_size = 0;
     if (builder->texture_data != NULL) {
-        size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count);
+        size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, &mipmaps_size);
     } else {
         size_pow2 = cecs_texture_builder_size_from_mip_count(cecs_is_pow2_u32(largest_side_size) ? mip_count - 1 : mip_count);
     }
@@ -535,7 +549,7 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
 
     if (builder->texture_data != NULL) {
         assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
-        cecs_write_mipmaps(
+        size_t write_size = cecs_write_mipmaps(
             context->queue,
             bank->texture,
             &builder->texture_descriptor, 
@@ -544,6 +558,7 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
             view_descriptor->aspect,
             slot_index
         );
+        assert(write_size == mipmaps_size && "error: writen size does not match mipmaps size");
 
         texture_builder_stbi_allocator.current_arena = builder->texture_arena;
         stbi_image_free(builder->texture_data);
