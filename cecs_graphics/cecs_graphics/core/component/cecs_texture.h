@@ -3,6 +3,7 @@
 
 #include <cecs_core/cecs_core.h>
 #include <webgpu/webgpu.h>
+#include "../../containers/cecs_dynamic_wgpu_buffer.h"
 
 typedef struct cecs_texture_reference {
     cecs_entity_id texture_id;
@@ -95,9 +96,11 @@ CECS_COMPONENT_DECLARE(cecs_texture_in_bank_reference);
 typedef struct cecs_texture_in_bank_range {
     uint8_t slot_index;
     uint8_t slot_range;
+    uint8_t padding[2];
 } cecs_texture_in_bank_range;
 typedef cecs_texture_in_bank_range cecs_texture_in_bank_range2_u8_attribute;
 CECS_COMPONENT_DECLARE(cecs_texture_in_bank_range2_u8_attribute);
+CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT(cecs_texture_in_bank_range2_u8_attribute);
 
 WGPUVertexBufferLayout cecs_texture_in_bank_range2_u8_attribute_layout(
     const uint32_t shader_location,
@@ -112,6 +115,7 @@ typedef struct cecs_texture_subrect2_f32 {
 } cecs_texture_subrect2_f32;
 typedef cecs_texture_subrect2_f32 cecs_texture_subrect2_f32_attribute;
 CECS_COMPONENT_DECLARE(cecs_texture_subrect2_f32_attribute);
+CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT(cecs_texture_subrect2_f32_attribute);
 
 WGPUVertexBufferLayout cecs_texture_subrect2_f32_attribute_layout(
     const uint32_t shader_location,

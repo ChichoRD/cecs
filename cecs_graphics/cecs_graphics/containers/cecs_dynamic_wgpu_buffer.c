@@ -7,6 +7,7 @@
 
 const cecs_buffer_offset_u64 cecs_webgpu_copy_buffer_alignment = CECS_WGPU_COPY_BUFFER_ALIGNMENT;
 const cecs_buffer_offset_u64 cecs_webgpu_uniform_buffer_alignment = CECS_WGPU_UNIFORM_BUFFER_ALIGNMENT;
+const cecs_buffer_offset_u64 cecs_webgpu_vertex_stride_alignment = CECS_WGPU_VERTEX_STRIDE_ALIGNMENT;
 
 extern inline cecs_buffer_offset_u64 cecs_align_to_pow2(cecs_dynamic_buffer_offset size, cecs_buffer_offset_u64 align);
 extern inline cecs_buffer_offset_u64 cecs_align_to_wgpu_copy_buffer_alignment(cecs_dynamic_buffer_offset size);

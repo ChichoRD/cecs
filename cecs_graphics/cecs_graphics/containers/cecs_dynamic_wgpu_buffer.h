@@ -49,6 +49,32 @@ static_assert(
 
 extern const cecs_buffer_offset_u64 cecs_webgpu_uniform_buffer_alignment;
 
+
+#define CECS_WGPU_VERTEX_STRIDE_ALIGNMENT_LOG2 2
+#define CECS_WGPU_VERTEX_STRIDE_ALIGNMENT ((cecs_buffer_offset_u64)(1 << CECS_WGPU_VERTEX_STRIDE_ALIGNMENT_LOG2))
+#define CECS_WGPU_VERTEX_STRIDE_ALIGNMENT_VALUE 4
+static_assert(
+    CECS_WGPU_VERTEX_STRIDE_ALIGNMENT == CECS_WGPU_VERTEX_STRIDE_ALIGNMENT_VALUE,
+    "static error: invalid vertex stride alignment"
+);
+
+#define CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_SIZE(size) \
+    CECS_IS_ALIGNED_TO_POW2(size, CECS_WGPU_VERTEX_STRIDE_ALIGNMENT)
+#define CECS_VERTEX_ATTRIBUTE_IS_ALIGNED(type) \
+    CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_SIZE(sizeof(type))
+
+#define CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT_INNER1(type, wgpu_v_alignment) \
+    static_assert( \
+        CECS_VERTEX_ATTRIBUTE_IS_ALIGNED(type), \
+        "static error: " #type " is not aligned to vertex stride alignment (" #wgpu_v_alignment ")" \
+    )
+#define CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT_INNER0(type, wgpu_v_alignment) \
+    CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT_INNER1(type, wgpu_v_alignment)
+#define CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT(type) \
+    CECS_VERTEX_ATTRIBUTE_IS_ALIGNED_STATIC_ASSERT_INNER0(type, CECS_WGPU_VERTEX_STRIDE_ALIGNMENT_VALUE)
+
+extern const cecs_buffer_offset_u64 cecs_webgpu_vertex_stride_alignment;
+
 inline cecs_buffer_offset_u64 cecs_align_to_pow2(cecs_dynamic_buffer_offset size, cecs_buffer_offset_u64 align) {
     const cecs_buffer_offset_u64 align_mask = align - 1;
     const cecs_buffer_offset_u64 aligned_size = (size + align_mask) & ~align_mask;

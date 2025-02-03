@@ -86,7 +86,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .visibility = WGPUShaderStage_Fragment,
                 .texture = (WGPUTextureBindingLayout) {
                     .sampleType = WGPUTextureSampleType_Float,
-                    .viewDimension = WGPUTextureViewDimension_2D,
+                    .viewDimension = WGPUTextureViewDimension_2DArray,
                     .multisampled = false,
                     .nextInChain = NULL,
                 },
@@ -163,12 +163,15 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
             .vertex = (WGPUVertexState) {
                 .entryPoint = "vs_main",
                 .module = shader_module,
-                .bufferCount = 4,
+                .bufferCount = 6,
                 .buffers = (WGPUVertexBufferLayout[]) {
                     position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
                     uv2_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
                     color3_f32_attribute_layout(2, (WGPUVertexAttribute[1]){0}, 1),
+                    
                     instance_position2_f32_attribute_layout(3, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
+                    cecs_texture_subrect2_f32_attribute_layout(4, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
+                    cecs_texture_in_bank_range2_u8_attribute_layout(5, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
                 },
             },
             .fragment = &(WGPUFragmentState) {
@@ -244,6 +247,7 @@ static WGPUBindGroup test_pass_create_local_bind_group(
     });
 }
 
+[[maybe_unused]]
 static WGPUBindGroup test_pass_create_local_texture_bind_group(
     test_pass *pass,
     WGPUDevice device,
@@ -262,6 +266,25 @@ static WGPUBindGroup test_pass_create_local_texture_bind_group(
     });
 }
 
+static WGPUBindGroup test_pass_create_local_texture_array_bind_group(
+    test_pass *pass,
+    WGPUDevice device,
+    cecs_texture_bank *texture
+) {
+    return wgpuDeviceCreateBindGroup(device, &(WGPUBindGroupDescriptor) {
+        .label = "Test Pass Local Texture Bind Group",
+        .layout = pass->local_texture_bgl,
+        .entryCount = 1,
+        .entries = (WGPUBindGroupEntry[]) {
+            {
+                .binding = 0,
+                .textureView = texture->texture_view,
+            }
+        }
+    });
+}
+
+
 static void test_pass_draw_inner(
     test_pass *pass,
     cecs_world *world,
@@ -277,7 +300,7 @@ static void test_pass_draw_inner(
         cecs_buffer_storage_attachment *position;
     } ubos;
     cecs_optional_component_storage optional_texture_storage = cecs_world_components_get_component_storage(
-        &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
+        &system->world.world.components, CECS_COMPONENT_ID(cecs_texture_bank)
     );
     cecs_component_storage *texture_storage;
     if (
@@ -310,6 +333,14 @@ static void test_pass_draw_inner(
         instance_position2_f32_attribute,
         &system->world
     );
+    cecs_buffer_storage_attachment *instance_subrect_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
+        cecs_texture_subrect2_f32_attribute,
+        &system->world
+    );
+    cecs_buffer_storage_attachment *instance_range_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
+        cecs_texture_in_bank_range2_u8_attribute,
+        &system->world
+    );
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
 
@@ -322,10 +353,12 @@ static void test_pass_draw_inner(
     out_local_bind_groups[1] = NULL;
     *out_local_bind_groups_count = 1;
 
+    cecs_entity_id last_texture_bank = CECS_ENTITY_ID_MAX;
+
     typedef cecs_uniform_raw_stream cecs_raw_color_stream;
     typedef cecs_uniform_raw_stream cecs_raw_position_stream;
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(
-        cecs_mesh, cecs_instance_group, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream, cecs_texture_reference
+        cecs_mesh, cecs_instance_group, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream, cecs_texture_in_bank_reference
     ) handle;
     cecs_arena arena = cecs_arena_create();
     for (
@@ -336,7 +369,7 @@ static void test_pass_draw_inner(
                 CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(color4_f32_uniform)),
                 CECS_RELATION_ID(cecs_uniform_raw_stream, CECS_COMPONENT_ID(position4_f32_uniform))
             ),
-            CECS_COMPONENTS_ALL(cecs_texture_reference)
+            CECS_COMPONENTS_ALL(cecs_texture_in_bank_reference)
         );
         !cecs_component_iterator_done(&it);
         cecs_component_iterator_next(&it)
@@ -356,25 +389,39 @@ static void test_pass_draw_inner(
         cecs_raw_stream instance_position = cecs_instance_group_get_raw_instance_stream(
             *handle.cecs_instance_group_component, sizeof(instance_position2_f32_attribute), &instance_position_buffer->buffer
         );
+        cecs_raw_stream instance_subrect = cecs_instance_group_get_raw_instance_stream(
+            *handle.cecs_instance_group_component, sizeof(cecs_texture_subrect2_f32_attribute), &instance_subrect_buffer->buffer
+        );
+        cecs_raw_stream instance_range = cecs_instance_group_get_raw_instance_stream(
+            *handle.cecs_instance_group_component, sizeof(cecs_texture_in_bank_range2_u8_attribute), &instance_range_buffer->buffer
+        );
 
         wgpuRenderPassEncoderSetBindGroup(render_pass, 1, out_local_bind_groups[0], 2, (const uint32_t[]){
             handle.cecs_raw_color_stream_component->offset,
             handle.cecs_raw_position_stream_component->offset
         });
 
-        cecs_texture *texture =
-            cecs_component_storage_get_unchecked(texture_storage, handle.cecs_texture_reference_component->texture_id, sizeof(cecs_texture));
-        if (out_local_bind_groups[1] != NULL) {
-            wgpuBindGroupRelease(out_local_bind_groups[1]);
+        if (last_texture_bank == CECS_ENTITY_ID_MAX || handle.cecs_texture_in_bank_reference_component->texture_id != last_texture_bank) {
+            if (out_local_bind_groups[1] != NULL) {
+                wgpuBindGroupRelease(out_local_bind_groups[1]);
+            }
+            cecs_texture_bank *texture_bank = cecs_component_storage_get_unchecked(
+                texture_storage, handle.cecs_texture_in_bank_reference_component->texture_id, sizeof(cecs_texture_bank)
+            );
+
+            out_local_bind_groups[1] = test_pass_create_local_texture_array_bind_group(pass, system->context.device, texture_bank);
+            *out_local_bind_groups_count = 2;
+            wgpuRenderPassEncoderSetBindGroup(render_pass, 2, out_local_bind_groups[1], 0, NULL);
+            last_texture_bank = handle.cecs_texture_in_bank_reference_component->texture_id;
         }
-        out_local_bind_groups[1] = test_pass_create_local_texture_bind_group(pass, system->context.device, texture);
-        *out_local_bind_groups_count = 2;
-        wgpuRenderPassEncoderSetBindGroup(render_pass, 2, out_local_bind_groups[1], 0, NULL);
 
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position.offset, position.size);
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, uv_buffer->buffer.buffer, uv.offset, uv.size);
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 2, color_buffer->buffer.buffer, color.offset, color.size);
+
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 3, instance_position_buffer->buffer.buffer, instance_position.offset, instance_position.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 4, instance_subrect_buffer->buffer.buffer, instance_subrect.offset, instance_subrect.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 5, instance_range_buffer->buffer.buffer, instance_range.offset, instance_range.size);
 
         if (handle.cecs_index_stream_component == NULL) {
             wgpuRenderPassEncoderDraw(
