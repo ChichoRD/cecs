@@ -74,6 +74,19 @@ static inline cecs_vertex_storage_attachment *cecs_graphics_world_get_or_set_ver
     );
 }
 
+static inline cecs_instance_storage_attachment *cecs_graphics_world_get_or_set_instance_buffer_attachments(
+    cecs_graphics_world *graphics_world,
+    cecs_instance_attribute_id attribute_id,
+    cecs_buffer_storage_attachment *default_attachment
+) {
+    cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, attribute_id, default_attachment);
+    CECS_UNION_IS_ASSERT(cecs_instance_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
+    return &CECS_UNION_GET_UNCHECKED(
+        cecs_instance_storage_attachment,
+        buffer->stream
+    );
+}
+
 static inline cecs_index_storage_attachment *cecs_graphics_world_get_or_set_index_buffer_attachments(
     cecs_graphics_world *graphics_world,
     cecs_vertex_index_id index_id,

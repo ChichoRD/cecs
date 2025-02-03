@@ -90,6 +90,18 @@ cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_vertex_unin
     };
 }
 
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_instance_uninitialized(cecs_instance_storage_attachment stream) {
+    return (cecs_buffer_storage_attachment){
+        .stream = CECS_UNION_CREATE(
+            cecs_instance_storage_attachment,
+            cecs_stream_storage_attachment,
+            stream
+        ),
+        .buffer = cecs_dynamic_wgpu_buffer_uninitialized(),
+        .buffer_flags = cecs_buffer_flags_none
+    };
+}
+
 cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_index_uninitialized(cecs_index_storage_attachment stream) {
     return (cecs_buffer_storage_attachment){
         .stream = CECS_UNION_CREATE(
