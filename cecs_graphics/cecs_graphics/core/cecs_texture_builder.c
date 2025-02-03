@@ -253,19 +253,24 @@ void cecs_write_mipmaps(
     }
 }
 
-static inline uint_fast8_t cecs_texture_builder_mip_count(const WGPUExtent3D size) {
+static inline uint_fast8_t cecs_texture_builder_mip_count(const WGPUExtent3D size, uint32_t *out_largest_side_size) {
     extern inline uint_fast8_t cecs_log2_u32(uint32_t n);
-    return cecs_log2_u32(cecs_max_u32(size.width, size.height)) + 1;
+    *out_largest_side_size = cecs_max_u32(size.width, size.height);
+    return cecs_log2_u32(*out_largest_side_size) + 1;
 }
 
 static inline cecs_texture_size_pow2 cecs_texture_builder_size_from_mip_count(const uint_fast8_t mip_count) {
-    extern inline bool cecs_is_pow2_u32(uint32_t n);
-    return (cecs_texture_size_pow2)(cecs_is_pow2_u32(mip_count) ? mip_count - 1 : mip_count);
+    return (cecs_texture_size_pow2)(mip_count);
 }
 
-static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder, uint_fast8_t mip_count) {
+extern inline bool cecs_is_pow2_u32(uint32_t n);
+static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder, const uint_fast8_t mip_count) {
     assert(builder->texture_data != NULL && "error: texture data must be set");
+    const uint32_t min_side = cecs_min_u32(builder->texture_descriptor.size.width, builder->texture_descriptor.size.height);
 
+    // 17px -> 5 size, 5 mip, 5 log
+    // 16px -> 4 size, 5 mip, 4 log
+    // 15px -> 4 size, 4 mip, 4 log
     if (
         (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps)
         && builder->texture_descriptor.mipLevelCount == 1
@@ -275,7 +280,6 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_textur
         const size_t texture_size =
             texture_texels * builder->descriptor.bytes_per_texel;
 
-        const uint32_t min_side = cecs_min_u32(builder->texture_descriptor.size.width, builder->texture_descriptor.size.height);
         const uint_fast8_t side_log2_difference =
             mip_count
             - cecs_log2_u32(min_side)
@@ -310,7 +314,8 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_textur
         );
     }
 
-    return cecs_texture_builder_size_from_mip_count(mip_count);
+    const uint32_t side_sum = builder->texture_descriptor.size.width + builder->texture_descriptor.size.height;
+    return cecs_texture_builder_size_from_mip_count(cecs_is_pow2_u32(side_sum - min_side) ? mip_count - 1 : mip_count);
 }
 
 WGPUTexture cecs_texture_builder_build_alloc(
@@ -326,7 +331,8 @@ WGPUTexture cecs_texture_builder_build_alloc(
     if (builder->texture_data == NULL) {
         return wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
     } else {
-        cecs_texture_builder_configure_mipmaps(builder, cecs_texture_builder_mip_count(builder->texture_descriptor.size));
+        uint32_t largest_side_size;
+        cecs_texture_builder_configure_mipmaps(builder, cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size));
         WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
 
         assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
@@ -425,6 +431,7 @@ static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
         .sampleCount = builder->texture_descriptor.sampleCount,
         .mipLevelCount = (uint32_t)texture_bank_id_descriptor.flags.mip_level_count,
     });
+    // TODO: cecs_texture_bank_create
     WGPUTexture bank_texture = cecs_texture_builder_build_alloc(&bank_builder, context, &(WGPUTextureViewDescriptor){
         .format = texture_bank_id_descriptor.format,
         .dimension = WGPUTextureViewDimension_2DArray,
@@ -470,19 +477,23 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
         (builder->texture_data == NULL) == !!(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
         && "error: texture data must be NULL iff flags are set to generate empty texture"
     );
-    const uint_fast8_t mip_count = cecs_texture_builder_mip_count(builder->texture_descriptor.size);
+    uint32_t largest_side_size;
+    const uint_fast8_t mip_count = cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size);
     cecs_texture_size_pow2 size_pow2;
     if (builder->texture_data != NULL) {
         size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count);
     } else {
-        size_pow2 = cecs_texture_builder_size_from_mip_count(mip_count);
+        size_pow2 = cecs_texture_builder_size_from_mip_count(cecs_is_pow2_u32(largest_side_size) ? mip_count - 1 : mip_count);
     }
 
+    const uint32_t descriptor_mip_count = cecs_min_u32(
+        (uint32_t)size_pow2, (uint32_t)mip_count
+    ) + 1;
     cecs_texture_bank_id_descriptor bank_descriptor = {
         .flags = {
             .slots_full = cecs_texture_bank_status_free,
             .size = size_pow2,
-            .mip_level_count = mip_count,
+            .mip_level_count = descriptor_mip_count,
             .usage = builder->texture_descriptor.usage,
         },
         .format = builder->texture_descriptor.format,

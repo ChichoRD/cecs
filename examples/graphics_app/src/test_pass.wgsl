@@ -24,7 +24,7 @@ struct vertex_output {
 @vertex
 fn vs_main(v_input: vertex_input, i_input: instance_input) -> vertex_output {
     var out: vertex_output;
-    out.position = vec4<f32>(v_input.position * 0.25 + position.xy + i_input.position, 0.0, 1.0);
+    out.position = vec4<f32>(v_input.position * 0.5 + position.xy + i_input.position, 0.0, 1.0);
     out.color = v_input.color;
     out.uv = v_input.uv;
     out.uv_subrect = i_input.uv_subrect;

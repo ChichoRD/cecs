@@ -119,10 +119,10 @@ int main(void) {
         .channel_count = 4,
         .flags = cecs_texture_builder_descriptor_config_generate_mipmaps | cecs_texture_builder_descriptor_config_alloc_mipmaps,
     });
-    uint32_t *texture_data = cecs_arena_alloc(&builder_arena, 23 * 9 * sizeof(uint32_t));
-    for (size_t i = 0; i < 9; i++) {
-        for (size_t j = 0; j < 23; j++) {
-            texture_data[i * 23 + j] = (((i / 4 + j / 4)) & 1) ? 0xFFFFFFFF : 0xFF000000;
+    uint32_t *texture_data = cecs_arena_alloc(&builder_arena, 230 * 90 * sizeof(uint32_t));
+    for (size_t i = 0; i < 90; i++) {
+        for (size_t j = 0; j < 230; j++) {
+            texture_data[i * 230 + j] = (((i / 4 + j / 4)) & 1) ? 0xFFFFFFFF : 0xFF000000;
         }
     }
     cecs_texture_builder_set_data(&texture_builder, (uint8_t *)texture_data, (WGPUTextureDescriptor){
@@ -131,20 +131,13 @@ int main(void) {
         .mipLevelCount = 1,
         .sampleCount = 1,
         .size = (WGPUExtent3D){
-            .width = 23,
-            .height = 9,
+            .width = 230,
+            .height = 90,
             .depthOrArrayLayers = 1,
         },
         .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
         .viewFormatCount = 0
     });
-    // cecs_texture_builder_load_from(
-    //     &texture_builder,
-    //     "../../examples/graphics_app/src/sample.png",
-    //     WGPUTextureDimension_2D,
-    //     WGPUTextureFormat_RGBA8Unorm,
-    //     WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
-    // );
     // cecs_texture texture = cecs_texture_builder_build(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
     //     .format = WGPUTextureFormat_RGBA8Unorm,
     //     .dimension = WGPUTextureViewDimension_2D,
@@ -164,6 +157,24 @@ int main(void) {
     });
     CECS_WORLD_SET_COMPONENT(cecs_texture_in_bank_reference, &world, id, &bundle.reference);
 
+    cecs_texture_builder_set_descriptor_no_data(&texture_builder, (WGPUTextureDescriptor){0});
+    cecs_texture_builder_load_from(
+        &texture_builder,
+        "../../examples/graphics_app/src/sample.png",
+        WGPUTextureDimension_2D,
+        WGPUTextureFormat_RGBA8Unorm,
+        WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
+    );
+    cecs_texture_in_bank_bundle secondary_bundle = cecs_texture_builder_build_in_bank(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
+        .format = WGPUTextureFormat_RGBA8Unorm,
+        .dimension = WGPUTextureViewDimension_2D,
+        .baseMipLevel = 0,
+        .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
+        .baseArrayLayer = 0,
+        .arrayLayerCount = 1,
+    });
+
+
     cecs_instance_builder instance_builder = cecs_instance_builder_create(&system.world, (cecs_instance_builder_descriptor){
         .instance_attributes_expected_count = 2,
     }, &builder_arena);
@@ -181,9 +192,9 @@ int main(void) {
     cecs_instance_builder_set_instance_attribute(&instance_builder, CECS_COMPONENT_ID(cecs_texture_in_bank_range2_u8_attribute),
         (cecs_texture_in_bank_range2_u8_attribute[]) {
             bundle.range,
+            secondary_bundle.range,
             bundle.range,
-            bundle.range,
-            bundle.range,
+            secondary_bundle.range,
             bundle.range,
         },
         5,
@@ -192,9 +203,9 @@ int main(void) {
     cecs_instance_builder_set_instance_attribute(&instance_builder, CECS_COMPONENT_ID(cecs_texture_subrect2_f32_attribute),
         (cecs_texture_subrect2_f32_attribute[]) {
             bundle.subrect,
+            secondary_bundle.subrect,
             bundle.subrect,
-            bundle.subrect,
-            bundle.subrect,
+            secondary_bundle.subrect,
             bundle.subrect,
         },
         5,
