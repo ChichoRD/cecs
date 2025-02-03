@@ -33,6 +33,11 @@ cecs_raw_stream cecs_raw_stream_from_vertex(
     cecs_vertex_stream stream,
     const cecs_vertex_buffer *vertex_buffer
 );
+typedef cecs_dynamic_wgpu_buffer cecs_instance_buffer;
+cecs_raw_stream cecs_raw_stream_from_instance(
+    cecs_instance_stream stream,
+    const cecs_instance_buffer *instance_buffer
+);
 
 typedef struct cecs_index_stream {
     size_t first_index;

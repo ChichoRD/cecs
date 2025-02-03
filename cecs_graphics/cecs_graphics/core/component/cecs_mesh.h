@@ -36,4 +36,19 @@ typedef struct cecs_instance_group {
 } cecs_instance_group;
 CECS_COMPONENT_DECLARE(cecs_instance_group);
 
+static inline uint32_t cecs_instance_group_instance_count(cecs_instance_group group) {
+    return cecs_exclusive_range_length(group.instance_entities);
+}
+
+static inline cecs_instance_stream cecs_instance_group_get_instance_stream(cecs_instance_group group, size_t stride) {
+    return (cecs_instance_stream){
+        .offset = group.instance_entities.start * stride,
+        .size = cecs_exclusive_range_length(group.instance_entities) * stride
+    };
+}
+
+static inline cecs_raw_stream cecs_instance_group_get_raw_instance_stream(cecs_instance_group group, size_t stride, const cecs_instance_buffer *instance_buffer) {
+    return cecs_raw_stream_from_instance(cecs_instance_group_get_instance_stream(group, stride), instance_buffer);
+}
+
 #endif

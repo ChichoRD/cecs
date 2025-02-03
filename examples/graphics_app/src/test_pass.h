@@ -29,6 +29,15 @@ WGPUVertexBufferLayout position2_f32_attribute_layout(
     size_t out_attributes_capacity
 );
 
+typedef position2_f32_attribute instance_position2_f32_attribute;
+CECS_COMPONENT_DECLARE(instance_position2_f32_attribute);
+WGPUVertexBufferLayout instance_position2_f32_attribute_layout(
+    const uint32_t shader_location,
+    const WGPUVertexStepMode step_mode,
+    WGPUVertexAttribute out_attributes[const],
+    const size_t out_attributes_capacity
+);
+
 typedef struct uv2_f32_attribute {
     float u;
     float v;

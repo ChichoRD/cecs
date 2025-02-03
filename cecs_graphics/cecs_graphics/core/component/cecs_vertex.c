@@ -16,6 +16,13 @@ cecs_raw_stream cecs_raw_stream_from_vertex(cecs_vertex_stream stream, const cec
     };
 }
 
+cecs_raw_stream cecs_raw_stream_from_instance(cecs_instance_stream stream, const cecs_instance_buffer *instance_buffer) {
+    return (cecs_raw_stream){
+        .offset = cecs_dynamic_wgpu_buffer_get_offset(instance_buffer, stream.offset),
+        .size = stream.size,
+    };
+}
+
 cecs_buffer_stream cecs_buffer_stream_from_index(cecs_index_stream stream)
 {
     return cecs_buffer_stream_from_index_size(

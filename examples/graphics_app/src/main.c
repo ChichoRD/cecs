@@ -85,6 +85,23 @@ int main(void) {
     cecs_index_stream index_stream;
     cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
     cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
+
+    cecs_instance_builder instance_builder = cecs_instance_builder_create(&system.world, (cecs_instance_builder_descriptor){
+        .instance_attributes_expected_count = 2,
+    }, &builder_arena);
+    cecs_instance_builder_set_instance_attribute(&instance_builder, CECS_COMPONENT_ID(instance_position2_f32_attribute),
+        (instance_position2_f32_attribute[]) {
+            { .x = -0.5f, .y = -0.5f },
+            { .x = 0.5f, .y = -0.5f },
+            { .x = 0.5f, .y = 0.5f },
+            { .x = -0.5f, .y = 0.5f },
+            { .x = 0.0f, .y = 0.0f },
+        },
+        5,
+        sizeof(instance_position2_f32_attribute)
+    );
+    cecs_instance_group instances = cecs_instance_builder_build_into_and_clear(&world, &instance_builder, &system.context);
+    CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, id, &instances);
     
     const cecs_uniform_raw_stream *stream = CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, id, &((color4_f32_uniform){
         .r = 0.5f,
