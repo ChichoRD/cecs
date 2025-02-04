@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <limits.h>
 #include "../../../types/cecs_macro_utils.h"
 #include "../../../types/cecs_type_id.h"
 
