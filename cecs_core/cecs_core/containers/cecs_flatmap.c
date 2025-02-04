@@ -27,11 +27,6 @@ static inline bool cecs_flatmap_count_is_pow2m1(size_t count) {
     return ((count + 1) & (count)) == 0;
 }
 
-// TODO: math and utility
-static inline bool cecs_next_pow2(size_t n) {
-    return n && !(n & (n - 1));
-}
-
 static inline size_t cecs_flatmap_offset_of_ctrl_padding(size_t count) {
     return count * sizeof(cecs_flatmap_ctrl);
 }
@@ -140,14 +135,14 @@ cecs_flatmap cecs_flatmap_create(void) {
     };
 }
 
-cecs_flatmap cecs_flatmap_create_with_size(cecs_arena *a, size_t value_count, size_t value_size) {
-    const size_t count_pow2m1 = cecs_next_pow2(value_count) - 1;
-    return (cecs_flatmap){
-        .ctrl_and_hash_values = cecs_arena_alloc(a, cecs_flatmap_offset_of_values_end(count_pow2m1, value_size)),
-        .count = count_pow2m1,
-        .occupied = 0
-    };
-}
+// cecs_flatmap cecs_flatmap_create_with_size(cecs_arena *a, size_t value_count, size_t value_size) {
+//     const size_t count_pow2m1 = cecs_next_pow2(value_count) - 1;
+//     return (cecs_flatmap){
+//         .ctrl_and_hash_values = cecs_arena_alloc(a, cecs_flatmap_offset_of_values_end(count_pow2m1, value_size)),
+//         .count = count_pow2m1,
+//         .occupied = 0
+//     };
+// }
 
 bool cecs_flatmap_get(
     const cecs_flatmap *m,
