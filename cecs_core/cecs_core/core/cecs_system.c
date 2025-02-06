@@ -133,7 +133,7 @@ cecs_components_search_group_range cecs_dynamic_world_system_set(cecs_dynamic_wo
         *CECS_DYNAMIC_ARRAY_GET(cecs_components_search_group, &d->components_search_groups, index)
     );
     if (info.component_count <= previous_info.component_count) {
-        size_t existing_index = previous_info.component_ids - (cecs_component_id*)d->component_ids.elements;
+        size_t existing_index = previous_info.component_ids - (cecs_component_id*)d->component_ids.values;
         if (CECS_DYNAMIC_ARRAY_GET(cecs_component_id, &d->component_ids, existing_index) != previous_info.component_ids) {
             assert(false && "unreachable: failed component ids index computation");
             exit(EXIT_FAILURE);
@@ -176,7 +176,7 @@ cecs_components_search_group_range cecs_dynamic_world_system_set_range(cecs_dyna
             *CECS_DYNAMIC_ARRAY_GET(cecs_components_search_group, &d->components_search_groups, index)
         );
         if (info.component_count <= previous_info.component_count) {
-            size_t index = previous_info.component_ids - (cecs_component_id*)d->component_ids.elements;
+            size_t index = previous_info.component_ids - (cecs_component_id*)d->component_ids.values;
             if (CECS_DYNAMIC_ARRAY_GET(cecs_component_id, &d->component_ids, index) != previous_info.component_ids) {
                 assert(false && "unreachable: failed component ids index computation");
                 exit(EXIT_FAILURE);
@@ -185,7 +185,7 @@ cecs_components_search_group_range cecs_dynamic_world_system_set_range(cecs_dyna
             CECS_UNION_GET_UNCHECKED(CECS_COMPONENTS_ALL_ID, group).component_ids = CECS_DYNAMIC_ARRAY_SET_RANGE(
                 cecs_component_id,
                 &d->component_ids,
-                (previous_info.component_ids - (cecs_component_id*)d->component_ids.elements),
+                (previous_info.component_ids - (cecs_component_id*)d->component_ids.values),
                 info.component_ids,
                 info.component_count
             );
@@ -207,14 +207,14 @@ cecs_components_search_group_range cecs_dynamic_world_system_set_range(cecs_dyna
 
 cecs_world_system cecs_dynamic_world_system_get(const cecs_dynamic_world_system* d) {
     return cecs_world_system_create(cecs_components_search_groups_create(
-        d->components_search_groups.elements,
+        d->components_search_groups.values,
         CECS_DYNAMIC_ARRAY_COUNT(cecs_components_search_group, &d->components_search_groups)
     ));
 }
 
 cecs_world_system cecs_dynamic_world_system_get_range(const cecs_dynamic_world_system* d, cecs_components_search_group_range r) {
     return cecs_world_system_create(cecs_components_search_groups_create(
-        (cecs_components_search_group*)d->components_search_groups.elements + r.start,
+        (cecs_components_search_group*)d->components_search_groups.values + r.start,
         cecs_exclusive_range_length(r)
     ));
 }

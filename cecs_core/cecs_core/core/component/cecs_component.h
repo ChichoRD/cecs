@@ -65,9 +65,10 @@ bool cecs_world_components_has_storage(const cecs_world_components *wc, cecs_com
 
 typedef cecs_component_id cecs_indirect_component_id;
 typedef struct cecs_component_storage_descriptor {
-    bool is_size_known;
-    size_t capacity;
     CECS_OPTION_STRUCT(cecs_component_id, cecs_indirect_component_id) indirect_component_id;
+    size_t capacity;
+    cecs_component_config config;
+    bool is_size_known;
 } cecs_component_storage_descriptor;
 
 cecs_sized_component_storage cecs_component_storage_descriptor_build(
@@ -105,7 +106,7 @@ cecs_optional_component_array cecs_world_components_set_component_copy_array(
     cecs_component_storage_descriptor additional_storage_descriptor
 );
 
-static inline void *cecs_world_components_set_component_unchecked(
+static inline void *cecs_world_components_set_component_expect(
     cecs_world_components *wc,
     cecs_entity_id entity_id,
     cecs_component_id component_id,

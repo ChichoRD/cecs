@@ -27,7 +27,7 @@ typedef cecs_discard cecs_resource_discard;
 
 typedef struct cecs_world_resources {
     cecs_arena resources_arena;
-    cecs_displaced_set resource_handles;
+    cecs_sentinel_set resource_handles;
     cecs_resource_discard discard;
 } cecs_world_resources;
 

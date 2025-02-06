@@ -79,7 +79,7 @@ typedef CECS_UNION_STRUCT(
 ) cecs_sparse_set_elements;
 
 typedef cecs_dynamic_array cecs_sparse_set_index_to_key;
-typedef cecs_displaced_set cecs_sparse_set_key_to_index;
+typedef cecs_sentinel_set cecs_sparse_set_key_to_index;
 
 typedef struct cecs_sparse_set_base {
     cecs_sparse_set_elements values;
@@ -90,10 +90,10 @@ static inline bool cecs_sparse_set_base_is_of_integers(const cecs_sparse_set_bas
     return CECS_UNION_IS(cecs_integer_elements, cecs_sparse_set_elements, s->values);
 }
 static inline void *cecs_sparse_set_base_values(cecs_sparse_set_base *s) {
-    return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->values).elements;
+    return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->values).values;
 }
 static inline size_t *cecs_sparse_set_base_keys(cecs_sparse_set_base *s) {
-    return s->index_to_key.elements;
+    return cecs_dynamic_array_first(&s->index_to_key);
 }
 
 size_t cecs_sparse_set_base_key_unchecked(const cecs_sparse_set_base *s, size_t index);
@@ -129,8 +129,9 @@ static inline size_t cecs_sparse_set_get_index_expect(const cecs_sparse_set *s, 
     return cecs_sparse_set_index_look(cecs_sparse_set_get_index(s, key));
 }
 
+extern inline bool cecs_sentinel_set_contains_index(const cecs_sentinel_set *s, const size_t index);
 static inline bool cecs_sparse_set_contains(const cecs_sparse_set *s, size_t key) {
-    return cecs_displaced_set_contains_index(&s->key_to_index, key)
+    return cecs_sentinel_set_contains_index(&s->key_to_index, key)
         && cecs_sparse_set_index_check(cecs_sparse_set_get_index(s, key));
 }
 static inline bool cecs_sparse_set_is_empty(const cecs_sparse_set *s) {

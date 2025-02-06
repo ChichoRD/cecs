@@ -18,6 +18,7 @@ typedef struct cecs_storage_info {
     bool is_unit_type_storage : 1;
     bool has_array_optimisation : 1;
     bool is_storage_extension : 1;
+    bool guarantees_contiguity : 1;
 } cecs_storage_info;
 
 
@@ -25,9 +26,9 @@ typedef CECS_OPTION_STRUCT(void *, cecs_optional_component) cecs_optional_compon
 typedef CECS_OPTION_STRUCT(void *, cecs_optional_component_array) cecs_optional_component_array;
 
 typedef cecs_storage_info cecs_info(const void *self);
-typedef cecs_optional_component cecs_get_component(const void *self, cecs_entity_id id, size_t size);
-typedef void *cecs_set_component(void *self, cecs_arena *a, cecs_entity_id id, void *component, size_t size);
-typedef bool cecs_remove_component(void *self, cecs_arena *a, cecs_entity_id id, void *out_removed_component, size_t size);
+typedef cecs_optional_component cecs_get_component(const void *self, const cecs_entity_id id, const size_t size);
+typedef void *cecs_set_component(void *self, cecs_arena *a, const cecs_entity_id id, const void *component, const size_t size);
+typedef bool cecs_remove_component(void *self, cecs_arena *a, const cecs_entity_id id, void *out_removed_component, const size_t size);
 typedef struct cecs_component_storage_functions {
     cecs_info *const info;
     cecs_get_component *const get;
@@ -57,23 +58,25 @@ extern const cecs_component_storage_functions unit_component_storage_functions;
 
 cecs_unit_component_storage cecs_unit_component_storage_create(void);
 
-
+struct cecs_component_storage;
 typedef struct cecs_indirect_component_storgage {
-    cecs_displaced_set component_references;
+    cecs_sentinel_set component_references;
+    cecs_sentinel_set component_indices;
+    struct cecs_component_storage *referenced_storage;
 } cecs_indirect_component_storage;
 
 cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage *self);
-cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_component_storage *self, cecs_entity_id id, size_t size);
-void *cecs_indirect_component_storage_set(cecs_indirect_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component, size_t size);
-bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage *self, cecs_arena *a, cecs_entity_id id, void *out_removed_component, size_t size);
+cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_component_storage *self, const cecs_entity_id id, const size_t size);
+void *cecs_indirect_component_storage_set(cecs_indirect_component_storage *self, cecs_arena *a, const cecs_entity_id id, const void *component_entity, const size_t size);
+bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage *self, cecs_arena *a, const cecs_entity_id id, void *out_removed_component, const size_t size);
 
-cecs_indirect_component_storage cecs_indirect_component_storage_create(void);
+cecs_indirect_component_storage cecs_indirect_component_storage_create(struct cecs_component_storage *referenced_storage);
 
 extern const cecs_component_storage_functions indirect_component_storage_functions;
 
 
 typedef struct cecs_sparse_component_storage {
-    cecs_displaced_set components;
+    cecs_sentinel_set components;
 } cecs_sparse_component_storage;
 
 cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component_storage *self);
@@ -110,14 +113,23 @@ typedef CECS_UNION_STRUCT(
     cecs_indirect_component_storage
 ) cecs_component_storage_union;
 
+typedef enum cecs_component_storage_status {
+    cecs_component_storage_status_none = 0,
+    cecs_component_storage_status_dirty = 1 << 0,
+    cecs_component_storage_status_reading = 1 << 1,
+    cecs_component_storage_status_writing = 1 << 2,
+} cecs_component_storage_status;
+typedef uint8_t cecs_component_storage_status_flags;
+
 typedef struct cecs_component_storage {
     cecs_hibitset entity_bitset;
     cecs_component_storage_union storage;
+    cecs_component_storage_status_flags status;
 } cecs_component_storage;
 
 cecs_component_storage cecs_component_storage_create_sparse(cecs_arena *a, size_t component_capacity, size_t component_size);
 cecs_component_storage cecs_component_storage_create_unit(cecs_arena *a);
-cecs_component_storage cecs_component_storage_create_indirect(cecs_arena *a);
+cecs_component_storage cecs_component_storage_create_indirect(cecs_arena *a, cecs_component_storage *referenced_storage);
 
 typedef enum cecs_component_storage_function_type {
     cecs_component_storage_function_type_none,
@@ -168,9 +180,9 @@ cecs_storage_info cecs_component_storage_info(const cecs_component_storage *self
 cecs_optional_component cecs_component_storage_get(const cecs_component_storage *self, cecs_entity_id id, size_t size);
 #define CECS_COMPONENT_STORAGE_GET(type, component_storage_ref, entity_id) \
     ((type *)cecs_component_storage_get(component_storage_ref, entity_id, sizeof(type)))
-size_t cecs_component_storage_get_array(const cecs_component_storage *self, cecs_entity_id id, void **out_components, size_t count, size_t size);
+size_t cecs_component_storage_get_array(const cecs_component_storage *self, cecs_entity_id id, void *out_components[static 1], size_t count, size_t size);
 
-void *cecs_component_storage_get_unchecked(const cecs_component_storage *self, cecs_entity_id id, size_t size);
+void *cecs_component_storage_get_expect(const cecs_component_storage *self, cecs_entity_id id, size_t size);
 void *cecs_component_storage_get_or_null(const cecs_component_storage *self, cecs_entity_id id, size_t size);
 
 cecs_optional_component cecs_component_storage_set(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component, size_t size);

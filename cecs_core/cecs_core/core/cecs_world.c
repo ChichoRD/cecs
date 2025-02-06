@@ -56,7 +56,7 @@ void* cecs_world_set_component(cecs_world* w, cecs_entity_id id, cecs_component_
         && "entity with given ID is inmutable and its components may not be set"
     );
 
-    return cecs_world_components_set_component_unchecked(
+    return cecs_world_components_set_component_expect(
         &w->components,
         id,
         component_id,
@@ -440,9 +440,19 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
     ) {
         cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
         void *source_components;
-        if (cecs_component_storage_info(&storage.storage->storage).is_unit_type_storage) {
+        const cecs_storage_info storage_info = cecs_component_storage_info(&storage.storage->storage);
+        if (storage_info.is_unit_type_storage) {
             source_components = NULL;
-        } else {
+        } else if (CECS_UNION_IS(cecs_indirect_component_storage, cecs_component_storage_union, storage.storage->storage.storage)) {
+            assert(storage_info.guarantees_contiguity && "fatal error: indirect component storage must guarantee contiguity");
+            const cecs_indirect_component_storage *indirect_storage =
+                &CECS_UNION_GET_UNCHECKED(cecs_indirect_component_storage, storage.storage->storage.storage);
+            source_components = cecs_sentinel_set_get_range_inbounds(
+                &indirect_storage->component_indices,
+                cecs_inclusive_range_from_exclusive(source.range),
+                storage.storage->component_size
+            );
+        } else if (storage_info.guarantees_contiguity) {
             size_t copy_source_count = cecs_component_storage_get_array(
                 &storage.storage->storage,
                 source.start,
@@ -455,6 +465,10 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
                 copy_source_count == source_count
                 && "error: source range does not contain enough components to copy"
             );
+        } else {
+            // FIXME: implement!
+            assert(false && "unimplemented");
+            exit(EXIT_FAILURE);
         }
 
         cecs_component_storage_set_array(
@@ -601,24 +615,28 @@ void* cecs_world_set_component_relation(cecs_world* w, cecs_entity_id id, cecs_c
         component;
 #endif
 
-    return cecs_world_components_set_component_unchecked(
+    void *holder_component = cecs_world_set_component(
+        w,
+        holder,
+        component_id,
+        component_source,
+        size
+    );
+    void *indirect_component = cecs_world_components_set_component_expect(
         &w->components,
         id,
         cecs_relation_id_create(cecs_relation_id_descriptor_create_tag(component_id, tag_id)),
-        cecs_world_set_component(
-            w,
-            holder,
-            component_id,
-            component_source,
-            size
-        ),
-        size,
+        &holder,
+        sizeof(cecs_entity_id),
         (cecs_component_storage_descriptor) {
             .capacity = 1,
             .indirect_component_id = CECS_OPTION_CREATE_SOME(cecs_indirect_component_id, component_id),
             .is_size_known = true,
+            .config = CECS_COMPONENT_CONFIG_DEFAULT
         }
     );
+    assert(indirect_component == holder_component && "error: stored indirect component does not match holder component");
+    return indirect_component;
 }
 
 void* cecs_world_get_component_relation(const cecs_world* w, cecs_entity_id id, cecs_component_id component_id, cecs_tag_id tag_id) {
@@ -678,18 +696,20 @@ cecs_tag_id cecs_world_add_tag_relation(cecs_world* w, cecs_entity_id id, cecs_t
         tag;
 #endif
 
-    return cecs_world_add_tag(
+    cecs_world_add_tag(
+        w,
+        holder,
+        tag_source
+    );
+    cecs_tag_id tag_id = cecs_world_add_tag(
         w,
         id,
-        cecs_relation_id_create(cecs_relation_id_descriptor_create_tag(
-            cecs_world_add_tag(
-                w,
-                holder,
-                tag_source
-            ),
-            target_tag_id
-        ))
+        cecs_relation_id_create(
+            cecs_relation_id_descriptor_create_tag(tag, target_tag_id)
+        )
     );
+
+    return tag_id;
 }
 
 bool cecs_world_remove_tag_relation(cecs_world* w, cecs_entity_id id, cecs_tag_id tag, cecs_tag_id target_tag_id) {

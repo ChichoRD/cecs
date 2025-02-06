@@ -20,16 +20,16 @@ typedef struct cecs_range {
     cecs_ssize_t end;
 } cecs_range;
 
-static inline bool cecs_range_is_left_subrange(const cecs_range superrange, const cecs_range subrange) {
+static inline bool cecs_range_is_left_subrange(const cecs_range subrange, const cecs_range superrange) {
     return subrange.start >= superrange.start;
 }
 
-static inline bool cecs_range_is_right_subrange(const cecs_range superrange, const cecs_range subrange) {
+static inline bool cecs_range_is_right_subrange(const cecs_range subrange, const cecs_range superrange) {
     return subrange.end <= superrange.end;
 }
 
-static inline bool cecs_range_is_subrange(const cecs_range superrange, const cecs_range subrange) {
-    return cecs_range_is_right_subrange(superrange, subrange) && cecs_range_is_left_subrange(superrange, subrange);
+static inline bool cecs_range_is_subrange(const cecs_range subrange, const cecs_range superrange) {
+    return cecs_range_is_right_subrange(subrange, superrange) && cecs_range_is_left_subrange(subrange, superrange);
 }
 
 static inline bool cecs_range_leff_equals(const cecs_range range1, const cecs_range range2) {
