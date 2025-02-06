@@ -47,59 +47,19 @@ bool cecs_world_components_has_storage(const cecs_world_components* wc, cecs_com
     return cecs_paged_sparse_set_contains(&wc->component_storages, (size_t)component_id);
 }
 
-cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_component_storage_descriptor descriptor, cecs_world_components* wc, size_t component_size) {
-    if (component_size == 0 && descriptor.is_size_known) {
-        return (cecs_sized_component_storage){
-            .storage = cecs_component_storage_create_unit(&wc->components_arena),
-            .component_size = 0
-        };
-    }
-
-    if (!descriptor.is_size_known) {
-        assert(component_size == 0 && "component_size must be zero if is_size_known is false");
-    }
-
-    if (CECS_OPTION_IS_SOME(cecs_indirect_component_id, descriptor.indirect_component_id)) {
-        cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
-        if (cecs_world_components_has_storage(wc, other_id)) {
-            return (cecs_sized_component_storage){
-                .storage = cecs_component_storage_create_indirect(
-                    &wc->components_arena
-                ),
-                .component_size = component_size
-            };
-        } else {
-            // TODO: keep an eye on indirect storages, and allow customization
-            cecs_sized_component_storage other_storage = cecs_component_storage_descriptor_build((cecs_component_storage_descriptor) {
-                .is_size_known = false,
-                .capacity = descriptor.capacity,
-                .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
-            }, wc, 0);
-            return (cecs_sized_component_storage){
-                .storage =cecs_component_storage_create_indirect(
-                    &wc->components_arena
-                ),
-                .component_size = component_size
-            };
-        }
-    } else {
-        return (cecs_sized_component_storage){
-            .storage = cecs_component_storage_create_sparse(&wc->components_arena, descriptor.capacity, component_size),
-            .component_size = component_size
-        };
-    }
-}
-
 static cecs_sized_component_storage *cecs_world_components_get_or_set_component_storage(
     cecs_world_components *wc,
-    cecs_component_id component_id,
-    cecs_component_storage_descriptor storage_descriptor,
-    size_t size
+    const cecs_component_id component_id,
+    const cecs_component_storage_descriptor storage_descriptor,
+    const size_t size
 ) {
     cecs_optional_component_storage optional_storage = cecs_world_components_get_component_storage(wc, component_id);
     if (CECS_OPTION_IS_SOME(cecs_optional_component_storage, optional_storage)) {
         cecs_sized_component_storage *storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, optional_storage);
-        assert(storage->component_size == size && "error: component size mismatch");
+        assert(
+            ((storage->component_size == size) || (!storage_descriptor.is_size_known && size == 0))
+            && "error: component size mismatch, or size known when it should not be"
+        );
         return storage;
     } else {
         cecs_sized_component_storage new_storage = cecs_component_storage_descriptor_build(storage_descriptor, wc, size);
@@ -112,6 +72,53 @@ static cecs_sized_component_storage *cecs_world_components_get_or_set_component_
         );
     }
 }
+
+cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_component_storage_descriptor descriptor, cecs_world_components* wc, size_t component_size) {
+    if (component_size == 0 && descriptor.is_size_known) {
+        return (cecs_sized_component_storage){
+            .storage = cecs_component_storage_create_unit(&wc->components_arena),
+            .component_size = 0
+        };
+    } else if (!descriptor.is_size_known) {
+        assert(component_size == 0 && "component_size must be zero if is_size_known is false");
+    }
+
+    if (CECS_OPTION_IS_SOME(cecs_indirect_component_id, descriptor.indirect_component_id)) {
+        const cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
+        cecs_sized_component_storage *other_storage = cecs_world_components_get_or_set_component_storage(wc, other_id, (cecs_component_storage_descriptor){
+            .capacity = descriptor.capacity,
+            .is_size_known = false,
+            .config = CECS_COMPONENT_CONFIG_DEFAULT,
+            .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
+        }, 0);
+        
+        return (cecs_sized_component_storage){
+            .storage = cecs_component_storage_create_indirect(
+                &wc->components_arena,
+                &other_storage->storage
+            ),
+            .component_size = component_size
+        };
+    } else {
+        switch (descriptor.config.storage_type) {
+        case cecs_component_config_storage_dense_set:
+        case cecs_component_config_storage_flatmap:
+        // TODO: create storage types
+        case cecs_component_config_storage_sparse_array:{
+            return (cecs_sized_component_storage){
+                .storage = cecs_component_storage_create_sparse(&wc->components_arena, descriptor.capacity, component_size),
+                .component_size = component_size
+            };
+        }
+        default: {
+            assert(false && "unreachable: invalid component storage type");
+            exit(EXIT_FAILURE);
+            return (cecs_sized_component_storage){0};
+        }
+        }
+    }
+}
+
 
 extern inline cecs_world_components_checksum cecs_world_components_checksum_add(cecs_world_components_checksum current, cecs_component_id component_id);
 extern inline cecs_world_components_checksum cecs_world_components_checksum_remove(cecs_world_components_checksum current, cecs_component_id component_id);

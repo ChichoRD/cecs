@@ -12,8 +12,8 @@ extern cecs_type_id *cecs_type_id_counter(void);
 #define CECS_PASTE3(x, y, z) x##y##z
 
 typedef struct cecs_type_id_meta {
-    bool initialized;
     cecs_type_id id;
+    bool initialized;
 } cecs_type_id_meta;
 
 #define CECS_TYPE_ID_META(type) CECS_PASTE3(cecs_, type, _type_id_meta)

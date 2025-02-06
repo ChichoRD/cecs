@@ -597,7 +597,7 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
         }
         cecs_dynamic_array_add(&screen, &screen_arena, "\n", sizeof(char));
     }
-    printf("%s", (char *)screen.elements);
+    printf("%s", (char *)screen.values);
     cecs_arena_free(&screen_arena);
     printf("fps: %f\n", 1.0 / CECS_WORLD_GET_RESOURCE(cecs_game_time, w)->averaged_delta_time_seconds);
     // cecs_arena_dbg_info dbg = cecs_arena_get_dbg_info_compare_size(&w->components.components_arena);

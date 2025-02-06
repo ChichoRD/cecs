@@ -182,7 +182,7 @@ cecs_component_iterator_descriptor cecs_component_iterator_descriptor_create(con
         .world_components = world_components,
         .entities_bitset = entities_bitset,
         .components_type_info = (struct cecs_components_type_info){
-            .component_ids = sized_component_ids.elements,
+            .component_ids = sized_component_ids.values,
             .component_count = sized_component_count
     }
     };
