@@ -85,6 +85,8 @@ cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_compon
 
     if (CECS_OPTION_IS_SOME(cecs_indirect_component_id, descriptor.indirect_component_id)) {
         const cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
+
+        // FIXME: require other component to be set because knowing its size is required
         cecs_sized_component_storage *other_storage = cecs_world_components_get_or_set_component_storage(wc, other_id, (cecs_component_storage_descriptor){
             .capacity = descriptor.capacity,
             .is_size_known = false,
@@ -95,7 +97,8 @@ cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_compon
         return (cecs_sized_component_storage){
             .storage = cecs_component_storage_create_indirect(
                 &wc->components_arena,
-                &other_storage->storage
+                &other_storage->storage,
+                other_storage->component_size
             ),
             .component_size = component_size
         };
