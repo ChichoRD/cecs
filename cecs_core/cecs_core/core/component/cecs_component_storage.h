@@ -63,6 +63,7 @@ typedef struct cecs_indirect_component_storgage {
     cecs_sentinel_set component_references;
     cecs_sentinel_set component_indices;
     struct cecs_component_storage *referenced_storage;
+    size_t referenced_size;
 } cecs_indirect_component_storage;
 
 cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage *self);
@@ -70,7 +71,7 @@ cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_
 void *cecs_indirect_component_storage_set(cecs_indirect_component_storage *self, cecs_arena *a, const cecs_entity_id id, const void *component_entity, const size_t size);
 bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage *self, cecs_arena *a, const cecs_entity_id id, void *out_removed_component, const size_t size);
 
-cecs_indirect_component_storage cecs_indirect_component_storage_create(struct cecs_component_storage *referenced_storage);
+cecs_indirect_component_storage cecs_indirect_component_storage_create(struct cecs_component_storage *referenced_storage, const size_t referenced_size);
 
 extern const cecs_component_storage_functions indirect_component_storage_functions;
 
@@ -129,7 +130,7 @@ typedef struct cecs_component_storage {
 
 cecs_component_storage cecs_component_storage_create_sparse(cecs_arena *a, size_t component_capacity, size_t component_size);
 cecs_component_storage cecs_component_storage_create_unit(cecs_arena *a);
-cecs_component_storage cecs_component_storage_create_indirect(cecs_arena *a, cecs_component_storage *referenced_storage);
+cecs_component_storage cecs_component_storage_create_indirect(cecs_arena *a, cecs_component_storage *referenced_storage, const size_t referenced_size);
 
 typedef enum cecs_component_storage_function_type {
     cecs_component_storage_function_type_none,

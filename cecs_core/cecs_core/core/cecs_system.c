@@ -207,7 +207,7 @@ cecs_components_search_group_range cecs_dynamic_world_system_set_range(cecs_dyna
 
 cecs_world_system cecs_dynamic_world_system_get(const cecs_dynamic_world_system* d) {
     return cecs_world_system_create(cecs_components_search_groups_create(
-        d->components_search_groups.values,
+        (cecs_components_search_group *)d->components_search_groups.values,
         CECS_DYNAMIC_ARRAY_COUNT(cecs_components_search_group, &d->components_search_groups)
     ));
 }
