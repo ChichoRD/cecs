@@ -14,7 +14,7 @@
 
 #include "test_pass.h"
 
-static cecs_mesh_builder *mesh_builder_configure_sqaure(cecs_mesh_builder *builder) {
+static cecs_mesh_builder *mesh_builder_configure_square(cecs_mesh_builder *builder) {
     cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(position2_f32_attribute),
         (position2_f32_attribute[]) {
             // quad 4 verts
@@ -81,7 +81,7 @@ int main(void) {
         .vertex_attributes_expected_count = 2,
         .index_format = WGPUIndexFormat_Uint16,
     }, &builder_arena);
-    mesh_builder_configure_sqaure(&builder);
+    mesh_builder_configure_square(&builder);
     cecs_index_stream index_stream;
     cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
     cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);

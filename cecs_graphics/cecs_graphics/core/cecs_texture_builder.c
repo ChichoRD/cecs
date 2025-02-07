@@ -175,7 +175,8 @@ WGPUExtent3D cecs_generate_next_mip(
             const uint8_t *texel_11 = mip_texels + bytes_per_texel * ((2 * j + 1) * mip_size.width + (2 * i + 1));
             
             for (uint_fast8_t k = 0; k < bytes_per_texel; ++k) {
-                destination_texel[k] = (texel_00[k] + texel_01[k] + texel_10[k] + texel_11[k]) / 4;
+                const uint_fast32_t average = ((uint_fast32_t)texel_00[k] + texel_01[k] + texel_10[k] + texel_11[k]) >> 2;
+                destination_texel[k] = average;
             }
         }
     }

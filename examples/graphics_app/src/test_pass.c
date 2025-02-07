@@ -141,7 +141,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                     .minFilter = WGPUFilterMode_Linear,
                     .mipmapFilter = WGPUMipmapFilterMode_Linear,
                     .lodMinClamp = 0.0f,
-                    .lodMaxClamp = 1.0f,
+                    .lodMaxClamp = 32.0f,
                     .compare = WGPUCompareFunction_Undefined,
                     .maxAnisotropy = 1,
                 }),
