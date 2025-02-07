@@ -142,7 +142,7 @@ static size_t cecs_dynamic_wgpu_buffer_unpad(cecs_dynamic_wgpu_buffer *buffer, c
 static size_t cecs_dynamic_wgpu_buffer_pad(cecs_dynamic_wgpu_buffer *buffer, cecs_arena *arena, size_t padding) {
     if (padding > 0) {
         cecs_dynamic_array *stage_values = (cecs_dynamic_array *)&cecs_dynamic_wgpu_buffer_get_stage(buffer)->base.values;
-        cecs_dynamic_array_append_empty(stage_values, arena, padding, sizeof(cecs_buffer_stage_element));
+        cecs_dynamic_array_extend(stage_values, arena, padding, sizeof(cecs_buffer_stage_element));
     }
     return buffer->current_padding + padding;
 }

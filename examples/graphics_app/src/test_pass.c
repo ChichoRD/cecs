@@ -405,7 +405,7 @@ static void test_pass_draw_inner(
             if (out_local_bind_groups[1] != NULL) {
                 wgpuBindGroupRelease(out_local_bind_groups[1]);
             }
-            cecs_texture_bank *texture_bank = cecs_component_storage_get_unchecked(
+            cecs_texture_bank *texture_bank = cecs_component_storage_get_expect(
                 texture_storage, handle.cecs_texture_in_bank_reference_component->texture_id, sizeof(cecs_texture_bank)
             );
 
