@@ -41,6 +41,9 @@ cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_compo
 }
 
 cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_component_storage* self, const cecs_entity_id id, const size_t size) {
+    assert(size == sizeof(cecs_entity_id) && "fatal error: indirect component storage only supports entity id components");
+    (void)size;
+
     if (self->referenced_storage->status & cecs_component_storage_status_dirty) {
         if (!cecs_sentinel_set_contains_index(&self->component_indices, (size_t)id)) {
             return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
@@ -76,6 +79,7 @@ cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_
 
 void *cecs_indirect_component_storage_set(cecs_indirect_component_storage* self, cecs_arena* a, const cecs_entity_id id, const void* component_entity, const size_t size) {
     assert(size == sizeof(cecs_entity_id) && "fatal error: indirect component storage only supports entity id components");
+    (void)size;
 
     const cecs_entity_id referenced_id = *(cecs_entity_id *)component_entity;
     cecs_sentinel_set_expand_to_include(
@@ -93,6 +97,9 @@ void *cecs_indirect_component_storage_set(cecs_indirect_component_storage* self,
 }
 
 bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* self, cecs_arena* a, const cecs_entity_id id, void* out_removed_component, const size_t size) {
+    assert(size == sizeof(cecs_entity_id) && "fatal error: indirect component storage only supports entity id components");
+    (void)size;
+    
     cecs_entity_id removed_referenced_id;
     bool removed_id = cecs_sentinel_set_remove(
         &self->component_indices,
@@ -104,7 +111,7 @@ bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* sel
     );
 
     if (!removed_id || removed_referenced_id == cecs_indirect_component_storage_invalid_id) {
-        memset(out_removed_component, 0, size);
+        memset(out_removed_component, 0, self->referenced_size);
         return false;
     }
 
@@ -132,7 +139,7 @@ bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* sel
         assert(removed_ref && "fatal error: removed reference must exist");
         assert(removed_reference != NULL && "fatal error: removed reference must not be NULL");
 
-        memcpy(out_removed_component, removed_reference, size);
+        memcpy(out_removed_component, removed_reference, self->referenced_size);
         return true;
     }
 }
