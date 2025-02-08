@@ -361,7 +361,7 @@ bool cecs_world_components_has_component_storage_attachments(const cecs_world_co
     );
 }
 
-const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_unchecked(
+const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_expect(
     const cecs_world_components *wc,
     cecs_component_id component_id
 ) {
