@@ -18,7 +18,7 @@ void cecs_graphics_world_free(cecs_graphics_world *w) {
     ) {
         cecs_associated_component_storage storage = cecs_world_components_iterator_current(&it);
         if (cecs_world_has_component_storage_attachments(&w->world, storage.component_id)) {
-            const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_unchecked(
+            const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_expect(
                 &w->world.components,
                 storage.component_id
             );
@@ -35,7 +35,7 @@ void cecs_graphics_world_free(cecs_graphics_world *w) {
 }
 
 cecs_buffer_storage_attachment *cecs_graphics_world_get_buffer_attachments(cecs_graphics_world *graphics_world, cecs_component_id component_id) {
-    const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_unchecked(
+    const cecs_component_storage_attachments *attachments = cecs_world_components_get_component_storage_attachments_expect(
         &graphics_world->world.components,
         component_id
     );

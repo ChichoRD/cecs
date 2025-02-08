@@ -133,6 +133,10 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_borrowed(
     uint16_t alignment
 );
 
+inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer) {
+    return CECS_COW_GET_REFERENCE(cecs_buffer_stage, buffer->stage);
+}
+
 static inline bool cecs_dynamic_wgpu_buffer_is_shared(const cecs_dynamic_wgpu_buffer *buffer) {
     return CECS_COW_IS_BORROWED(cecs_buffer_stage, buffer->stage);
 }

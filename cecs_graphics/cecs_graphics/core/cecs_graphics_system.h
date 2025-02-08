@@ -32,20 +32,22 @@ const cecs_uniform_raw_stream *cecs_graphics_system_set_component_as_uniform(
 cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
     cecs_graphics_system *system,
     cecs_world *world,
-    cecs_component_id component_id
+    cecs_arena *sync_arena,
+    const cecs_component_id component_id
 );
-#define CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS(type, graphics_system_ref, world_ref) \
-    (cecs_graphics_system_sync_uniform_components(graphics_system_ref, world_ref, CECS_COMPONENT_ID(type)))
+#define CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS(type, graphics_system_ref, world_ref, sync_arena_ref) \
+    (cecs_graphics_system_sync_uniform_components(graphics_system_ref, world_ref, sync_arena_ref, CECS_COMPONENT_ID(type)))
 
 bool cecs_graphics_system_sync_uniform_components_all(
     cecs_graphics_system *system,
     cecs_world *world,
+    cecs_arena *sync_arena,
     const cecs_component_id components[],
     size_t components_count,
     cecs_buffer_storage_attachment *out_uniform_buffers[]
 );
-#define CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(graphics_system_ref, world_ref, out_uniform_buffers_ref, ...) \
-    (cecs_graphics_system_sync_uniform_components_all(graphics_system_ref, world_ref, CECS_COMPONENT_ID_ARRAY(__VA_ARGS__), CECS_COMPONENT_COUNT(__VA_ARGS__), (cecs_buffer_storage_attachment **)out_uniform_buffers_ref))
+#define CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(graphics_system_ref, world_ref, sync_arena_ref, out_uniform_buffers_ref, ...) \
+    (cecs_graphics_system_sync_uniform_components_all(graphics_system_ref, world_ref, sync_arena_ref, CECS_COMPONENT_ID_ARRAY(__VA_ARGS__), CECS_COMPONENT_COUNT(__VA_ARGS__), (cecs_buffer_storage_attachment **)out_uniform_buffers_ref))
 
 
 cecs_texture_reference *cecs_graphics_system_set_texture(

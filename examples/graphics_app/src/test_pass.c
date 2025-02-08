@@ -303,9 +303,10 @@ static void test_pass_draw_inner(
         &system->world.world.components, CECS_COMPONENT_ID(cecs_texture_bank)
     );
     cecs_component_storage *texture_storage;
+    cecs_arena frame_arena = cecs_arena_create();
     if (
         !CECS_GRAPHICS_SYSTEM_SYNC_UNIFORM_COMPONENTS_ALL(
-            system, world, &ubos, color4_f32_uniform, position4_f32_uniform
+            system, world, &frame_arena, &ubos, color4_f32_uniform, position4_f32_uniform
         )
         || CECS_OPTION_IS_NONE(cecs_optional_component_storage, optional_texture_storage)
     ) {
@@ -360,9 +361,8 @@ static void test_pass_draw_inner(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(
         cecs_mesh, cecs_instance_group, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream, cecs_texture_in_bank_reference
     ) handle;
-    cecs_arena arena = cecs_arena_create();
     for (
-        cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, &arena,
+        cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, &frame_arena,
             CECS_COMPONENTS_ALL(cecs_mesh, cecs_instance_group),
             CECS_COMPONENTS_AND_ANY(cecs_index_stream),
             CECS_COMPONENTS_ALL_IDS(
@@ -446,7 +446,7 @@ static void test_pass_draw_inner(
             );
         }
     }
-    cecs_arena_free(&arena);
+    cecs_arena_free(&frame_arena);
 }
 
 void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *system, cecs_render_target *target) {

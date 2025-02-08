@@ -1,3 +1,4 @@
+#include <memory.h>
 #include "cecs_graphics_system.h"
 
 cecs_graphics_system cecs_graphics_system_create(size_t vertex_capacity, size_t vertex_attributes_capacity, GLFWwindow *window) {
@@ -80,36 +81,64 @@ const cecs_uniform_raw_stream *cecs_graphics_system_set_component_as_uniform(
 cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
     cecs_graphics_system *system,
     cecs_world *world,
-    cecs_component_id component_id
+    cecs_arena *sync_arena,
+    const cecs_component_id component_id
 ) {
-    cecs_buffer_storage_attachment *storage = cecs_graphics_world_get_buffer_attachments(
+    cecs_sized_component_storage *storage = cecs_world_components_get_component_storage_expect(
+        &world->components,
+        component_id
+    );
+    cecs_buffer_storage_attachment *uniform_buffer = cecs_graphics_world_get_buffer_attachments(
         &system->world,
         component_id
     );
-    // TODO: maybe iter and update the cecs_uniform_raw_stream of those that have this component
-    // TODO: for that, not only the gpu buffer must have adirty flag but cecs storage must also have
-    // in order to dintinguish between just needing an upload or a stage and then upload
-    (void)world;
+
+    if (storage->storage.status & cecs_component_storage_status_dirty) {
+        extern inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer);
+        cecs_sparse_set *stage = cecs_dynamic_wgpu_buffer_get_stage(&uniform_buffer->buffer);
+        uint8_t *stage_data = cecs_sparse_set_values(stage);
+
+        CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_uniform_raw_stream, void) handle;
+        for (
+            cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, sync_arena,
+                CECS_COMPONENTS_ALL_IDS(CECS_RELATION_ID(cecs_uniform_raw_stream, component_id), component_id)
+            );
+            !cecs_component_iterator_done(&it);
+            cecs_component_iterator_next(&it)
+        ) {
+            cecs_component_iterator_current(&it, &handle);
+            memcpy(
+                stage_data + handle.cecs_uniform_raw_stream_component->offset,
+                handle.void_component,
+                handle.cecs_uniform_raw_stream_component->size
+            );
+        }
+
+        // HACK: we are the ONES removing the dirty flag
+        storage->storage.status &= ~cecs_component_storage_status_dirty;
+        uniform_buffer->buffer_flags |= cecs_buffer_flags_dirty;
+    }
     
     assert(
-        storage->buffer_flags & cecs_buffer_flags_initialized
+        uniform_buffer->buffer_flags & cecs_buffer_flags_initialized
         && "error: uniform buffer must be initialized"
     );
-    if (storage->buffer_flags & cecs_buffer_flags_dirty) {
+    if (uniform_buffer->buffer_flags & cecs_buffer_flags_dirty) {
         cecs_dynamic_wgpu_buffer_upload_all(
-            &storage->buffer,
+            &uniform_buffer->buffer,
             system->context.device,
             system->context.queue,
             cecs_graphics_world_default_buffer_arena(&system->world)
         );
-        storage->buffer_flags &= ~cecs_buffer_flags_dirty;
+        uniform_buffer->buffer_flags &= ~cecs_buffer_flags_dirty;
     }
-    return storage;
+    return uniform_buffer;
 }
 
 bool cecs_graphics_system_sync_uniform_components_all(
     cecs_graphics_system *system,
     cecs_world *world,
+    cecs_arena *sync_arena,
     const cecs_component_id components[],
     size_t components_count,
     cecs_buffer_storage_attachment *out_uniform_buffers[]
@@ -121,6 +150,7 @@ bool cecs_graphics_system_sync_uniform_components_all(
             out_uniform_buffers[i] = cecs_graphics_system_sync_uniform_components(
                 system,
                 world,
+                sync_arena,
                 components[i]
             );
             ++i;

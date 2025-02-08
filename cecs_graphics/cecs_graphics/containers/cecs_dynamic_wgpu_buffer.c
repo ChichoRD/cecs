@@ -102,9 +102,7 @@ cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_borrowed(
     return buffer;
 }
 
-static inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer) {
-    return CECS_COW_GET_REFERENCE(cecs_buffer_stage, buffer->stage);
-}
+extern inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer);
 
 void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer) {
     wgpuBufferRelease(buffer->buffer);

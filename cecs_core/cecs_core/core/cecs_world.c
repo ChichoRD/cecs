@@ -161,7 +161,7 @@ bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_comp
 }
 
 void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
-    return cecs_world_components_get_component_storage_attachments_unchecked(
+    return cecs_world_components_get_component_storage_attachments_expect(
         &w->components,
         component_id
     )->user_attachments;
