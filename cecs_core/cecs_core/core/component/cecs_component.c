@@ -86,14 +86,17 @@ cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_compon
     if (CECS_OPTION_IS_SOME(cecs_indirect_component_id, descriptor.indirect_component_id)) {
         const cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
 
-        // FIXME: require other component to be set because knowing its size is required
-        cecs_sized_component_storage *other_storage = cecs_world_components_get_or_set_component_storage(wc, other_id, (cecs_component_storage_descriptor){
-            .capacity = descriptor.capacity,
-            .is_size_known = false,
-            .config = CECS_COMPONENT_CONFIG_DEFAULT,
-            .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
-        }, 0);
-        
+        cecs_optional_component_storage optional_storage = cecs_world_components_get_component_storage(wc, other_id);
+        if (CECS_OPTION_IS_NONE(cecs_optional_component_storage, optional_storage)) {
+            assert(
+                false
+                && "fatal error: indirect referenced component must be set before setting a relation with it as component.\n"
+                "It is necessary to know at least the size of the component before setting a relation with it."
+            );
+            exit(EXIT_FAILURE);
+        }
+
+        cecs_sized_component_storage *other_storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, optional_storage);
         return (cecs_sized_component_storage){
             .storage = cecs_component_storage_create_indirect(
                 &wc->components_arena,
