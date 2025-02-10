@@ -386,8 +386,9 @@ bool create_shockwave(cecs_world *w, position p, velocity v) {
 
 void update_controllables(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
-    cecs_system_predicate_data delta_time_seconds
+    const cecs_system_predicate_data delta_time_seconds
 ) {
     velocity *v = handle->velocity_component;
     controllable c = *handle->controllable_component;
@@ -416,6 +417,7 @@ void update_controllables(
 
 void update_lonk(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -439,6 +441,7 @@ void update_lonk(
 
 void update_ducks(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -463,6 +466,7 @@ void update_ducks(
 
 void update_shockwaves(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -475,7 +479,7 @@ void update_shockwaves(
     if (p->x < 0 || p->x >= BOARD_WIDTH
         || p->y < 0 || p->y >= BOARD_HEIGHT
         || v->x == 0 && v->y == 0) {
-        cecs_world_remove_entity(w, handle->entity_id);
+        cecs_world_remove_entity(w, entity);
     } else {
         renderable new_r = renderable_create_shockwave_alloc(abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
         *handle->renderable_component = new_r;
@@ -491,6 +495,7 @@ void update_shockwaves(
 
 void update_children_position(
     const CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, cecs_is_child_of) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -503,43 +508,54 @@ void update_children_position(
 }
 
 bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_time_seconds) {
+    void *component_handles[8] = {0};
     cecs_scene_world_system s = cecs_scene_world_system_create(0, iteration_arena);
-    CECS_WORLD_SYSTEM_ITER_RANGE(
-        cecs_scene_world_system_get_with(&s, iteration_arena, CECS_COMPONENTS_ALL(velocity, controllable)),
+    cecs_dynamic_world_system_set_or_extend_range(&s.world_system, iteration_arena, 1, (cecs_component_iteration_group[]){
+        CECS_COMPONENT_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, velocity),
+        CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, controllable)
+    }, 2);
+    
+    CECS_WORLD_SYSTEM_ITER(
+        cecs_world_system_from_dynamic_range(&s.world_system, (cecs_component_iteration_group_range){1, 3}),
         w,
         iteration_arena,
-        ((cecs_entity_id_range){0, 512}),
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_controllables
     );
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, velocity_register, controllable),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_lonk
     );
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, velocity, renderable, is_shockwave),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_shockwaves
     );
-    cecs_entity_count duck_count = CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, is_duck),
+    const cecs_entity_count duck_count = CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, is_duck),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_ducks
     );
-    //  entity_id lonk;
-    // CECS_WORLD_GET_ENTITY_WITH(w, &lonk, CECS_COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
+    (void)duck_count;
     
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE_GROUPED(CECS_COMPONENTS_ALL(position, renderable), CECS_COMPONENTS_OR_ALL(cecs_is_child_of)),
+        CECS_WORLD_SYSTEM_CREATE_GROUPED(
+            CECS_COMPONENT_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, position, renderable),
+            CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_or_all, cecs_is_child_of)),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_children_position
     );
@@ -549,6 +565,7 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
 
 void update_console_buffer(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data buffer_user_data
 ) {
@@ -575,11 +592,13 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
             new_console_buffer.buffer[x][y] = " ";
         }
     }
-    //scene_cecs_world_system s = scene_cecs_world_system_create(0, iteration_arena);
+    
+    void *component_handles[2] = {0};
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, renderable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_inmmutable, cecs_component_group_search_all, position, renderable),
         (cecs_world *)w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_user_data(&new_console_buffer),
         update_console_buffer
     );
@@ -619,6 +638,7 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
 
 void write_controllables(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(controllable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data controllable_user_data
 ) {
@@ -648,10 +668,12 @@ bool process_input(cecs_world *w, cecs_arena *iteration_arena) {
         c.buffer[c.buffer_count++] = input;
     }
 
+    void *component_handles[1] = {0};
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(controllable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, controllable),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_user_data(&c),
         write_controllables
     );
@@ -673,21 +695,21 @@ bool finalize(cecs_world *w) {
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
     //size_t count = 0;
     // BUG: we kaboom here
-    for (
-        cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
-            &w->components,
-            &a,
-            CECS_COMPONENTS_SEARCH_GROUPS_CREATE(
-                CECS_COMPONENTS_ALL(renderable, owns_renderable)
-            )
-        ));
-        !cecs_component_iterator_done(&it);
-        cecs_component_iterator_next(&it)
-    ) {
-        cecs_component_iterator_current(&it, &handle);
-        free(handle.renderable_component->sprite);
-        //++count;
-    }
+    // for (
+    //     cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
+    //         &w->components,
+    //         &a,
+    //         CECS_COMPONENTS_SEARCH_GROUPS_CREATE(
+    //             CECS_COMPONENTS_ALL(renderable, owns_renderable)
+    //         )
+    //     ));
+    //     !cecs_component_iterator_done(&it);
+    //     cecs_component_iterator_next(&it)
+    // ) {
+    //     cecs_component_iterator_current(&it, &handle);
+    //     free(handle.renderable_component->sprite);
+    //     //++count;
+    // }
     //printf("freed %d renderables\n", count);
     cecs_arena_free(&a);
     return EXIT_SUCCESS;

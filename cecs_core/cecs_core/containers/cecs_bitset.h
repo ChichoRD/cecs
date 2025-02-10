@@ -164,7 +164,7 @@ bool cecs_hibitset_bit_in_range(const cecs_hibitset *b, size_t bit_index);
 
 
 typedef struct cecs_hibitset_iterator {
-    const CECS_COW_STRUCT(const cecs_hibitset, cecs_hibitset) hibitset;
+    CECS_COW_STRUCT(cecs_hibitset, cecs_hibitset) hibitset;
     size_t current_bit_index;
 } cecs_hibitset_iterator;
 
