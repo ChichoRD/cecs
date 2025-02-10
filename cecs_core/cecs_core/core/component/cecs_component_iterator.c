@@ -207,7 +207,7 @@ cecs_component_iterator cecs_component_iterator_create(
     );
     return (cecs_component_iterator) {
         .descriptor = { .groupped = descriptor_filtered },
-        .entities_iterator = cecs_hibitset_iterator_create_owned_at(set, descriptor.entity_range.start),
+        .entities_iterator = cecs_hibitset_iterator_create_owned_at_first(set),
         .creation_checksum = world_components->checksum,
         .world_components = world_components,
         .component_count = sized_component_count,
@@ -293,8 +293,7 @@ cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, c
     assert(component_count == it->component_count && "fatal error: component count mismatch");
     it->descriptor.flattened = flat_descriptor;
 
-    if (!cecs_hibitset_iterator_done(&it->entities_iterator)
-        && !cecs_hibitset_iterator_current_is_set(&it->entities_iterator)) {
+    if (!cecs_hibitset_iterator_current_is_set(&it->entities_iterator)) {
         cecs_hibitset_iterator_next_set(&it->entities_iterator);
     }
     return it->entities_iterator.current_bit_index;

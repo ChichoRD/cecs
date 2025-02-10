@@ -531,8 +531,12 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
         cecs_system_predicate_data_create_none(),
         update_lonk
     );
+    const cecs_component_id pos = CECS_COMPONENT_ID(position);
+    const cecs_component_id vel = CECS_COMPONENT_ID(velocity);
+    const cecs_component_id ren = CECS_COMPONENT_ID(renderable);
+    const cecs_component_id is_shw = CECS_COMPONENT_ID(is_shockwave);
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, is_shockwave),
         w,
         iteration_arena,
         component_handles,
