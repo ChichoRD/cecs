@@ -60,6 +60,6 @@ cecs_scene_world_system cecs_scene_world_system_create_from(
     const size_t group_count
 );
 
-cecs_scene_world_system* cecs_scene_world_system_set_active_scene(cecs_scene_world_system* s, cecs_arena* a, const cecs_scene_id scene);
+cecs_scene_world_system* cecs_scene_world_system_set_active_scene(cecs_scene_world_system* s, const cecs_scene_id scene);
 
 #endif

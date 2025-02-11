@@ -90,7 +90,7 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_add_range(
     );
     for (size_t i = 0; i < group_count; ++i) {
         const cecs_component_iteration_group added_group = added_groups[i];
-        const cecs_component_id *added_components = cecs_dynamic_array_add_range(
+        cecs_component_id *added_components = cecs_dynamic_array_add_range(
             &d->components,
             a,
             added_group.components,
@@ -150,6 +150,7 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_set_or_extend_ran
 }
 
 cecs_world_system cecs_world_system_from_dynamic(const cecs_dynamic_world_system* d) {
+    // TODO: watch group const disqualifier
     return cecs_world_system_create((cecs_component_iterator_descriptor){
         .entity_range = { 0, PTRDIFF_MAX },
         .groups = cecs_dynamic_array_first(&d->component_groups),
@@ -174,7 +175,7 @@ cecs_world_system cecs_world_system_from_dynamic_range(const cecs_dynamic_world_
 cecs_dynamic_world_system cecs_dynamic_world_system_clone(const cecs_dynamic_world_system* d, cecs_arena* a) {
     return cecs_dynamic_world_system_create_from(
         a,
-        cecs_dynamic_array_first(&d->component_groups),
+        cecs_dynamic_array_first_const(&d->component_groups),
         cecs_dynamic_array_count_of_size(&d->component_groups, sizeof(cecs_component_iteration_group))
     );
 }

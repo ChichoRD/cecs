@@ -7,6 +7,7 @@
 
 #include "cecs_dynamic_array.h"
 
+// TODO: circular buffer
 typedef struct cecs_queue {
     cecs_dynamic_array elements;
     size_t first;

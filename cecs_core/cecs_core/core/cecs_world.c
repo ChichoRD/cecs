@@ -439,7 +439,7 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
         cecs_world_components_entity_iterator_next(&it)
     ) {
         cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
-        void *source_components;
+        const void *source_components;
         const cecs_storage_info storage_info = cecs_component_storage_info(&storage.storage->storage);
         if (storage_info.is_unit_type_storage) {
             source_components = NULL;
@@ -447,16 +447,17 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
             assert(storage_info.guarantees_contiguity && "fatal error: indirect component storage must guarantee contiguity");
             const cecs_indirect_component_storage *indirect_storage =
                 &CECS_UNION_GET_UNCHECKED(cecs_indirect_component_storage, storage.storage->storage.storage);
-            source_components = cecs_sentinel_set_get_range_inbounds(
+            source_components = cecs_sentinel_set_get_range_inbounds_const(
                 &indirect_storage->component_indices,
                 cecs_inclusive_range_from_exclusive(source.range),
                 storage.storage->component_size
             );
         } else if (storage_info.guarantees_contiguity) {
+            void *contiguous_source_components;
             size_t copy_source_count = cecs_component_storage_get_array(
                 &storage.storage->storage,
                 source.start,
-                &source_components,
+                &contiguous_source_components,
                 source_count,
                 storage.storage->component_size
             );
@@ -465,6 +466,7 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
                 copy_source_count == source_count
                 && "error: source range does not contain enough components to copy"
             );
+            source_components = contiguous_source_components;
         } else {
             // FIXME: implement!
             assert(false && "unimplemented");

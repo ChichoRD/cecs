@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include "cecs_component_storage.h"
 
-cecs_storage_info cecs_unit_component_storage_info(const cecs_unit_component_storage* self) {
+cecs_storage_info cecs_unit_component_storage_info(const void* self) {
     (void)self;
     return (cecs_storage_info) {
         .is_index_stable = true,
@@ -29,7 +29,7 @@ cecs_unit_component_storage cecs_unit_component_storage_create(void) {
 static const cecs_entity_id cecs_indirect_component_storage_invalid_id = CECS_ENTITY_ID_MAX;
 static const uint_fast8_t cecs_indirect_component_storage_invalid_id_pattern = UINT8_MAX;
 
-cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_component_storage* self) {
+cecs_storage_info cecs_indirect_component_storage_info(const void* self) {
     (void)self;
     return (cecs_storage_info) {
         .is_dense = false,
@@ -40,25 +40,29 @@ cecs_storage_info cecs_indirect_component_storage_info(const cecs_indirect_compo
     };
 }
 
-cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_component_storage* self, const cecs_entity_id id, const size_t size) {
+cecs_optional_component cecs_indirect_component_storage_get(void *self, const cecs_entity_id id, const size_t size) {
     assert(size == sizeof(cecs_entity_id) && "fatal error: indirect component storage only supports entity id components");
     (void)size;
 
-    if (self->referenced_storage->status & cecs_component_storage_status_dirty) {
-        if (!cecs_sentinel_set_contains_index(&self->component_indices, (size_t)id)) {
+    cecs_indirect_component_storage *storage = (cecs_indirect_component_storage *)self;
+    if (storage->referenced_storage->status & cecs_component_storage_status_dirty) {
+        if (!cecs_sentinel_set_contains_index(&storage->component_indices, (size_t)id)) {
             return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
         } else {
-            cecs_entity_id referenced_id =
-                *(cecs_entity_id*)cecs_sentinel_set_get_inbounds(&self->component_indices, (size_t)id, sizeof(cecs_entity_id));
+            const cecs_entity_id referenced_id = *(cecs_entity_id*)cecs_sentinel_set_get_inbounds_const(
+                &storage->component_indices,
+                (size_t)id,
+                sizeof(cecs_entity_id)
+            );
             if (referenced_id == cecs_indirect_component_storage_invalid_id) {
                 return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
             }
 
-            cecs_optional_component component = cecs_component_storage_get(self->referenced_storage, referenced_id, self->referenced_size);
+            cecs_optional_component component = cecs_component_storage_get(storage->referenced_storage, referenced_id, storage->referenced_size);
             if (CECS_OPTION_IS_SOME(cecs_optional_component, component)) {
                 // TODO: improve displaced set API
                 void *some_component = CECS_OPTION_GET_UNCHECKED(cecs_optional_component, component);
-                void **stored_reference = cecs_sentinel_set_get_inbounds(&self->component_references, id, sizeof(void *));
+                void **stored_reference = cecs_sentinel_set_get_inbounds(&storage->component_references, id, sizeof(void *));
 
                 assert(*stored_reference != NULL && "fatal error: stored reference cannot be NULL"); 
                 *stored_reference = some_component;
@@ -67,42 +71,44 @@ cecs_optional_component cecs_indirect_component_storage_get(const cecs_indirect_
         }
     }
     
-    if (!cecs_sentinel_set_contains_index(&self->component_references, (size_t)id)) {
+    if (!cecs_sentinel_set_contains_index(&storage->component_references, (size_t)id)) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
     } else {
         return CECS_OPTION_CREATE_SOME_STRUCT(
             cecs_optional_component,
-            (*(void **)cecs_sentinel_set_get_inbounds(&self->component_references, (size_t)id, sizeof(void *)))
+            (*(void **)cecs_sentinel_set_get_inbounds(&storage->component_references, (size_t)id, sizeof(void *)))
         );
     }
 }
 
-void *cecs_indirect_component_storage_set(cecs_indirect_component_storage* self, cecs_arena* a, const cecs_entity_id id, const void* component_entity, const size_t size) {
+void *cecs_indirect_component_storage_set(void* self, cecs_arena* a, const cecs_entity_id id, const void* component_entity, const size_t size) {
     assert(size == sizeof(cecs_entity_id) && "fatal error: indirect component storage only supports entity id components");
     (void)size;
 
+    cecs_indirect_component_storage *storage = (cecs_indirect_component_storage *)self;
     const cecs_entity_id referenced_id = *(cecs_entity_id *)component_entity;
     cecs_sentinel_set_expand_to_include(
-        &self->component_indices, a, cecs_inclusive_range_singleton(id), sizeof(cecs_entity_id), cecs_indirect_component_storage_invalid_id_pattern
+        &storage->component_indices, a, cecs_inclusive_range_singleton(id), sizeof(cecs_entity_id), cecs_indirect_component_storage_invalid_id_pattern
     );
-    cecs_sentinel_set_set_inbounds(&self->component_indices, a, (size_t)id, &referenced_id, sizeof(cecs_entity_id));
+    cecs_sentinel_set_set_inbounds(&storage->component_indices, (size_t)id, &referenced_id, sizeof(cecs_entity_id));
 
-    void *component_reference = cecs_component_storage_get_expect(self->referenced_storage, referenced_id, self->referenced_size);
+    void *component_reference = cecs_component_storage_get_expect(storage->referenced_storage, referenced_id, storage->referenced_size);
     cecs_sentinel_set_expand_to_include(
-        &self->component_references, a, cecs_inclusive_range_singleton(id), sizeof(void *), 0
+        &storage->component_references, a, cecs_inclusive_range_singleton(id), sizeof(void *), 0
     );
-    cecs_sentinel_set_set_inbounds(&self->component_references, a, (size_t)id, &component_reference, sizeof(void *));
+    cecs_sentinel_set_set_inbounds(&storage->component_references, (size_t)id, &component_reference, sizeof(void *));
     
     return component_reference;
 }
 
-bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* self, cecs_arena* a, const cecs_entity_id id, void* out_removed_component, const size_t size) {
+bool cecs_indirect_component_storage_remove(void* self, cecs_arena* a, const cecs_entity_id id, void* out_removed_component, const size_t size) {
     assert(size == sizeof(cecs_entity_id) && "fatal error: indirect component storage only supports entity id components");
     (void)size;
     
+    cecs_indirect_component_storage *storage = (cecs_indirect_component_storage *)self;
     cecs_entity_id removed_referenced_id;
     bool removed_id = cecs_sentinel_set_remove(
-        &self->component_indices,
+        &storage->component_indices,
         a,
         (size_t)id,
         &removed_referenced_id,
@@ -111,25 +117,25 @@ bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* sel
     );
 
     if (!removed_id || removed_referenced_id == cecs_indirect_component_storage_invalid_id) {
-        memset(out_removed_component, 0, self->referenced_size);
+        memset(out_removed_component, 0, storage->referenced_size);
         return false;
     }
 
-    if (self->referenced_storage->status & cecs_component_storage_status_dirty) {
-        void **removed_reference = cecs_sentinel_set_get_inbounds(&self->component_references, (size_t)id, sizeof(void *));
+    if (storage->referenced_storage->status & cecs_component_storage_status_dirty) {
+        void **removed_reference = cecs_sentinel_set_get_inbounds(&storage->component_references, (size_t)id, sizeof(void *));
         assert(*removed_reference != NULL && "fatal error: removed reference must not be NULL");
         
         *removed_reference = NULL;
         memcpy(
             out_removed_component,
-            cecs_component_storage_get_expect(self->referenced_storage, removed_referenced_id, self->referenced_size),
-            self->referenced_size
+            cecs_component_storage_get_expect(storage->referenced_storage, removed_referenced_id, storage->referenced_size),
+            storage->referenced_size
         );
         return true;
     } else {
         void *removed_reference;
         bool removed_ref = cecs_sentinel_set_remove(
-            &self->component_references,
+            &storage->component_references,
             a,
             (size_t)id,
             &removed_reference,
@@ -139,7 +145,7 @@ bool cecs_indirect_component_storage_remove(cecs_indirect_component_storage* sel
         assert(removed_ref && "fatal error: removed reference must exist");
         assert(removed_reference != NULL && "fatal error: removed reference must not be NULL");
 
-        memcpy(out_removed_component, removed_reference, self->referenced_size);
+        memcpy(out_removed_component, removed_reference, storage->referenced_size);
         return true;
     }
 }
@@ -160,7 +166,7 @@ const cecs_component_storage_functions indirect_component_storage_functions = {
     .remove = (cecs_remove_component *const)cecs_indirect_component_storage_remove
 };
 
-cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component_storage* self) {
+cecs_storage_info cecs_sparse_component_storage_info(const void* self) {
     (void)self;
     return (cecs_storage_info) {
         .is_index_stable = true,
@@ -171,23 +177,26 @@ cecs_storage_info cecs_sparse_component_storage_info(const cecs_sparse_component
     };
 }
 
-cecs_optional_component cecs_sparse_component_storage_get(const cecs_sparse_component_storage* self, cecs_entity_id id, size_t size) {
-    if (!cecs_sentinel_set_contains_index(&self->components, (size_t)id)) {
+cecs_optional_component cecs_sparse_component_storage_get(void* self, const cecs_entity_id id, const size_t size) {
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
+    if (!cecs_sentinel_set_contains_index(&storage->components, (size_t)id)) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
     } else {
-        return CECS_OPTION_CREATE_SOME_STRUCT(cecs_optional_component, cecs_sentinel_set_get_inbounds(&self->components, (size_t)id, size));
+        return CECS_OPTION_CREATE_SOME_STRUCT(cecs_optional_component, cecs_sentinel_set_get_inbounds(&storage->components, (size_t)id, size));
     }
 }
 
-void *cecs_sparse_component_storage_set(cecs_sparse_component_storage* self, cecs_arena* a, cecs_entity_id id, void* component, size_t size) {
-    cecs_sentinel_set_expand_to_include(&self->components, a, cecs_inclusive_range_singleton(id), size, 0);
-    return cecs_sentinel_set_set_inbounds(&self->components, a, (size_t)id, component, size);
+void *cecs_sparse_component_storage_set(void* self, cecs_arena* a, const cecs_entity_id id, const void* component, const size_t size) {
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
+    cecs_sentinel_set_expand_to_include(&storage->components, a, cecs_inclusive_range_singleton(id), size, 0);
+    return cecs_sentinel_set_set_inbounds(&storage->components, (size_t)id, component, size);
 }
 
-bool cecs_sparse_component_storage_remove(cecs_sparse_component_storage* self, cecs_arena* a, cecs_entity_id id, void* out_removed_component, size_t size) {
+bool cecs_sparse_component_storage_remove(void* self, cecs_arena* a, const cecs_entity_id id, void* out_removed_component, const size_t size) {
     (void)a;
-    if (cecs_sentinel_set_contains_index(&self->components, (size_t)id)) {
-        memcpy(out_removed_component, cecs_sentinel_set_get_inbounds(&self->components, (size_t)id, size), size);
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
+    if (cecs_sentinel_set_contains_index(&storage->components, (size_t)id)) {
+        memcpy(out_removed_component, cecs_sentinel_set_get_inbounds_const(&storage->components, (size_t)id, size), size);
         return true;
     } else {
         memset(out_removed_component, 0, size);
@@ -195,7 +204,7 @@ bool cecs_sparse_component_storage_remove(cecs_sparse_component_storage* self, c
     }
 }
 
-cecs_sparse_component_storage cecs_sparse_component_storage_create(cecs_arena* a, size_t component_capacity, size_t component_size) {
+cecs_sparse_component_storage cecs_sparse_component_storage_create(cecs_arena* a, const size_t component_capacity, const size_t component_size) {
     return (cecs_sparse_component_storage) {
         .components = cecs_sentinel_set_create_with_capacity(a, component_capacity * component_size),
     };
@@ -208,17 +217,18 @@ const cecs_component_storage_functions sparse_component_storage_functions = {
     .remove = (cecs_remove_component *const)cecs_sparse_component_storage_remove
 };
 
-size_t cecs_sparse_component_storage_get_array(const cecs_sparse_component_storage *self, cecs_entity_id id, void **out_components, size_t count, size_t size) {
+size_t cecs_sparse_component_storage_get_array(void *self, const cecs_entity_id id, void **out_components, const size_t count, const size_t size) {
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
     cecs_inclusive_range range = cecs_inclusive_range_from_exclusive(cecs_range_intersection(
         cecs_exclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count).range,
-        self->components.index_range.range
+        storage->components.index_range.range
     ));
     if (cecs_inclusive_range_is_empty(range)) {
         *out_components = NULL;
         return 0;
     } else {
         *out_components = cecs_sentinel_set_get_range_inbounds(
-            &self->components,
+            &storage->components,
             range,
             size
         );
@@ -226,44 +236,49 @@ size_t cecs_sparse_component_storage_get_array(const cecs_sparse_component_stora
     }
 }
 
-void *cecs_sparse_component_storage_set_array(cecs_sparse_component_storage *self, cecs_arena *a, cecs_entity_id id, void *components, size_t count, size_t size) {
+void *cecs_sparse_component_storage_set_array(void *self, cecs_arena *a, const cecs_entity_id id, const void *components, const size_t count, const size_t size) {
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
     cecs_sentinel_set_expand_to_include(
-        &self->components, a, cecs_inclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count), size, 0
+        &storage->components, a, cecs_inclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count), size, 0
     );
     return cecs_sentinel_set_set_range_inbounds(
-        &self->components,
-        a,
+        &storage->components,
         cecs_inclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count),
         components,
         size
     );
 }
 
-void *cecs_sparse_component_storage_set_copy_array(cecs_sparse_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component_single_src, size_t count, size_t size) {
+void *cecs_sparse_component_storage_set_copy_array(void *self, cecs_arena *a, const cecs_entity_id id, const void *component_single_src, const size_t count, const size_t size) {
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
     cecs_sentinel_set_expand_to_include(
-        &self->components, a, cecs_inclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count), size, 0
+        &storage->components, a, cecs_inclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count), size, 0
     );
     return cecs_sentinel_set_set_copy_range_inbounds(
-        &self->components,
-        a,
+        &storage->components,
         cecs_inclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count),
         component_single_src,
         size
     );
 }
 
-size_t cecs_sparse_component_storage_remove_array(cecs_sparse_component_storage *self, cecs_arena *a, cecs_entity_id id, void *out_removed_components, size_t count, size_t size) {
+size_t cecs_sparse_component_storage_remove_array(void *self, cecs_arena *a, const cecs_entity_id id, void *out_removed_components, const size_t count, const size_t size) {
     (void)a;
+    cecs_sparse_component_storage *storage = (cecs_sparse_component_storage *)self;
     cecs_inclusive_range range = cecs_inclusive_range_from_exclusive(cecs_range_intersection(
         cecs_exclusive_range_index_count((cecs_ssize_t)id, (cecs_ssize_t)count).range,
-        self->components.index_range.range
+        storage->components.index_range.range
     ));
     if (cecs_inclusive_range_is_empty(range)) {
         memset(out_removed_components, 0, count * size);
         return 0;
     } else {
         size_t removed_count = cecs_inclusive_range_length(range);
-        memcpy(out_removed_components, cecs_sentinel_set_get_range_inbounds(&self->components, range, size), removed_count * size);
+        memcpy(
+            out_removed_components,
+            cecs_sentinel_set_get_range_inbounds_const(&storage->components, range, size),
+            removed_count * size
+        );
         return removed_count;
     }
 }
@@ -353,7 +368,7 @@ cecs_storage_info cecs_component_storage_info(const cecs_component_storage* self
     return storage_functions.info(&self->storage);
 }
 
-cecs_optional_component cecs_component_storage_get(const cecs_component_storage* self, cecs_entity_id id, size_t size) {
+cecs_optional_component cecs_component_storage_get(cecs_component_storage* self, const cecs_entity_id id, const size_t size) {
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
     if (cecs_component_storage_function_type_from_info(storage_functions.info(&self->storage))
         != cecs_component_storage_function_type_none) {
@@ -363,7 +378,7 @@ cecs_optional_component cecs_component_storage_get(const cecs_component_storage*
     }
 }
 
-size_t cecs_component_storage_get_array(const cecs_component_storage *self, cecs_entity_id id, void *out_components[static 1], size_t count, size_t size) {
+size_t cecs_component_storage_get_array(cecs_component_storage *self, const cecs_entity_id id, void *out_components[static 1], const size_t count, const size_t size) {
     const cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
     const cecs_storage_info info = storage_functions.info(&self->storage);
     // info.is_dense
@@ -402,10 +417,10 @@ size_t cecs_component_storage_get_array(const cecs_component_storage *self, cecs
     }
 }
 
-void *cecs_component_storage_get_expect(const cecs_component_storage *self, cecs_entity_id id, size_t size) {
+void *cecs_component_storage_get_expect(cecs_component_storage *self, const cecs_entity_id id, const size_t size) {
     return CECS_OPTION_GET(cecs_optional_component, cecs_component_storage_get(self, id, size));
 }
-void *cecs_component_storage_get_or_null(const cecs_component_storage* self, cecs_entity_id id, size_t size) {
+void *cecs_component_storage_get_or_null(cecs_component_storage* self, const cecs_entity_id id, const size_t size) {
     cecs_optional_component component = cecs_component_storage_get(self, id, size);
     return CECS_OPTION_GET_OR_NULL(cecs_optional_component, component);
 }

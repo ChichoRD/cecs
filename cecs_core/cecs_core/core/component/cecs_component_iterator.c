@@ -184,7 +184,7 @@ static cecs_component_iterator_descriptor cecs_component_iterator_descriptor_fil
 }
 
 cecs_component_iterator cecs_component_iterator_create(
-    const cecs_component_iterator_descriptor descriptor, 
+    cecs_component_iterator_descriptor descriptor, 
     cecs_world_components *world_components,
     cecs_arena *iterator_temporary_arena
 ) {

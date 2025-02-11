@@ -117,7 +117,7 @@ cecs_scene_world_system cecs_scene_world_system_create_from(
     return s;
 }
 
-cecs_scene_world_system* cecs_scene_world_system_set_active_scene(cecs_scene_world_system* s, cecs_arena* a, const cecs_scene_id scene) {
+cecs_scene_world_system* cecs_scene_world_system_set_active_scene(cecs_scene_world_system* s, const cecs_scene_id scene) {
     s->scene = scene;
     cecs_component_iteration_group *scene_group = cecs_dynamic_array_get(
         &s->world_system.component_groups,

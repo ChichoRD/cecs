@@ -434,8 +434,6 @@ static size_t write_set_bits(const cecs_world *w, const cecs_entity_id entity, c
     return count;
 }
 
-static cecs_entity_id s_id = 0; 
-
 void update_lonk(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
     const cecs_entity_id entity,
@@ -454,7 +452,7 @@ void update_lonk(
     for (size_t k = 0; k < c.buffer_count; k++) {
         switch (c.buffer[k]) {
             case 'x': {
-                s_id = create_shockwave(w, *p, vr->velocity);
+                create_shockwave(w, *p, vr->velocity);
                 break;
             }
         }
@@ -543,32 +541,7 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
         },
         2
     );
-    // cecs_world_system ws = cecs_world_system_from_dynamic_range(&s.world_system, (cecs_component_iteration_group_range){1, 3});
-    
-    // if (s_id != 0) {
-    //     const cecs_component_id pos = CECS_COMPONENT_ID(position);
-    //     const cecs_component_id vel = CECS_COMPONENT_ID(velocity);
-    //     const cecs_component_id ren = CECS_COMPONENT_ID(renderable);
-    //     const cecs_component_id is_shw = CECS_TAG_ID(is_shockwave);
-        
-    //     char pos_buffer[16 * 2 + 1] = {0};
-    //     char vel_buffer[16 * 2 + 1] = {0};
-    //     char ren_buffer[16 * 2 + 1] = {0};
-    //     char is_shw_buffer[16 * 2 + 1] = {0};
-    //     size_t pos_count = write_set_bits(w, s_id, pos, pos_buffer);
-    //     size_t vel_count = write_set_bits(w, s_id, vel, vel_buffer);
-    //     size_t ren_count = write_set_bits(w, s_id, ren, ren_buffer);
-    //     size_t is_shw_count = write_set_bits(w, s_id, is_shw, is_shw_buffer);
 
-    //     printf("\x1b[%d;%dH\x1b[J", 0, 0);
-    //     fflush(stdout);
-    
-    //     printf("pos: %s\nvel: %s\nren: %s\nshw: %s\n", pos_buffer, vel_buffer, ren_buffer, is_shw_buffer);
-    //     // assert(false);
-    // }
-
-
-    // Boys we got em
     CECS_WORLD_SYSTEM_ITER(
         cecs_world_system_from_dynamic_range(&s.world_system, r),
         w,
@@ -577,37 +550,6 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
         cecs_system_predicate_data_create_none(),
         update_controllables
     );
-    // CECS_WORLD_SYSTEM_ITER(
-    //     CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, velocity, controllable),
-    //     w,
-    //     iteration_arena,
-    //     component_handles,
-    //     cecs_system_predicate_data_create_none(),
-    //     update_controllables
-    // );
-
-    // if (s_id != 0) {
-    //     const cecs_component_id pos = CECS_COMPONENT_ID(position);
-    //     const cecs_component_id vel = CECS_COMPONENT_ID(velocity);
-    //     const cecs_component_id ren = CECS_COMPONENT_ID(renderable);
-    //     const cecs_component_id is_shw = CECS_TAG_ID(is_shockwave);
-        
-    //     char pos_buffer[16 * 2 + 1] = {0};
-    //     char vel_buffer[16 * 2 + 1] = {0};
-    //     char ren_buffer[16 * 2 + 1] = {0};
-    //     char is_shw_buffer[16 * 2 + 1] = {0};
-    //     size_t pos_count = write_set_bits(w, s_id, pos, pos_buffer);
-    //     size_t vel_count = write_set_bits(w, s_id, vel, vel_buffer);
-    //     size_t ren_count = write_set_bits(w, s_id, ren, ren_buffer);
-    //     size_t is_shw_count = write_set_bits(w, s_id, is_shw, is_shw_buffer);
-
-    //     printf("\x1b[%d;%dH\x1b[J", 0, 0);
-    //     fflush(stdout);
-    
-    //     printf("pos: %s\nvel: %s\nren: %s\nshw: %s\n", pos_buffer, vel_buffer, ren_buffer, is_shw_buffer);
-    //     // assert(false);
-    // }
-
     
     CECS_WORLD_SYSTEM_ITER(
         CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, velocity_register, controllable),
@@ -617,10 +559,7 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
         cecs_system_predicate_data_create_none(),
         update_lonk
     );
-    const cecs_component_id pos = CECS_COMPONENT_ID(position);
-    const cecs_component_id vel = CECS_COMPONENT_ID(velocity);
-    const cecs_component_id ren = CECS_COMPONENT_ID(renderable);
-    const cecs_component_id is_shw = CECS_COMPONENT_ID(is_shockwave);
+
     CECS_WORLD_SYSTEM_ITER(
         CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, is_shockwave),
         w,
@@ -629,6 +568,7 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
         cecs_system_predicate_data_create_none(),
         update_shockwaves
     );
+
     const cecs_entity_count duck_count = CECS_WORLD_SYSTEM_ITER(
         CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, is_duck),
         w,
