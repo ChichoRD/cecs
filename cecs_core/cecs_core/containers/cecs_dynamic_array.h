@@ -33,7 +33,7 @@ void *cecs_dynamic_array_add(cecs_dynamic_array *l, cecs_arena *a, const void *e
 #define CECS_DYNAMIC_ARRAY_ADD(type, cecs_dynamic_array_ref, arena_ref, element_ref) \
     ((type *)cecs_dynamic_array_add(cecs_dynamic_array_ref, arena_ref, element_ref, sizeof(type)))
 
-void *cecs_dynamic_array_add_range(cecs_dynamic_array *l, cecs_arena *a, void *elements, size_t count, size_t size);
+void *cecs_dynamic_array_add_range(cecs_dynamic_array *l, cecs_arena *a, const void *elements, size_t count, size_t size);
 #define CECS_DYNAMIC_ARRAY_ADD_RANGE(type, cecs_dynamic_array_ref, arena_ref, elements_ref, count) \
     cecs_dynamic_array_add_range(cecs_dynamic_array_ref, arena_ref, elements_ref, count, sizeof(type))
 

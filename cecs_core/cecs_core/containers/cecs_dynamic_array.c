@@ -209,7 +209,7 @@ void *cecs_dynamic_array_set(cecs_dynamic_array *l, size_t index, void *element,
     return memcpy(l->values + index * size, element, size);
 }
 
-void* cecs_dynamic_array_add_range(cecs_dynamic_array* l, cecs_arena* a, void* elements, size_t count, size_t size) {
+void* cecs_dynamic_array_add_range(cecs_dynamic_array* l, cecs_arena* a, const void* elements, size_t count, size_t size) {
     size_t new_count = l->count + count * size;
     if (new_count > l->capacity)
         cecs_dynamic_array_grow(l, a, new_count);

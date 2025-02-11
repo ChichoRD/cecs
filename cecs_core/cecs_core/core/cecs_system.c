@@ -89,14 +89,15 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_add_range(
         sizeof(cecs_component_iteration_group)
     );
     for (size_t i = 0; i < group_count; ++i) {
-        const cecs_component_iteration_group added = added_groups[i];
-        added_groups[i].components = cecs_dynamic_array_add_range(
+        const cecs_component_iteration_group added_group = added_groups[i];
+        const cecs_component_id *added_components = cecs_dynamic_array_add_range(
             &d->components,
             a,
-            added.components,
-            added.component_count,
+            added_group.components,
+            added_group.component_count,
             sizeof(cecs_component_id)
         );
+        added_groups[i].components = added_components;
     }
     return (cecs_component_iteration_group_range) {
         0, cecs_dynamic_array_count_of_size(&d->component_groups, sizeof(cecs_component_iteration_group))
@@ -113,13 +114,11 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_set_or_extend_ran
     const size_t current_group_count = cecs_dynamic_array_count_of_size(&d->component_groups, sizeof(cecs_component_iteration_group));
     assert(index <= group_count && "error: group index out of bounds");
 
-    if (index + group_count > group_count) {
+    if (index + group_count > current_group_count) {
         const size_t extension = index + group_count - current_group_count;
         cecs_component_iteration_group *extended =
             cecs_dynamic_array_extend(&d->component_groups, a, extension, sizeof(cecs_component_iteration_group));
-        for (size_t i = 0; i < extension; ++i) {
-            extended[i].component_count = 0;
-        }
+        memset(extended, 0, extension * sizeof(cecs_component_iteration_group));
     }
 
     for (size_t i = 0; i < group_count; ++i) {
@@ -135,19 +134,16 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_set_or_extend_ran
                 new_group.component_count,
                 sizeof(cecs_component_id)
             );
-            previous_group->component_count = new_group.component_count;
-            previous_group->access = new_group.access;
-            previous_group->search_mode = new_group.search_mode;
         } else {
             memcpy(
                 previous_group->components,
                 new_group.components,
                 new_group.component_count * sizeof(cecs_component_id)
             );
-            previous_group->component_count = new_group.component_count;
-            previous_group->access = new_group.access;
-            previous_group->search_mode = new_group.search_mode;
         }
+        previous_group->component_count = new_group.component_count;
+        previous_group->access = new_group.access;
+        previous_group->search_mode = new_group.search_mode;
     }
 
     return (cecs_component_iteration_group_range) { 0, index + group_count };
@@ -162,6 +158,12 @@ cecs_world_system cecs_world_system_from_dynamic(const cecs_dynamic_world_system
 }
 
 cecs_world_system cecs_world_system_from_dynamic_range(const cecs_dynamic_world_system* d, const cecs_component_iteration_group_range r) {
+    assert(r.start >= 0 && "error: start index out of bounds");
+    assert(r.start <= r.end && "error: start index greater than end index, invalid range");
+    assert(
+        (size_t)r.end <= cecs_dynamic_array_count_of_size(&d->component_groups, sizeof(cecs_component_iteration_group))
+        && "error: end index out of bounds"
+    );
     return cecs_world_system_create((cecs_component_iterator_descriptor){
         .entity_range = { 0, PTRDIFF_MAX },
         .groups = cecs_dynamic_array_get(&d->component_groups, r.start, sizeof(cecs_component_iteration_group)),

@@ -336,12 +336,12 @@ bool init(cecs_world *w) {
         duck
     );
 
-    // 2 test lonks
-    cecs_entity_id_range lonk_range = cecs_world_add_entity_range(w, 2);
-    size_t copied_component_types =
-        cecs_world_copy_entity_range_onto(w, lonk_range, cecs_exclusive_range_singleton(lonk), lonk);
-    CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start, &((position){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 2}));
-    CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start + 1, &((position){BOARD_WIDTH / 2 + 2, BOARD_HEIGHT / 2 + 4}));
+    // // 2 test lonks
+    // cecs_entity_id_range lonk_range = cecs_world_add_entity_range(w, 2);
+    // size_t copied_component_types =
+    //     cecs_world_copy_entity_range_onto(w, lonk_range, cecs_exclusive_range_singleton(lonk), lonk);
+    // CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start, &((position){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 2}));
+    // CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start + 1, &((position){BOARD_WIDTH / 2 + 2, BOARD_HEIGHT / 2 + 4}));
 
     // for (size_t i = 0; i < 2; i++) {
     //     create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (cecs_entity_id[]){lonk}, 1);
@@ -353,7 +353,7 @@ bool init(cecs_world *w) {
     return EXIT_SUCCESS;
 }
 
-bool create_shockwave(cecs_world *w, position p, velocity v) {
+cecs_entity_id create_shockwave(cecs_world *w, position p, velocity v) {
     cecs_entity_id e = cecs_world_add_entity(w);
 
     CECS_WORLD_SET_COMPONENT(
@@ -381,7 +381,7 @@ bool create_shockwave(cecs_world *w, position p, velocity v) {
         })
     );
     CECS_WORLD_ADD_TAG(is_shockwave, w, e);
-    return EXIT_SUCCESS;
+    return e;
 }
 
 void update_controllables(
@@ -415,6 +415,27 @@ void update_controllables(
 }
 
 
+static size_t write_set_bits(const cecs_world *w, const cecs_entity_id entity, const cecs_component_id component, char buffer[static 16 * 2]) {
+    cecs_hibitset *set =
+        &cecs_world_components_get_component_storage_expect(&w->components, component)->storage.entity_bitset;
+    cecs_hibitset_iterator it = cecs_hibitset_iterator_create_borrowed_at(set, entity);
+    size_t count = 0;
+    for (size_t i = 0; i < 16; i++) {
+        if (cecs_hibitset_iterator_current_is_set(&it)) {
+            buffer[i * 2] = '1';
+            ++count;
+        } else {
+            buffer[i * 2] = '0';
+        }
+
+        buffer[i * 2 + 1] = ' ';
+        cecs_hibitset_iterator_next(&it);
+    }
+    return count;
+}
+
+static cecs_entity_id s_id = 0; 
+
 void update_lonk(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
     const cecs_entity_id entity,
@@ -432,11 +453,13 @@ void update_lonk(
     controllable c = *handle->controllable_component;
     for (size_t k = 0; k < c.buffer_count; k++) {
         switch (c.buffer[k]) {
-            case 'x':
-                create_shockwave(w, *p, vr->velocity);
+            case 'x': {
+                s_id = create_shockwave(w, *p, vr->velocity);
                 break;
+            }
         }
     }
+
 }
 
 void update_ducks(
@@ -510,19 +533,82 @@ void update_children_position(
 bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_time_seconds) {
     void *component_handles[8] = {0};
     cecs_scene_world_system s = cecs_scene_world_system_create(0, iteration_arena);
-    cecs_dynamic_world_system_set_or_extend_range(&s.world_system, iteration_arena, 1, (cecs_component_iteration_group[]){
-        CECS_COMPONENT_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, velocity),
-        CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, controllable)
-    }, 2);
+    const cecs_component_iteration_group_range r = cecs_dynamic_world_system_set_or_extend_range(
+        &s.world_system,
+        iteration_arena,
+        2,
+        (cecs_component_iteration_group[]){
+            CECS_COMPONENT_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, velocity),
+            CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, controllable)
+        },
+        2
+    );
+    // cecs_world_system ws = cecs_world_system_from_dynamic_range(&s.world_system, (cecs_component_iteration_group_range){1, 3});
     
+    // if (s_id != 0) {
+    //     const cecs_component_id pos = CECS_COMPONENT_ID(position);
+    //     const cecs_component_id vel = CECS_COMPONENT_ID(velocity);
+    //     const cecs_component_id ren = CECS_COMPONENT_ID(renderable);
+    //     const cecs_component_id is_shw = CECS_TAG_ID(is_shockwave);
+        
+    //     char pos_buffer[16 * 2 + 1] = {0};
+    //     char vel_buffer[16 * 2 + 1] = {0};
+    //     char ren_buffer[16 * 2 + 1] = {0};
+    //     char is_shw_buffer[16 * 2 + 1] = {0};
+    //     size_t pos_count = write_set_bits(w, s_id, pos, pos_buffer);
+    //     size_t vel_count = write_set_bits(w, s_id, vel, vel_buffer);
+    //     size_t ren_count = write_set_bits(w, s_id, ren, ren_buffer);
+    //     size_t is_shw_count = write_set_bits(w, s_id, is_shw, is_shw_buffer);
+
+    //     printf("\x1b[%d;%dH\x1b[J", 0, 0);
+    //     fflush(stdout);
+    
+    //     printf("pos: %s\nvel: %s\nren: %s\nshw: %s\n", pos_buffer, vel_buffer, ren_buffer, is_shw_buffer);
+    //     // assert(false);
+    // }
+
+
+    // Boys we got em
     CECS_WORLD_SYSTEM_ITER(
-        cecs_world_system_from_dynamic_range(&s.world_system, (cecs_component_iteration_group_range){1, 3}),
+        cecs_world_system_from_dynamic_range(&s.world_system, r),
         w,
         iteration_arena,
         component_handles,
         cecs_system_predicate_data_create_none(),
         update_controllables
     );
+    // CECS_WORLD_SYSTEM_ITER(
+    //     CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, velocity, controllable),
+    //     w,
+    //     iteration_arena,
+    //     component_handles,
+    //     cecs_system_predicate_data_create_none(),
+    //     update_controllables
+    // );
+
+    // if (s_id != 0) {
+    //     const cecs_component_id pos = CECS_COMPONENT_ID(position);
+    //     const cecs_component_id vel = CECS_COMPONENT_ID(velocity);
+    //     const cecs_component_id ren = CECS_COMPONENT_ID(renderable);
+    //     const cecs_component_id is_shw = CECS_TAG_ID(is_shockwave);
+        
+    //     char pos_buffer[16 * 2 + 1] = {0};
+    //     char vel_buffer[16 * 2 + 1] = {0};
+    //     char ren_buffer[16 * 2 + 1] = {0};
+    //     char is_shw_buffer[16 * 2 + 1] = {0};
+    //     size_t pos_count = write_set_bits(w, s_id, pos, pos_buffer);
+    //     size_t vel_count = write_set_bits(w, s_id, vel, vel_buffer);
+    //     size_t ren_count = write_set_bits(w, s_id, ren, ren_buffer);
+    //     size_t is_shw_count = write_set_bits(w, s_id, is_shw, is_shw_buffer);
+
+    //     printf("\x1b[%d;%dH\x1b[J", 0, 0);
+    //     fflush(stdout);
+    
+    //     printf("pos: %s\nvel: %s\nren: %s\nshw: %s\n", pos_buffer, vel_buffer, ren_buffer, is_shw_buffer);
+    //     // assert(false);
+    // }
+
+    
     CECS_WORLD_SYSTEM_ITER(
         CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, velocity_register, controllable),
         w,

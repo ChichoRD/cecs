@@ -93,13 +93,16 @@ cecs_scene_world_system cecs_scene_world_system_create(cecs_scene_id scene, cecs
     return (cecs_scene_world_system) {
         .world_system = cecs_dynamic_world_system_create_from(
             a,
-            (cecs_component_iteration_group[]){CECS_COMPONENT_GROUP_FROM_IDS(
-                cecs_component_access_ignore, cecs_component_group_search_all, CECS_RELATION_ID(cecs_is_scene_member_of, scene)
-            )},
-            1
+            (cecs_component_iteration_group[]){
+                CECS_COMPONENT_GROUP_DEFAULT_EXCLUDED,
+                CECS_COMPONENT_GROUP_FROM_IDS(
+                    cecs_component_access_ignore, cecs_component_group_search_all, CECS_RELATION_ID(cecs_is_scene_member_of, scene)
+                )
+            },
+            2
         ),
         .scene = scene,
-        .scene_group_index = 0
+        .scene_group_index = 1
     };
 }
 
@@ -116,14 +119,12 @@ cecs_scene_world_system cecs_scene_world_system_create_from(
 
 cecs_scene_world_system* cecs_scene_world_system_set_active_scene(cecs_scene_world_system* s, cecs_arena* a, const cecs_scene_id scene) {
     s->scene = scene;
-    cecs_dynamic_world_system_set_or_extend_range(
-        &s->world_system,
-        a,
-        0,
-        (cecs_component_iteration_group[]){CECS_COMPONENT_GROUP_FROM_IDS(
-            cecs_component_access_ignore, cecs_component_group_search_all, CECS_RELATION_ID(cecs_is_scene_member_of, scene)
-        )},
-        0
+    cecs_component_iteration_group *scene_group = cecs_dynamic_array_get(
+        &s->world_system.component_groups,
+        s->scene_group_index,
+        sizeof(cecs_component_iteration_group)
     );
+    assert(scene_group->component_count == 1 && "fatal error: scene group must have exactly one component");
+    scene_group->components[0] = CECS_RELATION_ID(cecs_is_scene_member_of, scene);
     return s;
 }
