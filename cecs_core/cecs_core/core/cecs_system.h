@@ -109,8 +109,8 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_set_or_extend_ran
     const size_t group_count
 );
 
-cecs_world_system cecs_world_system_from_dynamic(const cecs_dynamic_world_system *d);
-cecs_world_system cecs_world_system_from_dynamic_range(const cecs_dynamic_world_system *d, const cecs_component_iteration_group_range r);
+cecs_world_system cecs_world_system_from_dynamic(cecs_dynamic_world_system *d);
+cecs_world_system cecs_world_system_from_dynamic_range(cecs_dynamic_world_system *d, const cecs_component_iteration_group_range r);
 
 cecs_dynamic_world_system cecs_dynamic_world_system_clone(const cecs_dynamic_world_system *d, cecs_arena *a);
 

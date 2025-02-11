@@ -48,19 +48,19 @@ void *cecs_sentinel_set_set_copy_range_inbounds(cecs_sentinel_set *s, const cecs
     ((type *)cecs_sentinel_set_set_copy_range_inbounds(set_ref, range, single_src_ref, sizeof(type)))
 
 
-void *cecs_sentinel_set_get_inbounds(cecs_sentinel_set *s, const size_t index, const size_t size);
+void *cecs_sentinel_set_get_inbounds_mut(cecs_sentinel_set *s, const size_t index, const size_t size);
+#define CECS_SENTINEL_SET_GET_INBOUNDS_MUT(type, set_ref, index) \
+    ((type *)cecs_sentinel_set_get_inbounds_mut(set_ref, index, sizeof(type)))
+const void *cecs_sentinel_set_get_inbounds(const cecs_sentinel_set *s, const size_t index, const size_t size);
 #define CECS_SENTINEL_SET_GET_INBOUNDS(type, set_ref, index) \
     ((type *)cecs_sentinel_set_get_inbounds(set_ref, index, sizeof(type)))
-const void *cecs_sentinel_set_get_inbounds_const(const cecs_sentinel_set *s, const size_t index, const size_t size);
-#define CECS_SENTINEL_SET_GET_INBOUNDS_CONST(type, set_ref, index) \
-    ((type *)cecs_sentinel_set_get_inbounds_const(set_ref, index, sizeof(type)))
 
-void *cecs_sentinel_set_get_range_inbounds(cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
+void *cecs_sentinel_set_get_range_inbounds_mut(cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
+#define CECS_SENTINEL_SET_GET_RANGE_INBOUNDS_MUT(type, set_ref, range) \
+    ((type *)cecs_sentinel_set_get_range_inbounds_mut(set_ref, range, sizeof(type)))
+const void *cecs_sentinel_set_get_range_inbounds(const cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
 #define CECS_SENTINEL_SET_GET_RANGE_INBOUNDS(type, set_ref, range) \
     ((type *)cecs_sentinel_set_get_range_inbounds(set_ref, range, sizeof(type)))
-const void *cecs_sentinel_set_get_range_inbounds_const(const cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
-#define CECS_SENTINEL_SET_GET_RANGE_INBOUNDS_CONST(type, set_ref, range) \
-    ((type *)cecs_sentinel_set_get_range_inbounds_const(set_ref, range, sizeof(type)))
 
 
 bool cecs_sentinel_set_remove(cecs_sentinel_set *s, cecs_arena *a, const size_t index, void *out_removed_element, const size_t size, const uint_fast8_t absent_pattern);

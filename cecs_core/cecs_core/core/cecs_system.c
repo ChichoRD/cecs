@@ -149,16 +149,16 @@ cecs_component_iteration_group_range cecs_dynamic_world_system_set_or_extend_ran
     return (cecs_component_iteration_group_range) { 0, index + group_count };
 }
 
-cecs_world_system cecs_world_system_from_dynamic(const cecs_dynamic_world_system* d) {
+cecs_world_system cecs_world_system_from_dynamic(cecs_dynamic_world_system* d) {
     // TODO: watch group const disqualifier
     return cecs_world_system_create((cecs_component_iterator_descriptor){
         .entity_range = { 0, PTRDIFF_MAX },
-        .groups = cecs_dynamic_array_first(&d->component_groups),
+        .groups = cecs_dynamic_array_first_mut(&d->component_groups),
         .group_count = cecs_dynamic_array_count_of_size(&d->component_groups, sizeof(cecs_component_iteration_group))
     });
 }
 
-cecs_world_system cecs_world_system_from_dynamic_range(const cecs_dynamic_world_system* d, const cecs_component_iteration_group_range r) {
+cecs_world_system cecs_world_system_from_dynamic_range(cecs_dynamic_world_system* d, const cecs_component_iteration_group_range r) {
     assert(r.start >= 0 && "error: start index out of bounds");
     assert(r.start <= r.end && "error: start index greater than end index, invalid range");
     assert(
@@ -167,7 +167,7 @@ cecs_world_system cecs_world_system_from_dynamic_range(const cecs_dynamic_world_
     );
     return cecs_world_system_create((cecs_component_iterator_descriptor){
         .entity_range = { 0, PTRDIFF_MAX },
-        .groups = cecs_dynamic_array_get(&d->component_groups, r.start, sizeof(cecs_component_iteration_group)),
+        .groups = cecs_dynamic_array_get_mut(&d->component_groups, r.start, sizeof(cecs_component_iteration_group)),
         .group_count = cecs_exclusive_range_length(r)
     });
 }
@@ -175,7 +175,7 @@ cecs_world_system cecs_world_system_from_dynamic_range(const cecs_dynamic_world_
 cecs_dynamic_world_system cecs_dynamic_world_system_clone(const cecs_dynamic_world_system* d, cecs_arena* a) {
     return cecs_dynamic_world_system_create_from(
         a,
-        cecs_dynamic_array_first_const(&d->component_groups),
+        cecs_dynamic_array_first(&d->component_groups),
         cecs_dynamic_array_count_of_size(&d->component_groups, sizeof(cecs_component_iteration_group))
     );
 }

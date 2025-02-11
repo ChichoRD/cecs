@@ -81,7 +81,7 @@ void *cecs_sentinel_set_expand_to_include(
             array_index < cecs_dynamic_array_count_of_size(&s->values, size)
             && "error: index out of bounds"
         );
-        return cecs_dynamic_array_get_range(&s->values, array_index, cecs_inclusive_range_length(range), size);
+        return cecs_dynamic_array_get_range_mut(&s->values, array_index, cecs_inclusive_range_length(range), size);
     }
 }
 
@@ -132,19 +132,19 @@ void *cecs_sentinel_set_set_copy_range_inbounds(cecs_sentinel_set *s, const cecs
     );
 }
 
-void* cecs_sentinel_set_get_inbounds(cecs_sentinel_set* s, const size_t index, const size_t size) {
+void* cecs_sentinel_set_get_inbounds_mut(cecs_sentinel_set* s, const size_t index, const size_t size) {
+    return cecs_dynamic_array_get_mut(&s->values, cecs_sentinel_set_value_index(s, index), size);
+}
+const void *cecs_sentinel_set_get_inbounds(const cecs_sentinel_set *s, const size_t index, const size_t size) {
     return cecs_dynamic_array_get(&s->values, cecs_sentinel_set_value_index(s, index), size);
 }
-const void *cecs_sentinel_set_get_inbounds_const(const cecs_sentinel_set *s, const size_t index, const size_t size) {
-    return cecs_dynamic_array_get_const(&s->values, cecs_sentinel_set_value_index(s, index), size);
+void *cecs_sentinel_set_get_range_inbounds_mut(cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size) {
+    assert(cecs_sentinel_set_contains_index(s, range.end) && "error: range end out of bounds");
+    return cecs_dynamic_array_get_range_mut(&s->values, cecs_sentinel_set_value_index(s, range.start), cecs_inclusive_range_length(range), size);
 }
-void *cecs_sentinel_set_get_range_inbounds(cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size) {
+const void *cecs_sentinel_set_get_range_inbounds(const cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size) {
     assert(cecs_sentinel_set_contains_index(s, range.end) && "error: range end out of bounds");
     return cecs_dynamic_array_get_range(&s->values, cecs_sentinel_set_value_index(s, range.start), cecs_inclusive_range_length(range), size);
-}
-const void *cecs_sentinel_set_get_range_inbounds_const(const cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size) {
-    assert(cecs_sentinel_set_contains_index(s, range.end) && "error: range end out of bounds");
-    return cecs_dynamic_array_get_range_const(&s->values, cecs_sentinel_set_value_index(s, range.start), cecs_inclusive_range_length(range), size);
 }
 
 
@@ -163,13 +163,13 @@ bool cecs_sentinel_set_remove(
         return false;
     } else {
         const size_t array_index = cecs_sentinel_set_value_index(s, index);
-        void *removed = cecs_dynamic_array_get(&s->values, array_index, size);
+        void *removed = cecs_dynamic_array_get_mut(&s->values, array_index, size);
         memcpy(out_removed_element, removed, size);
         memset(removed, absent_pattern, size);
         s->first_last_set = cecs_sentinel_set_exclude_first_last_set(s->first_last_set, cecs_inclusive_range_singleton(index));
 
         const size_t present_count = cecs_inclusive_range_length(s->first_last_set);
-        if (present_count < cecs_exclusive_range_length(s->index_range) / 2) {
+        if (present_count < (size_t)cecs_exclusive_range_length(s->index_range) / 2) {
             const size_t first_present_index = cecs_sentinel_set_value_index(s, s->first_last_set.start);
             memmove(
                 s->values.values,

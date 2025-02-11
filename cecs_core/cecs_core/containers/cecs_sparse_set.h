@@ -89,11 +89,14 @@ typedef struct cecs_sparse_set_base {
 static inline bool cecs_sparse_set_base_is_of_integers(const cecs_sparse_set_base *s) {
     return CECS_UNION_IS(cecs_integer_elements, cecs_sparse_set_elements, s->values);
 }
-static inline void *cecs_sparse_set_base_values(cecs_sparse_set_base *s) {
+static inline void *cecs_sparse_set_base_values_mut(cecs_sparse_set_base *s) {
+    return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->values).values;
+}
+static inline const void *cecs_sparse_set_base_values(const cecs_sparse_set_base *s) {
     return CECS_UNION_GET_UNCHECKED(cecs_any_elements, s->values).values;
 }
 static inline size_t *cecs_sparse_set_base_keys(cecs_sparse_set_base *s) {
-    return cecs_dynamic_array_first(&s->index_to_key);
+    return cecs_dynamic_array_first_mut(&s->index_to_key);
 }
 
 size_t cecs_sparse_set_base_key_unchecked(const cecs_sparse_set_base *s, size_t index);
@@ -111,7 +114,10 @@ cecs_sparse_set cecs_sparse_set_create_of_integers(void);
 cecs_sparse_set cecs_sparse_set_create_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 cecs_sparse_set cecs_sparse_set_create_of_integers_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-static inline void *cecs_sparse_set_values(cecs_sparse_set *s) {
+static inline void *cecs_sparse_set_values_mut(cecs_sparse_set *s) {
+    return cecs_sparse_set_base_values_mut(&s->base);
+}
+static inline const void *cecs_sparse_set_values(const cecs_sparse_set *s) {
     return cecs_sparse_set_base_values(&s->base);
 }
 static inline size_t *cecs_sparse_set_keys(const cecs_sparse_set *s) {
@@ -223,7 +229,10 @@ cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers(void);
 cecs_paged_sparse_set cecs_paged_sparse_set_create_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 cecs_paged_sparse_set cecs_paged_sparse_set_create_of_integers_with_capacity(cecs_arena *a, size_t element_capacity, size_t element_size);
 
-static inline void *cecs_paged_sparse_set_data(cecs_paged_sparse_set *s) {
+static inline void *cecs_paged_sparse_set_values_mut(cecs_paged_sparse_set *s) {
+    return cecs_sparse_set_base_values_mut(&s->base);
+}
+static inline const void *cecs_paged_sparse_set_values(const cecs_paged_sparse_set *s) {
     return cecs_sparse_set_base_values(&s->base);
 }
 static inline size_t *cecs_paged_sparse_set_keys(cecs_paged_sparse_set *s) {

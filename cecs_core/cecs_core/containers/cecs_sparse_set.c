@@ -24,9 +24,9 @@ static inline cecs_integer_elements *cecs_sparse_set_base_values_array_int(cecs_
 
 size_t cecs_sparse_set_base_key_unchecked(const cecs_sparse_set_base *s, size_t index) {
     if (cecs_sparse_set_base_is_of_integers(s)) {
-        return *CECS_DYNAMIC_ARRAY_GET_CONST(size_t, cecs_sparse_set_base_values_array_any_unchecked((cecs_sparse_set_base *)s), index);
+        return *CECS_DYNAMIC_ARRAY_GET(size_t, cecs_sparse_set_base_values_array_any_unchecked((cecs_sparse_set_base *)s), index);
     } else {
-        return *CECS_DYNAMIC_ARRAY_GET_CONST(size_t, &s->index_to_key, index);
+        return *CECS_DYNAMIC_ARRAY_GET(size_t, &s->index_to_key, index);
     }
 }
 size_t cecs_sparse_set_base_count_of_size(const cecs_sparse_set_base *s, size_t element_size) {
@@ -146,7 +146,7 @@ cecs_optional_element cecs_sparse_set_get(cecs_sparse_set *s, size_t key, size_t
     if (cecs_sparse_set_index_check(index)) {
         return CECS_OPTION_CREATE_SOME_STRUCT(
             cecs_optional_element,
-            cecs_dynamic_array_get(
+            cecs_dynamic_array_get_mut(
                 cecs_sparse_set_base_values_array_any_unchecked(&s->base),
                 cecs_sparse_set_index_look(index),
                 element_size
@@ -247,7 +247,7 @@ static bool cecs_sparse_set_remove_key(
             assert(s->index_to_key.count == 0 && "fatal error: sparse set integer mode mismatch");
             *out_invalidated_key = NULL;
         } else {
-            *out_invalidated_key = cecs_dynamic_array_get(&s->index_to_key, *out_removed_index, sizeof(size_t));
+            *out_invalidated_key = cecs_dynamic_array_get_mut(&s->index_to_key, *out_removed_index, sizeof(size_t));
         }
 
         *index = cecs_sparse_set_index_invalid;
@@ -452,7 +452,7 @@ bool cecs_paged_sparse_set_contains(const cecs_paged_sparse_set *s, size_t key) 
 
     return cecs_paged_sparse_set_key_to_index((cecs_paged_sparse_set *)s, key, &key_to_index, &page_key)
         && cecs_sentinel_set_contains_index(key_to_index, page_key)
-        && cecs_sparse_set_index_check(*CECS_SENTINEL_SET_GET_INBOUNDS_CONST(cecs_sparse_set_index, key_to_index, page_key));
+        && cecs_sparse_set_index_check(*CECS_SENTINEL_SET_GET_INBOUNDS(cecs_sparse_set_index, key_to_index, page_key));
 }
 
 cecs_optional_element cecs_paged_sparse_set_get(cecs_paged_sparse_set *s, size_t key, size_t element_size) {
@@ -465,11 +465,11 @@ cecs_optional_element cecs_paged_sparse_set_get(cecs_paged_sparse_set *s, size_t
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_element);
     }
 
-    const cecs_sparse_set_index index = *CECS_SENTINEL_SET_GET_INBOUNDS_CONST(cecs_sparse_set_index, key_to_index, page_key);
+    const cecs_sparse_set_index index = *CECS_SENTINEL_SET_GET_INBOUNDS(cecs_sparse_set_index, key_to_index, page_key);
     if (cecs_sparse_set_index_check(index)) {
         return CECS_OPTION_CREATE_SOME_STRUCT(
             cecs_optional_element,
-            cecs_dynamic_array_get(
+            cecs_dynamic_array_get_mut(
                 cecs_sparse_set_base_values_array_any_unchecked(&s->base),
                 cecs_sparse_set_index_look(index),
                 element_size
@@ -499,7 +499,7 @@ void* cecs_paged_sparse_set_set(cecs_paged_sparse_set* s, cecs_arena* a, size_t 
         return cecs_dynamic_array_set(cecs_sparse_set_base_values_array_any_unchecked(&s->base), index, element, element_size);
     } else {
         if (!integer) {
-            size_t *last_key = cecs_dynamic_array_last(&s->base.index_to_key, sizeof(size_t));
+            size_t *last_key = cecs_dynamic_array_last_mut(&s->base.index_to_key, sizeof(size_t));
             *last_key = key;
         }
 

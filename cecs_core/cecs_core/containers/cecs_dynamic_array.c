@@ -102,11 +102,11 @@ static inline void *cecs_dynamic_array_get_range_ptr(
     return l->values + index * size;
 }
 
-void *cecs_dynamic_array_get_range(cecs_dynamic_array* l, const size_t index, const size_t count, const size_t size) {
+void *cecs_dynamic_array_get_range_mut(cecs_dynamic_array* l, const size_t index, const size_t count, const size_t size) {
     return cecs_dynamic_array_get_range_ptr(l, index, count, size);
 }
 
-const void *cecs_dynamic_array_get_range_const(
+const void *cecs_dynamic_array_get_range(
     const cecs_dynamic_array *l,
     const size_t index,
     const size_t count,
@@ -197,27 +197,14 @@ static inline void *cecs_dynamic_array_get_ptr(const cecs_dynamic_array *l, cons
     return l->values + index * size;
 }
 
-void* cecs_dynamic_array_get(cecs_dynamic_array* l, const size_t index, const size_t size) {
+void* cecs_dynamic_array_get_mut(cecs_dynamic_array* l, const size_t index, const size_t size) {
     return cecs_dynamic_array_get_ptr(l, index, size);
 }
 
-const void *cecs_dynamic_array_get_const(const cecs_dynamic_array *l, const size_t index, const size_t size) {
+const void *cecs_dynamic_array_get(const cecs_dynamic_array *l, const size_t index, const size_t size) {
     return cecs_dynamic_array_get_ptr(l, index, size);
 }
 
-void cecs_dynamic_array_keep_range(cecs_dynamic_array *l, cecs_arena *a, const size_t index, const size_t count, const size_t size) {
-    assert((index * size < l->count) && "Attempted to keep elements with starting index out of bounds");
-    assert(((index + count) * size <= l->count) && "Attempted to keep elements with end out of bounds");
-    
-    size_t new_count = count * size;
-    if (index > 0) {
-        memmove(l->values, l->values + index * size, new_count);
-    }
-
-    if (new_count <= l->capacity / 2)
-        cecs_dynamic_array_shrink(l, a, new_count);
-    l->count = new_count;
-}
 
 void cecs_dynamic_array_truncate(cecs_dynamic_array *l, cecs_arena *a, const size_t new_count, const size_t size) {
     const size_t new_byte_count = new_count * size; 

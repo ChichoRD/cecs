@@ -26,7 +26,7 @@ void cecs_world_resources_free(cecs_world_resources* wr) {
 
 bool cecs_world_resources_has_resource(const cecs_world_resources* wr, cecs_resource_id id) {
     return cecs_sentinel_set_contains_index(&wr->resource_handles, (size_t)id)
-        && (*(const cecs_resource_handle *)cecs_sentinel_set_get_inbounds_const(
+        && (*(const cecs_resource_handle *)cecs_sentinel_set_get_inbounds(
             &wr->resource_handles, (size_t)id, sizeof(cecs_resource_handle)
         ) != NULL
     );

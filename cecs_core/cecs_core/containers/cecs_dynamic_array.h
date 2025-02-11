@@ -48,19 +48,19 @@ void cecs_dynamic_array_remove_range(cecs_dynamic_array *l, cecs_arena *a, const
 void cecs_dynamic_array_truncate(cecs_dynamic_array *l, cecs_arena *a, const size_t new_count, const size_t size);
 
 
-static inline void *cecs_dynamic_array_first(cecs_dynamic_array *l) {
+static inline void *cecs_dynamic_array_first_mut(cecs_dynamic_array *l) {
     assert(l->count > 0 && "error: attempted to get first element of empty cecs_dynamic_array");
     return l->values;
 }
-static inline const void *cecs_dynamic_array_first_const(const cecs_dynamic_array *l) {
+static inline const void *cecs_dynamic_array_first(const cecs_dynamic_array *l) {
     assert(l->count > 0 && "error: attempted to get first element of empty cecs_dynamic_array");
     return l->values;
 }
-static inline void *cecs_dynamic_array_last(cecs_dynamic_array *l, size_t size) {
+static inline void *cecs_dynamic_array_last_mut(cecs_dynamic_array *l, size_t size) {
     assert(l->count > 0 && "error: attempted to get last element of empty cecs_dynamic_array");
     return l->values + (l->count - size);
 }
-static inline const void *cecs_dynamic_array_last_const(const cecs_dynamic_array *l, size_t size) {
+static inline const void *cecs_dynamic_array_last(const cecs_dynamic_array *l, size_t size) {
     assert(l->count > 0 && "error: attempted to get last element of empty cecs_dynamic_array");
     return l->values + (l->count - size);
 }
@@ -72,20 +72,20 @@ void *cecs_dynamic_array_remove_swap_last(cecs_dynamic_array *l, cecs_arena *a, 
 void cecs_dynamic_array_clear(cecs_dynamic_array *l);
 
 
-void *cecs_dynamic_array_get(cecs_dynamic_array *l, const size_t index, const size_t size);
-#define CECS_DYNAMIC_ARRAY_GET(type, dynamic_array_ref, index) ((type *)cecs_dynamic_array_get(dynamic_array_ref, index, sizeof(type)))
+void *cecs_dynamic_array_get_mut(cecs_dynamic_array *l, const size_t index, const size_t size);
+#define CECS_DYNAMIC_ARRAY_GET_MUT(type, dynamic_array_ref, index) ((type *)cecs_dynamic_array_get(dynamic_array_ref, index, sizeof(type)))
 
-const void *cecs_dynamic_array_get_const(const cecs_dynamic_array *l, const size_t index, const size_t size);
-#define CECS_DYNAMIC_ARRAY_GET_CONST(type, dynamic_array_ref, index) \
-    ((type *)cecs_dynamic_array_get_const(dynamic_array_ref, index, sizeof(type)))
+const void *cecs_dynamic_array_get(const cecs_dynamic_array *l, const size_t index, const size_t size);
+#define CECS_DYNAMIC_ARRAY_GET(type, dynamic_array_ref, index) \
+    ((type *)cecs_dynamic_array_get(dynamic_array_ref, index, sizeof(type)))
 
-void *cecs_dynamic_array_get_range(cecs_dynamic_array *l, const size_t index, const size_t count, const size_t size);
+void *cecs_dynamic_array_get_range_mut(cecs_dynamic_array *l, const size_t index, const size_t count, const size_t size);
+#define CECS_DYNAMIC_ARRAY_GET_RANGE_MUT(type, dynamic_array_ref, index, count) \
+    ((type *)cecs_dynamic_array_get_range_mut(dynamic_array_ref, index, count, sizeof(type)))
+
+const void *cecs_dynamic_array_get_range(const cecs_dynamic_array *l, const size_t index, const size_t count, const size_t size);
 #define CECS_DYNAMIC_ARRAY_GET_RANGE(type, dynamic_array_ref, index, count) \
     ((type *)cecs_dynamic_array_get_range(dynamic_array_ref, index, count, sizeof(type)))
-
-const void *cecs_dynamic_array_get_range_const(const cecs_dynamic_array *l, const size_t index, const size_t count, const size_t size);
-#define CECS_DYNAMIC_ARRAY_GET_RANGE_CONST(type, dynamic_array_ref, index, count) \
-    ((type *)cecs_dynamic_array_get_range_const(dynamic_array_ref, index, count, sizeof(type)))
 
 
 void *cecs_dynamic_array_set(cecs_dynamic_array *l, const size_t index, const void *element, const size_t size);

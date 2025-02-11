@@ -27,13 +27,13 @@ void *cecs_queue_get(cecs_queue *q, size_t index, size_t size);
 
 static inline void *cecs_queue_first(const cecs_queue *q, size_t size) {
     assert(q->first < cecs_dynamic_array_count_of_size(&q->elements, size) && "Attempted to get first element of empty queue");
-    return cecs_dynamic_array_get(&q->elements, q->first, size);
+    return cecs_dynamic_array_get_mut(&q->elements, q->first, size);
 }
 #define CECS_QUEUE_FIRST(type, queue_ref) ((type *)cecs_queue_first(queue_ref, sizeof(type)))
 
 static inline void *cecs_queue_last(const cecs_queue *q, size_t size) {
     assert(cecs_dynamic_array_count_of_size(&q->elements, size) > 0 && "Attempted to get last element of empty queue");
-    return cecs_dynamic_array_last(&q->elements, size);
+    return cecs_dynamic_array_last_mut(&q->elements, size);
 }
 #define CECS_QUEUE_LAST(type, queue_ref) ((type *)cecs_queue_last(queue_ref, sizeof(type)))
 

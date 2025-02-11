@@ -447,7 +447,7 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
             assert(storage_info.guarantees_contiguity && "fatal error: indirect component storage must guarantee contiguity");
             const cecs_indirect_component_storage *indirect_storage =
                 &CECS_UNION_GET_UNCHECKED(cecs_indirect_component_storage, storage.storage->storage.storage);
-            source_components = cecs_sentinel_set_get_range_inbounds_const(
+            source_components = cecs_sentinel_set_get_range_inbounds(
                 &indirect_storage->component_indices,
                 cecs_inclusive_range_from_exclusive(source.range),
                 storage.storage->component_size

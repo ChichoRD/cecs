@@ -58,7 +58,7 @@ static inline size_t cecs_world_components_get_component_storage_count(const cec
 }
 
 typedef CECS_OPTION_STRUCT(cecs_sized_component_storage *, cecs_optional_component_storage) cecs_optional_component_storage;
-cecs_optional_component_storage cecs_world_components_get_component_storage(const cecs_world_components *wc, cecs_component_id component_id);
+cecs_optional_component_storage cecs_world_components_get_component_storage(cecs_world_components *wc, const cecs_component_id component_id);
 cecs_sized_component_storage *cecs_world_components_get_component_storage_expect(const cecs_world_components *wc, cecs_component_id component_id);
 
 bool cecs_world_components_has_storage(const cecs_world_components *wc, cecs_component_id component_id);
@@ -197,7 +197,7 @@ const cecs_component_storage_attachments *cecs_world_components_set_component_st
 );
 
 bool cecs_world_components_has_component_storage_attachments(const cecs_world_components *wc, cecs_component_id component_id);
-const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_expect(const cecs_world_components *wc, cecs_component_id component_id);
+const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_expect(cecs_world_components *wc, const cecs_component_id component_id);
 
 const cecs_component_storage_attachments *cecs_world_components_get_or_set_component_storage_attachments(
     cecs_world_components *wc,
@@ -215,7 +215,7 @@ bool cecs_world_components_remove_component_storage_attachments(
 
 
 typedef struct cecs_associated_component_storage {
-    const cecs_sized_component_storage *storage;
+    cecs_sized_component_storage *storage;
     cecs_component_id component_id;
 } cecs_associated_component_storage;
 
@@ -227,7 +227,7 @@ typedef struct cecs_world_components_iterator {
 cecs_world_components_iterator cecs_world_components_iterator_create(const cecs_world_components *components);
 bool cecs_world_components_iterator_done(const cecs_world_components_iterator *it);
 size_t cecs_world_components_iterator_next(cecs_world_components_iterator *it);
-cecs_associated_component_storage cecs_world_components_iterator_current(const cecs_world_components_iterator *it);
+cecs_associated_component_storage cecs_world_components_iterator_current(cecs_world_components_iterator *it);
 
 
 typedef struct cecs_world_components_entity_iterator {
@@ -238,6 +238,6 @@ typedef struct cecs_world_components_entity_iterator {
 cecs_world_components_entity_iterator cecs_world_components_entity_iterator_create(const cecs_world_components *components, cecs_entity_id entity_id);
 bool cecs_world_components_entity_iterator_done(const cecs_world_components_entity_iterator *it);
 size_t cecs_world_components_entity_iterator_next(cecs_world_components_entity_iterator *it);
-cecs_associated_component_storage cecs_world_components_entity_iterator_current(const cecs_world_components_entity_iterator *it);
+cecs_associated_component_storage cecs_world_components_entity_iterator_current(cecs_world_components_entity_iterator *it);
 
 #endif
