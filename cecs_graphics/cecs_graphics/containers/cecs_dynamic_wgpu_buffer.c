@@ -15,10 +15,10 @@ extern inline cecs_buffer_offset_u64 cecs_align_to_wgpu_copy_buffer_alignment(ce
 // https://github.com/luiswirth/wgpu-util/tree/main
 WGPUBuffer cecs_wgpu_buffer_create_with_data(
     WGPUDevice device,
-    WGPUBufferUsageFlags usage,
-    uint64_t buffer_size,
-    void *data,
-    size_t data_size
+    const WGPUBufferUsageFlags usage,
+    const uint64_t buffer_size,
+    const void *data,
+    const size_t data_size
 ) {
     assert(buffer_size >= data_size && "error: buffer size must be greater than or equal to data size");
     assert(buffer_size != 0 && "error: buffer size must be non-zero");
@@ -250,7 +250,7 @@ static void cecs_dynamic_wgpu_buffer_upload_staged(
             queue,
             buffer->buffer,
             staging->aligned_requested_offset,
-            (cecs_buffer_stage_element *)cecs_sparse_set_values(stage) + staging->requested_offset,
+            (const cecs_buffer_stage_element *)cecs_sparse_set_values(stage) + staging->requested_offset,
             staging->aligned_requested_size
         );
     }

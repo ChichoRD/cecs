@@ -393,14 +393,18 @@ static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
 ) {
     const cecs_component_id texture_bank_id = cecs_component_id_from_texture_resource_id_descriptor(texture_bank_id_descriptor);
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_texture_bank) handle;
+    // FIXME: correct typo in `GROUPPED`
+    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(&builder->world->world.components, builder->texture_arena, 
+        CECS_COMPONENT_GROUP_FROM_IDS(
+            cecs_component_access_inmmutable, cecs_component_group_search_all, CECS_RELATION_ID(cecs_texture_bank, texture_bank_id)
+        )
+    );
     for (
-        cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&builder->world->world.components, builder->texture_arena, CECS_COMPONENTS_ALL_IDS(
-            CECS_RELATION_ID(cecs_texture_bank, texture_bank_id),
-        ));
+        cecs_component_iterator_begin_iter(&it, builder->texture_arena);
         !cecs_component_iterator_done(&it);
         cecs_component_iterator_next(&it)
     ) {
-        cecs_component_iterator_current(&it, &handle);
+        const cecs_entity_id entity = cecs_component_iterator_current(&it, (void **)&handle);
         assert(!cecs_texture_bank_is_full(handle.cecs_texture_bank_component) && "fatal error: texture bank is full, tag mismatch");
 
         uint_fast8_t slot_index;
@@ -412,12 +416,13 @@ static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
 
         extern inline uint_fast8_t cecs_texture_bank_slot_count(const cecs_texture_bank *bank);
         if (slot_index < cecs_texture_bank_slot_count(handle.cecs_texture_bank_component)) {
-            *out_bank_entity_id = handle.entity_id;
+            *out_bank_entity_id = entity;
             *out_slot_index = slot_index;
             *out_slot_mask = slot_mask;
             return handle.cecs_texture_bank_component;
         }
     }
+    cecs_component_iterator_end_iter(&it);
 
 
     static const uint32_t cecs_texture_bank_default_array_layers = 64;

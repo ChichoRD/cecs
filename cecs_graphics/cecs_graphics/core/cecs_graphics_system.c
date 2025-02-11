@@ -96,23 +96,27 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
     if (storage->storage.status & cecs_component_storage_status_dirty) {
         extern inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer);
         cecs_sparse_set *stage = cecs_dynamic_wgpu_buffer_get_stage(&uniform_buffer->buffer);
-        uint8_t *stage_data = cecs_sparse_set_values(stage);
+        uint8_t *stage_data = cecs_sparse_set_values_mut(stage);
 
         CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_uniform_raw_stream, void) handle;
+        cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(&world->components, sync_arena,
+            CECS_COMPONENT_GROUP_FROM_IDS(cecs_component_access_inmmutable, cecs_component_group_search_all,
+                CECS_RELATION_ID(cecs_uniform_raw_stream, component_id), component_id
+            )
+        );
         for (
-            cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, sync_arena,
-                CECS_COMPONENTS_ALL_IDS(CECS_RELATION_ID(cecs_uniform_raw_stream, component_id), component_id)
-            );
+            cecs_component_iterator_begin_iter(&it, sync_arena);
             !cecs_component_iterator_done(&it);
             cecs_component_iterator_next(&it)
         ) {
-            cecs_component_iterator_current(&it, &handle);
+            cecs_component_iterator_current(&it, (void **)&handle);
             memcpy(
                 stage_data + handle.cecs_uniform_raw_stream_component->offset,
                 handle.void_component,
                 handle.cecs_uniform_raw_stream_component->size
             );
         }
+        cecs_component_iterator_end_iter(&it);
 
         // HACK: we are the ONES removing the dirty flag
         storage->storage.status &= ~cecs_component_storage_status_dirty;

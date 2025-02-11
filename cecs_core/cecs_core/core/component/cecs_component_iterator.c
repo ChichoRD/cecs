@@ -197,14 +197,21 @@ cecs_component_iterator cecs_component_iterator_create(
         &component_count,
         &sized_component_count
     );
+    assert(component_count >= sized_component_count && "fatal error: component count - sized mismatch");
 
-    cecs_hibitset set = cecs_component_iterator_join_iteration_groups(
-        world_components,
-        iterator_temporary_arena,
-        descriptor.groups,
-        descriptor.group_count,
-        component_count
-    );
+    cecs_hibitset set;
+    if (component_count > 0) {
+        set = cecs_component_iterator_join_iteration_groups(
+            world_components,
+            iterator_temporary_arena,
+            descriptor.groups,
+            descriptor.group_count,
+            component_count
+        );
+    } else {
+        set = cecs_hibitset_empty();
+    }
+
     return (cecs_component_iterator) {
         .descriptor = { .groupped = descriptor_filtered },
         .entities_iterator = cecs_hibitset_iterator_create_owned_at_first(set),
@@ -279,7 +286,9 @@ cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, c
 
     const cecs_component_iterator_descriptor_flat flat_descriptor = {
         .entity_range = it->descriptor.groupped.entity_range,
-        .components = cecs_arena_alloc(iterator_temporary_arena, it->component_count * sizeof(cecs_component_id))
+        .components = (it->component_count == 0)
+            ? NULL
+            : cecs_arena_alloc(iterator_temporary_arena, it->component_count * sizeof(cecs_component_id))
     };
     size_t component_count = 0;
     for (size_t i = 0; i < it->descriptor.groupped.group_count; i++) {

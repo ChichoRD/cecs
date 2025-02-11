@@ -88,10 +88,10 @@ inline cecs_buffer_offset_u64 cecs_align_to_wgpu_copy_buffer_alignment(cecs_dyna
 
 WGPUBuffer cecs_wgpu_buffer_create_with_data(
     WGPUDevice device,
-    WGPUBufferUsageFlags usage,
-    uint64_t buffer_size,
-    void *data,
-    size_t data_size
+    const WGPUBufferUsageFlags usage,
+    const uint64_t buffer_size,
+    const void *data,
+    const size_t data_size
 );
 
 typedef uint8_t cecs_buffer_stage_element;
