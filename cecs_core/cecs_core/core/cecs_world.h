@@ -29,19 +29,19 @@ static inline size_t cecs_world_entity_count(const cecs_world* w) {
     return cecs_world_entities_count(&w->entities);
 }
 
-void *cecs_world_get_component(const cecs_world *w, cecs_entity_id entity_id, cecs_component_id component_id);
+void *cecs_world_get_component(cecs_world *w, const cecs_entity_id entity_id, const cecs_component_id component_id);
 #define CECS_WORLD_GET_COMPONENT(type, world_ref, entity_id0) \
     ((type *)cecs_world_get_component(world_ref, entity_id0, CECS_COMPONENT_ID(type)))
 
-bool cecs_world_try_get_component(const cecs_world *w, cecs_entity_id entity_id, cecs_component_id component_id, void **out_component);
+bool cecs_world_try_get_component(cecs_world *w, const cecs_entity_id entity_id, const cecs_component_id component_id, void **out_component);
 #define CECS_WORLD_TRY_GET_COMPONENT(type, world_ref, entity_id0, out_component_ref) \
     (cecs_world_try_get_component(world_ref, entity_id0, CECS_COMPONENT_ID(type), ((void **)out_component_ref)))
 
-size_t cecs_world_get_component_array(const cecs_world *w, cecs_entity_id_range range, cecs_component_id component_id, void **out_components);
+size_t cecs_world_get_component_array(cecs_world *w, const cecs_entity_id_range range, const cecs_component_id component_id, void **out_components);
 #define CECS_WORLD_GET_COMPONENT_ARRAY(type, world_ref, entity_id_range, out_components_ref) \
     (cecs_world_get_component_array(world_ref, entity_id_range, CECS_COMPONENT_ID(type), ((void **)out_components_ref)))
 
-cecs_entity_flags cecs_world_get_entity_flags(const cecs_world *w, cecs_entity_id entity_id);
+cecs_entity_flags cecs_world_get_entity_flags(const cecs_world *w, const cecs_entity_id entity_id);
 
 void *cecs_world_set_component(cecs_world *w, cecs_entity_id id, cecs_component_id component_id, void *component, size_t size);
 #define CECS_WORLD_SET_COMPONENT(type, world_ref, entity_id0, component_ref) \
@@ -74,7 +74,7 @@ void *cecs_world_set_component_storage_attachments(cecs_world *w, cecs_component
 bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_component_id component_id);
 #define CECS_WORLD_HAS_COMPONENT_STORAGE_ATTACHMENTS(type, world_ref) \
     cecs_world_has_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type))
-void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id);
+void *cecs_world_get_component_storage_attachments(cecs_world *w, const cecs_component_id component_id);
 #define CECS_WORLD_GET_COMPONENT_STORAGE_ATTACHMENTS(type, attachment_type, world_ref) \
     ((attachment_type *)cecs_world_get_component_storage_attachments(world_ref, CECS_COMPONENT_ID(type)))
 void *cecs_world_get_or_set_component_storage_attachments(cecs_world *w, cecs_component_id component_id, void *default_attachments, size_t size);
@@ -148,7 +148,7 @@ void *cecs_world_set_component_relation(cecs_world *w, cecs_entity_id id, cecs_c
 #define CECS_WORLD_SET_COMPONENT_RELATION(component_type, world_ref, entity_id0, component_ref, target_id) \
     ((component_type *)cecs_world_set_component_relation(world_ref, entity_id0, CECS_COMPONENT_ID(component_type), component_ref, sizeof(component_type), target_id))
 
-void *cecs_world_get_component_relation(const cecs_world *w, cecs_entity_id id, cecs_component_id component_id, cecs_tag_id tag_id);
+void *cecs_world_get_component_relation(cecs_world *w, const cecs_entity_id id, const cecs_component_id component_id, const cecs_tag_id tag_id);
 #define CECS_WORLD_GET_COMPONENT_RELATION(component_type, world_ref, entity_id0, target_id) \
     ((component_type *)cecs_world_get_component_relation(world_ref, entity_id0, CECS_COMPONENT_ID(component_type), target_id))
 

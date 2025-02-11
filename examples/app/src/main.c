@@ -336,12 +336,12 @@ bool init(cecs_world *w) {
         duck
     );
 
-    // 2 test lonks
-    cecs_entity_id_range lonk_range = cecs_world_add_entity_range(w, 2);
-    size_t copied_component_types =
-        cecs_world_copy_entity_range_onto(w, lonk_range, cecs_exclusive_range_singleton(lonk), lonk);
-    CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start, &((position){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 2}));
-    CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start + 1, &((position){BOARD_WIDTH / 2 + 2, BOARD_HEIGHT / 2 + 4}));
+    // // 2 test lonks
+    // cecs_entity_id_range lonk_range = cecs_world_add_entity_range(w, 2);
+    // size_t copied_component_types =
+    //     cecs_world_copy_entity_range_onto(w, lonk_range, cecs_exclusive_range_singleton(lonk), lonk);
+    // CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start, &((position){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 2}));
+    // CECS_WORLD_SET_COMPONENT(position, w, lonk_range.start + 1, &((position){BOARD_WIDTH / 2 + 2, BOARD_HEIGHT / 2 + 4}));
 
     // for (size_t i = 0; i < 2; i++) {
     //     create_duck(w, (v2_i16){BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 2}, (cecs_entity_id[]){lonk}, 1);
@@ -353,7 +353,7 @@ bool init(cecs_world *w) {
     return EXIT_SUCCESS;
 }
 
-bool create_shockwave(cecs_world *w, position p, velocity v) {
+cecs_entity_id create_shockwave(cecs_world *w, position p, velocity v) {
     cecs_entity_id e = cecs_world_add_entity(w);
 
     CECS_WORLD_SET_COMPONENT(
@@ -381,13 +381,14 @@ bool create_shockwave(cecs_world *w, position p, velocity v) {
         })
     );
     CECS_WORLD_ADD_TAG(is_shockwave, w, e);
-    return EXIT_SUCCESS;
+    return e;
 }
 
 void update_controllables(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(velocity, controllable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
-    cecs_system_predicate_data delta_time_seconds
+    const cecs_system_predicate_data delta_time_seconds
 ) {
     velocity *v = handle->velocity_component;
     controllable c = *handle->controllable_component;
@@ -414,8 +415,28 @@ void update_controllables(
 }
 
 
+static size_t write_set_bits(const cecs_world *w, const cecs_entity_id entity, const cecs_component_id component, char buffer[static 16 * 2]) {
+    cecs_hibitset *set =
+        &cecs_world_components_get_component_storage_expect(&w->components, component)->storage.entity_bitset;
+    cecs_hibitset_iterator it = cecs_hibitset_iterator_create_borrowed_at(set, entity);
+    size_t count = 0;
+    for (size_t i = 0; i < 16; i++) {
+        if (cecs_hibitset_iterator_current_is_set(&it)) {
+            buffer[i * 2] = '1';
+            ++count;
+        } else {
+            buffer[i * 2] = '0';
+        }
+
+        buffer[i * 2 + 1] = ' ';
+        cecs_hibitset_iterator_next(&it);
+    }
+    return count;
+}
+
 void update_lonk(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable, velocity_register, controllable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -430,15 +451,18 @@ void update_lonk(
     controllable c = *handle->controllable_component;
     for (size_t k = 0; k < c.buffer_count; k++) {
         switch (c.buffer[k]) {
-            case 'x':
+            case 'x': {
                 create_shockwave(w, *p, vr->velocity);
                 break;
+            }
         }
     }
+
 }
 
 void update_ducks(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -463,6 +487,7 @@ void update_ducks(
 
 void update_shockwaves(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, velocity, renderable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -475,7 +500,7 @@ void update_shockwaves(
     if (p->x < 0 || p->x >= BOARD_WIDTH
         || p->y < 0 || p->y >= BOARD_HEIGHT
         || v->x == 0 && v->y == 0) {
-        cecs_world_remove_entity(w, handle->entity_id);
+        cecs_world_remove_entity(w, entity);
     } else {
         renderable new_r = renderable_create_shockwave_alloc(abs(v->x) > abs(v->y) ? abs(v->x) : abs(v->y));
         *handle->renderable_component = new_r;
@@ -491,6 +516,7 @@ void update_shockwaves(
 
 void update_children_position(
     const CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable, cecs_is_child_of) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data delta_time_seconds
 ) {
@@ -503,43 +529,63 @@ void update_children_position(
 }
 
 bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_time_seconds) {
+    void *component_handles[8] = {0};
     cecs_scene_world_system s = cecs_scene_world_system_create(0, iteration_arena);
-    CECS_WORLD_SYSTEM_ITER_RANGE(
-        cecs_scene_world_system_get_with(&s, iteration_arena, CECS_COMPONENTS_ALL(velocity, controllable)),
+    const cecs_component_iteration_group_range r = cecs_dynamic_world_system_set_or_extend_range(
+        &s.world_system,
+        iteration_arena,
+        2,
+        (cecs_component_iteration_group[]){
+            CECS_COMPONENT_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, velocity),
+            CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, controllable)
+        },
+        2
+    );
+
+    CECS_WORLD_SYSTEM_ITER(
+        cecs_world_system_from_dynamic_range(&s.world_system, r),
         w,
         iteration_arena,
-        ((cecs_entity_id_range){0, 512}),
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_controllables
     );
+    
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, velocity, renderable, velocity_register, controllable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, velocity_register, controllable),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_lonk
     );
+
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, velocity, renderable, is_shockwave),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, velocity, renderable, is_shockwave),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_shockwaves
     );
-    cecs_entity_count duck_count = CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, is_duck),
+
+    const cecs_entity_count duck_count = CECS_WORLD_SYSTEM_ITER(
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, position, is_duck),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_ducks
     );
-    //  entity_id lonk;
-    // CECS_WORLD_GET_ENTITY_WITH(w, &lonk, CECS_COMPONENTS_ALL(position, velocity, renderable, velocity_register, controllable));
+    (void)duck_count;
     
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE_GROUPED(CECS_COMPONENTS_ALL(position, renderable), CECS_COMPONENTS_OR_ALL(cecs_is_child_of)),
+        CECS_WORLD_SYSTEM_CREATE_GROUPED(
+            CECS_COMPONENT_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, position, renderable),
+            CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_or_all, cecs_is_child_of)),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_none(),
         update_children_position
     );
@@ -549,6 +595,7 @@ bool update_entities(cecs_world *w, cecs_arena *iteration_arena, double delta_ti
 
 void update_console_buffer(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(position, renderable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data buffer_user_data
 ) {
@@ -575,11 +622,13 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
             new_console_buffer.buffer[x][y] = " ";
         }
     }
-    //scene_cecs_world_system s = scene_cecs_world_system_create(0, iteration_arena);
+    
+    void *component_handles[2] = {0};
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(position, renderable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_inmmutable, cecs_component_group_search_all, position, renderable),
         (cecs_world *)w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_user_data(&new_console_buffer),
         update_console_buffer
     );
@@ -619,6 +668,7 @@ bool render(const cecs_world *w, cecs_arena *iteration_arena) {
 
 void write_controllables(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(controllable) *handle,
+    const cecs_entity_id entity,
     cecs_world *w,
     cecs_system_predicate_data controllable_user_data
 ) {
@@ -648,10 +698,12 @@ bool process_input(cecs_world *w, cecs_arena *iteration_arena) {
         c.buffer[c.buffer_count++] = input;
     }
 
+    void *component_handles[1] = {0};
     CECS_WORLD_SYSTEM_ITER(
-        CECS_WORLD_SYSTEM_CREATE(controllable),
+        CECS_WORLD_SYSTEM_CREATE(cecs_component_access_mutable, cecs_component_group_search_all, controllable),
         w,
         iteration_arena,
+        component_handles,
         cecs_system_predicate_data_create_user_data(&c),
         write_controllables
     );
@@ -673,21 +725,21 @@ bool finalize(cecs_world *w) {
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(renderable) handle;
     //size_t count = 0;
     // BUG: we kaboom here
-    for (
-        cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
-            &w->components,
-            &a,
-            CECS_COMPONENTS_SEARCH_GROUPS_CREATE(
-                CECS_COMPONENTS_ALL(renderable, owns_renderable)
-            )
-        ));
-        !cecs_component_iterator_done(&it);
-        cecs_component_iterator_next(&it)
-    ) {
-        cecs_component_iterator_current(&it, &handle);
-        free(handle.renderable_component->sprite);
-        //++count;
-    }
+    // for (
+    //     cecs_component_iterator it = cecs_component_iterator_create(cecs_component_iterator_descriptor_create(
+    //         &w->components,
+    //         &a,
+    //         CECS_COMPONENTS_SEARCH_GROUPS_CREATE(
+    //             CECS_COMPONENTS_ALL(renderable, owns_renderable)
+    //         )
+    //     ));
+    //     !cecs_component_iterator_done(&it);
+    //     cecs_component_iterator_next(&it)
+    // ) {
+    //     cecs_component_iterator_current(&it, &handle);
+    //     free(handle.renderable_component->sprite);
+    //     //++count;
+    // }
     //printf("freed %d renderables\n", count);
     cecs_arena_free(&a);
     return EXIT_SUCCESS;
@@ -696,60 +748,6 @@ bool finalize(cecs_world *w) {
 #include "cecs_core/containers/cecs_flatmap.h"
 
 int main(void) {
-    //     cecs_arena a = cecs_arena_create();
-    // cecs_flatmap map = cecs_flatmap_create();
-    // // prepare some quick tests and assertions for the flatmap
-    // // needs same sized data
-
-    // struct test {
-    //     uint8_t a;
-    //     uint8_t b;
-    // };
-
-    // for (size_t i = 0; i < 125; i++) {
-    //     void *out;
-    //     cecs_flatmap_add(&map, &a, 124 - i, &(struct test){i, i}, sizeof(struct test), &out);
-    // }
-
-    // for (size_t i = 0; i < 125; i++) {
-    //     void *out;
-    //     bool added = cecs_flatmap_add(&map, &a, i, &(struct test){i, i}, sizeof(struct test), &out);
-    //     assert(!added);
-    //     struct test *t = out;
-    //     assert(t == NULL);
-    // }
-
-    // for (size_t i = 0; i < 125; i++) {
-    //     void *out;
-    //     bool e = cecs_flatmap_get(&map, i, &out, sizeof(struct test));
-    //     assert(e);
-    //     struct test *t = out;
-    //     assert(t->a == 124 - i);
-    //     assert(t->b == 124 - i);
-    // }
-
-    // for (size_t i = 5; i < 120; i++) {
-    //     struct test out;
-    //     bool rm = cecs_flatmap_remove(&map, &a, i, &out, sizeof(struct test));
-    //     assert(rm);
-    //     assert(out.a == 124 - i);
-    //     assert(out.b == 124 - i);
-    // }
-
-    // for (size_t i = 0; i < 125; i++) {
-    //     void *out;
-    //     cecs_flatmap_get(&map, i, &out, sizeof(struct test));
-    //     struct test *t = out;
-    //     if (i >= 5 && i < 120) {
-    //         assert(t == NULL);
-    //     } else {
-    //         assert(t->a == 124 - i);
-    //         assert(t->b == 124 - i);
-    //     }
-    // }
-
-    // cecs_arena_free(&a);
-    // return 0;
     cecs_world w = cecs_world_create(1024, 32, 4);
 
     bool quitting = false;

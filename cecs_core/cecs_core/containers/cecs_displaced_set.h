@@ -35,25 +35,33 @@ void *cecs_sentinel_set_expand_to_include(
     const uint_fast8_t absent_pattern
 );
 
-void *cecs_sentinel_set_set_inbounds(cecs_sentinel_set *s, cecs_arena *a, const size_t index, const void *element, const size_t size);
-#define CECS_SENTINEL_SET_SET_INBOUNDS(type, set_ref, arena_ref, index, element_ref) \
-    ((type *)cecs_sentinel_set_set_inbounds(set_ref, arena_ref, index, element_ref, sizeof(type)))
+void *cecs_sentinel_set_set_inbounds(cecs_sentinel_set *s, const size_t index, const void *element, const size_t size);
+#define CECS_SENTINEL_SET_SET_INBOUNDS(type, set_ref, index, element_ref) \
+    ((type *)cecs_sentinel_set_set_inbounds(set_ref, index, element_ref, sizeof(type)))
 
-void *cecs_sentinel_set_set_range_inbounds(cecs_sentinel_set *s, cecs_arena *a, const cecs_inclusive_range range, const void *elements, const size_t size);
-#define CECS_SENTINEL_SET_SET_RANGE_INBOUNDS(type, set_ref, arena_ref, range, elements_ref) \
-    ((type *)cecs_sentinel_set_set_range_inbounds(set_ref, arena_ref, range, elements_ref, sizeof(type)))
+void *cecs_sentinel_set_set_range_inbounds(cecs_sentinel_set *s, const cecs_inclusive_range range, const void *elements, const size_t size);
+#define CECS_SENTINEL_SET_SET_RANGE_INBOUNDS(type, set_ref, range, elements_ref) \
+    ((type *)cecs_sentinel_set_set_range_inbounds(set_ref, range, elements_ref, sizeof(type)))
 
-void *cecs_sentinel_set_set_copy_range_inbounds(cecs_sentinel_set *s, cecs_arena *a, const cecs_inclusive_range range, const void *single_src, const size_t size);
-#define CECS_SENTINEL_SET_SET_COPY_RANGE_INBOUNDS(type, set_ref, arena_ref, range, single_src_ref) \
-    ((type *)cecs_sentinel_set_set_copy_range_inbounds(set_ref, arena_ref, range, single_src_ref, sizeof(type)))
+void *cecs_sentinel_set_set_copy_range_inbounds(cecs_sentinel_set *s, const cecs_inclusive_range range, const void *single_src, const size_t size);
+#define CECS_SENTINEL_SET_SET_COPY_RANGE_INBOUNDS(type, set_ref, range, single_src_ref) \
+    ((type *)cecs_sentinel_set_set_copy_range_inbounds(set_ref, range, single_src_ref, sizeof(type)))
 
-void *cecs_sentinel_set_get_inbounds(const cecs_sentinel_set *s, const size_t index, const size_t size);
+
+void *cecs_sentinel_set_get_inbounds_mut(cecs_sentinel_set *s, const size_t index, const size_t size);
+#define CECS_SENTINEL_SET_GET_INBOUNDS_MUT(type, set_ref, index) \
+    ((type *)cecs_sentinel_set_get_inbounds_mut(set_ref, index, sizeof(type)))
+const void *cecs_sentinel_set_get_inbounds(const cecs_sentinel_set *s, const size_t index, const size_t size);
 #define CECS_SENTINEL_SET_GET_INBOUNDS(type, set_ref, index) \
     ((type *)cecs_sentinel_set_get_inbounds(set_ref, index, sizeof(type)))
-    
-void *cecs_sentinel_set_get_range_inbounds(const cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
+
+void *cecs_sentinel_set_get_range_inbounds_mut(cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
+#define CECS_SENTINEL_SET_GET_RANGE_INBOUNDS_MUT(type, set_ref, range) \
+    ((type *)cecs_sentinel_set_get_range_inbounds_mut(set_ref, range, sizeof(type)))
+const void *cecs_sentinel_set_get_range_inbounds(const cecs_sentinel_set *s, const cecs_inclusive_range range, const size_t size);
 #define CECS_SENTINEL_SET_GET_RANGE_INBOUNDS(type, set_ref, range) \
     ((type *)cecs_sentinel_set_get_range_inbounds(set_ref, range, sizeof(type)))
+
 
 bool cecs_sentinel_set_remove(cecs_sentinel_set *s, cecs_arena *a, const size_t index, void *out_removed_element, const size_t size, const uint_fast8_t absent_pattern);
 void cecs_sentinel_set_clear(cecs_sentinel_set *s);

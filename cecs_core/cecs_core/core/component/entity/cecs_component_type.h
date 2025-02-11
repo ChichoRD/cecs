@@ -62,37 +62,12 @@ typedef struct cecs_component_id_meta {
 #define _CECS_COMPONENT_CONFIG(component) CECS_COMPONENT_CONFIG_FUNC_NAME(component)()
 #define  CECS_COMPONENT_CONFIG(type) (_CECS_COMPONENT_CONFIG(CECS_COMPONENT(type)))
 
-typedef struct cecs_components_type_info {
-    cecs_component_id *component_ids;
-    size_t component_count;
-} cecs_components_type_info;
-
-static inline cecs_components_type_info cecs_components_type_info_create(cecs_component_id *component_ids, size_t component_count) {
-    return (cecs_components_type_info) {
-        .component_ids = component_ids,
-        .component_count = component_count
-    };
-}
-
-#define CECS_COMPONENTS_TYPE_INFO_CREATE(...) \
-    cecs_components_type_info_create( \
-        CECS_COMPONENT_ID_ARRAY(__VA_ARGS__), \
-        CECS_COMPONENT_COUNT(__VA_ARGS__) \
-    )
-#define CECS_COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(...) \
-    cecs_components_type_info_create( \
-        ((cecs_component_id[]){ __VA_ARGS__ }), \
-        sizeof((cecs_component_id[]){ __VA_ARGS__ }) / sizeof(cecs_component_id) \
-    )
-
-typedef union {
-    struct {
-        const cecs_component_id *const component_ids;
-        const size_t component_count;
-    };
-    cecs_components_type_info components_type_info;
-} cecs_components_type_info_deconstruct;
-
-
+    
+typedef enum cecs_component_access {
+    cecs_component_access_inmmutable,
+    cecs_component_access_mutable,
+    cecs_component_access_ignore
+} cecs_component_access;
+typedef uint8_t cecs_component_access_mode;
 
 #endif

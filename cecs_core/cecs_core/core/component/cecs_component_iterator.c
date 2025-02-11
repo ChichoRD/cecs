@@ -3,245 +3,324 @@
 
 #include "cecs_component_iterator.h"
 
-bool cecs_component_iterator_descriptor_copy_component_bitsets(const cecs_world_components* world_components, cecs_components_type_info components_type_info, cecs_hibitset bitsets_destination[]) {
-    bool intersection_empty = false;
-    for (size_t i = 0; i < components_type_info.component_count; i++) {
-        if (!cecs_world_components_has_storage(world_components, components_type_info.component_ids[i])) {
-            intersection_empty = true;
-            bitsets_destination[i] = cecs_hibitset_empty();
-        }
-        else {
-            cecs_component_storage* storage = &cecs_world_components_get_component_storage_expect(
-                world_components,
-                components_type_info.component_ids[i]
-            )->storage;
-            bitsets_destination[i] = storage->entity_bitset;
-        }
-    }
-    return !intersection_empty;
-}
 
-size_t cecs_component_iterator_descriptor_append_sized_component_ids(const cecs_world_components* world_components, cecs_arena* iterator_temporary_arena, cecs_components_type_info components_type_info, cecs_dynamic_array* sized_component_ids) {
-    size_t sized_count = 0;
-    for (size_t i = 0; i < components_type_info.component_count; i++) {
-        if (
-            cecs_world_components_has_storage(world_components, components_type_info.component_ids[i])
-            && !cecs_component_storage_info(&cecs_world_components_get_component_storage_expect(
-                world_components,
-                components_type_info.component_ids[i]
-            )->storage).is_unit_type_storage
-            ) {
-            CECS_DYNAMIC_ARRAY_ADD(cecs_component_id, sized_component_ids, iterator_temporary_arena, &components_type_info.component_ids[i]);
-            ++sized_count;
-        }
-    }
-
-    return sized_count;
-}
-
-cecs_hibitset cecs_component_iterator_descriptor_get_search_groups_bitset(const cecs_world_components* world_components, cecs_arena* iterator_temporary_arena, cecs_components_search_groups search_groups, size_t max_component_count) {
-    cecs_hibitset* bitsets = calloc(max_component_count, sizeof(cecs_hibitset));
-    cecs_hibitset entities_bitset = cecs_hibitset_create(iterator_temporary_arena);
-    bool has_empty_intersection = false;
-    for (size_t i = 0; i < search_groups.group_count; i++) {
-        cecs_components_type_info info = CECS_UNION_GET_UNCHECKED(CECS_COMPONENTS_ALL_ID, search_groups.groups[i]);
-        assert(max_component_count >= info.component_count && "component count is larger than max component count");
-
-        bool component_bitsets_empty = !cecs_component_iterator_descriptor_copy_component_bitsets(
+static bool cecs_component_iterator_copy_component_bitset_or_empty(
+    cecs_world_components* world_components,
+    const cecs_component_id id,
+    cecs_hibitset *destination_bitset
+) {
+    if (!cecs_world_components_has_storage(world_components, id)) {
+        *destination_bitset = cecs_hibitset_empty();
+        return false;
+    } else {
+        *destination_bitset = cecs_world_components_get_component_storage_expect(
             world_components,
-            info,
-            bitsets
-        );
-        bool entities_bitset_empty = cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
-
-        CECS_UNION_MATCH(search_groups.groups[i]) {
-            case CECS_UNION_VARIANT(CECS_COMPONENTS_ALL_ID, cecs_components_search_group): {
-                if (has_empty_intersection)
-                    break;
-
-                if (component_bitsets_empty) {
-                    cecs_hibitset_unset_all(&entities_bitset);
-                }
-                else if (entities_bitset_empty) {
-                    entities_bitset = info.component_count == 1
-                        ? bitsets[0]
-                        : cecs_hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
-                }
-                else {
-                    cecs_hibitset_intersect(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
-                }
-
-                has_empty_intersection |= cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
-                break;
-            }
-
-            case CECS_UNION_VARIANT(CECS_COMPONENTS_ANY_ID, cecs_components_search_group): {
-                if (component_bitsets_empty)
-                    break;
-
-                if (entities_bitset_empty) {
-                    entities_bitset = info.component_count == 1
-                        ? bitsets[0]
-                        : cecs_hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
-                }
-                else {
-                    cecs_hibitset_join(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
-                }
-                break;
-            }
-
-            case CECS_UNION_VARIANT(CECS_COMPONENTS_NONE_ID, cecs_components_search_group): {
-                if (component_bitsets_empty || entities_bitset_empty) {
-                    break;
-                }
-                cecs_hibitset_subtract(&entities_bitset, bitsets, info.component_count, iterator_temporary_arena);
-                break;
-            }
-
-            case CECS_UNION_VARIANT(CECS_COMPONENTS_OR_ALL_ID, cecs_components_search_group): {
-                if (component_bitsets_empty)
-                    break;
-
-                if (entities_bitset_empty) {
-                    entities_bitset = info.component_count == 1
-                        ? bitsets[0]
-                        : cecs_hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
-                }
-                else {
-                    cecs_hibitset intersection = info.component_count == 1
-                        ? bitsets[0]
-                        : cecs_hibitset_intersection(bitsets, info.component_count, iterator_temporary_arena);
-                    cecs_hibitset_join(&entities_bitset, &intersection, 1, iterator_temporary_arena);
-                }
-                break;
-            }
-
-            case CECS_UNION_VARIANT(CECS_COMPONENTS_AND_ANY_ID, cecs_components_search_group): {
-                if (has_empty_intersection)
-                    break;
-
-                if (component_bitsets_empty) {
-                    cecs_hibitset_unset_all(&entities_bitset);
-                }
-                else if (entities_bitset_empty) {
-                    entities_bitset = info.component_count == 1
-                        ? bitsets[0]
-                        : cecs_hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
-                }
-                else {
-                    cecs_hibitset union_ = info.component_count == 1
-                        ? bitsets[0]
-                        : cecs_hibitset_union(bitsets, info.component_count, iterator_temporary_arena);
-                    cecs_hibitset_intersect(&entities_bitset, &union_, 1, iterator_temporary_arena);
-                }
-
-                has_empty_intersection |= cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&entities_bitset));
-                break;
-            }
-
-            default: {
-                assert(false && "unreachable: invalid component search group variant");
-                exit(EXIT_FAILURE);
-            }
-        }
+            id
+        )->storage.entity_bitset;
+        return true;
     }
-    free(bitsets);
-
-    return entities_bitset;
 }
 
-cecs_component_iterator_descriptor cecs_component_iterator_descriptor_create(const cecs_world_components* world_components, cecs_arena* iterator_temporary_arena, cecs_components_search_groups search_groups) {
-    cecs_dynamic_array sized_component_ids = CECS_DYNAMIC_ARRAY_CREATE_WITH_CAPACITY(cecs_component_id, iterator_temporary_arena, search_groups.group_count);
-    size_t sized_component_count = 0;
-    size_t component_count = 0;
-    (void)component_count;
-    size_t max_component_count = 0;
-    for (size_t i = 0; i < search_groups.group_count; i++) {
-        cecs_components_type_info info = CECS_UNION_GET_UNCHECKED(CECS_COMPONENTS_ALL_ID, search_groups.groups[i]);
-        component_count += info.component_count;
-        max_component_count = max(max_component_count, info.component_count);
+static cecs_hibitset cecs_component_iterator_join_iteration_groups(
+    cecs_world_components* world_components,
+    cecs_arena* iterator_temporary_arena,
+    const cecs_component_iteration_group groups[],
+    const size_t group_count,
+    const size_t total_component_count
+) {
+    cecs_hibitset *source_bitsets = cecs_arena_alloc(iterator_temporary_arena, total_component_count * sizeof(cecs_hibitset));
+    cecs_hibitset result_bitset = cecs_hibitset_create(iterator_temporary_arena);
 
-        if (!CECS_UNION_IS(CECS_COMPONENTS_NONE_ID, cecs_components_search_group, search_groups.groups[i])) {
-            sized_component_count += cecs_component_iterator_descriptor_append_sized_component_ids(
+    bool has_empty_intersection = false;
+    for (size_t i = 0; i < group_count; i++) {
+        const cecs_component_iteration_group group = groups[i];
+        assert(total_component_count >= group.component_count && "group component count is larger than total component count");
+
+        bool any_source_set_empty = false;
+        for (size_t j = 0; j < group.component_count; j++) {
+            any_source_set_empty |= !cecs_component_iterator_copy_component_bitset_or_empty(
                 world_components,
-                iterator_temporary_arena,
-                info,
-                &sized_component_ids
+                group.components[j],
+                &source_bitsets[j]
             );
         }
-    }
+        const bool result_set_empty = cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&result_bitset));
+        
+        switch (group.search_mode) {
+        case cecs_component_group_search_all: {
+            if (has_empty_intersection)
+                break;
 
-    cecs_hibitset entities_bitset = cecs_component_iterator_descriptor_get_search_groups_bitset(
-        world_components,
-        iterator_temporary_arena,
-        search_groups,
-        max_component_count
-    );
+            if (any_source_set_empty) {
+                cecs_hibitset_unset_all(&result_bitset);
+            } else if (result_set_empty) {
+                result_bitset = group.component_count == 1
+                    ? source_bitsets[0]
+                    : cecs_hibitset_intersection(source_bitsets, group.component_count, iterator_temporary_arena);
+            } else {
+                cecs_hibitset_intersect(&result_bitset, source_bitsets, group.component_count, iterator_temporary_arena);
+            }
+
+            has_empty_intersection |= cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&result_bitset));
+            break;
+        }
+
+        case cecs_component_group_search_any: {
+            if (any_source_set_empty)
+                break;
+
+            if (result_set_empty) {
+                result_bitset = group.component_count == 1
+                    ? source_bitsets[0]
+                    : cecs_hibitset_union(source_bitsets, group.component_count, iterator_temporary_arena);
+            } else {
+                cecs_hibitset_join(&result_bitset, source_bitsets, group.component_count, iterator_temporary_arena);
+            }
+            break;
+        }
+
+        case cecs_component_group_search_none: {
+            if (any_source_set_empty || result_set_empty) {
+                break;
+            }
+            cecs_hibitset_subtract(&result_bitset, source_bitsets, group.component_count, iterator_temporary_arena);
+            break;
+        }
+
+        case cecs_component_group_search_or_all: {
+            if (any_source_set_empty)
+                break;
+
+            if (result_set_empty) {
+                result_bitset = group.component_count == 1
+                    ? source_bitsets[0]
+                    : cecs_hibitset_intersection(source_bitsets, group.component_count, iterator_temporary_arena);
+            } else {
+                cecs_hibitset intersection = group.component_count == 1
+                    ? source_bitsets[0]
+                    : cecs_hibitset_intersection(source_bitsets, group.component_count, iterator_temporary_arena);
+                cecs_hibitset_join(&result_bitset, &intersection, 1, iterator_temporary_arena);
+            }
+            break;
+        }
+
+        case cecs_component_group_search_and_any: {
+            if (has_empty_intersection)
+                break;
+
+            if (any_source_set_empty) {
+                cecs_hibitset_unset_all(&result_bitset);
+            } else if (result_set_empty) {
+                result_bitset = group.component_count == 1
+                    ? source_bitsets[0]
+                    : cecs_hibitset_union(source_bitsets, group.component_count, iterator_temporary_arena);
+            } else {
+                cecs_hibitset union_ = group.component_count == 1
+                    ? source_bitsets[0]
+                    : cecs_hibitset_union(source_bitsets, group.component_count, iterator_temporary_arena);
+                cecs_hibitset_intersect(&result_bitset, &union_, 1, iterator_temporary_arena);
+            }
+
+            has_empty_intersection |= cecs_exclusive_range_is_empty(cecs_hibitset_bit_range(&result_bitset));
+            break;
+        }
+
+        default: {
+            assert(false && "unreachable: invalid component search group variant");
+            exit(EXIT_FAILURE);
+        }
+        }
+    }
+    return result_bitset;
+}
+
+static cecs_component_iterator_descriptor cecs_component_iterator_descriptor_filter_sized(
+    cecs_world_components* world_components,
+    cecs_arena *iterator_temporary_arena,
+    cecs_component_iterator_descriptor *in_out_reordered_source,
+    size_t *out_component_count,
+    size_t *out_sized_component_count
+) {
     cecs_component_iterator_descriptor descriptor = {
-        .checksum = world_components->checksum,
-        .world_components = world_components,
-        .entities_bitset = entities_bitset,
-        .components_type_info = (struct cecs_components_type_info){
-            .component_ids = (cecs_component_id *)sized_component_ids.values,
-            .component_count = sized_component_count
-    }
+        .entity_range = in_out_reordered_source->entity_range,
+        .groups = cecs_arena_alloc(iterator_temporary_arena, in_out_reordered_source->group_count * sizeof(cecs_component_iteration_group)),
+        .group_count = in_out_reordered_source->group_count,
     };
+    
+    size_t component_count = 0;
+    size_t sized_component_count = 0;
+    for (size_t i = 0; i < descriptor.group_count; i++) {
+        descriptor.groups[i] = in_out_reordered_source->groups[i];
+        
+        const size_t group_component_count = in_out_reordered_source->groups[i].component_count;
+        size_t first_tag_index = group_component_count;
+        for (size_t j = 0; j < group_component_count; j++) {
+            if (cecs_world_components_has_storage(world_components, descriptor.groups[i].components[j])) {
+                ++component_count;
+                const size_t component_size = cecs_world_components_get_component_storage_expect(
+                    world_components,
+                    descriptor.groups[i].components[j]
+                )->component_size;
 
+                if (component_size == 0 && first_tag_index == group_component_count) {
+                    first_tag_index = j;
+                } else if (component_size != 0) {
+                    ++sized_component_count;
+                    if (first_tag_index < group_component_count) {
+                        const cecs_component_id temp = descriptor.groups[i].components[first_tag_index];
+                        descriptor.groups[i].components[first_tag_index] = descriptor.groups[i].components[j];
+                        descriptor.groups[i].components[j] = temp;
+                        first_tag_index = j;
+                    }
+                }
+                // c c t c t c t c
+            }
+        }
+        descriptor.groups[i].component_count = first_tag_index;
+    }
+    *out_component_count = component_count;
+    *out_sized_component_count = sized_component_count;
     return descriptor;
 }
 
-raw_iteration_handle_reference cecs_component_iterator_descriptor_allocate_handle(const cecs_component_iterator_descriptor descriptor) {
-    return malloc(cecs_component_iteration_handle_size(descriptor.components_type_info));
-}
+cecs_component_iterator cecs_component_iterator_create(
+    cecs_component_iterator_descriptor descriptor, 
+    cecs_world_components *world_components,
+    cecs_arena *iterator_temporary_arena
+) {
+    size_t component_count;
+    size_t sized_component_count;
+    cecs_component_iterator_descriptor descriptor_filtered = cecs_component_iterator_descriptor_filter_sized(
+        world_components,
+        iterator_temporary_arena,
+        &descriptor,
+        &component_count,
+        &sized_component_count
+    );
 
-raw_iteration_handle_reference cecs_component_iterator_descriptor_allocate_handle_in(cecs_arena* a, const cecs_component_iterator_descriptor descriptor) {
-    return cecs_arena_alloc(a, cecs_component_iteration_handle_size(descriptor.components_type_info));
-}
-
-cecs_component_iterator cecs_component_iterator_create(cecs_component_iterator_descriptor descriptor) {
-    assert(descriptor.checksum == descriptor.world_components->checksum
-        && "Component iterator descriptor is invalid or outdated, please create a new one");
-    cecs_hibitset_iterator iterator = cecs_hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
-    if (!cecs_hibitset_iterator_current_is_set(&iterator)) {
-        cecs_hibitset_iterator_next_set(&iterator);
-    }
+    cecs_hibitset set = cecs_component_iterator_join_iteration_groups(
+        world_components,
+        iterator_temporary_arena,
+        descriptor.groups,
+        descriptor.group_count,
+        component_count
+    );
     return (cecs_component_iterator) {
-        .descriptor = descriptor,
-            .entities_iterator = iterator,
-            .entity_range = cecs_hibitset_bit_range(&descriptor.entities_bitset)
+        .descriptor = { .groupped = descriptor_filtered },
+        .entities_iterator = cecs_hibitset_iterator_create_owned_at_first(set),
+        .creation_checksum = world_components->checksum,
+        .world_components = world_components,
+        .component_count = sized_component_count,
+        .flags = cecs_component_iterator_status_none
     };
 }
 
-cecs_component_iterator cecs_component_iterator_create_ranged(cecs_component_iterator_descriptor descriptor, cecs_entity_id_range range) {
-    assert(descriptor.checksum == descriptor.world_components->checksum
-        && "Component iterator descriptor is invalid or outdated, please create a new one");
-    cecs_hibitset_iterator iterator = cecs_hibitset_iterator_create_owned_at_first(descriptor.entities_bitset);
-    if (!cecs_hibitset_iterator_current_is_set(&iterator)) {
-        cecs_hibitset_iterator_next_set(&iterator);
+bool cecs_component_iterator_can_begin_iter(const cecs_component_iterator *it) {
+    return it->creation_checksum == it->world_components->checksum;
+}
+
+static size_t cecs_component_iteration_group_ensure_access_and_collect(
+    const cecs_component_iteration_group group,
+    cecs_world_components *world_components,
+    cecs_component_id components_destination[]
+) {
+    const cecs_component_access group_access = group.access;
+    cecs_component_storage_status_flags access_flags;
+    switch (group_access) {
+    case cecs_component_access_inmmutable:
+        access_flags = cecs_component_storage_status_reading;
+        break;
+    case cecs_component_access_mutable:
+        access_flags =
+            cecs_component_storage_status_reading | cecs_component_storage_status_writing | cecs_component_storage_status_dirty;
+        break;
+    case cecs_component_access_ignore:
+        access_flags = cecs_component_storage_status_none;
+        break;
+    default: {
+        assert(false && "unreachable: invalid component access mode");
+        exit(EXIT_FAILURE);
     }
-    return (cecs_component_iterator) {
-        .descriptor = descriptor,
-            .entities_iterator = iterator,
-            .entity_range = range
+    }
+    size_t count = 0;
+    for (size_t i = 0; i < group.component_count; i++) {
+        if (cecs_world_components_has_storage(world_components, group.components[i])) {  
+            cecs_component_storage *storage = &cecs_world_components_get_component_storage_expect(
+                world_components,
+                group.components[i]
+            )->storage;
+    
+            if (storage->status & cecs_component_storage_status_writing) {
+                if (group_access != cecs_component_access_ignore) {
+                    assert(false && "error: user requested reference access on a component that is being written to");
+                    exit(EXIT_FAILURE);
+                }
+            } else if (storage->status & cecs_component_storage_status_reading) {
+                if (group_access == cecs_component_access_mutable) {
+                    assert(false && "error: user requested mutable access on a component that is being read from");
+                    exit(EXIT_FAILURE);
+                }
+            }
+    
+            storage->status |= access_flags;
+            components_destination[count] = group.components[i];
+            ++count;
+        }
+    }
+    return count;
+}
+
+cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, cecs_arena *iterator_temporary_arena) {
+    assert(
+        cecs_component_iterator_can_begin_iter(it)
+        && "error: component iterator is not in a state where it can begin iteration"
+    );
+    it->flags |= cecs_component_iterator_status_iter_checked;
+
+    const cecs_component_iterator_descriptor_flat flat_descriptor = {
+        .entity_range = it->descriptor.groupped.entity_range,
+        .components = cecs_arena_alloc(iterator_temporary_arena, it->component_count * sizeof(cecs_component_id))
     };
+    size_t component_count = 0;
+    for (size_t i = 0; i < it->descriptor.groupped.group_count; i++) {
+        const size_t collected = cecs_component_iteration_group_ensure_access_and_collect(
+            it->descriptor.groupped.groups[i],
+            it->world_components,
+            flat_descriptor.components + component_count
+        );
+        component_count += collected;
+    }
+    assert(component_count == it->component_count && "fatal error: component count mismatch");
+    it->descriptor.flattened = flat_descriptor;
+
+    if (!cecs_hibitset_iterator_current_is_set(&it->entities_iterator)) {
+        cecs_hibitset_iterator_next_set(&it->entities_iterator);
+    }
+    return it->entities_iterator.current_bit_index;
+}
+
+cecs_component_iterator cecs_component_iterator_create_and_begin_iter(
+    cecs_component_iterator_descriptor descriptor,
+    cecs_world_components *world_components,
+    cecs_arena *iterator_temporary_arena
+) {
+    cecs_component_iterator it = cecs_component_iterator_create(descriptor, world_components, iterator_temporary_arena);
+    cecs_component_iterator_begin_iter(&it, iterator_temporary_arena);
+    return it;
 }
 
 bool cecs_component_iterator_done(const cecs_component_iterator* it) {
-    return !cecs_exclusive_range_contains(it->entity_range, it->entities_iterator.current_bit_index)
+    return !cecs_exclusive_range_contains(it->descriptor.flattened.entity_range, it->entities_iterator.current_bit_index)
         || cecs_hibitset_iterator_done(&it->entities_iterator);
 }
 
-cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator* it, raw_iteration_handle_reference out_iteration_handle) {
-    cecs_entity_id* handle = (cecs_entity_id*)out_iteration_handle;
-    *handle = it->entities_iterator.current_bit_index;
-
-    for (size_t i = 0; i < it->descriptor.component_count; i++) {
+cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator* it, void *out_component_handles[]) {
+    for (size_t i = 0; i < it->component_count; i++) {
         cecs_sized_component_storage* storage = cecs_world_components_get_component_storage_expect(
-            it->descriptor.world_components,
-            it->descriptor.component_ids[i]
+            it->world_components,
+            it->descriptor.flattened.components[i]
         );
-
-        ((cecs_raw_component_reference*)(handle + 1))[i] = cecs_component_storage_get_or_null(
+        out_component_handles[i] = cecs_component_storage_get_or_null(
             &storage->storage,
             it->entities_iterator.current_bit_index,
             storage->component_size
@@ -252,4 +331,22 @@ cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator* it
 
 size_t cecs_component_iterator_next(cecs_component_iterator* it) {
     return cecs_hibitset_iterator_next_set(&it->entities_iterator);
+}
+
+void cecs_component_iterator_end_iter(cecs_component_iterator *it) {
+    assert(
+        (it->flags & cecs_component_iterator_status_iter_checked)
+        && "error: component iterator is not in a state where it can end iteration"
+    );
+    it->flags &= ~cecs_component_iterator_status_iter_checked;
+
+    for (size_t i = 0; i < it->component_count; i++) {
+        cecs_component_storage *storage = &cecs_world_components_get_component_storage_expect(
+            it->world_components,
+            it->descriptor.flattened.components[i]
+        )->storage;
+        storage->status &= ~(
+            cecs_component_storage_status_reading | cecs_component_storage_status_writing
+        );
+    }
 }

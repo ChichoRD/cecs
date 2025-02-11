@@ -12,23 +12,22 @@ cecs_world cecs_world_create(size_t entity_capacity, size_t component_type_capac
     return w;
 }
 
-void* cecs_world_get_component(const cecs_world* w, cecs_entity_id entity_id, cecs_component_id component_id) {
-    return cecs_world_components_get_component_unchecked(&w->components, entity_id, component_id);
+void *cecs_world_get_component(cecs_world* w, const cecs_entity_id entity_id, const cecs_component_id component_id) {
+    return cecs_world_components_get_component_expect(&w->components, entity_id, component_id);
 }
 
-bool cecs_world_try_get_component(const cecs_world* w, cecs_entity_id entity_id, cecs_component_id component_id, void** out_component) {
+bool cecs_world_try_get_component(cecs_world* w, const cecs_entity_id entity_id, const cecs_component_id component_id, void** out_component) {
     cecs_optional_component component = cecs_world_components_get_component(&w->components, entity_id, component_id);
     if (CECS_OPTION_IS_SOME(cecs_optional_component, component)) {
         *out_component = CECS_OPTION_GET(cecs_optional_component, component);
         return true;
-    }
-    else {
+    } else {
         *out_component = NULL;
         return false;
     }
 }
 
-size_t cecs_world_get_component_array(const cecs_world *w, cecs_entity_id_range range, cecs_component_id component_id, void **out_components) {
+size_t cecs_world_get_component_array(cecs_world *w, const cecs_entity_id_range range, const cecs_component_id component_id, void **out_components) {
     return cecs_world_components_get_component_array(
         &w->components,
         (cecs_entity_id)range.start,
@@ -38,13 +37,12 @@ size_t cecs_world_get_component_array(const cecs_world *w, cecs_entity_id_range 
     );
 }
 
-cecs_entity_flags cecs_world_get_entity_flags(const cecs_world* w, cecs_entity_id entity_id) {
+cecs_entity_flags cecs_world_get_entity_flags(const cecs_world* w, const cecs_entity_id entity_id) {
     assert(cecs_world_enities_has_entity(&w->entities, entity_id) && "entity with given ID does not exist");
-    cecs_entity_flags* flags = NULL;
-    if (CECS_WORLD_TRY_GET_COMPONENT(cecs_entity_flags, w, entity_id, &flags)) {
+    cecs_entity_flags *flags = NULL;
+    if (CECS_WORLD_TRY_GET_COMPONENT(cecs_entity_flags, (cecs_world *)w, entity_id, &flags)) {
         return *flags;
-    }
-    else {
+    } else {
         return cecs_entity_flags_default();
     }
 }
@@ -160,7 +158,7 @@ bool cecs_world_has_component_storage_attachments(const cecs_world *w, cecs_comp
     return cecs_world_components_has_component_storage_attachments(&w->components, component_id);
 }
 
-void *cecs_world_get_component_storage_attachments(const cecs_world *w, cecs_component_id component_id) {
+void *cecs_world_get_component_storage_attachments(cecs_world *w, const cecs_component_id component_id) {
     return cecs_world_components_get_component_storage_attachments_expect(
         &w->components,
         component_id
@@ -439,7 +437,7 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
         cecs_world_components_entity_iterator_next(&it)
     ) {
         cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
-        void *source_components;
+        const void *source_components;
         const cecs_storage_info storage_info = cecs_component_storage_info(&storage.storage->storage);
         if (storage_info.is_unit_type_storage) {
             source_components = NULL;
@@ -453,10 +451,11 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
                 storage.storage->component_size
             );
         } else if (storage_info.guarantees_contiguity) {
+            void *contiguous_source_components;
             size_t copy_source_count = cecs_component_storage_get_array(
                 &storage.storage->storage,
                 source.start,
-                &source_components,
+                &contiguous_source_components,
                 source_count,
                 storage.storage->component_size
             );
@@ -465,6 +464,7 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
                 copy_source_count == source_count
                 && "error: source range does not contain enough components to copy"
             );
+            source_components = contiguous_source_components;
         } else {
             // FIXME: implement!
             assert(false && "unimplemented");
@@ -639,7 +639,7 @@ void* cecs_world_set_component_relation(cecs_world* w, cecs_entity_id id, cecs_c
     return indirect_component;
 }
 
-void* cecs_world_get_component_relation(const cecs_world* w, cecs_entity_id id, cecs_component_id component_id, cecs_tag_id tag_id) {
+void* cecs_world_get_component_relation(cecs_world* w, const cecs_entity_id id, const cecs_component_id component_id, const cecs_tag_id tag_id) {
     assert(cecs_world_enities_has_entity(&w->entities, id) && "entity with given ID does not exist");
     return cecs_world_get_component(w, id, cecs_relation_id_create(cecs_relation_id_descriptor_create_tag(component_id, tag_id)));
 }

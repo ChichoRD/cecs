@@ -4,6 +4,7 @@
 
 # cmake
 build/
+out/
 
 # visual studio
 x64/

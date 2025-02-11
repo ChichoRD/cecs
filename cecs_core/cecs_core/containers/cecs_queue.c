@@ -18,10 +18,21 @@ cecs_queue cecs_queue_create_with_capacity(cecs_arena* a, size_t capacity) {
 
 void* cecs_queue_get(cecs_queue* q, size_t index, size_t size) {
     assert(index < cecs_queue_count_of_size(q, size) && "Attempted to get element with index out of bounds");
-    return cecs_dynamic_array_get(&q->elements, q->first + index, size);
+    return cecs_dynamic_array_get_mut(&q->elements, q->first + index, size);
 }
 
-size_t cecs_queue_pop_first(cecs_queue* q, cecs_arena* a, void* out_pop_element, size_t size) {
+void *cecs_queue_first(const cecs_queue *q, const size_t size) {
+    assert(q->first < cecs_dynamic_array_count_of_size(&q->elements, size) && "error: attempted to get first element of empty queue");
+    return cecs_dynamic_array_get_mut(&q->elements, q->first, size);
+}
+
+void *cecs_queue_last(const cecs_queue *q, const size_t size) {
+    assert(cecs_dynamic_array_count_of_size(&q->elements, size) > 0 && "error: attempted to get last element of empty queue");
+    return cecs_dynamic_array_last_mut(&q->elements, size);
+}
+
+size_t cecs_queue_pop_first(cecs_queue *q, cecs_arena *a, void *out_pop_element, size_t size)
+{
     size_t cecs_dynamic_array_count = cecs_dynamic_array_count_of_size(&q->elements, size);
     assert(q->first < cecs_dynamic_array_count && "Attempted to pop first element of empty queue");
     memcpy(out_pop_element, cecs_dynamic_array_get(&q->elements, q->first++, size), size);

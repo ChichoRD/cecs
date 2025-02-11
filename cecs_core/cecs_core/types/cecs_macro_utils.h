@@ -16,9 +16,11 @@
 
 #define CECS_FIRST(first, ...) first
 #define CECS_SECOND(first, second, ...) second
+#define CECS_THIRD(first, second, third, ...) third
 #define CECS_TAIL(first, ...) __VA_ARGS__
 
 #define CECS_IS_PROBE(...) CECS_SECOND(__VA_ARGS__, 0)
+#define CECS_IS_NOT_PROBE(...) CECS_THIRD(__VA_ARGS__, 0, 1)
 #define CECS_PROBE() ~, 1
 
 #define CECS_CAT2(x, ...) x ## __VA_ARGS__
@@ -61,8 +63,9 @@
 #define CECS_DEFER3(f) f CECS_EMPTY CECS_EMPTY CECS_EMPTY()()()
 #define CECS_DEFER4(f) f CECS_EMPTY CECS_EMPTY CECS_EMPTY CECS_EMPTY()()()()
 
-#define CECS_END_OF_ARGUMENTS(...) CECS_BOOL(CECS_FIRST(__VA_ARGS__))
-#define CECS_HAS_ARGUMENTS(...) CECS_BOOL(CECS_FIRST(CECS_END_OF_ARGUMENTS __VA_ARGS__)(0))
+#define CECS_ANY_ARGUMENTS(...) CECS_IS_NOT_PROBE(__VA_ARGS__)
+#define CECS_HAS_ARGUMENTS(...) CECS_BOOL(CECS_FIRST(CECS_ANY_ARGUMENTS __VA_ARGS__)(CECS_PROBE()))
+
 
 #define _CECS_MAP_() _CECS_MAP
 #define _CECS_MAP(f, separator, first, ...) \

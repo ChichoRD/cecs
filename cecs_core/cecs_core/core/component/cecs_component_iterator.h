@@ -7,163 +7,140 @@
 #include "../../containers/cecs_arena.h"
 #include "cecs_component.h"
 
-#define CECS_COMPONENTS_ALL_ID components_all
-#define CECS_COMPONENTS_ANY_ID components_any
-#define CECS_COMPONENTS_NONE_ID components_none
+typedef enum cecs_component_group_search {
+    cecs_component_group_search_all,
+    cecs_component_group_search_any,
+    cecs_component_group_search_none,
+    cecs_component_group_search_or_all,
+    cecs_component_group_search_and_any
+} cecs_component_group_search;
+typedef uint8_t cecs_component_group_search_mode;
 
-#define CECS_COMPONENTS_OR_ALL_ID components_or_all
-#define CECS_COMPONENTS_AND_ANY_ID components_and_any
-
-typedef CECS_UNION_STRUCT(
-    cecs_components_search_group,
-    cecs_components_type_info,
-    CECS_COMPONENTS_ALL_ID,
-    cecs_components_type_info,
-    CECS_COMPONENTS_ANY_ID,
-    cecs_components_type_info,
-    CECS_COMPONENTS_NONE_ID,
-    cecs_components_type_info,
-    CECS_COMPONENTS_OR_ALL_ID,
-    cecs_components_type_info,
-    CECS_COMPONENTS_AND_ANY_ID
-) cecs_components_search_group;
-
-#define CECS_COMPONENTS_SEARCH_GROUP_CREATE(components_type_info, variant) \
-    ((cecs_components_search_group)CECS_UNION_CREATE(variant, cecs_components_search_group, components_type_info))
-
-#define CECS_COMPONENTS_ALL(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), CECS_COMPONENTS_ALL_ID)
-#define CECS_COMPONENTS_ANY(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), CECS_COMPONENTS_ANY_ID)
-#define CECS_COMPONENTS_NONE(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), CECS_COMPONENTS_NONE_ID)
-#define CECS_COMPONENTS_OR_ALL(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), CECS_COMPONENTS_OR_ALL_ID)
-#define CECS_COMPONENTS_AND_ANY(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE(__VA_ARGS__), CECS_COMPONENTS_AND_ANY_ID)
-
-#define CECS_COMPONENTS_ALL_IDS(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), CECS_COMPONENTS_ALL_ID)
-#define CECS_COMPONENTS_ANY_IDS(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), CECS_COMPONENTS_ANY_ID)
-#define CECS_COMPONENTS_NONE_IDS(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), CECS_COMPONENTS_NONE_ID)
-#define CECS_COMPONENTS_OR_ALL_IDS(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), CECS_COMPONENTS_OR_ALL_ID)
-#define CECS_COMPONENTS_AND_ANY_IDS(...) CECS_COMPONENTS_SEARCH_GROUP_CREATE(CECS_COMPONENTS_TYPE_INFO_CREATE_FROM_IDS(__VA_ARGS__), CECS_COMPONENTS_AND_ANY_ID)
-
-
-typedef struct cecs_components_search_groups {
-    cecs_components_search_group *groups;
-    size_t group_count;
-} cecs_components_search_groups;
-
-static inline cecs_components_search_groups cecs_components_search_groups_create(
-    cecs_components_search_group *groups,
-    size_t group_count
-) {
-    return (cecs_components_search_groups) {
-        .groups = groups,
-        .group_count = group_count
-    };
-}
-
-// TODO: count macro should map each va_arg to literal 1 and sum them
-#define CECS_COMPONENTS_SEARCH_GROUPS_CREATE_RAW(...) \
-    cecs_components_search_groups_create( \
-        ((cecs_components_search_group[]){ __VA_ARGS__ }), \
-        sizeof((cecs_components_search_group[]){ __VA_ARGS__ }) / sizeof(cecs_components_search_group) \
-    )
-
-#define CECS_COMPONENTS_SEARCH_GROUP_DEFAULT_IGNORED \
-    CECS_COMPONENTS_NONE(cecs_is_prefab)
-
-#define CECS_COMPONENTS_SEARCH_GROUPS_CREATE(...) \
-    CECS_COMPONENTS_SEARCH_GROUPS_CREATE_RAW(CECS_COMPONENTS_SEARCH_GROUP_DEFAULT_IGNORED, __VA_ARGS__)
-
-
-
+typedef struct cecs_component_iteration_group {
+    cecs_component_id *components;
+    size_t component_count; 
+    cecs_component_access_mode access;
+    cecs_component_group_search_mode search_mode;
+} cecs_component_iteration_group;
 typedef struct cecs_component_iterator_descriptor {
-    const cecs_world_components_checksum checksum;
-    const cecs_world_components *const world_components;
-    cecs_components_type_info_deconstruct;
-    cecs_hibitset entities_bitset;
+    cecs_entity_id_range entity_range;
+    cecs_component_iteration_group *groups;
+    size_t group_count;
 } cecs_component_iterator_descriptor;
 
-bool cecs_component_iterator_descriptor_copy_component_bitsets(
-    const cecs_world_components *world_components,
-    cecs_components_type_info components_type_info,
-    cecs_hibitset bitsets_destination[]
+
+typedef struct cecs_component_iterator_descriptor_flat {
+    cecs_entity_id_range entity_range;
+    cecs_component_id *components;
+} cecs_component_iterator_descriptor_flat;
+
+typedef union cecs_component_iterator_descriptor_union {
+    cecs_component_iterator_descriptor groupped;
+    cecs_component_iterator_descriptor_flat flattened;
+} cecs_component_iterator_descriptor_union;
+
+// TODO: decide leading iterator
+typedef enum cecs_component_iterator_status {
+    cecs_component_iterator_status_none = 0,
+    cecs_component_iterator_status_iter_checked = 1 << 0,
+} cecs_component_iterator_status;
+typedef uint8_t cecs_component_iterator_status_flags;
+
+typedef struct cecs_component_iterator {
+    cecs_component_iterator_descriptor_union descriptor;
+    cecs_hibitset_iterator entities_iterator;
+    cecs_world_components_checksum creation_checksum;
+    cecs_world_components *world_components;
+    size_t component_count;
+    cecs_component_iterator_status_flags flags;
+} cecs_component_iterator;
+
+cecs_component_iterator cecs_component_iterator_create(
+    cecs_component_iterator_descriptor descriptor,
+    cecs_world_components *world_components,
+    cecs_arena *iterator_temporary_arena
 );
 
-size_t cecs_component_iterator_descriptor_append_sized_component_ids(
-    const cecs_world_components *world_components,
-    cecs_arena *iterator_temporary_arena,
-    cecs_components_type_info components_type_info,
-    cecs_dynamic_array *sized_component_ids
+bool cecs_component_iterator_can_begin_iter(const cecs_component_iterator *it);
+cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, cecs_arena *iterator_temporary_arena);
+
+cecs_component_iterator cecs_component_iterator_create_and_begin_iter(
+    cecs_component_iterator_descriptor descriptor,
+    cecs_world_components *world_components,
+    cecs_arena *iterator_temporary_arena
 );
 
-cecs_hibitset cecs_component_iterator_descriptor_get_search_groups_bitset(
-    const cecs_world_components *world_components,
-    cecs_arena *iterator_temporary_arena,
-    cecs_components_search_groups search_groups,
-    size_t max_component_count
-);
+bool cecs_component_iterator_done(const cecs_component_iterator *it);
+cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator *it, void *out_component_handles[]);
+size_t cecs_component_iterator_next(cecs_component_iterator *it);
 
-cecs_component_iterator_descriptor cecs_component_iterator_descriptor_create(
-    const cecs_world_components *world_components,
-    cecs_arena *iterator_temporary_arena,
-    cecs_components_search_groups search_groups
-);
-
+void cecs_component_iterator_end_iter(cecs_component_iterator *it);
 
 #define _CECS_PREPEND_UNDERSCORE(x) _##x
 #define _CECS_COMPONENT_ITERATION_HANDLE_FIELD(type) \
-    type *CECS_CAT2(type, _component)
+    type *CECS_COMPONENT(type)
 #define CECS_COMPONENT_ITERATION_HANDLE(...) \
     CECS_CAT(CECS_FIRST(__VA_ARGS__), CECS_MAP(_CECS_PREPEND_UNDERSCORE, CECS_COMMA, CECS_TAIL(__VA_ARGS__)), _component_iteration_handle)
+
 #define CECS_COMPONENT_ITERATION_HANDLE_STRUCT(...) \
     struct CECS_COMPONENT_ITERATION_HANDLE(__VA_ARGS__) { \
-        cecs_entity_id entity_id; \
         CECS_MAP(_CECS_COMPONENT_ITERATION_HANDLE_FIELD, CECS_SEMICOLON, __VA_ARGS__); \
     }
 
+#define _CECS_COMPONENT_ITERATION_HANDLE_FIELD_ALIAS(type, alias) \
+    type *alias
+#define CECS_COMPONENT_ITERATION_HANDLE_ALIAS_STRUCT(...) \
+    struct CECS_COMPONENT_ITERATION_HANDLE(__VA_ARGS__) { \
+        CECS_MAP_PAIRS(_CECS_COMPONENT_ITERATION_HANDLE_FIELD_ALIAS, CECS_SEMICOLON, __VA_ARGS__); \
+    }
 
+#define CECS_COMPONENT_GROUP(access_mode, component_search, ...) \
+    (cecs_component_iteration_group){ \
+        .components = CECS_COMPONENT_ID_ARRAY(__VA_ARGS__), \
+        .component_count = CECS_COMPONENT_COUNT(__VA_ARGS__), \
+        .access = access_mode, \
+        .search_mode = component_search \
+    }
+#define CECS_COMPONENT_GROUP_FROM_IDS(access_mode, component_search, ...) \
+    (cecs_component_iteration_group){ \
+        .components = (cecs_component_id[]){ __VA_ARGS__ }, \
+        .component_count = (sizeof((cecs_component_id[]){ __VA_ARGS__ }) / sizeof(cecs_component_id)), \
+        .access = access_mode, \
+        .search_mode = component_search \
+    }
+#define CECS_COMPONENT_GROUP_DEFAULT_EXCLUDED \
+    CECS_COMPONENT_GROUP(cecs_component_access_ignore, cecs_component_group_search_none, \
+        cecs_is_prefab \
+    )
 
-typedef void *cecs_raw_component_reference;
-static inline size_t cecs_component_iteration_handle_size(cecs_components_type_info components_type_info) {
-    return sizeof(cecs_entity_id)
-        + cecs_padding_between(cecs_entity_id, cecs_raw_component_reference)
-        + sizeof(cecs_raw_component_reference) * components_type_info.component_count;
-}
+#define CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED_RAW(...) \
+    (cecs_component_iterator_descriptor){ \
+        .entity_range = {0, PTRDIFF_MAX}, \
+        .groups = (cecs_component_iteration_group[]){ __VA_ARGS__ }, \
+        .group_count = (sizeof((cecs_component_iteration_group[]){ __VA_ARGS__ }) / sizeof(cecs_component_iteration_group)) \
+    }
+#define CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED(...) \
+    CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED_RAW( \
+        (CECS_COMPONENT_GROUP_DEFAULT_EXCLUDED), \
+        __VA_ARGS__ \
+    )
 
-typedef void *raw_iteration_handle_reference;
-raw_iteration_handle_reference cecs_component_iterator_descriptor_allocate_handle(const cecs_component_iterator_descriptor descriptor);
+#define CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(world_components_reference, iterator_temporary_arena_reference, ...) \
+    cecs_component_iterator_create( \
+        CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED(__VA_ARGS__), \
+        world_components_reference, \
+        iterator_temporary_arena_reference \
+    )
 
-raw_iteration_handle_reference cecs_component_iterator_descriptor_allocate_handle_in(cecs_arena *a, const cecs_component_iterator_descriptor descriptor);
-
-
-typedef struct cecs_component_iterator {
-    cecs_component_iterator_descriptor descriptor;
-    cecs_hibitset_iterator entities_iterator;
-    cecs_entity_id_range entity_range;
-} cecs_component_iterator;
-
-cecs_component_iterator cecs_component_iterator_create(cecs_component_iterator_descriptor descriptor);
-#define CECS_COMPONENT_ITERATOR_CREATE_GROUPED(world_components_ref, arena_ref, ...) \
-    cecs_component_iterator_create(cecs_component_iterator_descriptor_create( \
-        world_components_ref, \
-        arena_ref, \
-        CECS_COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__) \
-    ))
-#define CECS_COMPONENT_ITERATOR_CREATE(world_components_ref, arena_ref, ...) \
-    CECS_COMPONENT_ITERATOR_CREATE_GROUPED(world_components_ref, arena_ref, CECS_COMPONENTS_ALL(__VA_ARGS__))
-
-cecs_component_iterator cecs_component_iterator_create_ranged(cecs_component_iterator_descriptor descriptor, cecs_entity_id_range range);
-#define CECS_COMPONENT_ITERATOR_CREATE_RANGED_GROUPED(world_components_ref, arena_ref, entity_id_range0, ...) \
-    cecs_component_iterator_create_ranged(cecs_component_iterator_descriptor_create( \
-        world_components_ref, \
-        arena_ref, \
-        CECS_COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__) \
-    ), entity_id_range0)
-#define CECS_COMPONENT_ITERATOR_CREATE_RANGED(world_components_ref, arena_ref, entity_id_range0, ...) \
-    CECS_COMPONENT_ITERATOR_CREATE_RANGED_GROUPED(world_components_ref, arena_ref, entity_id_range0, CECS_COMPONENTS_ALL(__VA_ARGS__))
-
-bool cecs_component_iterator_done(const cecs_component_iterator *it);
-
-cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator *it, raw_iteration_handle_reference out_iteration_handle);
-
-size_t cecs_component_iterator_next(cecs_component_iterator *it);
+#define CECS_COMPONENT_ITERATOR_CREATE(world_components_reference, iterator_temporary_arena_reference, ...) \
+    CECS_COMPONENT_ITERATOR_CREATE_GROUPPED( \
+        world_components_reference, iterator_temporary_arena_reference, \
+        CECS_COMPONENTS_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, __VA_ARGS__) \
+    )
+#define CECS_COMPONENT_ITERATOR_CREATE_MUT(world_components_reference, iterator_temporary_arena_reference, ...) \
+    CECS_COMPONENT_ITERATOR_CREATE_GROUPPED( \
+        world_components_reference, iterator_temporary_arena_reference, \
+        CECS_COMPONENTS_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, __VA_ARGS__) \
+    )
 
 #endif

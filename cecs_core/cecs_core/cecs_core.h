@@ -10,11 +10,9 @@
 
 typedef cecs_entity_id cecs_prefab_id;
 cecs_prefab_id cecs_world_set_prefab(cecs_world *w, cecs_entity_id prefab);
-
 cecs_entity_id cecs_world_unset_prefab(cecs_world *w, cecs_prefab_id prefab);
 
 cecs_entity_id cecs_world_add_entity_from_prefab(cecs_world *w, cecs_prefab_id prefab);
-
 cecs_entity_id cecs_world_set_components_from_prefab(cecs_world *w, cecs_entity_id destination, cecs_prefab_id prefab);
 
 void *cecs_world_set_components_from_prefab_and_grab(cecs_world *w, cecs_entity_id destination, cecs_prefab_id prefab, cecs_component_id grab_component_id);
@@ -40,17 +38,12 @@ typedef struct cecs_is_child_of {
 } cecs_is_child_of;
 CECS_COMPONENT_DECLARE(cecs_is_child_of);
 
-bool cecs_world_get_entity_with(const cecs_world *w, cecs_entity_id *out_entity_id, cecs_components_search_groups search_groups);
-#define CECS_WORLD_GET_ENTITY_WITH(world_ref, out_entity_id_ref, ...) \
-    (cecs_world_get_entity_with(world_ref, out_entity_id_ref, CECS_COMPONENTS_SEARCH_GROUPS_CREATE(__VA_ARGS__)))
 
 typedef cecs_tag_id cecs_scene_id;
-
 typedef bool cecs_is_scene_member_of;
 CECS_TAG_DECLARE(cecs_is_scene_member_of);
 
 cecs_scene_id cecs_world_add_entity_to_scene(cecs_world *w, cecs_entity_id id, cecs_scene_id scene);
-
 cecs_scene_id cecs_world_remove_entity_from_scene(cecs_world *w, cecs_entity_id id, cecs_scene_id scene);
 
 typedef struct cecs_scene_world_system {
@@ -59,14 +52,14 @@ typedef struct cecs_scene_world_system {
     size_t scene_group_index;
 } cecs_scene_world_system;
 
-cecs_scene_world_system cecs_scene_world_system_create(cecs_scene_id scene, cecs_arena *a);
+cecs_scene_world_system cecs_scene_world_system_create(const cecs_scene_id scene, cecs_arena *a);
+cecs_scene_world_system cecs_scene_world_system_create_from(
+    const cecs_scene_id scene,
+    cecs_arena *a,
+    const cecs_component_iteration_group groups[const],
+    const size_t group_count
+);
 
-cecs_scene_world_system cecs_scene_world_system_create_from(cecs_scene_id scene, cecs_arena *a, cecs_components_search_groups search_groups);
-
-cecs_scene_world_system *cecs_scene_world_system_set_active_scene(cecs_scene_world_system *s, cecs_arena *a, cecs_scene_id scene);
-
-cecs_world_system cecs_scene_world_system_get_with(cecs_scene_world_system *s, cecs_arena *a, cecs_components_search_group search_group);
-
-cecs_world_system cecs_scene_world_system_get_with_range(cecs_scene_world_system *s, cecs_arena *a, cecs_components_search_groups search_groups);
+cecs_scene_world_system* cecs_scene_world_system_set_active_scene(cecs_scene_world_system* s, const cecs_scene_id scene);
 
 #endif

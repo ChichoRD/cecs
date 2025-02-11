@@ -90,7 +90,7 @@ typedef uint8_t cecs_none;
 #define CECS_OWNED(identifier) owned_##identifier
 #define CECS_COW(identifier) cow_##identifier
 #define CECS_COW_STRUCT(type, identifier) \
-    _CECS_UNION_STRUCT(CECS_COW(identifier), identifier, type *, CECS_BORROWED(identifier), type, CECS_OWNED(identifier))
+    _CECS_UNION_STRUCT(CECS_COW(identifier), identifier, const type *, CECS_BORROWED(identifier), type, CECS_OWNED(identifier))
 
 #define CECS_COW_CREATE_OWNED(identifier, value) CECS_UNION_CREATE(CECS_OWNED(identifier), identifier, value)
 #define CECS_COW_CREATE_OWNED_STRUCT(identifier, value) ((struct CECS_COW(identifier))CECS_COW_CREATE_OWNED(identifier, value))

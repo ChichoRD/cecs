@@ -31,7 +31,7 @@ void cecs_world_components_free(cecs_world_components* wc) {
 }
 
 // FIXME: messed up with const qualifications
-cecs_optional_component_storage cecs_world_components_get_component_storage(const cecs_world_components* wc, cecs_component_id component_id) {
+cecs_optional_component_storage cecs_world_components_get_component_storage(cecs_world_components* wc, const cecs_component_id component_id) {
     return CECS_OPTION_MAP_REFERENCE_STRUCT(
         cecs_optional_element,
         CECS_PAGED_SPARSE_SET_GET(cecs_sized_component_storage, &wc->component_storages, (size_t)component_id),
@@ -39,7 +39,7 @@ cecs_optional_component_storage cecs_world_components_get_component_storage(cons
     );
 }
 
-cecs_sized_component_storage *cecs_world_components_get_component_storage_expect(const cecs_world_components* wc, cecs_component_id component_id) {
+cecs_sized_component_storage *cecs_world_components_get_component_storage_expect(cecs_world_components* wc, const cecs_component_id component_id) {
     return CECS_OPTION_GET(cecs_optional_component_storage, cecs_world_components_get_component_storage(wc, component_id));
 }
 
@@ -86,14 +86,17 @@ cecs_sized_component_storage cecs_component_storage_descriptor_build(cecs_compon
     if (CECS_OPTION_IS_SOME(cecs_indirect_component_id, descriptor.indirect_component_id)) {
         const cecs_component_id other_id = CECS_OPTION_GET(cecs_indirect_component_id, descriptor.indirect_component_id);
 
-        // FIXME: require other component to be set because knowing its size is required
-        cecs_sized_component_storage *other_storage = cecs_world_components_get_or_set_component_storage(wc, other_id, (cecs_component_storage_descriptor){
-            .capacity = descriptor.capacity,
-            .is_size_known = false,
-            .config = CECS_COMPONENT_CONFIG_DEFAULT,
-            .indirect_component_id = CECS_OPTION_CREATE_NONE(cecs_indirect_component_id)
-        }, 0);
-        
+        cecs_optional_component_storage optional_storage = cecs_world_components_get_component_storage(wc, other_id);
+        if (CECS_OPTION_IS_NONE(cecs_optional_component_storage, optional_storage)) {
+            assert(
+                false
+                && "fatal error: indirect referenced component must be set before setting a relation with it as component.\n"
+                "It is necessary to know at least the size of the component before setting a relation with it."
+            );
+            exit(EXIT_FAILURE);
+        }
+
+        cecs_sized_component_storage *other_storage = CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, optional_storage);
         return (cecs_sized_component_storage){
             .storage = cecs_component_storage_create_indirect(
                 &wc->components_arena,
@@ -212,13 +215,14 @@ cecs_optional_component_array cecs_world_components_set_component_copy_array(
 }
 
 bool cecs_world_components_has_component(const cecs_world_components* wc, cecs_entity_id entity_id, cecs_component_id component_id) {
-    cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
+    // TODO: deciding if casting away const when I know I do NOT mut is a good idea
+    cecs_optional_component_storage storage = cecs_world_components_get_component_storage((cecs_world_components *)wc, component_id);
 
     return CECS_OPTION_IS_SOME(cecs_optional_component_storage, storage)
         && cecs_component_storage_has(&CECS_OPTION_GET_UNCHECKED(cecs_optional_component_storage, storage)->storage, entity_id);
 }
 
-cecs_optional_component cecs_world_components_get_component(const cecs_world_components* wc, cecs_entity_id entity_id, cecs_component_id component_id) {
+cecs_optional_component cecs_world_components_get_component(cecs_world_components* wc, const cecs_entity_id entity_id, const cecs_component_id component_id) {
     cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
     if (CECS_OPTION_IS_NONE(cecs_optional_component_storage, storage)) {
         return CECS_OPTION_CREATE_NONE_STRUCT(cecs_optional_component);
@@ -237,11 +241,11 @@ cecs_optional_component cecs_world_components_get_component(const cecs_world_com
 }
 
 size_t cecs_world_components_get_component_array(
-    const cecs_world_components* wc,
-    cecs_entity_id entity_id,
-    cecs_component_id component_id,
+    cecs_world_components* wc,
+    const cecs_entity_id entity_id,
+    const cecs_component_id component_id,
     void** out_components,
-    size_t count
+    const size_t count
 ) {
     cecs_optional_component_storage storage = cecs_world_components_get_component_storage(wc, component_id);
     if (!CECS_OPTION_IS_SOME(cecs_optional_component_storage, storage)) {
@@ -354,7 +358,8 @@ const cecs_component_storage_attachments *cecs_world_components_set_component_st
     }
 }
 
-bool cecs_world_components_has_component_storage_attachments(const cecs_world_components *wc, cecs_component_id component_id) {
+bool cecs_world_components_has_component_storage_attachments(const cecs_world_components *wc, const cecs_component_id component_id) {
+    // TODO: const correctness for this one (true const use)
     return CECS_OPTION_IS_SOME(
         cecs_optional_element,
         CECS_PAGED_SPARSE_SET_GET(cecs_component_storage_attachments, &wc->component_storages_attachments, (size_t)component_id)
@@ -362,13 +367,13 @@ bool cecs_world_components_has_component_storage_attachments(const cecs_world_co
 }
 
 const cecs_component_storage_attachments *cecs_world_components_get_component_storage_attachments_expect(
-    const cecs_world_components *wc,
-    cecs_component_id component_id
+    cecs_world_components *wc,
+    const cecs_component_id component_id
 ) {
     cecs_optional_element stored_attachments =
         CECS_PAGED_SPARSE_SET_GET(cecs_component_storage_attachments, &wc->component_storages_attachments, (size_t)component_id);
     CECS_OPTION_IS_SOME_ASSERT(cecs_optional_element, stored_attachments);
-    cecs_component_storage_attachments *attachments = CECS_OPTION_GET_UNCHECKED(cecs_optional_element, stored_attachments);
+    const cecs_component_storage_attachments *attachments = CECS_OPTION_GET_UNCHECKED(cecs_optional_element, stored_attachments);
     if (attachments->user_attachments == NULL) {
         assert(false && "unreachable: attachments must not be NULL");
         exit(EXIT_FAILURE);
@@ -460,9 +465,10 @@ size_t cecs_world_components_iterator_next(cecs_world_components_iterator* it) {
     return ++it->storage_raw_index;
 }
 
-cecs_associated_component_storage cecs_world_components_iterator_current(const cecs_world_components_iterator* it) {
-    const cecs_sized_component_storage *current =
-        ((const cecs_sized_component_storage *)cecs_paged_sparse_set_data(&it->components->component_storages)) + it->storage_raw_index;
+cecs_associated_component_storage cecs_world_components_iterator_current(cecs_world_components_iterator* it) {
+    // TODO: solve this const borrowing
+    cecs_sized_component_storage *current =
+        ((cecs_sized_component_storage *)cecs_paged_sparse_set_values_mut(&it->components->component_storages)) + it->storage_raw_index;
     const cecs_component_id component_id =
         (cecs_component_id)cecs_paged_sparse_set_keys(&it->components->component_storages)[it->storage_raw_index];
 
@@ -487,7 +493,7 @@ static inline bool cecs_world_components_iterator_current_contains_entity(const 
     assert(!cecs_world_components_iterator_done(&it->it) && "error: iterator is done");
 
     const cecs_component_storage *current = &((cecs_sized_component_storage *)(
-        cecs_paged_sparse_set_data(&it->it.components->component_storages)
+        cecs_paged_sparse_set_values(&it->it.components->component_storages)
     ))[it->it.storage_raw_index].storage;
     return cecs_component_storage_has(
         current,
@@ -506,6 +512,6 @@ size_t cecs_world_components_entity_iterator_next(cecs_world_components_entity_i
     return it->it.storage_raw_index;
 }
 
-cecs_associated_component_storage cecs_world_components_entity_iterator_current(const cecs_world_components_entity_iterator* it) {
+cecs_associated_component_storage cecs_world_components_entity_iterator_current(cecs_world_components_entity_iterator* it) {
     return cecs_world_components_iterator_current(&it->it);
 }
