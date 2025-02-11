@@ -5,7 +5,7 @@
 
 
 static bool cecs_component_iterator_copy_component_bitset_or_empty(
-    const cecs_world_components* world_components,
+    cecs_world_components* world_components,
     const cecs_component_id id,
     cecs_hibitset *destination_bitset
 ) {
@@ -22,7 +22,7 @@ static bool cecs_component_iterator_copy_component_bitset_or_empty(
 }
 
 static cecs_hibitset cecs_component_iterator_join_iteration_groups(
-    const cecs_world_components* world_components,
+    cecs_world_components* world_components,
     cecs_arena* iterator_temporary_arena,
     const cecs_component_iteration_group groups[],
     const size_t group_count,
@@ -135,7 +135,7 @@ static cecs_hibitset cecs_component_iterator_join_iteration_groups(
 }
 
 static cecs_component_iterator_descriptor cecs_component_iterator_descriptor_filter_sized(
-    const cecs_world_components* world_components,
+    cecs_world_components* world_components,
     cecs_arena *iterator_temporary_arena,
     cecs_component_iterator_descriptor *in_out_reordered_source,
     size_t *out_component_count,

@@ -425,7 +425,7 @@ void *cecs_component_storage_get_or_null(cecs_component_storage* self, const cec
     return CECS_OPTION_GET_OR_NULL(cecs_optional_component, component);
 }
 
-cecs_optional_component cecs_component_storage_set(cecs_component_storage* self, cecs_arena* a, cecs_entity_id id, void* component, size_t size) {
+cecs_optional_component cecs_component_storage_set(cecs_component_storage* self, cecs_arena* a,  const cecs_entity_id id, const void* component, const size_t size) {
     cecs_hibitset_set(&self->entity_bitset, a, (size_t)id);
 
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
@@ -439,7 +439,14 @@ cecs_optional_component cecs_component_storage_set(cecs_component_storage* self,
     }
 }
 
-cecs_optional_component_array cecs_component_storage_set_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *components, size_t count, size_t size) {
+cecs_optional_component_array cecs_component_storage_set_array(
+    cecs_component_storage *self,
+    cecs_arena *a,
+    const cecs_entity_id id,
+    const void *components,
+    const size_t count,
+    const size_t size
+) {
     cecs_hibitset_set_range(&self->entity_bitset, a, (size_t)id, count);
 
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);
@@ -477,7 +484,14 @@ cecs_optional_component_array cecs_component_storage_set_array(cecs_component_st
     }
 }
 
-cecs_optional_component_array cecs_component_storage_set_copy_array(cecs_component_storage *self, cecs_arena *a, cecs_entity_id id, void *component_single_src, size_t count, size_t size) {
+cecs_optional_component_array cecs_component_storage_set_copy_array(
+    cecs_component_storage *self,
+    cecs_arena *a,
+    const cecs_entity_id id,
+    const void *component_single_src,
+    const size_t count,
+    const size_t size
+) {
     cecs_hibitset_set_range(&self->entity_bitset, a, (size_t)id, count);
 
     cecs_component_storage_functions storage_functions = cecs_component_storage_get_functions(self);

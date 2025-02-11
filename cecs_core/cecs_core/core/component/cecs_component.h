@@ -59,7 +59,7 @@ static inline size_t cecs_world_components_get_component_storage_count(const cec
 
 typedef CECS_OPTION_STRUCT(cecs_sized_component_storage *, cecs_optional_component_storage) cecs_optional_component_storage;
 cecs_optional_component_storage cecs_world_components_get_component_storage(cecs_world_components *wc, const cecs_component_id component_id);
-cecs_sized_component_storage *cecs_world_components_get_component_storage_expect(const cecs_world_components *wc, cecs_component_id component_id);
+cecs_sized_component_storage *cecs_world_components_get_component_storage_expect(cecs_world_components *wc, const cecs_component_id component_id);
 
 bool cecs_world_components_has_storage(const cecs_world_components *wc, cecs_component_id component_id);
 
@@ -153,22 +153,22 @@ static inline void *cecs_world_components_set_component_copy_array_unchecked(
 bool cecs_world_components_has_component(const cecs_world_components *wc, cecs_entity_id entity_id, cecs_component_id component_id);
 
 cecs_optional_component cecs_world_components_get_component(
-    const cecs_world_components *wc,
-    cecs_entity_id entity_id, 
-    cecs_component_id component_id
+    cecs_world_components *wc,
+    const cecs_entity_id entity_id, 
+    const cecs_component_id component_id
 );
 size_t cecs_world_components_get_component_array(
-    const cecs_world_components* wc,
-    cecs_entity_id entity_id,
-    cecs_component_id component_id,
+    cecs_world_components* wc,
+    const cecs_entity_id entity_id,
+    const cecs_component_id component_id,
     void** out_components,
-    size_t count
+    const size_t count
 );
 
-static inline void *cecs_world_components_get_component_unchecked(
-    const cecs_world_components *wc,
-    cecs_entity_id entity_id,
-    cecs_component_id component_id
+static inline void *cecs_world_components_get_component_expect(
+    cecs_world_components *wc,
+    const cecs_entity_id entity_id,
+    const cecs_component_id component_id
 ) {
     return CECS_OPTION_GET(cecs_optional_component, cecs_world_components_get_component(wc, entity_id, component_id));
 }
