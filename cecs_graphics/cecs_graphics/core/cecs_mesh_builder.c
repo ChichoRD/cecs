@@ -3,6 +3,27 @@
 #include <stdlib.h>
 #include "cecs_mesh_builder.h"
 
+// void foo() {
+//     const cgltf_options opt = {
+//         .type = cgltf_file_type_invalid,
+//         .memory = (cgltf_memory_options) {
+//             .alloc_func = cecs_cgltf_alloc,
+//             .free_func = cecs_cgltf_free,
+//             .user_data = NULL,
+//         },
+//     };
+//     cgltf_data *data;
+//     const cgltf_result result = cgltf_parse_file(&opt, "path/to/file", &data);
+//     if (result != cgltf_result_success) {
+//         fprintf(stderr, "error: failed to parse gltf file\n");
+//         return;
+//     }
+//     //cgltf_accessor_unpack_floats()
+//     //cgltf_find_accessor
+//     cgltf_leng
+//     data.scene->nodes[0]->mesh->primitives->attributes
+// }
+
 cecs_buffer_attribute_builder cecs_attribute_builder_create(cecs_graphics_world *graphics_world, cecs_arena *builder_arena, const size_t expected_attribute_count) {
     return (cecs_buffer_attribute_builder){
         .graphics_world = graphics_world,
@@ -353,6 +374,7 @@ cecs_mesh_builder cecs_mesh_builder_create(cecs_graphics_world *graphics_world, 
         .index_builder = cecs_attribute_builder_create(graphics_world, builder_arena, 1),
         .descriptor = descriptor,
         .bounding_radius = 0.0f,
+        .loaded_data = NULL,
     };
 }
 
@@ -437,7 +459,8 @@ cecs_mesh cecs_mesh_builder_build_into(
 
 bool cecs_mesh_builder_is_clear(const cecs_mesh_builder *builder) {
     return cecs_attribute_builder_is_clear(&builder->vertex_builder)
-        && cecs_attribute_builder_is_clear(&builder->index_builder);
+        && cecs_attribute_builder_is_clear(&builder->index_builder)
+        && builder->loaded_data == NULL;
 }
 
 static cecs_mesh_builder *cecs_mesh_builder_clear_vertices(cecs_mesh_builder *builder) {
@@ -504,6 +527,7 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
 cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder) {
     cecs_mesh_builder_clear_vertices(builder);
     cecs_mesh_builder_clear_indices(builder);
+    cecs_mesh_builder_clear_loaded_data(builder);
     return builder;
 }
 
@@ -517,6 +541,101 @@ cecs_mesh cecs_mesh_builder_build_into_and_clear(
     cecs_mesh_builder_clear(builder);
     return mesh;
 }
+
+cecs_mesh_builder *cecs_mesh_builder_load_gltf(cecs_mesh_builder *builder, const char *path) {
+    const cgltf_options options = {
+        .type = cgltf_file_type_invalid,
+        .memory = (cgltf_memory_options) {
+            .alloc_func = cecs_cgltf_alloc,
+            .free_func = cecs_cgltf_free,
+            .user_data = builder->vertex_builder.builder_arena,
+        },
+    };
+    cgltf_data *data;
+    const cgltf_result result = cgltf_parse_file(&options, path, &data);
+    if (result != cgltf_result_success) {
+        assert(false && "error: failed to parse or locate .gltf file");
+        exit(EXIT_FAILURE);
+    }
+    
+    builder->loaded_data = data;
+    return builder;
+}
+
+cecs_mesh_builder *cecs_mesh_builder_set_loaded_vertex_attribute(
+    cecs_mesh_builder *builder,
+    const cecs_vertex_attribute_id attribute_id,
+    const cgltf_attribute_type attribute_type
+) {
+    assert(builder->loaded_data != NULL && "error: setting vertex attribute from loaded data requires loading a .gltf first");
+    cgltf_int accessor_index = -1;
+    for (size_t i = 0; i < builder->loaded_data->meshes_count; i++) {
+        const cgltf_mesh *mesh = &builder->loaded_data->meshes[i];
+        for (size_t j = 0; j < mesh->primitives_count; j++) {
+            const cgltf_primitive *primitive = &mesh->primitives[j];
+            for (size_t k = 0; k < primitive->attributes_count; k++) {
+                const cgltf_attribute *attribute = &primitive->attributes[k];
+                if (attribute->type == attribute_type) {
+                    accessor_index = attribute->index;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (accessor_index == -1) {
+        assert(false && "error: attribute not found in loaded data");
+        exit(EXIT_FAILURE);
+    }
+
+    const cgltf_accessor *accessor = &builder->loaded_data->accessors[accessor_index];
+    const cgltf_size float_count = cgltf_accessor_unpack_floats(accessor, NULL, 0);
+    assert(float_count > 0 && "error: no floats in accessor");
+    
+    float *attributes_data = cecs_arena_alloc(builder->vertex_builder.builder_arena, float_count * sizeof(float));
+    const cgltf_size unpacked_size = cgltf_accessor_unpack_floats(accessor, attributes_data, float_count);
+    assert(unpacked_size == float_count && "error: unpacked size mismatch");
+
+    return cecs_mesh_builder_set_vertex_attribute(
+        builder,
+        attribute_id,
+        attributes_data,
+        float_count,
+        accessor->stride
+    );
+}
+
+cecs_mesh_builder *cecs_mesh_builder_set_loaded_indices(cecs_mesh_builder *builder) {
+    assert(builder->loaded_data != NULL && "error: setting indices from loaded data requires loading a .gltf first");
+    assert(builder->loaded_data->meshes_count > 0 && "error: no meshes loaded");
+
+    const cgltf_mesh *first_mesh = builder->loaded_data->meshes;
+    assert(first_mesh->primitives_count > 0 && "error: no primitives in first mesh");
+
+    const cgltf_accessor *index_accessor = first_mesh->primitives->indices;
+    const cgltf_size index_count = cgltf_accessor_unpack_indices(index_accessor, NULL, 0, 0);
+    assert(index_count > 0 && "error: no indices in accessor");
+
+    const cgltf_size component_size = cgltf_component_size(index_accessor->component_type);
+    assert(component_size == cecs_index_format_info_from(builder->descriptor.index_format).size && "error: index size mismatch");    
+
+    uint8_t *indices_data = cecs_arena_alloc(builder->index_builder.builder_arena, index_count * component_size);
+    const cgltf_size unpacked_size = cgltf_accessor_unpack_indices(index_accessor, indices_data, component_size, index_count);
+    assert(unpacked_size == index_count && "error: unpacked size mismatch");
+
+    return cecs_mesh_builder_set_indices(
+        builder,
+        indices_data,
+        index_count
+    );
+}
+
+cecs_mesh_builder *cecs_mesh_builder_clear_loaded_data(cecs_mesh_builder *builder) {
+    cecs_cgltf_free(builder->vertex_builder.builder_arena, builder->loaded_data);
+    builder->loaded_data = NULL;
+    return builder;
+}
+
 
 static cecs_buffer_attribute_builder_buffer_info cecs_instance_builder_get_instance_info(
     cecs_buffer_attribute_builder *builder,

@@ -3,6 +3,7 @@
 
 #include "component/cecs_mesh.h"
 #include "context/cecs_graphics_context.h"
+#include "builder/cecs_cgltf.h"
 #include "cecs_graphics_world.h"
 
 typedef struct cecs_buffer_attribute_builder {
@@ -77,6 +78,12 @@ cecs_buffer_attribute_range cecs_attribute_builder_build_into_and_clear(
 );
 
 
+// typedef enum cecs_mesh_builder_config {
+//     cecs_mesh_builder_config_none = 0,
+//     cecs_mesh_builder_config_remove_on_build = 1 << 0,
+//     cecs_mesh_builder_load
+// }
+
 typedef struct cecs_mesh_builder_descriptor {
     size_t vertex_attributes_expected_count;
     WGPUIndexFormat index_format;
@@ -87,6 +94,7 @@ typedef struct cecs_mesh_builder {
     cecs_buffer_attribute_builder vertex_builder;
     cecs_buffer_attribute_builder index_builder;
     cecs_mesh_builder_descriptor descriptor;
+    cgltf_data *loaded_data;
     float bounding_radius;
 } cecs_mesh_builder;
 
@@ -126,6 +134,20 @@ cecs_mesh cecs_mesh_builder_build_into_and_clear(
     cecs_graphics_context *context,
     cecs_index_stream *out_index_stream
 );
+
+cecs_mesh_builder *cecs_mesh_builder_load_gltf(
+    cecs_mesh_builder *builder,
+    const char *path
+);
+cecs_mesh_builder *cecs_mesh_builder_set_loaded_vertex_attribute(
+    cecs_mesh_builder *builder,
+    const cecs_vertex_attribute_id attribute_id,
+    const cgltf_attribute_type attribute_type
+);
+cecs_mesh_builder *cecs_mesh_builder_set_loaded_indices(
+    cecs_mesh_builder *builder
+);
+cecs_mesh_builder *cecs_mesh_builder_clear_loaded_data(cecs_mesh_builder *builder);
 
 typedef struct cecs_instance_builder_descriptor  {
     size_t instance_attributes_expected_count;
