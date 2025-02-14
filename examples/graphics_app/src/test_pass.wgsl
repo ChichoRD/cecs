@@ -71,5 +71,6 @@ fn hsv_from_rgb(color: vec3f) -> vec3f {
 
 @fragment
 fn fs_main(input: vertex_output) -> @location(0) vec4<f32> {
+    //return vec4f(input.uv * input.uv_subrect, 0.0, 1.0);
     return textureSample(albedo_texture, texture_sampler, input.uv * input.uv_subrect, input.texture_range[0]);
 }

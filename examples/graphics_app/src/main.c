@@ -84,6 +84,28 @@ int main(void) {
     mesh_builder_configure_square(&builder);
     cecs_index_stream index_stream;
     cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
+    
+    // mesh_builder_configure_square(&builder);
+    cecs_mesh_builder_load_gltf(&builder, "../../examples/graphics_app/src/TextureCoordinateTest.gltf");
+    cecs_mesh_builder_set_loaded_vertex_attribute(
+        &builder,
+        CECS_COMPONENT_ID(position2_f32_attribute),
+        cgltf_attribute_type_position,
+        sizeof(position2_f32_attribute),
+        cecs_attribute_copy_expect_larger_copy_padded
+    );
+    cecs_mesh_builder_set_loaded_vertex_attribute(
+        &builder,
+        CECS_COMPONENT_ID(uv2_f32_attribute),
+        cgltf_attribute_type_texcoord,
+        sizeof(uv2_f32_attribute),
+        cecs_attribute_copy_expect_exact
+    );
+    color3_f32_attribute *colors =
+        cecs_arena_alloc(&builder_arena, cecs_exclusive_range_length(builder.vertex_builder.attribute_range) * sizeof(color3_f32_attribute));
+    cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(color3_f32_attribute), colors, cecs_exclusive_range_length(builder.vertex_builder.attribute_range), sizeof(color3_f32_attribute));
+    cecs_mesh_builder_set_loaded_indices(&builder, cecs_attribute_copy_expect_smaller_zero_fill_padded);
+    mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
     cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
     
     const cecs_uniform_raw_stream *stream = CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, id, &((color4_f32_uniform){
@@ -110,7 +132,7 @@ int main(void) {
         .sample_count = 1,
         .aspect_ratio = 640.0f / 480.0f,
     }, &system.world.world.resources.resources_arena);
-
+    
     WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
     (void)clear_color;
     
@@ -119,6 +141,23 @@ int main(void) {
         .channel_count = 4,
         .flags = cecs_texture_builder_descriptor_config_generate_mipmaps | cecs_texture_builder_descriptor_config_alloc_mipmaps,
     });
+    cecs_texture_builder_set_descriptor_no_data(&texture_builder, (WGPUTextureDescriptor){0});
+    cecs_texture_builder_load_from(
+        &texture_builder,
+        "../../examples/graphics_app/src/TextureCoordinateTemplate.png",
+        WGPUTextureDimension_2D,
+        WGPUTextureFormat_RGBA8Unorm,
+        WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
+    );
+    cecs_texture_in_bank_bundle secondary_bundle = cecs_texture_builder_build_in_bank(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
+        .format = WGPUTextureFormat_RGBA8Unorm,
+        .dimension = WGPUTextureViewDimension_2D,
+        .baseMipLevel = 0,
+        .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
+        .baseArrayLayer = 0,
+        .arrayLayerCount = 1,
+    });
+
     uint32_t *texture_data = cecs_arena_alloc(&builder_arena, 230 * 90 * sizeof(uint32_t));
     for (size_t i = 0; i < 90; i++) {
         for (size_t j = 0; j < 230; j++) {
@@ -138,15 +177,6 @@ int main(void) {
         .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
         .viewFormatCount = 0
     });
-    // cecs_texture texture = cecs_texture_builder_build(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
-    //     .format = WGPUTextureFormat_RGBA8Unorm,
-    //     .dimension = WGPUTextureViewDimension_2D,
-    //     .baseMipLevel = 0,
-    //     .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
-    //     .baseArrayLayer = 0,
-    //     .arrayLayerCount = 1,
-    // }, 0);
-    //CECS_GRAPHICS_SYSTEM_SET_TEXTURE(cecs_texture, &system, &world, id, &texture);
     cecs_texture_in_bank_bundle bundle = cecs_texture_builder_build_in_bank(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
         .format = WGPUTextureFormat_RGBA8Unorm,
         .dimension = WGPUTextureViewDimension_2D,
@@ -155,24 +185,8 @@ int main(void) {
         .baseArrayLayer = 0,
         .arrayLayerCount = 1,
     });
-    CECS_WORLD_SET_COMPONENT(cecs_texture_in_bank_reference, &world, id, &bundle.reference);
+    CECS_WORLD_SET_COMPONENT(cecs_texture_in_bank_reference, &world, id, &secondary_bundle.reference);
 
-    cecs_texture_builder_set_descriptor_no_data(&texture_builder, (WGPUTextureDescriptor){0});
-    cecs_texture_builder_load_from(
-        &texture_builder,
-        "../../examples/graphics_app/src/sample.png",
-        WGPUTextureDimension_2D,
-        WGPUTextureFormat_RGBA8Unorm,
-        WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
-    );
-    cecs_texture_in_bank_bundle secondary_bundle = cecs_texture_builder_build_in_bank(&texture_builder, &system.context, &(WGPUTextureViewDescriptor){
-        .format = WGPUTextureFormat_RGBA8Unorm,
-        .dimension = WGPUTextureViewDimension_2D,
-        .baseMipLevel = 0,
-        .mipLevelCount = texture_builder.texture_descriptor.mipLevelCount,
-        .baseArrayLayer = 0,
-        .arrayLayerCount = 1,
-    });
 
 
     cecs_instance_builder instance_builder = cecs_instance_builder_create(&system.world, (cecs_instance_builder_descriptor){
