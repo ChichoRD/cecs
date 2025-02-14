@@ -391,8 +391,11 @@ cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, c
         it->flags |= cecs_component_iterator_status_collected;
     }
     
+    
     assert(
-        ((it->flags & cecs_component_iterator_status_collected_storages) != 0) ^ ((it->flags & cecs_component_iterator_status_collected_components) != 0)
+        (it->component_count == 0)
+        || ((it->flags & cecs_component_iterator_status_collected_storages) != 0)
+            ^ ((it->flags & cecs_component_iterator_status_collected_components) != 0)
         && "fatal error: component iterator must have exclusively collected either components or storages"
     );
 
