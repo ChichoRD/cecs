@@ -226,29 +226,42 @@ bool cecs_component_iterator_can_begin_iter(const cecs_component_iterator *it) {
     return it->creation_checksum == it->world_components->checksum;
 }
 
-static size_t cecs_component_iteration_group_ensure_access_and_collect(
-    const cecs_component_iteration_group group,
-    cecs_world_components *world_components,
-    cecs_component_id components_destination[]
-) {
-    const cecs_component_access group_access = group.access;
-    cecs_component_storage_status_flags access_flags;
-    switch (group_access) {
+static cecs_component_storage_status_flags cecs_component_storage_status_flags_from_access(const cecs_component_access access) {
+    switch (access) {
     case cecs_component_access_inmmutable:
-        access_flags = cecs_component_storage_status_reading;
-        break;
+        return cecs_component_storage_status_reading;
     case cecs_component_access_mutable:
-        access_flags =
-            cecs_component_storage_status_reading | cecs_component_storage_status_writing | cecs_component_storage_status_dirty;
-        break;
+        return cecs_component_storage_status_reading | cecs_component_storage_status_writing | cecs_component_storage_status_dirty;
     case cecs_component_access_ignore:
-        access_flags = cecs_component_storage_status_none;
-        break;
+        return cecs_component_storage_status_none;
     default: {
         assert(false && "unreachable: invalid component access mode");
         exit(EXIT_FAILURE);
     }
     }
+}
+
+static void cecs_component_iteration_group_ensure_access(const cecs_component_storage *storage, const cecs_component_access access) {
+    if (storage->status & cecs_component_storage_status_writing) {
+        if (access != cecs_component_access_ignore) {
+            assert(false && "error: user requested reference access on a component that is being written to");
+            exit(EXIT_FAILURE);
+        }
+    } else if (storage->status & cecs_component_storage_status_reading) {
+        if (access == cecs_component_access_mutable) {
+            assert(false && "error: user requested mutable access on a component that is being read from");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+[[maybe_unused]]
+static size_t cecs_component_iteration_group_ensure_access_and_collect_components(
+    const cecs_component_iteration_group group,
+    cecs_world_components *world_components,
+    cecs_component_id components_destination[]
+) {
+    const cecs_component_storage_status_flags access_flags = cecs_component_storage_status_flags_from_access(group.access);
     size_t count = 0;
     for (size_t i = 0; i < group.component_count; i++) {
         if (cecs_world_components_has_storage(world_components, group.components[i])) {  
@@ -257,17 +270,7 @@ static size_t cecs_component_iteration_group_ensure_access_and_collect(
                 group.components[i]
             )->storage;
     
-            if (storage->status & cecs_component_storage_status_writing) {
-                if (group_access != cecs_component_access_ignore) {
-                    assert(false && "error: user requested reference access on a component that is being written to");
-                    exit(EXIT_FAILURE);
-                }
-            } else if (storage->status & cecs_component_storage_status_reading) {
-                if (group_access == cecs_component_access_mutable) {
-                    assert(false && "error: user requested mutable access on a component that is being read from");
-                    exit(EXIT_FAILURE);
-                }
-            }
+            cecs_component_iteration_group_ensure_access(storage, group.access);
     
             storage->status |= access_flags;
             components_destination[count] = group.components[i];
@@ -277,6 +280,87 @@ static size_t cecs_component_iteration_group_ensure_access_and_collect(
     return count;
 }
 
+[[maybe_unused]]
+static size_t cecs_component_iteration_group_ensure_access_and_collect_storages(
+    const cecs_component_iteration_group group,
+    cecs_world_components *world_components,
+    cecs_sized_component_storage *storages_destination[]
+) {
+    const cecs_component_storage_status_flags access_flags = cecs_component_storage_status_flags_from_access(group.access);
+    size_t count = 0;
+    for (size_t i = 0; i < group.component_count; i++) {
+        if (cecs_world_components_has_storage(world_components, group.components[i])) {  
+            cecs_sized_component_storage *storage = cecs_world_components_get_component_storage_expect(
+                world_components,
+                group.components[i]
+            );
+    
+            cecs_component_iteration_group_ensure_access(&storage->storage, group.access);
+    
+            storage->storage.status |= access_flags;
+            storages_destination[count] = storage;
+            ++count;
+        }
+    }
+    return count;
+}
+
+[[maybe_unused]]
+static cecs_component_iterator_descriptor_flat cecs_component_iterator_descriptor_flat_from_groupped(
+    const cecs_component_iterator *iterator,
+    cecs_world_components *world_components,
+    cecs_arena *iterator_temporary_arena
+) {
+    const cecs_component_iterator_descriptor descriptor = iterator->descriptor.groupped;
+    cecs_component_iterator_descriptor_flat flat_descriptor = {
+        .entity_range = descriptor.entity_range,
+        .components = cecs_arena_alloc(iterator_temporary_arena, iterator->component_count * sizeof(cecs_component_id))
+    };
+    size_t collected_count = 0;
+    for (size_t i = 0; i < descriptor.group_count; i++) {
+        const size_t collected = cecs_component_iteration_group_ensure_access_and_collect_components(
+            descriptor.groups[i],
+            world_components,
+            flat_descriptor.components + collected_count
+        );
+        collected_count += collected;
+    }
+    assert(collected_count == iterator->component_count && "fatal error: component count mismatch");
+    return flat_descriptor;
+}
+
+[[maybe_unused]]
+static cecs_component_iterator_descriptor_storages cecs_component_iterator_descriptor_storages_from_groupped(
+    const cecs_component_iterator *iterator,
+    cecs_world_components *world_components,
+    cecs_arena *iterator_temporary_arena
+) {
+    const cecs_component_iterator_descriptor descriptor = iterator->descriptor.groupped;
+    cecs_component_iterator_descriptor_storages storages_descriptor = {
+        .entity_range = descriptor.entity_range,
+        .storages = cecs_arena_alloc(iterator_temporary_arena, iterator->component_count * sizeof(cecs_sized_component_storage*))
+    };
+    size_t collected_count = 0;
+    for (size_t i = 0; i < descriptor.group_count; i++) {
+        const size_t collected = cecs_component_iteration_group_ensure_access_and_collect_storages(
+            descriptor.groups[i],
+            world_components,
+            storages_descriptor.storages + collected_count
+        );
+        collected_count += collected;
+    }
+    assert(collected_count == iterator->component_count && "fatal error: component count mismatch");
+    return storages_descriptor;
+}
+
+// This is under the asumption that storages are stable to cache
+#define CECS_COMPONENT_ITERATOR_COLLECT_STORAGES true
+#define CECS_COMPONENT_ITERATOR_COLLECT_COMPONENTS (!CECS_COMPONENT_ITERATOR_COLLECT_STORAGES)
+static_assert(
+    CECS_COMPONENT_ITERATOR_COLLECT_STORAGES ^ CECS_COMPONENT_ITERATOR_COLLECT_COMPONENTS,
+    "fatal error: component iterator must exclusively collect either components or storages"
+);
+
 cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, cecs_arena *iterator_temporary_arena) {
     assert(
         cecs_component_iterator_can_begin_iter(it)
@@ -284,23 +368,36 @@ cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, c
     );
     it->flags |= cecs_component_iterator_status_iter_checked;
 
-    const cecs_component_iterator_descriptor_flat flat_descriptor = {
-        .entity_range = it->descriptor.groupped.entity_range,
-        .components = (it->component_count == 0)
-            ? NULL
-            : cecs_arena_alloc(iterator_temporary_arena, it->component_count * sizeof(cecs_component_id))
-    };
-    size_t component_count = 0;
-    for (size_t i = 0; i < it->descriptor.groupped.group_count; i++) {
-        const size_t collected = cecs_component_iteration_group_ensure_access_and_collect(
-            it->descriptor.groupped.groups[i],
-            it->world_components,
-            flat_descriptor.components + component_count
+    if ((it->component_count > 0) && !(it->flags & cecs_component_iterator_status_collected)) {
+        assert(
+            !(it->flags & (cecs_component_iterator_status_collected_components | cecs_component_iterator_status_collected_storages))
+            && "fatal error: component iterator must not have collected components or storages if collected flag is unset"
         );
-        component_count += collected;
+#if CECS_COMPONENT_ITERATOR_COLLECT_STORAGES
+        it->descriptor.storages = cecs_component_iterator_descriptor_storages_from_groupped(
+            it,
+            it->world_components,
+            iterator_temporary_arena
+        );
+        it->flags |= cecs_component_iterator_status_collected_storages;
+#elif CECS_COMPONENT_ITERATOR_COLLECT_COMPONENTS
+        it->descriptor.flattened = cecs_component_iterator_descriptor_flat_from_groupped(
+            it,
+            it->world_components,
+            iterator_temporary_arena
+        );
+        it->flags |= cecs_component_iterator_status_collected_components;
+#endif
+        it->flags |= cecs_component_iterator_status_collected;
     }
-    assert(component_count == it->component_count && "fatal error: component count mismatch");
-    it->descriptor.flattened = flat_descriptor;
+    
+    
+    assert(
+        (it->component_count == 0)
+        || ((it->flags & cecs_component_iterator_status_collected_storages) != 0)
+            ^ ((it->flags & cecs_component_iterator_status_collected_components) != 0)
+        && "fatal error: component iterator must have exclusively collected either components or storages"
+    );
 
     if (!cecs_hibitset_iterator_current_is_set(&it->entities_iterator)) {
         cecs_hibitset_iterator_next_set(&it->entities_iterator);
@@ -325,10 +422,14 @@ bool cecs_component_iterator_done(const cecs_component_iterator* it) {
 
 cecs_entity_id cecs_component_iterator_current(const cecs_component_iterator* it, void *out_component_handles[]) {
     for (size_t i = 0; i < it->component_count; i++) {
+#if CECS_COMPONENT_ITERATOR_COLLECT_STORAGES
+        cecs_sized_component_storage *storage = it->descriptor.storages.storages[i];
+#elif CECS_COMPONENT_ITERATOR_COLLECT_COMPONENTS
         cecs_sized_component_storage* storage = cecs_world_components_get_component_storage_expect(
             it->world_components,
             it->descriptor.flattened.components[i]
         );
+#endif
         out_component_handles[i] = cecs_component_storage_get_or_null(
             &storage->storage,
             it->entities_iterator.current_bit_index,
@@ -350,10 +451,14 @@ void cecs_component_iterator_end_iter(cecs_component_iterator *it) {
     it->flags &= ~cecs_component_iterator_status_iter_checked;
 
     for (size_t i = 0; i < it->component_count; i++) {
+#if CECS_COMPONENT_ITERATOR_COLLECT_STORAGES
+        cecs_component_storage *storage = &it->descriptor.storages.storages[i]->storage;
+#elif CECS_COMPONENT_ITERATOR_COLLECT_COMPONENTS
         cecs_component_storage *storage = &cecs_world_components_get_component_storage_expect(
             it->world_components,
             it->descriptor.flattened.components[i]
         )->storage;
+#endif
         storage->status &= ~(
             cecs_component_storage_status_reading | cecs_component_storage_status_writing
         );

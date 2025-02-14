@@ -34,15 +34,24 @@ typedef struct cecs_component_iterator_descriptor_flat {
     cecs_component_id *components;
 } cecs_component_iterator_descriptor_flat;
 
+typedef struct cecs_component_iterator_descriptor_storages {
+    cecs_entity_id_range entity_range;
+    cecs_sized_component_storage **storages;
+} cecs_component_iterator_descriptor_storages;
+
 typedef union cecs_component_iterator_descriptor_union {
     cecs_component_iterator_descriptor groupped;
     cecs_component_iterator_descriptor_flat flattened;
+    cecs_component_iterator_descriptor_storages storages;
 } cecs_component_iterator_descriptor_union;
 
 // TODO: decide leading iterator
 typedef enum cecs_component_iterator_status {
     cecs_component_iterator_status_none = 0,
     cecs_component_iterator_status_iter_checked = 1 << 0,
+    cecs_component_iterator_status_collected = 1 << 1,
+    cecs_component_iterator_status_collected_components = 1 << 2,
+    cecs_component_iterator_status_collected_storages = 1 << 3
 } cecs_component_iterator_status;
 typedef uint8_t cecs_component_iterator_status_flags;
 
