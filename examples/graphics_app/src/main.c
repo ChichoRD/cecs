@@ -86,26 +86,84 @@ int main(void) {
     cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
     
     // mesh_builder_configure_square(&builder);
-    cecs_mesh_builder_load_gltf(&builder, "../../examples/graphics_app/src/TextureCoordinateTest.gltf");
-    cecs_mesh_builder_set_loaded_vertex_attribute(
-        &builder,
-        CECS_COMPONENT_ID(position2_f32_attribute),
+    // cecs_mesh_builder_load_gltf(&builder, "../../examples/graphics_app/src/TextureCoordinateTest.gltf");
+    // cecs_mesh_builder_set_loaded_vertex_attribute(
+    //     &builder,
+    //     CECS_COMPONENT_ID(position2_f32_attribute),
+    //     cgltf_attribute_type_position,
+    //     sizeof(position2_f32_attribute),
+    //     cecs_attribute_copy_expect_larger_copy_padded
+    // );
+    // cecs_mesh_builder_set_loaded_vertex_attribute(
+    //     &builder,
+    //     CECS_COMPONENT_ID(uv2_f32_attribute),
+    //     cgltf_attribute_type_texcoord,
+    //     sizeof(uv2_f32_attribute),
+    //     cecs_attribute_copy_expect_exact
+    // );
+    // color3_f32_attribute *colors =
+    //     cecs_arena_alloc(&builder_arena, cecs_exclusive_range_length(builder.vertex_builder.attribute_range) * sizeof(color3_f32_attribute));
+    // cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(color3_f32_attribute), colors, cecs_exclusive_range_length(builder.vertex_builder.attribute_range), sizeof(color3_f32_attribute));
+    // cecs_mesh_builder_set_loaded_indices(&builder, cecs_attribute_copy_expect_smaller_zero_fill_padded);
+    // mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
+    cecs_file_mesh_builder_gltf file_builder = cecs_file_mesh_builder_gltf_create(&system.world, (cecs_mesh_builder_descriptor){
+        .vertex_attributes_expected_count = 3,
+        .index_format = WGPUIndexFormat_Uint16,
+    }, &builder_arena, "../../examples/graphics_app/src/TextureCoordinateTest.gltf");
+    cecs_file_mesh_builder_gltf_set_all_vertex_attributes(
+        &file_builder,
         cgltf_attribute_type_position,
+        CECS_COMPONENT_ID(position2_f32_attribute),
         sizeof(position2_f32_attribute),
         cecs_attribute_copy_expect_larger_copy_padded
     );
-    cecs_mesh_builder_set_loaded_vertex_attribute(
-        &builder,
-        CECS_COMPONENT_ID(uv2_f32_attribute),
+    cecs_file_mesh_builder_gltf_set_all_vertex_attributes(
+        &file_builder,
         cgltf_attribute_type_texcoord,
+        CECS_COMPONENT_ID(uv2_f32_attribute),
         sizeof(uv2_f32_attribute),
         cecs_attribute_copy_expect_exact
     );
-    color3_f32_attribute *colors =
-        cecs_arena_alloc(&builder_arena, cecs_exclusive_range_length(builder.vertex_builder.attribute_range) * sizeof(color3_f32_attribute));
-    cecs_mesh_builder_set_vertex_attribute(&builder, CECS_COMPONENT_ID(color3_f32_attribute), colors, cecs_exclusive_range_length(builder.vertex_builder.attribute_range), sizeof(color3_f32_attribute));
-    cecs_mesh_builder_set_loaded_indices(&builder, cecs_attribute_copy_expect_smaller_zero_fill_padded);
-    mesh = cecs_mesh_builder_build_into_and_clear(&world, &builder, &system.context, &index_stream);
+    cecs_dynamic_array color3_f32_attributes = cecs_dynamic_array_create();
+    for (size_t i = 0; i < cecs_file_mesh_builder_gltf_mesh_count(&file_builder); i++) {
+        cecs_mesh_builder *mesh_builder = file_builder.mesh_builders + i;
+        const size_t mesh_range = cecs_exclusive_range_length(mesh_builder->vertex_builder.attribute_range);
+        cecs_ssize_t missing = mesh_range - cecs_dynamic_array_count_of_size(&color3_f32_attributes, sizeof(color3_f32_attribute));
+        if (missing > 0) {
+            cecs_dynamic_array_extend(&color3_f32_attributes, &builder_arena, missing, sizeof(color3_f32_attribute));
+        }
+        cecs_mesh_builder_set_vertex_attribute(mesh_builder, CECS_COMPONENT_ID(color3_f32_attribute),
+            cecs_dynamic_array_first_mut(&color3_f32_attributes),
+            mesh_range,
+            sizeof(color3_f32_attribute)
+        );
+    }
+    cecs_file_mesh_builder_gltf_set_all_indices(&file_builder, cecs_attribute_copy_expect_smaller_zero_fill_padded);
+    const size_t mesh_count = cecs_file_mesh_builder_gltf_mesh_count(&file_builder); 
+    assert(mesh_count <= 5);
+    cecs_mesh meshes[5] = {0};
+    cecs_index_stream index_streams[5] = {0};
+    for (size_t i = 0; i < mesh_count; i++) {
+        meshes[i] = cecs_mesh_builder_build_into_and_clear(&world, file_builder.mesh_builders + i, &system.context, index_streams + i);
+    }
+
+    cecs_entity_id meshes_ids[5] = {0};
+    for (size_t i = 0; i < mesh_count; i++) {
+        meshes_ids[i] = cecs_world_add_entity_with_indexed_mesh(&world, meshes + i, index_streams + i);
+        CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, meshes_ids[i], &((color4_f32_uniform){
+            .r = 0.5f,
+            .g = 0.5f,
+            .b = 0.5f,
+            .a = 1.0f,
+        }));
+        CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(position4_f32_uniform, &system, &world, meshes_ids[i], &((position4_f32_uniform){
+            .x = 0.0f,
+            .y = 0.0f,
+            .z = 0.0f,
+            .w = 0.0f,
+        }));
+    }
+
     cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
     
     const cecs_uniform_raw_stream *stream = CECS_GRAPHICS_SYSTEM_SET_COMPONENT_AS_UNIFORM(color4_f32_uniform, &system, &world, id, &((color4_f32_uniform){
@@ -227,6 +285,9 @@ int main(void) {
     );
     cecs_instance_group instances = cecs_instance_builder_build_into_and_clear(&world, &instance_builder, &system.context);
     CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, id, &instances);
+    for (size_t i = 0; i < mesh_count; i++) {
+        CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, meshes_ids[i], &instances);
+    }
 
     cecs_arena_free(&builder_arena);
 

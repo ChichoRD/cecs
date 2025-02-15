@@ -193,6 +193,7 @@ static cecs_buffer_staging_parameters cecs_dynamic_wgpu_buffer_align_stage_range
     return cecs_dynamic_wgpu_buffer_align_stage_raw_range(buffer, arena, stage_size, requested_offset, size);
 }
 
+static_assert(false, "TODO: split alignement into offset alignmnent and size/upload alignment. TODO: index into buffer not offset");
 cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage(
     cecs_dynamic_wgpu_buffer *buffer,
     cecs_arena *arena,

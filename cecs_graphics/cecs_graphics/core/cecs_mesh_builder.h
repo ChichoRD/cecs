@@ -94,7 +94,6 @@ typedef struct cecs_mesh_builder {
     cecs_buffer_attribute_builder vertex_builder;
     cecs_buffer_attribute_builder index_builder;
     cecs_mesh_builder_descriptor descriptor;
-    cgltf_data *loaded_data;
     float bounding_radius;
 } cecs_mesh_builder;
 
@@ -135,33 +134,6 @@ cecs_mesh cecs_mesh_builder_build_into_and_clear(
     cecs_index_stream *out_index_stream
 );
 
-cecs_mesh_builder *cecs_mesh_builder_load_gltf(
-    cecs_mesh_builder *builder,
-    const char *path
-);
-typedef enum cecs_attribute_copy {
-    cecs_attribute_copy_expect_exact = 0,
-
-    cecs_attribute_copy_expect_larger_copy_padded,
-    cecs_attribute_copy_expect_larger_copy_start,
-
-    cecs_attribute_copy_expect_smaller_zero_fill_padded,
-    cecs_attribute_copy_expect_smaller_zero_fill,
-} cecs_attribute_copy;
-typedef uint8_t cecs_attribute_copy_options;
-
-cecs_mesh_builder *cecs_mesh_builder_set_loaded_vertex_attribute(
-    cecs_mesh_builder *builder,
-    const cecs_vertex_attribute_id attribute_id,
-    const cgltf_attribute_type attribute_type,
-    const size_t attribute_size,
-    const cecs_attribute_copy_options copy_options
-);
-cecs_mesh_builder *cecs_mesh_builder_set_loaded_indices(
-    cecs_mesh_builder *builder,
-    const cecs_attribute_copy_options copy_options
-);
-cecs_mesh_builder *cecs_mesh_builder_clear_loaded_data(cecs_mesh_builder *builder);
 
 typedef struct cecs_instance_builder_descriptor  {
     size_t instance_attributes_expected_count;

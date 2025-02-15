@@ -111,7 +111,8 @@ cecs_graphics_context cecs_graphics_context_create(GLFWwindow *window)
         .compatibleSurface = surface,
     };
     WGPUAdapter adapter = cecs_request_adapter_sync(instance, &adapter_options);
-
+    
+    
     WGPUDeviceDescriptor device_descriptor = {
         .nextInChain = NULL,
         .label = "Learn WGPU Device",

@@ -374,7 +374,6 @@ cecs_mesh_builder cecs_mesh_builder_create(cecs_graphics_world *graphics_world, 
         .index_builder = cecs_attribute_builder_create(graphics_world, builder_arena, 1),
         .descriptor = descriptor,
         .bounding_radius = 0.0f,
-        .loaded_data = NULL,
     };
 }
 
@@ -459,8 +458,7 @@ cecs_mesh cecs_mesh_builder_build_into(
 
 bool cecs_mesh_builder_is_clear(const cecs_mesh_builder *builder) {
     return cecs_attribute_builder_is_clear(&builder->vertex_builder)
-        && cecs_attribute_builder_is_clear(&builder->index_builder)
-        && builder->loaded_data == NULL;
+        && cecs_attribute_builder_is_clear(&builder->index_builder);
 }
 
 static cecs_mesh_builder *cecs_mesh_builder_clear_vertices(cecs_mesh_builder *builder) {
@@ -527,7 +525,6 @@ cecs_mesh_builder *cecs_mesh_builder_set_indices(
 cecs_mesh_builder *cecs_mesh_builder_clear(cecs_mesh_builder *builder) {
     cecs_mesh_builder_clear_vertices(builder);
     cecs_mesh_builder_clear_indices(builder);
-    cecs_mesh_builder_clear_loaded_data(builder);
     return builder;
 }
 
@@ -540,262 +537,6 @@ cecs_mesh cecs_mesh_builder_build_into_and_clear(
     cecs_mesh mesh = cecs_mesh_builder_build_into(world, builder, context, out_index_stream);
     cecs_mesh_builder_clear(builder);
     return mesh;
-}
-
-cecs_mesh_builder *cecs_mesh_builder_load_gltf(cecs_mesh_builder *builder, const char *path) {
-    const cgltf_options options = {
-        .type = cgltf_file_type_invalid,
-        .memory = (cgltf_memory_options) {
-            .alloc_func = cecs_cgltf_alloc,
-            .free_func = cecs_cgltf_free,
-            .user_data = builder->vertex_builder.builder_arena,
-        },
-    };
-    cgltf_data *data;
-    const cgltf_result result = cgltf_parse_file(&options, path, &data);
-    if (result != cgltf_result_success) {
-        assert(false && "error: failed to parse or locate .gltf file");
-        exit(EXIT_FAILURE);
-    }
-    
-    const cgltf_result buffers_result = cgltf_load_buffers(&options, data, path);
-    if (buffers_result != cgltf_result_success) {
-        assert(false && "error: failed to load buffers");
-        exit(EXIT_FAILURE);
-    }
-
-    builder->loaded_data = data;
-    return builder;
-}
-
-static void cecs_mesh_builder_unpack_attributes(
-    const cgltf_accessor *accessor,
-    cecs_arena *builder_arena,
-    void *attributes_buffer,
-    const size_t attribute_capacity,
-    const size_t attribute_size,
-    const cgltf_size accessor_attribute_component_count,
-    const cecs_attribute_copy_options copy_options
-) {
-    const cgltf_size accessor_float_count = accessor->count * accessor_attribute_component_count;
-    const cgltf_size accessor_attribute_component_size = cgltf_component_size(accessor->component_type);
-    const cgltf_size accessor_attribute_size = accessor_attribute_component_count * accessor_attribute_component_size;
-
-    switch (copy_options) {
-    case cecs_attribute_copy_expect_exact: {
-        assert(accessor_attribute_size == attribute_size && "error: attribute size mismatch, with copy option expect exact");
-        const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, attributes_buffer, accessor_float_count);
-        assert(unpacked_floats == accessor_float_count && "error: unpacked floats mismatch");
-        break;
-    }
-    case cecs_attribute_copy_expect_larger_copy_padded: {
-        assert(accessor_attribute_size >= attribute_size && "error: attribute size mismatch, with copy option expect larger");
-        float *unpacked = cecs_arena_alloc(builder_arena, accessor->count * accessor_attribute_size);
-        const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, unpacked, accessor_float_count);
-        assert(unpacked_floats == accessor_float_count && "error: unpacked floats mismatch");
-        for (size_t i = 0; i < accessor->count; i++) {
-            memcpy(
-                (uint8_t *)attributes_buffer + i * attribute_size,
-                unpacked + i * accessor_attribute_component_count,
-                accessor_attribute_component_count * attribute_size
-            );
-        }
-        break;
-    }
-    case cecs_attribute_copy_expect_larger_copy_start: {
-        assert(accessor_attribute_size >= attribute_size && "error: attribute size mismatch, with copy option expect larger");
-        const cgltf_size float_unpack_count = attribute_capacity * attribute_size / accessor_attribute_component_size;
-        const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, attributes_buffer, float_unpack_count);
-        assert(unpacked_floats == float_unpack_count && "error: unpacked floats mismatch");
-        break;
-    }
-    case cecs_attribute_copy_expect_smaller_zero_fill_padded: {
-        assert(accessor_attribute_size <= attribute_size && "error: attribute size mismatch, with copy option expect smaller");
-        const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, attributes_buffer, accessor_float_count);
-        assert(unpacked_floats == accessor_float_count && "error: unpacked floats mismatch");
-        for (ptrdiff_t i = unpacked_floats - accessor_attribute_component_count; i >= 0; i -= accessor_attribute_component_count) {
-            memmove(
-                (uint8_t *)attributes_buffer + i * attribute_size,
-                (float *)attributes_buffer + i,
-                accessor_attribute_size
-            );
-        }
-        break;
-    }
-    case cecs_attribute_copy_expect_smaller_zero_fill: {
-        assert(accessor_attribute_size <= attribute_size && "error: attribute size mismatch, with copy option expect smaller");
-        // arena guarantees zeroed memory
-        const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, attributes_buffer, accessor_float_count);
-        assert(unpacked_floats == accessor_float_count && "error: unpacked floats mismatch");
-        break;
-    }
-    default: {
-        assert(false && "error: unknown copy option");
-        exit(EXIT_FAILURE);
-    }
-    }
-}
-
-cecs_mesh_builder *cecs_mesh_builder_set_loaded_vertex_attribute(
-    cecs_mesh_builder *builder,
-    const cecs_vertex_attribute_id attribute_id,
-    const cgltf_attribute_type attribute_type,
-    const size_t attribute_size,
-    const cecs_attribute_copy_options copy_options
-) {
-    assert(builder->loaded_data != NULL && "error: setting vertex attribute from loaded data requires loading a .gltf first");
-    // const cgltf_accessor *accessor = NULL;
-    cecs_dynamic_array accessors = cecs_dynamic_array_create();
-    size_t total_attribute_count = 0;
-    for (size_t i = 0; i < builder->loaded_data->meshes_count; i++) {
-        const cgltf_mesh *mesh = &builder->loaded_data->meshes[i];
-        for (size_t j = 0; j < mesh->primitives_count; j++) {
-            const cgltf_primitive *primitive = &mesh->primitives[j];
-            for (size_t k = 0; k < primitive->attributes_count; k++) {
-                const cgltf_attribute *attribute = &primitive->attributes[k];
-                if (attribute->type == attribute_type) {
-                    const cgltf_accessor *accessor = attribute->data;
-
-                    assert(accessor->count > 0 && "error: no attributes in accessor");
-                    total_attribute_count += accessor->count;
-                    cecs_dynamic_array_add(
-                        &accessors,
-                        builder->vertex_builder.builder_arena,
-                        &accessor,
-                        sizeof(cgltf_accessor *)
-                    );
-                }
-            }
-        }
-    }
-    
-    if (accessors.count == 0) {
-        assert(false && "error: attribute not found in loaded data");
-        exit(EXIT_FAILURE);
-    }
-
-    const size_t expected_capacity = total_attribute_count * attribute_size;
-    uint8_t *attributes = cecs_arena_alloc(builder->vertex_builder.builder_arena, expected_capacity);
-    const size_t accessor_count = cecs_dynamic_array_count_of_size(&accessors, sizeof(cgltf_accessor *));
-    for (size_t i = 0; i < accessor_count; i++) {
-        const cgltf_accessor *accessor =
-            *(cgltf_accessor **)cecs_dynamic_array_get(&accessors, i, sizeof(cgltf_accessor *));
-        const cgltf_size attribute_component_count = cgltf_num_components(accessor->type);
-        
-        cecs_mesh_builder_unpack_attributes(
-            accessor,
-            builder->vertex_builder.builder_arena,
-            attributes,
-            accessor->count,
-            attribute_size,
-            attribute_component_count,
-            copy_options
-        );
-        attributes += accessor->count * attribute_size;
-    }
-    attributes -= total_attribute_count * attribute_size;
-
-    return cecs_mesh_builder_set_vertex_attribute(
-        builder,
-        attribute_id,
-        attributes,
-        total_attribute_count,
-        attribute_size
-    );
-}
-
-static void cecs_mesh_builder_unpack_indices(
-    const cgltf_accessor *accessor,
-    cecs_arena *builder_arena,
-    uint8_t *index_buffer,
-    const size_t index_capacity,
-    const size_t index_size,
-    const cecs_attribute_copy_options copy_options
-) {
-    assert(cgltf_num_components(accessor->type) == 1 && "error: index accessor component count mismatch");
-    assert(index_capacity == accessor->count && "error: index capacity mismatch");
-    const cgltf_size accessor_index_size = cgltf_component_size(accessor->component_type);
-
-    switch (copy_options) {
-    case cecs_attribute_copy_expect_exact: {
-        assert(accessor_index_size == index_size && "error: index size mismatch, with copy option expect exact");
-        const cgltf_size unpacked_indices = cgltf_accessor_unpack_indices(accessor, index_buffer, index_size, index_capacity);
-        assert(unpacked_indices == index_capacity && "error: unpacked indeices mismatch");
-        break;
-    }
-    case cecs_attribute_copy_expect_larger_copy_padded: {
-        assert(accessor_index_size >= index_size && "error: index size mismatch, with copy option expect larger");
-        uint8_t *unpacked = cecs_arena_alloc(builder_arena, index_capacity * accessor_index_size);
-        const cgltf_size unpacked_indices = cgltf_accessor_unpack_indices(accessor, unpacked, accessor_index_size, index_capacity);
-        assert(unpacked_indices == index_capacity && "error: unpacked indices mismatch");
-        for (size_t i = 0; i < index_capacity; i++) {
-            memcpy(
-                index_buffer + i * index_size,
-                unpacked + i * accessor_index_size,
-                index_size
-            );
-        }
-        break;
-    }
-    case cecs_attribute_copy_expect_larger_copy_start: {
-        assert(accessor_index_size >= index_size && "error: index size mismatch, with copy option expect larger");
-        const cgltf_size index_unpack_count = index_capacity * index_size / accessor_index_size;
-        const cgltf_size unpacked_indices = cgltf_accessor_unpack_indices(accessor, index_buffer, accessor_index_size, index_unpack_count);
-        assert(unpacked_indices == index_unpack_count && "error: unpacked indices mismatch");
-        break;
-    }
-    case cecs_attribute_copy_expect_smaller_zero_fill_padded: {
-        assert(accessor_index_size <= index_size && "error: index size mismatch, with copy option expect smaller");
-        const cgltf_size unpacked_indices = cgltf_accessor_unpack_indices(accessor, index_buffer, index_size, index_capacity);
-        assert(unpacked_indices == index_capacity && "error: unpacked indices mismatch");
-        break;
-    }
-    case cecs_attribute_copy_expect_smaller_zero_fill: {
-        assert(false && "error: copy option not supported for indices, use expect smaller zero fill padded");
-        exit(EXIT_FAILURE);
-        break;
-    }
-    default: {
-        assert(false && "error: unknown copy option");
-        exit(EXIT_FAILURE);
-    }
-    }
-}
-
-
-cecs_mesh_builder *cecs_mesh_builder_set_loaded_indices(cecs_mesh_builder *builder, const cecs_attribute_copy_options copy_options) {
-    assert(builder->loaded_data != NULL && "error: setting indices from loaded data requires loading a .gltf first");
-    assert(builder->loaded_data->meshes_count > 0 && "error: no meshes loaded");
-
-    const cgltf_mesh *first_mesh = builder->loaded_data->meshes;
-    assert(first_mesh->primitives_count > 0 && "error: no primitives in first mesh");
-
-    cgltf_accessor *index_accessor = first_mesh->primitives->indices;
-    const cgltf_size index_count = index_accessor->count;
-    assert(index_count > 0 && "error: no indices in accessor");
-
-    const size_t expected_size = cecs_index_format_info_from(builder->descriptor.index_format).size;
-    uint8_t *indices = cecs_arena_alloc(builder->index_builder.builder_arena, index_count * expected_size);
-    cecs_mesh_builder_unpack_indices(
-        index_accessor,
-        builder->index_builder.builder_arena,
-        indices,
-        index_count,
-        expected_size,
-        copy_options
-    );
-    
-    return cecs_mesh_builder_set_indices(
-        builder,
-        indices,
-        index_count
-    );
-}
-
-cecs_mesh_builder *cecs_mesh_builder_clear_loaded_data(cecs_mesh_builder *builder) {
-    cecs_cgltf_free(builder->vertex_builder.builder_arena, builder->loaded_data);
-    builder->loaded_data = NULL;
-    return builder;
 }
 
 
