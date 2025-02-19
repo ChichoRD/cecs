@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
+#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
 #include "cecs_arena.h"
 
@@ -15,14 +16,24 @@ cecs_block cecs_block_create(size_t capacity) {
     return b;
 }
 
-void* cecs_block_alloc(cecs_block* b, size_t size) {
-    size_t remaining = b->capacity - b->size;
-    assert((remaining >= size) && "Requested size exceeds block capacity");
+static size_t cecs_max_alignment_from_size(const size_t size) {
+    const size_t alignment = 1 << cecs_log2(size);
+    return min(alignment, sizeof(uintmax_t));
+}
 
-    void* ptr = b->data + b->size;
-    size_t padding = cecs_block_alignment_padding_from_size(ptr, size);
-    b->size += size + padding;
-    return (uint8_t*)ptr + padding;
+static inline size_t cecs_align_to_pow2(const size_t size, const size_t alignment) {
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+
+void* cecs_block_alloc(cecs_block* b, size_t size) {
+    assert(cecs_block_can_alloc(b, size) && "error: requested size exceeds block capacity");
+
+    uint8_t *ptr = b->data + b->size;
+    uint8_t *aligned = b->data + cecs_align_to_pow2(b->size, cecs_max_alignment_from_size(size));
+    assert(aligned >= ptr && "error: alignment ptr must be greater than or equal to ptr");
+
+    b->size += (aligned - ptr) + size;
+    return aligned;
 }
 
 void cecs_block_free(cecs_block* b) {
@@ -44,61 +55,9 @@ cecs_block cecs_block_create_from_existing(size_t capacity, size_t size, uint8_t
     return b;
 }
 
-size_t cecs_block_alignment_padding_from_size(uint8_t* ptr, size_t structure_size) {
-    union max_alignment {
-        uintmax_t a;
-        uintptr_t b;
-        long double c;
-    };
-    uint_fast8_t alignment = (uint_fast8_t)min(structure_size, sizeof(union max_alignment));
-
-#define ALIGNMENT_2 2
-#define ALIGNMENT_4 4
-#define ALIGNMENT_8 8
-    switch (alignment) {
-    case 0: {
-        assert(false && "Alignment cannot be 0");
-        return 0;
-    }
-    case 1: {
-        return 0;
-    }
-    case ALIGNMENT_2:
-    case 3: {
-        return (ALIGNMENT_2 - ((uintptr_t)ptr & (ALIGNMENT_2 - 1))) & (ALIGNMENT_2 - 1);
-    }
-    case ALIGNMENT_4:
-    case 5:
-    case 6:
-    case 7: {
-        return (ALIGNMENT_4 - ((uintptr_t)ptr & (ALIGNMENT_4 - 1))) & (ALIGNMENT_4 - 1);
-    }
-    case ALIGNMENT_8:
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15: {
-        return (ALIGNMENT_8 - ((uintptr_t)ptr & (ALIGNMENT_8 - 1))) & (ALIGNMENT_8 - 1);
-    }
-    default: {
-        uint_fast16_t closest_alignment = ALIGNMENT_8;
-        while (closest_alignment << 1 <= alignment) {
-            closest_alignment <<= 1;
-        }
-
-        return (closest_alignment - ((uintptr_t)ptr & (closest_alignment - 1))) & (closest_alignment - 1);
-    }
-    }
-#undef ALIGNMENT_2
-#undef ALIGNMENT_4
-#undef ALIGNMENT_8
-}
 
 bool cecs_block_can_alloc(const cecs_block* b, size_t structure_size) {
-    return b->size + structure_size + cecs_block_alignment_padding_from_size(b->data + b->size, structure_size) <= b->capacity;
+    return cecs_align_to_pow2(b->size, cecs_max_alignment_from_size(structure_size)) + structure_size <= b->capacity;
 }
 
 cecs_linked_block cecs_linked_block_create(cecs_block b, cecs_linked_block* next) {
