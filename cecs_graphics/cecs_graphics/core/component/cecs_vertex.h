@@ -29,16 +29,7 @@ static inline cecs_buffer_stream cecs_buffer_stream_create(size_t first_vertex, 
 }
 
 typedef cecs_dynamic_wgpu_buffer cecs_vertex_buffer;
-cecs_raw_stream cecs_raw_stream_from_vertex(
-    cecs_vertex_stream stream,
-    const cecs_vertex_buffer *vertex_buffer
-);
 typedef cecs_dynamic_wgpu_buffer cecs_instance_buffer;
-cecs_raw_stream cecs_raw_stream_from_instance(
-    cecs_instance_stream stream,
-    const cecs_instance_buffer *instance_buffer
-);
-
 typedef struct cecs_index_stream {
     size_t first_index;
     size_t index_count;
@@ -57,16 +48,6 @@ cecs_buffer_stream cecs_buffer_stream_from_index(cecs_index_stream stream);
 typedef cecs_dynamic_wgpu_buffer cecs_index_buffer_u16;
 typedef cecs_dynamic_wgpu_buffer cecs_index_buffer_u32;
 
-typedef struct cecs_exclusive_index_buffer_pair {
-    cecs_index_buffer_u16 *u16;
-    cecs_index_buffer_u32 *u32;
-} cecs_exclusive_index_buffer_pair;
-
-cecs_raw_stream cecs_raw_stream_from_index(
-    cecs_index_stream stream,
-    cecs_exclusive_index_buffer_pair in_buffers,
-    cecs_dynamic_wgpu_buffer **out_index_buffer
-);
 
 typedef cecs_component_id cecs_buffer_attribute_id;
 typedef cecs_buffer_attribute_id cecs_vertex_attribute_id;
@@ -110,55 +91,64 @@ typedef struct cecs_uniform_storage_attachment {
     size_t uniform_stride;
 } cecs_uniform_storage_attachment;
 
-typedef CECS_UNION_STRUCT(
-    cecs_stream_storage_attachment,
-    cecs_vertex_storage_attachment,
-    cecs_vertex_storage_attachment,
-    cecs_instance_storage_attachment,
-    cecs_instance_storage_attachment,
-    cecs_index_storage_attachment,
-    cecs_index_storage_attachment,
-    cecs_uniform_storage_attachment,
-    cecs_uniform_storage_attachment
-) cecs_stream_storage_attachment;
 
+typedef union cecs_stream_storage_attachment {
+    cecs_vertex_storage_attachment vertex;
+    cecs_instance_storage_attachment instance;
+    cecs_index_storage_attachment index;
+    cecs_uniform_storage_attachment uniform;
+} cecs_stream_storage_attachment;
 typedef enum cecs_component_storage_attachment_graphics_usage {
     cecs_component_storage_attachment_usage_graphics_buffer = 1 << 1,
 } cecs_component_storage_attachment_graphics_usage;
 
-typedef struct cecs_buffer_storage_attachment {
-    cecs_stream_storage_attachment stream;
+
+typedef union cecs_buffer_storage_attachment_buffer {
     cecs_dynamic_wgpu_buffer buffer;
-    enum cecs_buffer_storage_attachment_flags {
-        cecs_buffer_flags_none = 0,
-        cecs_buffer_flags_initialized = 1 << 0,
-        cecs_buffer_flags_dirty = 1 << 1
-    } buffer_flags;
+    cecs_dynamic_wgpu_element_buffer element_buffer;
+} cecs_buffer_storage_attachment_buffer;
+typedef union cecs_buffer_storage_attachment_offsets {
+    cecs_buffer_offset_u64 offset;
+    cecs_dynamic_buffer_offset element_offset;
+} cecs_buffer_storage_attachment_offsets;
+
+typedef enum cecs_buffer_status {
+    cecs_buffer_status_none = 0,
+    cecs_buffer_status_initialized = 1 << 0,
+    cecs_buffer_status_dirty = 1 << 1,
+} cecs_buffer_status;
+typedef enum cecs_buffer_type {
+    cecs_buffer_type_none = 0,
+    cecs_buffer_type_vertex = 1 << 2,
+    cecs_buffer_type_instance = 1 << 3,
+    cecs_buffer_type_index = 1 << 4,
+    cecs_buffer_type_uniform = 1 << 5,
+    
+    cecs_buffer_type_dynamic = cecs_buffer_type_vertex | cecs_buffer_type_instance | cecs_buffer_type_index,
+    cecs_buffer_type_dynamic_element = cecs_buffer_type_uniform,
+} cecs_buffer_type;
+typedef uint8_t cecs_buffer_flags;
+
+typedef struct cecs_buffer_storage_attachment {
+    cecs_buffer_storage_attachment_buffer buffer;
+    cecs_stream_storage_attachment stream;
+    cecs_buffer_storage_attachment_offsets offsets;
+    cecs_buffer_flags buffer_flags;
 } cecs_buffer_storage_attachment;
 
-cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_vertex_uninitialized(cecs_vertex_storage_attachment stream);
-cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_instance_uninitialized(cecs_instance_storage_attachment stream);
-cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_index_uninitialized(cecs_index_storage_attachment stream);
-cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_uniform_uninitialized(cecs_uniform_storage_attachment stream);
+WGPUBuffer cecs_buffer_storage_attachment_get_buffer(cecs_buffer_storage_attachment *storage);
 
-#define CECS_STREAM_STORAGE_VERTEX_VARIANT \
-    (CECS_UNION_VARIANT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment))
-#define CECS_STREAM_STORAGE_INSTANCE_VARIANT \
-    (CECS_UNION_VARIANT(cecs_instance_storage_attachment, cecs_stream_storage_attachment))
-#define CECS_STREAM_STORAGE_INDEX_VARIANT \
-    (CECS_UNION_VARIANT(cecs_index_storage_attachment, cecs_stream_storage_attachment))
-#define CECS_STREAM_STORAGE_UNIFORM_VARIANT \
-    (CECS_UNION_VARIANT(cecs_uniform_storage_attachment, cecs_stream_storage_attachment))
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_vertex_uninitialized(const cecs_vertex_storage_attachment stream);
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_instance_uninitialized(const cecs_instance_storage_attachment stream);
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_index_uninitialized(const cecs_index_storage_attachment stream);
+cecs_buffer_storage_attachment cecs_buffer_storage_attachment_create_uniform_uninitialized(const cecs_uniform_storage_attachment stream);
 
-inline cecs_buffer_storage_attachment cecs_buffer_storage_attachment_uninitialized(size_t variant) {
+inline cecs_buffer_storage_attachment cecs_buffer_storage_attachment_uninitialized(const cecs_stream_storage_attachment stream, const cecs_buffer_type type) {
     return (cecs_buffer_storage_attachment){
-        .stream = CECS_UNION_CREATE_VARIANT(
-            cecs_vertex_storage_attachment,
-            variant,
-            ((cecs_vertex_storage_attachment){ 0 })
-        ),
-        .buffer = cecs_dynamic_wgpu_buffer_uninitialized(),
-        .buffer_flags = cecs_buffer_flags_none
+        .stream = stream,
+        .buffer = {0},
+        .offsets = {0},
+        .buffer_flags = type
     };
 }
 
@@ -166,22 +156,41 @@ void cecs_buffer_storage_attachment_initialize(
     cecs_buffer_storage_attachment *storage,
     WGPUDevice device,
     cecs_arena *arena,
-    WGPUBufferUsageFlags usage,
-    size_t buffer_size,
-    uint16_t buffer_alignment
+    const WGPUBufferUsageFlags usage,
+    const size_t buffer_size,
+    const uint16_t buffer_alignment
 );
-
-void cecs_buffer_storage_attachment_initialize_shared(
-    cecs_buffer_storage_attachment *storage,
-    WGPUDevice device,
-    cecs_arena *arena,
-    WGPUBufferUsageFlags usage,
-    size_t buffer_size,
-    uint16_t buffer_alignment,
-    cecs_sparse_set *shared_stage
-);
-
 void cecs_buffer_storage_attachment_free(cecs_buffer_storage_attachment *storage);
 
+void *cecs_buffer_storage_attachment_extend_dynamic(
+    cecs_buffer_storage_attachment *storage,
+    cecs_arena *arena,
+    const cecs_dynamic_buffer_offset offset,
+    const size_t size
+);
+void *cecs_buffer_storage_attachment_extend_dynamic_elements(
+    cecs_buffer_storage_attachment *storage,
+    cecs_arena *arena,
+    const cecs_dynamic_buffer_offset element_index,
+    const size_t element_count
+);
 
+cecs_raw_stream cecs_raw_stream_from_vertex(
+    const cecs_vertex_stream stream,
+    const cecs_buffer_storage_attachment *vertex_buffer
+);
+cecs_raw_stream cecs_raw_stream_from_instance(
+    const cecs_instance_stream stream,
+    const cecs_buffer_storage_attachment *instance_buffer
+);
+
+typedef struct cecs_exclusive_index_buffer_pair {
+    cecs_buffer_storage_attachment *u16;
+    cecs_buffer_storage_attachment *u32;
+} cecs_exclusive_index_buffer_pair;
+cecs_raw_stream cecs_raw_stream_from_index(
+    const cecs_index_stream stream,
+    cecs_exclusive_index_buffer_pair in_buffers,
+    cecs_buffer_storage_attachment **out_index_buffer
+);
 #endif

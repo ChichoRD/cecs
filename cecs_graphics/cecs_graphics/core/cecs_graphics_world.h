@@ -22,35 +22,24 @@ static inline cecs_vertex_storage_attachment *cecs_graphics_world_get_vertex_buf
     cecs_vertex_attribute_id attribute_id
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_buffer_attachments(graphics_world, attribute_id);
-    CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_vertex_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_vertex) && "error: buffer is not a vertex buffer");
+    return &buffer->stream.vertex;
 }
-
 static inline cecs_index_storage_attachment *cecs_graphics_world_get_index_buffer_attachments(
     cecs_graphics_world *graphics_world,
     cecs_vertex_index_id index_id
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_buffer_attachments(graphics_world, index_id);
-    CECS_UNION_IS_ASSERT(cecs_index_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_index_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_index) && "error: buffer is not an index buffer");
+    return &buffer->stream.index;
 }
-
 static inline cecs_uniform_storage_attachment *cecs_graphics_world_get_uniform_buffer_attachments(
     cecs_graphics_world *graphics_world,
     cecs_component_id component_id
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_buffer_attachments(graphics_world, component_id);
-    CECS_UNION_IS_ASSERT(cecs_uniform_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_uniform_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_uniform) && "error: buffer is not a uniform buffer");
+    return &buffer->stream.uniform;
 }
 
 cecs_buffer_storage_attachment *cecs_graphics_world_get_or_set_buffer_attachments(
@@ -67,24 +56,17 @@ static inline cecs_vertex_storage_attachment *cecs_graphics_world_get_or_set_ver
     cecs_buffer_storage_attachment *default_attachment
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, attribute_id, default_attachment);
-    CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_vertex_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_vertex) && "error: buffer is not a vertex buffer");
+    return &buffer->stream.vertex;
 }
-
 static inline cecs_instance_storage_attachment *cecs_graphics_world_get_or_set_instance_buffer_attachments(
     cecs_graphics_world *graphics_world,
     cecs_instance_attribute_id attribute_id,
     cecs_buffer_storage_attachment *default_attachment
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, attribute_id, default_attachment);
-    CECS_UNION_IS_ASSERT(cecs_instance_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_instance_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_instance) && "error: buffer is not an instance buffer");
+    return &buffer->stream.instance;
 }
 
 static inline cecs_index_storage_attachment *cecs_graphics_world_get_or_set_index_buffer_attachments(
@@ -93,24 +75,17 @@ static inline cecs_index_storage_attachment *cecs_graphics_world_get_or_set_inde
     cecs_buffer_storage_attachment *default_attachment
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, index_id, default_attachment);
-    CECS_UNION_IS_ASSERT(cecs_index_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_index_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_index) && "error: buffer is not an index buffer");
+    return &buffer->stream.index;
 }
-
 static inline cecs_uniform_storage_attachment *cecs_graphics_world_get_or_set_uniform_buffer_attachments(
     cecs_graphics_world *graphics_world,
     cecs_component_id component_id,
     cecs_buffer_storage_attachment *default_attachment
 ) {
     cecs_buffer_storage_attachment *buffer = cecs_graphics_world_get_or_set_buffer_attachments(graphics_world, component_id, default_attachment);
-    CECS_UNION_IS_ASSERT(cecs_uniform_storage_attachment, cecs_stream_storage_attachment, buffer->stream);
-    return &CECS_UNION_GET_UNCHECKED(
-        cecs_uniform_storage_attachment,
-        buffer->stream
-    );
+    assert((buffer->buffer_flags & cecs_buffer_type_uniform) && "error: buffer is not a uniform buffer");
+    return &buffer->stream.uniform;
 }
 
 cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world);
@@ -119,8 +94,9 @@ cecs_arena *cecs_graphics_world_default_buffer_arena(cecs_graphics_world *graphi
 cecs_buffer_storage_attachment *cecs_graphics_world_get_or_init_uniform_buffer(
     cecs_graphics_world *world,
     cecs_graphics_context *context,
-    cecs_component_id component_id,
-    size_t size
+    const cecs_component_id component_id,
+    const size_t size,
+    cecs_buffer_flags *out_previous_flags
 );
 
 cecs_entity_id cecs_world_add_entity_with_mesh(

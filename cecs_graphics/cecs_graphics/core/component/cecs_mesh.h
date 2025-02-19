@@ -26,7 +26,7 @@ static inline cecs_vertex_stream cecs_mesh_get_vertex_stream(cecs_mesh mesh, siz
     };
 }
 
-static inline cecs_raw_stream cecs_mesh_get_raw_vertex_stream(cecs_mesh mesh, size_t stride, const cecs_vertex_buffer *vertex_buffer) {
+static inline cecs_raw_stream cecs_mesh_get_raw_vertex_stream(cecs_mesh mesh, size_t stride, const cecs_buffer_storage_attachment *vertex_buffer) {
     return cecs_raw_stream_from_vertex(cecs_mesh_get_vertex_stream(mesh, stride), vertex_buffer);
 }
 
@@ -47,7 +47,7 @@ static inline cecs_instance_stream cecs_instance_group_get_instance_stream(cecs_
     };
 }
 
-static inline cecs_raw_stream cecs_instance_group_get_raw_instance_stream(cecs_instance_group group, size_t stride, const cecs_instance_buffer *instance_buffer) {
+static inline cecs_raw_stream cecs_instance_group_get_raw_instance_stream(cecs_instance_group group, size_t stride, const cecs_buffer_storage_attachment *instance_buffer) {
     return cecs_raw_stream_from_instance(cecs_instance_group_get_instance_stream(group, stride), instance_buffer);
 }
 

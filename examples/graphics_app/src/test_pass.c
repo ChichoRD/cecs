@@ -226,6 +226,9 @@ static WGPUBindGroup test_pass_create_local_bind_group(
     cecs_buffer_storage_attachment *position_uniform_buffer
 ) {
     // TODO: texture binding to different bind group to not swap the whole
+    WGPUBuffer color_buffer = cecs_buffer_storage_attachment_get_buffer(color_uniform_buffer);
+    WGPUBuffer position_buffer = cecs_buffer_storage_attachment_get_buffer(position_uniform_buffer);
+
     return wgpuDeviceCreateBindGroup(device, &(WGPUBindGroupDescriptor) {
         .label = "Test Pass Local Bind Group",
         .layout = pass->local_bgl,
@@ -233,15 +236,17 @@ static WGPUBindGroup test_pass_create_local_bind_group(
         .entries = (WGPUBindGroupEntry[]) {
             {
                 .binding = 0,
-                .buffer = color_uniform_buffer->buffer.buffer,
+                .buffer = color_buffer,
                 .offset = 0,
-                .size = color_uniform_buffer->buffer.uploaded_size,
+                // .size = wgpuBufferGetSize(color_buffer),
+                .size = sizeof(color4_f32_uniform),
             },
             {
                 .binding = 1,
-                .buffer = position_uniform_buffer->buffer.buffer,
+                .buffer = position_buffer,
                 .offset = 0,
-                .size = position_uniform_buffer->buffer.uploaded_size,
+                // .size = wgpuBufferGetSize(position_buffer),
+                .size = sizeof(position4_f32_uniform),
             }
         }
     });
@@ -379,22 +384,22 @@ static void test_pass_draw_inner(
         // TODO: jump by batches instead of by mesh
         cecs_component_iterator_current(&it, &handle);
         cecs_raw_stream position = cecs_mesh_get_raw_vertex_stream(
-            *handle.cecs_mesh_component, sizeof(position2_f32_attribute), &position_buffer->buffer
+            *handle.cecs_mesh_component, sizeof(position2_f32_attribute), position_buffer
         );
         cecs_raw_stream color = cecs_mesh_get_raw_vertex_stream(
-            *handle.cecs_mesh_component, sizeof(color3_f32_attribute), &color_buffer->buffer
+            *handle.cecs_mesh_component, sizeof(color3_f32_attribute), color_buffer
         );
         cecs_raw_stream uv = cecs_mesh_get_raw_vertex_stream(
-            *handle.cecs_mesh_component, sizeof(uv2_f32_attribute), &uv_buffer->buffer
+            *handle.cecs_mesh_component, sizeof(uv2_f32_attribute), uv_buffer
         );
         cecs_raw_stream instance_position = cecs_instance_group_get_raw_instance_stream(
-            *handle.cecs_instance_group_component, sizeof(instance_position2_f32_attribute), &instance_position_buffer->buffer
+            *handle.cecs_instance_group_component, sizeof(instance_position2_f32_attribute), instance_position_buffer
         );
         cecs_raw_stream instance_subrect = cecs_instance_group_get_raw_instance_stream(
-            *handle.cecs_instance_group_component, sizeof(cecs_texture_subrect2_f32_attribute), &instance_subrect_buffer->buffer
+            *handle.cecs_instance_group_component, sizeof(cecs_texture_subrect2_f32_attribute), instance_subrect_buffer
         );
         cecs_raw_stream instance_range = cecs_instance_group_get_raw_instance_stream(
-            *handle.cecs_instance_group_component, sizeof(cecs_texture_in_bank_range2_u8_attribute), &instance_range_buffer->buffer
+            *handle.cecs_instance_group_component, sizeof(cecs_texture_in_bank_range2_u8_attribute), instance_range_buffer
         );
 
         wgpuRenderPassEncoderSetBindGroup(render_pass, 1, out_local_bind_groups[0], 2, (const uint32_t[]){
@@ -416,13 +421,13 @@ static void test_pass_draw_inner(
             last_texture_bank = handle.cecs_texture_in_bank_reference_component->texture_id;
         }
 
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, position_buffer->buffer.buffer, position.offset, position.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, uv_buffer->buffer.buffer, uv.offset, uv.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 2, color_buffer->buffer.buffer, color.offset, color.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, cecs_buffer_storage_attachment_get_buffer(position_buffer), position.offset, position.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, cecs_buffer_storage_attachment_get_buffer(uv_buffer), uv.offset, uv.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 2, cecs_buffer_storage_attachment_get_buffer(color_buffer), color.offset, color.size);
 
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 3, instance_position_buffer->buffer.buffer, instance_position.offset, instance_position.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 4, instance_subrect_buffer->buffer.buffer, instance_subrect.offset, instance_subrect.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 5, instance_range_buffer->buffer.buffer, instance_range.offset, instance_range.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 3, cecs_buffer_storage_attachment_get_buffer(instance_position_buffer), instance_position.offset, instance_position.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 4, cecs_buffer_storage_attachment_get_buffer(instance_subrect_buffer), instance_subrect.offset, instance_subrect.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 5, cecs_buffer_storage_attachment_get_buffer(instance_range_buffer), instance_range.offset, instance_range.size);
 
         if (handle.cecs_index_stream_component == NULL) {
             wgpuRenderPassEncoderDraw(
@@ -431,7 +436,7 @@ static void test_pass_draw_inner(
                 0, 0
             );
         } else  {
-            cecs_dynamic_wgpu_buffer *index_buffer = NULL;
+            cecs_buffer_storage_attachment *index_buffer = NULL;
             cecs_raw_stream index_stream = cecs_raw_stream_from_index(
                 *handle.cecs_index_stream_component,
                 index_buffers,
@@ -439,7 +444,7 @@ static void test_pass_draw_inner(
             );
 
             WGPUIndexFormat format = handle.cecs_index_stream_component->format;
-            wgpuRenderPassEncoderSetIndexBuffer(render_pass, index_buffer->buffer, format, index_stream.offset, index_stream.size);
+            wgpuRenderPassEncoderSetIndexBuffer(render_pass, cecs_buffer_storage_attachment_get_buffer(index_buffer), format, index_stream.offset, index_stream.size);
             wgpuRenderPassEncoderDrawIndexed(
                 render_pass,
                 handle.cecs_index_stream_component->index_count, cecs_instance_group_instance_count(*handle.cecs_instance_group_component),

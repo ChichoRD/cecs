@@ -172,21 +172,35 @@ static cecs_buffer_storage_attachment *cecs_attribute_builder_build_attribute(
         builder->graphics_world,
         attribute_id
     );
+    assert(
+        storage->buffer_flags & cecs_buffer_type_dynamic
+        && "error: buffer is not a dynamic buffer"
+    );
 
     const cecs_buffer_attribute_builder_buffer_info info = get_buffer_info(builder, attribute_id, userdata);
-    if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
-        uint64_t size = (*info.max_attribute_count) * (*info.attribute_stride);
-        cecs_buffer_storage_attachment_initialize(
-            storage, context->device, cecs_graphics_world_default_buffer_arena(builder->graphics_world), usage, size, cecs_webgpu_copy_buffer_alignment
-        );
-    }
-    
     const size_t attribute_count = cecs_exclusive_range_length(builder->attribute_range);
     const cecs_buffer_stream attribute_stream = cecs_buffer_stream_create(
         builder->attribute_range.start,
         attribute_count,
         *info.attribute_stride
     );
+    if (!(storage->buffer_flags & cecs_buffer_status_initialized)) {
+        uint64_t size = (*info.max_attribute_count) * (*info.attribute_stride);
+        cecs_buffer_storage_attachment_initialize(
+            storage, context->device, cecs_graphics_world_default_buffer_arena(builder->graphics_world), usage, size, cecs_webgpu_copy_buffer_alignment
+        );
+        storage->offsets.offset = 0;
+    } else if (attribute_stream.offset < storage->offsets.offset) {
+        const size_t expansion = storage->offsets.offset - attribute_stream.offset;
+        cecs_buffer_storage_attachment_extend_dynamic(
+            storage,
+            cecs_graphics_world_default_buffer_arena(builder->graphics_world),
+            0,
+            expansion
+        );
+        storage->offsets.offset = attribute_stream.offset;
+    }
+    
 
     void *attributes = NULL;
     assert(
@@ -200,13 +214,19 @@ static cecs_buffer_storage_attachment *cecs_attribute_builder_build_attribute(
     );
 
     // TODO: use function to lower the key (offset) instead of indexing bytes
-    cecs_dynamic_wgpu_buffer_stage_and_upload(
-        &storage->buffer,
+    cecs_dynamic_wgpu_buffer_stage_or_resize(
+        &storage->buffer.buffer,
+        cecs_graphics_world_default_buffer_arena(builder->graphics_world),
+        attribute_stream.offset,
+        attributes,
+        attribute_stream.size
+    );
+    cecs_dynamic_wgpu_buffer_upload(
+        &storage->buffer.buffer,
         context->device,
         context->queue,
         cecs_graphics_world_default_buffer_arena(builder->graphics_world),
         attribute_stream.offset,
-        attributes,
         attribute_stream.size
     );
     return storage;
@@ -233,11 +253,21 @@ cecs_buffer_attribute_range cecs_attribute_builder_build_into(
         cecs_buffer_attribute_id id = ((cecs_buffer_attribute_id *)cecs_sparse_set_values(&builder->attribute_ids))[i];
         cecs_buffer_storage_attachment *storage = cecs_attribute_builder_build_attribute(builder, context, id, usage, get_buffer_info, userdata);
 
-        const cecs_attribute_storage_attachment *attributes_info =
-            &CECS_UNION_GET_UNCHECKED(cecs_vertex_storage_attachment, storage->stream);
+        size_t stride;
+        if (storage->buffer_flags & cecs_buffer_type_vertex) {
+            stride = storage->stream.vertex.attribute_stride;
+        } else if (storage->buffer_flags & cecs_buffer_type_instance) {
+            stride = storage->stream.instance.attribute_stride;
+        } else if (storage->buffer_flags & cecs_buffer_type_index) {
+            stride = cecs_index_format_info_from(storage->stream.index.index_format).size;
+        } else {
+            assert(false && "fatal error: invalid buffer type");
+            exit(EXIT_FAILURE);
+        }
+
         buffer_attribute_references[i] = (cecs_buffer_attribute_reference){
             .attribute_id = id,
-            .stride = attributes_info->attribute_stride,
+            .stride = stride,
         };
         // TODO: maybe add too an array of cecs_vertex_stream
     }
@@ -296,8 +326,9 @@ static cecs_buffer_attribute_builder_buffer_info cecs_mesh_builder_get_vertex_in
         builder->graphics_world,
         attribute_id
     );
-    CECS_UNION_IS_ASSERT(cecs_vertex_storage_attachment, cecs_stream_storage_attachment, storage->stream);
-    cecs_vertex_storage_attachment *vertex_info = &CECS_UNION_GET_UNCHECKED(cecs_vertex_storage_attachment, storage->stream);
+    assert((storage->buffer_flags & cecs_buffer_type_vertex) && "error: buffer is not a vertex buffer");
+    cecs_vertex_storage_attachment *vertex_info = &storage->stream.vertex;
+
     return (cecs_buffer_attribute_builder_buffer_info){
         .attribute_count = &vertex_info->current_attribute_count,
         .attribute_stride = &vertex_info->attribute_stride,
@@ -318,8 +349,8 @@ static cecs_buffer_attribute_builder_buffer_info cecs_mesh_builder_get_index_inf
         builder->graphics_world,
         attribute_id
     );
-    CECS_UNION_IS_ASSERT(cecs_index_storage_attachment, cecs_stream_storage_attachment, storage->stream);
-    cecs_index_storage_attachment *index_info = &CECS_UNION_GET_UNCHECKED(cecs_index_storage_attachment, storage->stream);
+    assert((storage->buffer_flags & cecs_buffer_type_index) && "error: buffer is not an index buffer");
+    cecs_index_storage_attachment *index_info = &storage->stream.index;
     
     return (cecs_buffer_attribute_builder_buffer_info){
         .attribute_count = &index_info->current_index_count,
@@ -552,8 +583,9 @@ static cecs_buffer_attribute_builder_buffer_info cecs_instance_builder_get_insta
         builder->graphics_world,
         attribute_id
     );
-    CECS_UNION_IS_ASSERT(cecs_instance_storage_attachment, cecs_stream_storage_attachment, storage->stream);
-    cecs_instance_storage_attachment *instance_info = &CECS_UNION_GET_UNCHECKED(cecs_instance_storage_attachment, storage->stream);
+    assert((storage->buffer_flags & cecs_buffer_type_instance) && "error: buffer is not an instance buffer");
+    cecs_instance_storage_attachment *instance_info = &storage->stream.instance;
+    
     return (cecs_buffer_attribute_builder_buffer_info){
         .attribute_count = &instance_info->current_attribute_count,
         .attribute_stride = &instance_info->attribute_stride,

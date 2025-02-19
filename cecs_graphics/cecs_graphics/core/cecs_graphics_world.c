@@ -25,7 +25,7 @@ void cecs_graphics_world_free(cecs_graphics_world *w) {
             
             if (attachments->flags & cecs_component_storage_attachment_usage_graphics_buffer) {
                 cecs_buffer_storage_attachment *buffer_attachment = attachments->user_attachments;
-                if (buffer_attachment->buffer_flags & cecs_buffer_flags_initialized) {
+                if (buffer_attachment->buffer_flags & cecs_buffer_status_initialized) {
                     cecs_buffer_storage_attachment_free(buffer_attachment);
                 }
             }
@@ -66,12 +66,12 @@ cecs_buffer_storage_attachment *cecs_graphics_world_get_or_set_buffer_attachment
 }
 
 cecs_exclusive_index_buffer_pair cecs_graphics_world_get_index_buffers(cecs_graphics_world *graphics_world) {
-    extern inline cecs_buffer_storage_attachment cecs_buffer_storage_attachment_uninitialized(size_t variant);
+    extern inline cecs_buffer_storage_attachment cecs_buffer_storage_attachment_uninitialized(const cecs_stream_storage_attachment stream, const cecs_buffer_type type);
 
-    cecs_buffer_storage_attachment uninitialized_buffer = cecs_buffer_storage_attachment_uninitialized(CECS_STREAM_STORAGE_INDEX_VARIANT);
+    cecs_buffer_storage_attachment uninitialized_buffer = cecs_buffer_storage_attachment_uninitialized((cecs_stream_storage_attachment){0}, cecs_buffer_type_index);
     return (cecs_exclusive_index_buffer_pair){
-        .u16 = &CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(cecs_vertex_index_u16, graphics_world, &uninitialized_buffer)->buffer,
-        .u32 = &CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(cecs_vertex_index_u32, graphics_world, &uninitialized_buffer)->buffer
+        .u16 = CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(cecs_vertex_index_u16, graphics_world, &uninitialized_buffer),
+        .u32 = CECS_GRAPHICS_WORLD_GET_OR_SET_BUFFER_ATTACHMENTS(cecs_vertex_index_u32, graphics_world, &uninitialized_buffer)
     };
 }
 
@@ -87,9 +87,10 @@ cecs_buffer_storage_attachment *cecs_graphics_world_get_or_init_uniform_buffer(
     cecs_graphics_world *world,
     cecs_graphics_context *context,
     cecs_component_id component_id,
-    size_t size
+    size_t size,
+    cecs_buffer_flags *out_previous_flags
 ) {
-        assert(
+    assert(
         CECS_UNIFORM_IS_ALIGNED_SIZE(size)
         && "error: uniform size must be aligned to uniform buffer alignment"
         && CECS_WGPU_UNIFORM_BUFFER_ALIGNMENT_VALUE
@@ -113,23 +114,26 @@ cecs_buffer_storage_attachment *cecs_graphics_world_get_or_init_uniform_buffer(
         && "error: attachments of component must be flagged for graphics buffer usage"
     );
     cecs_buffer_storage_attachment *storage = attachments->user_attachments;
+    *out_previous_flags = storage->buffer_flags;
 
-    if (!(storage->buffer_flags & cecs_buffer_flags_initialized)) {
-        // TODO: check if storage is dense so that is shared
+    if (!(storage->buffer_flags & cecs_buffer_status_initialized)) {
+        // WGPUSupportedLimits limits;
+        // const bool sucess = wgpuDeviceGetLimits(context->device, &limits);
+        // assert(sucess && "fatal error: failed to get device limits");
+
         cecs_buffer_storage_attachment_initialize(
             storage,
             context->device,
             cecs_graphics_world_default_buffer_arena(world),
             WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
             size,
-            cecs_webgpu_uniform_buffer_alignment
-        );
-    } else {
-        assert(
-            storage->buffer.alignment == cecs_webgpu_uniform_buffer_alignment
-            && "fatal error: uniform buffer alignment mismatch"
+            256// limits.limits.minUniformBufferOffsetAlignment
         );
     }
+    assert(
+        storage->buffer.element_buffer.buffer.size_alignmnent == cecs_webgpu_copy_buffer_alignment
+        && "fatal error: uniform buffer alignment mismatch"
+    );
 
     return storage;
 }

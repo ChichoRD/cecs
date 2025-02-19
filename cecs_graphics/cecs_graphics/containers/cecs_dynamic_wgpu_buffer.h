@@ -4,6 +4,7 @@
 #include <webgpu/webgpu.h>
 #include <cecs_core/cecs_core.h>
 #include <stdint.h>
+#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
 typedef uint64_t cecs_buffer_offset_u64;
 typedef uint32_t cecs_buffer_offset_u32;
@@ -75,105 +76,191 @@ static_assert(
 
 extern const cecs_buffer_offset_u64 cecs_webgpu_vertex_stride_alignment;
 
-inline cecs_buffer_offset_u64 cecs_align_to_pow2(cecs_dynamic_buffer_offset size, cecs_buffer_offset_u64 align) {
-    const cecs_buffer_offset_u64 align_mask = align - 1;
-    const cecs_buffer_offset_u64 aligned_size = (size + align_mask) & ~align_mask;
-    return max(aligned_size, align);
-}
-
 inline cecs_buffer_offset_u64 cecs_align_to_wgpu_copy_buffer_alignment(cecs_dynamic_buffer_offset size) {
-    extern inline cecs_buffer_offset_u64 cecs_align_to_pow2(cecs_dynamic_buffer_offset size, cecs_buffer_offset_u64 align);
-    return cecs_align_to_pow2(size, cecs_webgpu_copy_buffer_alignment);
+    extern inline uint64_t cecs_align_to_pow2_u64(const uint64_t size, const uint64_t alignment);
+    return cecs_align_to_pow2_u64(size, cecs_webgpu_copy_buffer_alignment);
 }
 
 WGPUBuffer cecs_wgpu_buffer_create_with_data(
     WGPUDevice device,
-    const WGPUBufferUsageFlags usage,
+    const WGPUBufferUsage usage,
     const uint64_t buffer_size,
     const void *data,
     const size_t data_size
 );
 
-typedef uint8_t cecs_buffer_stage_element;
+typedef uint8_t cecs_buffer_stage_value;
 typedef CECS_COW_STRUCT(cecs_sparse_set, cecs_buffer_stage) cecs_buffer_stage;
 
 typedef struct cecs_dynamic_wgpu_buffer {
     WGPUBuffer buffer;
-    cecs_buffer_stage stage;
-    uint16_t alignment;
-    size_t uploaded_size;
-    size_t current_padding;
-    WGPUBufferUsage usage;
+    cecs_buffer_stage_value *stage;
+    size_t stage_size;
+    WGPUBufferUsageFlags usage;
+    uint16_t size_alignmnent;
 } cecs_dynamic_wgpu_buffer;
 
-static inline cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_uninitialized(void) {
+inline cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_uninitialized(void) {
     return (cecs_dynamic_wgpu_buffer){
         .buffer = NULL,
-        .stage = CECS_COW_CREATE_OWNED(cecs_buffer_stage, cecs_sparse_set_create()),
-        .alignment = 0,
-        .uploaded_size = 0,
-        .current_padding = 0,
+        .stage = NULL,
+        .stage_size = 0,
+        .size_alignmnent = 0,
         .usage = WGPUBufferUsage_None
     };
 }
 
-cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_owned(
+cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_from_stage(
+    WGPUDevice device,
+    cecs_buffer_stage_value *stage,
+    const size_t stage_size,
+    const WGPUBufferUsage usage,
+    const uint16_t size_alignment
+);
+cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_from_stage_mapped(
+    WGPUDevice device,
+    cecs_buffer_stage_value *stage,
+    const size_t stage_size,
+    const WGPUBufferUsage usage,
+    const uint16_t size_alignment
+);
+cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create(
     WGPUDevice device,
     cecs_arena *arena,
-    WGPUBufferUsageFlags usage,
-    cecs_dynamic_buffer_offset size,
-    uint16_t alignment
+    const size_t size,
+    const WGPUBufferUsage usage,
+    const uint16_t size_alignment
 );
 
-cecs_dynamic_wgpu_buffer cecs_dynamic_wgpu_buffer_create_borrowed(
-    WGPUDevice device,
-    cecs_sparse_set *stage,
-    WGPUBufferUsageFlags usage,
-    cecs_dynamic_buffer_offset size,
-    uint16_t alignment
-);
-
-inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer) {
-    return CECS_COW_GET_REFERENCE(cecs_buffer_stage, buffer->stage);
-}
-
-static inline bool cecs_dynamic_wgpu_buffer_is_shared(const cecs_dynamic_wgpu_buffer *buffer) {
-    return CECS_COW_IS_BORROWED(cecs_buffer_stage, buffer->stage);
-}
-
-void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer);
-
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_get_offset(const cecs_dynamic_wgpu_buffer *buffer, cecs_dynamic_buffer_offset offset);
-
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage(
+void *cecs_dynamic_wgpu_buffer_resize(
     cecs_dynamic_wgpu_buffer *buffer,
     cecs_arena *arena,
-    cecs_dynamic_buffer_offset offset,
-    void *data,
-    cecs_dynamic_buffer_offset size
+    const size_t new_size
 );
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload(
+void *cecs_dynamic_wgpu_buffer_stage(
+    cecs_dynamic_wgpu_buffer *buffer,
+    const cecs_dynamic_buffer_offset offset,
+    const void *data,
+    const cecs_dynamic_buffer_offset size
+);
+void *cecs_dynamic_wgpu_buffer_stage_or_resize(
+    cecs_dynamic_wgpu_buffer *buffer,
+    cecs_arena *arena,
+    const cecs_dynamic_buffer_offset offset,
+    const void *data,
+    const cecs_dynamic_buffer_offset size
+);
+
+cecs_dynamic_buffer_offset cecs_dynamic_wgpu_buffer_upload(
     cecs_dynamic_wgpu_buffer *buffer,
     WGPUDevice device,
     WGPUQueue queue,
     cecs_arena *arena,
-    cecs_dynamic_buffer_offset offset,
-    cecs_dynamic_buffer_offset size
+    const cecs_dynamic_buffer_offset offset,
+    const cecs_dynamic_buffer_offset size
 );
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_upload_all(
+cecs_dynamic_buffer_offset cecs_dynamic_wgpu_buffer_upload_all(
     cecs_dynamic_wgpu_buffer *buffer,
     WGPUDevice device,
     WGPUQueue queue,
     cecs_arena *arena
 );
-cecs_buffer_offset_u64 cecs_dynamic_wgpu_buffer_stage_and_upload(
-    cecs_dynamic_wgpu_buffer *buffer,
+
+void cecs_dynamic_wgpu_buffer_free(cecs_dynamic_wgpu_buffer *buffer);
+
+
+typedef struct cecs_dynamic_wgpu_element_buffer {
+    cecs_dynamic_wgpu_buffer buffer;
+    uint8_t aligned_element_size_log2;
+} cecs_dynamic_wgpu_element_buffer;
+
+inline size_t cecs_dynamic_wgpu_element_buffer_element_size(const cecs_dynamic_wgpu_element_buffer *buffer) {
+    return ((size_t)1 << (size_t)buffer->aligned_element_size_log2);
+}
+inline size_t cecs_dynamic_wgpu_element_buffer_element_count(const cecs_dynamic_wgpu_element_buffer *buffer) {
+    return buffer->buffer.stage_size >> buffer->aligned_element_size_log2;
+}
+
+inline cecs_dynamic_wgpu_element_buffer cecs_dynamic_wgpu_element_buffer_uninitialized(void) {
+    return (cecs_dynamic_wgpu_element_buffer){
+        .buffer = cecs_dynamic_wgpu_buffer_uninitialized(),
+        .aligned_element_size_log2 = 0
+    };
+}
+
+cecs_dynamic_wgpu_element_buffer cecs_dynamic_wgpu_element_buffer_create(
+    WGPUDevice device,
+    cecs_arena *arena,
+    const size_t element_size,
+    const uint16_t element_offset_alignment,
+    const uint16_t upload_alignment,
+    const WGPUBufferUsageFlags usage
+);
+void cecs_dynamic_wgpu_element_buffer_free(cecs_dynamic_wgpu_element_buffer *buffer);
+
+inline cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_element_offset(
+    const cecs_dynamic_wgpu_element_buffer *buffer,
+    const cecs_dynamic_buffer_offset element_index
+) {
+    return element_index << buffer->aligned_element_size_log2;
+}
+inline cecs_dynamic_buffer_offset cecs_dynamic_wgpu_element_buffer_element_index(
+    const cecs_dynamic_wgpu_element_buffer *buffer,
+    const cecs_buffer_offset_u64 element_offset
+)  {
+    return element_offset >> buffer->aligned_element_size_log2;
+}
+inline cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_element_offset_start(
+    const cecs_dynamic_wgpu_element_buffer *buffer,
+    const cecs_buffer_offset_u64 element_inner_offset
+) {
+    return cecs_dynamic_wgpu_element_buffer_element_offset(
+        buffer,
+        cecs_dynamic_wgpu_element_buffer_element_index(buffer, element_inner_offset)
+    );
+}
+
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_stage(
+    cecs_dynamic_wgpu_element_buffer *buffer,
+    cecs_arena *arena,
+    const cecs_dynamic_buffer_offset element_index,
+    const cecs_buffer_offset_u64 suboffset,
+    const void *data,
+    const size_t size
+);
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_stage_range(
+    cecs_dynamic_wgpu_element_buffer *buffer,
+    cecs_arena *arena,
+    const cecs_dynamic_buffer_offset element_index,
+    const cecs_dynamic_buffer_offset suboffset,
+    const void *data,
+    const size_t count,
+    const size_t size
+);
+
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_upload(
+    cecs_dynamic_wgpu_element_buffer *buffer,
     WGPUDevice device,
     WGPUQueue queue,
     cecs_arena *arena,
-    cecs_dynamic_buffer_offset offset,
-    void *data,
-    cecs_dynamic_buffer_offset size
+    const cecs_dynamic_buffer_offset element_index,
+    const cecs_buffer_offset_u64 suboffset,
+    const size_t size
 );
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_upload_range(
+    cecs_dynamic_wgpu_element_buffer *buffer,
+    WGPUDevice device,
+    WGPUQueue queue,
+    cecs_arena *arena,
+    const cecs_dynamic_buffer_offset element_index,
+    const size_t count
+);
+cecs_buffer_offset_u64 cecs_dynamic_wgpu_element_buffer_upload_all(
+    cecs_dynamic_wgpu_element_buffer *buffer,
+    WGPUDevice device,
+    WGPUQueue queue,
+    cecs_arena *arena
+);
+
 
 #endif

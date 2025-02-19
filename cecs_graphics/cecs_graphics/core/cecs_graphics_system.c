@@ -28,46 +28,62 @@ const cecs_uniform_raw_stream *cecs_graphics_system_set_component_as_uniform(
     void *component,
     size_t size
 ) {
+    cecs_buffer_flags previous_flags;
     cecs_buffer_storage_attachment *storage = cecs_graphics_world_get_or_init_uniform_buffer(
         &system->world,
         &system->context,
         component_id,
+        size,
+        &previous_flags
+    );
+    assert(
+        (storage->buffer_flags & cecs_buffer_status_initialized)
+        && "error: uniform buffer must be initialized"
+    );
+    assert(
+        (storage->buffer_flags & cecs_buffer_type_uniform)
+        && "error: buffer must be a uniform buffer"
+    );
+    assert(
+        (storage->buffer_flags & cecs_buffer_type_dynamic_element)
+        && "error: buffer must be a dynamic buffer"
+    );
+
+    cecs_dynamic_wgpu_element_buffer *buffer = &storage->buffer.element_buffer;
+    if (!(previous_flags & cecs_buffer_status_initialized)) {
+        storage->offsets.element_offset = entity;
+    } else if (entity < storage->offsets.element_offset) {
+        const size_t elements_expansion = storage->offsets.element_offset - entity;
+        cecs_buffer_storage_attachment_extend_dynamic_elements(
+            storage,
+            cecs_graphics_world_default_buffer_arena(&system->world),
+            0,
+            elements_expansion
+        );
+        storage->offsets.element_offset = entity;
+    }
+
+    cecs_world_set_component(
+        world,
+        entity,
+        component_id,
+        component,
         size
     );
-    cecs_uniform_raw_stream stream;
-    if (cecs_dynamic_wgpu_buffer_is_shared(&storage->buffer)) {
-        cecs_world_set_component(
-            world,
-            entity,
-            component_id,
+    
+    cecs_uniform_raw_stream stream = (cecs_uniform_raw_stream){
+        .offset = cecs_dynamic_wgpu_element_buffer_stage(
+            buffer,
+            cecs_graphics_world_default_buffer_arena(&system->world),
+            entity - storage->offsets.element_offset,
+            0,
             component,
             size
-        );
-        stream = (cecs_uniform_raw_stream){
-            .offset = cecs_dynamic_wgpu_buffer_get_offset(&storage->buffer, entity),
-            .size = size
-        };
-        storage->buffer_flags |= cecs_buffer_flags_dirty;
-    } else {
-        cecs_world_set_component(
-            world,
-            entity,
-            component_id,
-            component,
-            size
-        );
-        stream = (cecs_uniform_raw_stream){
-            .offset = cecs_dynamic_wgpu_buffer_stage(
-                &storage->buffer,
-                cecs_graphics_world_default_buffer_arena(&system->world),
-                entity * size,
-                component,
-                size
-            ),
-            .size = size
-        };
-        storage->buffer_flags |= cecs_buffer_flags_dirty;
-    }
+        ),
+        .size = size
+    };
+    storage->buffer_flags |= cecs_buffer_status_dirty;
+
 
     return CECS_WORLD_SET_COMPONENT_RELATION(
         cecs_uniform_raw_stream,
@@ -92,11 +108,21 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
         &system->world,
         component_id
     );
+    assert(
+        (uniform_buffer->buffer_flags & cecs_buffer_status_initialized)
+        && "error: uniform buffer must be initialized"
+    );
+    assert(
+        (uniform_buffer->buffer_flags & cecs_buffer_type_uniform)
+        && "error: buffer must be a uniform buffer"
+    );
+    assert(
+        (uniform_buffer->buffer_flags & cecs_buffer_type_dynamic_element)
+        && "error: buffer must be a dynamic buffer"
+    );
 
     if (storage->storage.status & cecs_component_storage_status_dirty) {
-        extern inline cecs_sparse_set *cecs_dynamic_wgpu_buffer_get_stage(cecs_dynamic_wgpu_buffer *buffer);
-        cecs_sparse_set *stage = cecs_dynamic_wgpu_buffer_get_stage(&uniform_buffer->buffer);
-        uint8_t *stage_data = cecs_sparse_set_values_mut(stage);
+        uint8_t *stage = uniform_buffer->buffer.element_buffer.buffer.stage;
 
         CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_uniform_raw_stream, void) handle;
         cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(&world->components, sync_arena,
@@ -111,7 +137,7 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
         ) {
             cecs_component_iterator_current(&it, (void **)&handle);
             memcpy(
-                stage_data + handle.cecs_uniform_raw_stream_component->offset,
+                stage + handle.cecs_uniform_raw_stream_component->offset,
                 handle.void_component,
                 handle.cecs_uniform_raw_stream_component->size
             );
@@ -120,21 +146,21 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
 
         // HACK: we are the ONES removing the dirty flag
         storage->storage.status &= ~cecs_component_storage_status_dirty;
-        uniform_buffer->buffer_flags |= cecs_buffer_flags_dirty;
+        uniform_buffer->buffer_flags |= cecs_buffer_status_dirty;
     }
     
     assert(
-        uniform_buffer->buffer_flags & cecs_buffer_flags_initialized
+        uniform_buffer->buffer_flags & cecs_buffer_status_initialized
         && "error: uniform buffer must be initialized"
     );
-    if (uniform_buffer->buffer_flags & cecs_buffer_flags_dirty) {
-        cecs_dynamic_wgpu_buffer_upload_all(
-            &uniform_buffer->buffer,
+    if (uniform_buffer->buffer_flags & cecs_buffer_status_dirty) {
+        cecs_dynamic_wgpu_element_buffer_upload_all(
+            &uniform_buffer->buffer.element_buffer,
             system->context.device,
             system->context.queue,
             cecs_graphics_world_default_buffer_arena(&system->world)
         );
-        uniform_buffer->buffer_flags &= ~cecs_buffer_flags_dirty;
+        uniform_buffer->buffer_flags &= ~cecs_buffer_status_dirty;
     }
     return uniform_buffer;
 }
