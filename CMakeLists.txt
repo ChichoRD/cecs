@@ -37,6 +37,8 @@ else()
         -Wno-unused-function
         -Wno-extra-semi
         #-Werror
+
+        -mlzcnt
     )
 endif()
 
@@ -91,11 +93,12 @@ project(cecs_app C)
         ${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
         ${CECS_SOURCES}
+        ${CECS_MATH_SOURCES}
     )
     target_include_directories(
         ${PROJECT_NAME}
-        PUBLIC
-        ${CECS_CORE_DIRECTORY}
+        PUBLIC ${CECS_CORE_DIRECTORY}
+        PUBLIC ${CECS_MATH_DIRECTORY}
     )
 
 
@@ -104,11 +107,12 @@ project(cecs_lib C)
         cecs
         STATIC
         ${CECS_SOURCES}
+        ${CECS_MATH_SOURCES}
     )
     target_include_directories(
         cecs
-        PUBLIC
-        ${CECS_CORE_DIRECTORY}
+        PUBLIC ${CECS_CORE_DIRECTORY}
+        PUBLIC ${CECS_MATH_DIRECTORY}
     )
 
 
