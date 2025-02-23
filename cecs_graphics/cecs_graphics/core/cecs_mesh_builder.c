@@ -189,7 +189,7 @@ static cecs_buffer_storage_attachment *cecs_attribute_builder_build_attribute(
         cecs_buffer_storage_attachment_initialize(
             storage, context->device, cecs_graphics_world_default_buffer_arena(builder->graphics_world), usage, size, cecs_webgpu_copy_buffer_alignment
         );
-        storage->offsets.offset = 0;
+        storage->offsets.offset = attribute_stream.offset;
     } else if (attribute_stream.offset < storage->offsets.offset) {
         const size_t expansion = storage->offsets.offset - attribute_stream.offset;
         cecs_buffer_storage_attachment_extend_dynamic(
@@ -213,11 +213,15 @@ static cecs_buffer_storage_attachment *cecs_attribute_builder_build_attribute(
         && "error: vertex attribute count mismatch"
     );
 
+    assert(
+        attribute_stream.offset >= storage->offsets.offset
+        && "error: attribute offset is less than storage offset"
+    );
     // TODO: use function to lower the key (offset) instead of indexing bytes
     cecs_dynamic_wgpu_buffer_stage_or_resize(
         &storage->buffer.buffer,
         cecs_graphics_world_default_buffer_arena(builder->graphics_world),
-        attribute_stream.offset,
+        attribute_stream.offset - storage->offsets.offset,
         attributes,
         attribute_stream.size
     );
@@ -226,7 +230,7 @@ static cecs_buffer_storage_attachment *cecs_attribute_builder_build_attribute(
         context->device,
         context->queue,
         cecs_graphics_world_default_buffer_arena(builder->graphics_world),
-        attribute_stream.offset,
+        attribute_stream.offset - storage->offsets.offset,
         attribute_stream.size
     );
     return storage;
