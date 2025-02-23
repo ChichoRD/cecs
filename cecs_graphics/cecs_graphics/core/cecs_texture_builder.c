@@ -45,6 +45,7 @@ cecs_texture_builder *cecs_texture_builder_load_from(
     cecs_stbi_allocator_get_current_allocator()->current_arena = NULL;
     assert(channels == builder->descriptor.channel_count && "error unexpected: channel count mismatch");
 
+    // TODO: add way for user to define padding in case texture has less channels than expected
     if (texture_data == NULL) {
         assert(false && "fatal error: failed to load texture");
         exit(EXIT_FAILURE);

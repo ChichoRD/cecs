@@ -163,15 +163,14 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
             .vertex = (WGPUVertexState) {
                 .entryPoint = "vs_main",
                 .module = shader_module,
-                .bufferCount = 6,
+                .bufferCount = 5,
                 .buffers = (WGPUVertexBufferLayout[]) {
                     position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
                     uv2_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
-                    color3_f32_attribute_layout(2, (WGPUVertexAttribute[1]){0}, 1),
                     
-                    instance_position2_f32_attribute_layout(3, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
-                    cecs_texture_subrect2_f32_attribute_layout(4, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
-                    cecs_texture_in_bank_range2_u8_attribute_layout(5, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
+                    instance_position2_f32_attribute_layout(2, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
+                    cecs_texture_subrect2_f32_attribute_layout(3, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
+                    cecs_texture_in_bank_range2_u8_attribute_layout(4, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
                 },
             },
             .fragment = &(WGPUFragmentState) {
@@ -327,10 +326,6 @@ static void test_pass_draw_inner(
         position2_f32_attribute,
         &system->world
     );
-    cecs_buffer_storage_attachment *color_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
-        color3_f32_attribute,
-        &system->world
-    );
     cecs_buffer_storage_attachment *uv_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
         uv2_f32_attribute,
         &system->world
@@ -386,9 +381,6 @@ static void test_pass_draw_inner(
         cecs_raw_stream position = cecs_mesh_get_raw_vertex_stream(
             *handle.cecs_mesh_component, sizeof(position2_f32_attribute), position_buffer
         );
-        cecs_raw_stream color = cecs_mesh_get_raw_vertex_stream(
-            *handle.cecs_mesh_component, sizeof(color3_f32_attribute), color_buffer
-        );
         cecs_raw_stream uv = cecs_mesh_get_raw_vertex_stream(
             *handle.cecs_mesh_component, sizeof(uv2_f32_attribute), uv_buffer
         );
@@ -423,11 +415,10 @@ static void test_pass_draw_inner(
 
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, cecs_buffer_storage_attachment_get_buffer(position_buffer), position.offset, position.size);
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, cecs_buffer_storage_attachment_get_buffer(uv_buffer), uv.offset, uv.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 2, cecs_buffer_storage_attachment_get_buffer(color_buffer), color.offset, color.size);
 
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 3, cecs_buffer_storage_attachment_get_buffer(instance_position_buffer), instance_position.offset, instance_position.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 4, cecs_buffer_storage_attachment_get_buffer(instance_subrect_buffer), instance_subrect.offset, instance_subrect.size);
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 5, cecs_buffer_storage_attachment_get_buffer(instance_range_buffer), instance_range.offset, instance_range.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 2, cecs_buffer_storage_attachment_get_buffer(instance_position_buffer), instance_position.offset, instance_position.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 3, cecs_buffer_storage_attachment_get_buffer(instance_subrect_buffer), instance_subrect.offset, instance_subrect.size);
+        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 4, cecs_buffer_storage_attachment_get_buffer(instance_range_buffer), instance_range.offset, instance_range.size);
 
         if (handle.cecs_index_stream_component == NULL) {
             wgpuRenderPassEncoderDraw(

@@ -103,7 +103,7 @@ static void cecs_file_mesh_builder_gltf_unpack_attributes(
     }
     case cecs_attribute_copy_expect_larger_copy_padded: {
         assert(accessor_attribute_size >= attribute_size && "error: attribute size mismatch, with copy option expect larger");
-        float *unpacked = cecs_arena_alloc(builder_arena, accessor_attribute_count * accessor_attribute_size);
+        uint8_t *unpacked = cecs_arena_alloc(builder_arena, accessor_attribute_count * accessor_attribute_size);
         const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, unpacked, accessor_float_count);
         assert(unpacked_floats == accessor_float_count && "error: unpacked floats mismatch");
 
