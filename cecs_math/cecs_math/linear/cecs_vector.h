@@ -1,7 +1,7 @@
 #ifndef CECS_VECTOR_H
 #define CECS_VECTOR_H
 
-#include <cmath>
+#include <math.h>
 #include "cecs_vector_def.h"
 
 // TODO: cecs_core replace all `static inline` -> `inline` + `extern inline`
@@ -94,26 +94,33 @@ inline cecs_vec4_f32 cecs_vec4_f32_mul(const cecs_vec4_f32 u, const float s) {
 
 
 inline cecs_vec2_f32 cecs_vec2_f32_div(const cecs_vec2_f32 u, const float s) {
+    assert(s != 0.0f);
     return (cecs_vec2_f32){u.x / s, u.y / s};
 }
 inline cecs_vec2_i32 cecs_vec2_i32_div(const cecs_vec2_i32 u, const int32_t s) {
+    assert(s != 0);
     return (cecs_vec2_i32){u.x / s, u.y / s};
 }
 inline cecs_vec2_u32 cecs_vec2_u32_div(const cecs_vec2_u32 u, const uint32_t s) {
+    assert(s != 0);
     return (cecs_vec2_u32){u.x / s, u.y / s};
 }
 
 inline cecs_vec3_f32 cecs_vec3_f32_div(const cecs_vec3_f32 u, const float s) {
+    assert(s != 0.0f);
     return (cecs_vec3_f32){u.x / s, u.y / s, u.z / s};
 }
 inline cecs_vec3_i32 cecs_vec3_i32_div(const cecs_vec3_i32 u, const int32_t s) {
+    assert(s != 0);
     return (cecs_vec3_i32){u.x / s, u.y / s, u.z / s};
 }
 inline cecs_vec3_u32 cecs_vec3_u32_div(const cecs_vec3_u32 u, const uint32_t s) {
+    assert(s != 0);
     return (cecs_vec3_u32){u.x / s, u.y / s, u.z / s};
 }
 
 inline cecs_vec4_f32 cecs_vec4_f32_div(const cecs_vec4_f32 u, const float s) {
+    assert(s != 0.0f);
     return (cecs_vec4_f32){u.x / s, u.y / s, u.z / s, u.w / s};
 }
 
