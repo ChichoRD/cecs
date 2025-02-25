@@ -1,14 +1,5 @@
 #include "cecs_vector.h"
 
-#define CECS_VEC2_F32_ZERO {0.0f, 0.0f}
-#define CECS_VEC2_I32_ZERO {0, 0}
-#define CECS_VEC2_U32_ZERO {0, 0}
-
-#define CECS_VEC3_F32_ZERO {0.0f, 0.0f, 0.0f}
-#define CECS_VEC3_I32_ZERO {0, 0, 0}
-#define CECS_VEC3_U32_ZERO {0, 0, 0}
-
-#define CECS_VEC4_F32_ZERO {0.0f, 0.0f, 0.0f, 0.0f}
 
 const cecs_vec2_f32 cecs_vec2_f32_zero = CECS_VEC2_F32_ZERO;
 const cecs_vec2_i32 cecs_vec2_i32_zero = CECS_VEC2_I32_ZERO;

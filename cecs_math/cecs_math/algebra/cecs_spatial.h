@@ -3,7 +3,7 @@
 
 #include "complex/cecs_quaternion.h"
 #include "linear/cecs_vector.h"
-#include "cecs_units.h"
+#include "../cecs_units.h"
 
 inline cecs_versor_f32 cecs_versor_f32_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle) {
     const cecs_radians_f32 half_angle = angle * 0.5f;
