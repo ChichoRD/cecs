@@ -10,7 +10,6 @@ cecs_camera cecs_camera_create_orthographic(const float half_height, const float
         .near = near
     };
 }
-
 cecs_camera cecs_camera_create_perspective(const cecs_radians_f32 fov_y, const float far, const float near) {
     assert(fov_y > 0.0f && "fatal error: field of view must be positive");
     assert(far > near && "fatal error: far plane must be greater than near plane");
@@ -33,7 +32,6 @@ cecs_ortho_projection_packed4_f32 cecs_camera_orthographic_projection(const cecs
         .affine_offset_z = -camera.near * scale.z
     };
 }
-
 cecs_persp_projection_packed4_f32 cecs_camera_perspective_projection(const cecs_camera camera, const float aspect_ratio) {
     const float inv_tan_half_fov = 1.0f / tanf(camera.projection.proj_fov_y * 0.5f);
     const float depth_length = camera.far - camera.near;
@@ -45,6 +43,15 @@ cecs_persp_projection_packed4_f32 cecs_camera_perspective_projection(const cecs_
     };
 }
 
+extern inline cecs_hcoord4_f32 cecs_hcoord4_f32_project_point_orthographic(const cecs_ortho_projection_packed4_f32 po, const cecs_hpoint3_f32 point);
+extern inline cecs_hcoord4_f32 cecs_hcoord4_f32_project_direction_orthographic(const cecs_ortho_projection_packed4_f32 po, const cecs_hvec3_f32 vec);
+extern inline cecs_hcoord4_f32 cecs_hcoord4_f32_project_orthographic(const cecs_ortho_projection_packed4_f32 po, const cecs_hcoord4_f32 coord);
+
+extern inline cecs_hcoord4_f32 cecs_hcoord4_f32_project_point_perspective(const cecs_persp_projection_packed4_f32 pp, const cecs_hpoint3_f32 point);
+extern inline cecs_hcoord4_f32 cecs_hcoord4_f32_project_direction_perspective(const cecs_persp_projection_packed4_f32 pp, const cecs_hvec3_f32 vec);
+extern inline cecs_hcoord4_f32 cecs_hcoord4_f32_project_perspective(const cecs_persp_projection_packed4_f32 pp, const cecs_hcoord4_f32 coord);
+
+
 cecs_ortho_projection_mat4c_f32 cecs_ortho_projection_mat4c_f32_unpack(const cecs_ortho_projection_packed4_f32 packed) {
     cecs_ortho_projection_mat4c_f32 projection = {0};
     projection.e0.x = packed.scale.x;
@@ -54,7 +61,6 @@ cecs_ortho_projection_mat4c_f32 cecs_ortho_projection_mat4c_f32_unpack(const cec
     projection.e3.w = 1.0f;
     return projection;
 }
-
 cecs_persp_projection_mat4c_f32 cecs_persp_projection_mat4c_f32_unpack(const cecs_persp_projection_packed4_f32 packed) {
     cecs_persp_projection_mat4c_f32 projection = {0};
     projection.e0.x = packed.scale.x;
