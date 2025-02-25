@@ -27,7 +27,7 @@ cecs_ortho_projection_packed4_f32 cecs_camera_orthographic_projection(const cecs
     const cecs_vec3_f32 scale = {2.0f / width, 2.0f / height, 1.0f / camera.depth_length};
     return (cecs_ortho_projection_packed4_f32){
         .scale = scale,
-        .affine_offset_z = near * scale.z
+        .affine_offset_z = -near * scale.z
     };
 }
 cecs_persp_projection_packed4_f32 cecs_camera_perspective_projection(const cecs_camera camera, const float aspect_ratio, const float near) {

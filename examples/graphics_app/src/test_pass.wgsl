@@ -10,11 +10,12 @@ struct instance_input {
 };
 
 struct vertex_output {
-    @builtin(position) position: vec4<f32>,
-    @location(0) uv: vec2<f32>,
+    @builtin(position) position_frame: vec4<f32>,
+    @location(0) position_world: vec3<f32>,
+    @location(1) uv: vec2<f32>,
 
-    @location(1) uv_subrect: vec2<f32>,
-    @location(2) texture_range: vec2<u32>,
+    @location(2) uv_subrect: vec2<f32>,
+    @location(3) texture_range: vec2<u32>,
 };
 
 
@@ -46,7 +47,7 @@ fn cecs_versor_f32_rotate(uq: cecs_versor_f32, v: vec3<f32>) -> vec3<f32> {
 }
 fn cecs_versor_f32_rotate_rcp(uq_rcp: cecs_versor_f32, v: vec3<f32>) -> vec3<f32> {
     let u = fma(v, vec3(-uq_rcp.w), cross(uq_rcp.xyz, v));
-    return v + cross(2.0f * -uq_rcp.xyz, u);
+    return v + cross(2.0f * uq_rcp.xyz, u);
 }
 
 alias cecs_projection_packed4_f32 = vec4<f32>;
@@ -71,12 +72,13 @@ fn cecs_project_point_orthographic(pack: cecs_ortho_projection_packed4_f32, posi
 fn vs_main(v_input: vertex_input, i_input: instance_input) -> vertex_output {
     var out: vertex_output;
     
-    let position_world = i_input.position + v_input.position;
+    let position_world = i_input.position * 100.0 + v_input.position * 0.25;
     let position_view = cecs_versor_f32_rotate_rcp(cam.orientation, position_world.xyz - cam.position);
     let position_clip = cecs_project_point_perspective(cam.projection_pack, position_view.xyz);
     let position_ndc = position_clip.xyz / position_clip.w;
 
-    out.position = vec4<f32>(position_ndc, 1.0);
+    out.position_frame = vec4<f32>(position_ndc, 1.0);
+    out.position_world = position_world;
     out.uv = v_input.uv;
     out.uv_subrect = i_input.uv_subrect;
     out.texture_range = i_input.texture_range;
@@ -89,6 +91,9 @@ fn vs_main(v_input: vertex_input, i_input: instance_input) -> vertex_output {
 
 @fragment
 fn fs_main(input: vertex_output) -> @location(0) vec4<f32> {
-    //return vec4f(input.uv * input.uv_subrect, 0.0, 1.0);
-    return textureSample(albedo_texture, texture_sampler, input.uv * input.uv_subrect, input.texture_range[0]);
+    let m = max(max(input.position_world.x, input.position_world.y), input.position_world.z);
+    let extreme = step(vec3f(m), input.position_world);
+    
+    let sample = textureSample(albedo_texture, texture_sampler, input.uv * input.uv_subrect, input.texture_range[0]);
+    return vec4f((sample.rgb * 0.1 + extreme * 0.9) , sample.a);
 }
