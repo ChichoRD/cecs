@@ -89,7 +89,7 @@ inline cecs_hvec3_f32 cecs_hvec3_f32_pack(const cecs_hcoord4_f32 coord) {
         .z = coord.z
     };
 }
-inline cecs_hpoint3_f32 cecs_hpoint3_f32_ptr(const cecs_hcoord4_f32 *coord) {
+inline cecs_hpoint3_f32 cecs_hpoint3_f32_pack_ptr(const cecs_hcoord4_f32 *coord) {
     assert(coord->w != 0.0f);
     return (cecs_hpoint3_f32){
         .x = coord->x / coord->w,
@@ -140,7 +140,7 @@ inline cecs_hcoord4_f32 cecs_mat4_f32_mul_hcoord4_affine_ptr(const cecs_mat4c_f3
     };
 }
 inline cecs_hcoord4_f32 cecs_mat4_f32_mul_hcoord4_projection(const cecs_mat4c_f32 m, const cecs_hcoord4_f32 c) {
-    return cecs_mat4_f32_mul_vec4(m, c);
+    return cecs_mat4c_f32_mul_vec4(m, c);
 }
 
 
@@ -160,10 +160,10 @@ inline cecs_hpoint3_f32 cecs_mat4_f32_mul_hpoint3_ptr(const cecs_mat4c_f32 *m, c
 }
 
 inline cecs_hvec3_f32 cecs_mat4_f32_mul_hvec3(const cecs_mat4c_f32 m, const cecs_hvec3_f32 v) {
-    return cecs_mat4_f32_mul_vec3(m, v);
+    return cecs_mat4c_f32_mul_vec3(m, v);
 }
 inline cecs_hvec3_f32 cecs_mat4_f32_mul_hvec3_ptr(const cecs_mat4c_f32 *m, const cecs_hvec3_f32 v) {
-    return cecs_mat4_f32_mul_vec3_ptr(m, v);
+    return cecs_mat4c_f32_mul_vec3_ptr(m, v);
 }
 
 #endif

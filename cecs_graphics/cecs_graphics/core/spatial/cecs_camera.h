@@ -4,6 +4,7 @@
 #include <cecs_math/cecs_units.h>
 #include <cecs_math/algebra/linear/cecs_matrix.h>
 #include <cecs_math/algebra/cecs_spatial.h>
+#include "cecs_transform.h"
 
 typedef union cecs_camera_projection_descriptor {
     float ortho_half_extent_y;
@@ -89,5 +90,27 @@ typedef cecs_projection_mat4c_f32 cecs_ortho_projection_mat4c_f32;
 typedef cecs_projection_mat4c_f32 cecs_persp_projection_mat4c_f32;
 cecs_ortho_projection_mat4c_f32 cecs_ortho_projection_mat4c_f32_unpack(const cecs_ortho_projection_packed4_f32 packed);
 cecs_persp_projection_mat4c_f32 cecs_persp_projection_mat4c_f32_unpack(const cecs_persp_projection_packed4_f32 packed);
+
+// TODO: handle infinite z planes
+typedef enum cecs_camera_options {
+    cecs_camera_options_none = 0,
+    cecs_camera_options_orthographic = 1 << 0,
+    cecs_camera_options_perspective = 1 << 1,
+    cecs_camera_options_z_infinite = 1 << 2
+} cecs_camera_options;
+typedef uint8_t cecs_camera_flags;
+
+typedef struct cecs_camera_bundle {
+    cecs_camera camera;
+    cecs_position3_f32 position;
+    cecs_orientation3_f32 orientation;
+    cecs_camera_flags flags;
+} cecs_camera_bundle;
+typedef struct cecs_camera_reference_bundle {
+    cecs_camera *camera;
+    cecs_position3_f32 *position;
+    cecs_orientation3_f32 *orientation;
+    cecs_camera_flags flags;
+} cecs_camera_reference_bundle;
 
 #endif
