@@ -150,6 +150,15 @@ inline float cecs_vec4_f32_dot(const cecs_vec4_f32 u, const cecs_vec4_f32 v) {
 }
 
 
+inline cecs_vec3_f32 cecs_vec3_f32_cross(const cecs_vec3_f32 u, const cecs_vec3_f32 v) {
+    return (cecs_vec3_f32){
+        .x = u.y * v.z - u.z * v.y,
+        .y = u.z * v.x - u.x * v.z,
+        .z = u.x * v.y - u.y * v.x
+    };
+}
+
+
 inline float cecs_vec2_f32_length(const cecs_vec2_f32 u) {
     return sqrtf(cecs_vec2_f32_dot(u, u));
 }

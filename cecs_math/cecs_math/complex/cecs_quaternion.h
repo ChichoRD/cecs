@@ -5,10 +5,10 @@
 #include <assert.h>
 
 typedef struct cecs_quaternion_f32 {
-    float x;
-    float y;
-    float z;
-    float w;
+    float i;
+    float j;
+    float k;
+    float r;
 } cecs_quaternion_f32;
 extern const cecs_quaternion_f32 cecs_quaternion_f32_identity;
 extern const cecs_quaternion_f32 cecs_quaternion_f32_zero;
@@ -18,49 +18,49 @@ inline cecs_quaternion_scalar_f32 cecs_quaternion_f32_scalar(const float s) {
     return (cecs_quaternion_scalar_f32){0.f, 0.0f, 0.0f, s};
 }
 typedef cecs_quaternion_f32 cecs_quaternion_vector_f32;
-inline cecs_quaternion_vector_f32 cecs_quaternion_f32_vector(const float x, const float y, const float z) {
-    return (cecs_quaternion_vector_f32){x, y, z, 0.0f};
+inline cecs_quaternion_vector_f32 cecs_quaternion_f32_vector(const float i, const float j, const float k) {
+    return (cecs_quaternion_vector_f32){i, j, k, 0.0f};
 }
 
 inline cecs_quaternion_f32 cecs_quaternion_f32_add(const cecs_quaternion_f32 p, const cecs_quaternion_f32 q) {
-    return (cecs_quaternion_f32){p.x + q.x, p.y + q.y, p.z + q.z, p.w + q.w};
+    return (cecs_quaternion_f32){p.i + q.i, p.j + q.j, p.k + q.k, p.r + q.r};
 }
 inline cecs_quaternion_f32 cecs_quaternion_f32_sub(const cecs_quaternion_f32 p, const cecs_quaternion_f32 q) {
-    return (cecs_quaternion_f32){p.x - q.x, p.y - q.y, p.z - q.z, p.w - q.w};
+    return (cecs_quaternion_f32){p.i - q.i, p.j - q.j, p.k - q.k, p.r - q.r};
 }
 inline cecs_quaternion_f32 cecs_quaternion_f32_mul(const cecs_quaternion_f32 p, const float s) {
-    return (cecs_quaternion_f32){p.x * s, p.y * s, p.z * s, p.w * s};
+    return (cecs_quaternion_f32){p.i * s, p.j * s, p.k * s, p.r * s};
 }
 inline cecs_quaternion_f32 cecs_quaternion_f32_div(const cecs_quaternion_f32 p, const float s) {
     assert(s != 0.0f);
-    return (cecs_quaternion_f32){p.x / s, p.y / s, p.z / s, p.w / s};
+    return (cecs_quaternion_f32){p.i / s, p.j / s, p.k / s, p.r / s};
 }
 
 
 inline cecs_quaternion_f32 cecs_quaternion_f32_product(const cecs_quaternion_f32 p, const cecs_quaternion_f32 q) {
     return (cecs_quaternion_f32){
-        .x = p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y,
-        .y = p.w * q.y - p.x * q.z + p.y * q.w + p.z * q.x,
-        .z = p.w * q.z + p.x * q.y - p.y * q.x + p.z * q.w,
-        .w = p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z
+        .i = p.r * q.i + p.i * q.r + p.j * q.k - p.k * q.j,
+        .j = p.r * q.j - p.i * q.k + p.j * q.r + p.k * q.i,
+        .k = p.r * q.k + p.i * q.j - p.j * q.i + p.k * q.r,
+        .r = p.r * q.r - p.i * q.i - p.j * q.j - p.k * q.k
     };
 }
 inline cecs_quaternion_f32 cecs_quaternion_vector_f32_product(const cecs_quaternion_vector_f32 p, const cecs_quaternion_f32 q) {
-    assert(p.w == 0.0f);
+    assert(p.r == 0.0f);
     return (cecs_quaternion_f32){
-        .x = p.x * q.w + p.y * q.z - p.z * q.y,
-        .y = -p.x * q.z + p.y * q.w + p.z * q.x,
-        .z = p.x * q.y - p.y * q.x + p.z * q.w,
-        .w = -p.x * q.x - p.y * q.y - p.z * q.z
+        .i =  p.i * q.r + p.j * q.k - p.k * q.j,
+        .j = -p.i * q.k + p.j * q.r + p.k * q.i,
+        .k =  p.i * q.j - p.j * q.i + p.k * q.r,
+        .r = -p.i * q.i - p.j * q.j - p.k * q.k
     };
 }
 
 
 inline cecs_quaternion_f32 cecs_quaternion_f32_conjugate(const cecs_quaternion_f32 q) {
-    return (cecs_quaternion_f32){-q.x, -q.y, -q.z, q.w};
+    return (cecs_quaternion_f32){-q.i, -q.j, -q.k, q.r};
 }
 inline float cecs_quaternion_f32_norm_sqr(const cecs_quaternion_f32 q) {
-    return q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+    return q.i * q.i + q.j * q.j + q.k * q.k + q.r * q.r;
 }
 inline float cecs_quaternion_f32_norm(const cecs_quaternion_f32 q) {
     return sqrtf(cecs_quaternion_f32_norm_sqr(q));
@@ -84,15 +84,15 @@ inline cecs_versor_f32 cecs_versor_f32_of(const cecs_quaternion_f32 q) {
 
 
 typedef struct cecs_versor_packed_f32 {
-    float x;
-    float y;
-    float z;
+    float i;
+    float j;
+    float k;
 } cecs_versor_packed_f32;
 inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack(const cecs_versor_f32 uq) {
-    return (cecs_versor_packed_f32){uq.x, uq.y, uq.z};
+    return (cecs_versor_packed_f32){uq.i, uq.j, uq.k};
 }
 inline cecs_versor_f32 cecs_versor_f32_unpack(const cecs_versor_packed_f32 uq) {
-    return (cecs_versor_f32){uq.x, uq.y, uq.z, sqrtf(1.0f - uq.x * uq.x - uq.y * uq.y - uq.z * uq.z)};
+    return (cecs_versor_f32){uq.i, uq.j, uq.k, sqrtf(1.0f - uq.i * uq.i - uq.j * uq.j - uq.k * uq.k)};
 }
 
 #endif

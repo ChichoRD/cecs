@@ -76,6 +76,9 @@ extern inline uint32_t cecs_vec3_u32_dot(const cecs_vec3_u32 u, const cecs_vec3_
 extern inline float cecs_vec4_f32_dot(const cecs_vec4_f32 u, const cecs_vec4_f32 v);
 
 
+extern inline cecs_vec3_f32 cecs_vec3_f32_cross(const cecs_vec3_f32 u, const cecs_vec3_f32 v);
+
+
 extern inline float cecs_vec2_f32_length(const cecs_vec2_f32 u);
 extern inline float cecs_vec3_f32_length(const cecs_vec3_f32 u);
 extern inline float cecs_vec4_f32_length(const cecs_vec4_f32 u);
