@@ -5,6 +5,7 @@
 #include <cecs_math/algebra/linear/cecs_matrix.h>
 #include <cecs_math/algebra/cecs_spatial.h>
 #include "cecs_transform.h"
+#include <stddef.h>
 
 typedef union cecs_camera_projection_descriptor {
     float ortho_half_extent_y;
@@ -122,8 +123,9 @@ typedef struct cecs_camera_raw_bundle {
     cecs_projection_packed4_f32 projection;
     cecs_orientation4_f32 orientation;
     cecs_position3_f32 position;
-    float unused;
+    float unused[1];
 } cecs_camera_raw_bundle;
+static_assert((offsetof(cecs_camera_raw_bundle, position) & 0x0F) == 0, "static error: cecs_camera_raw_bundle is not 16 byte aligned");
 
 cecs_camera_raw_bundle cecs_camera_raw_bundle_from_pack_orthographic(const cecs_camera_pack pack, const float aspect_ratio);
 cecs_camera_raw_bundle cecs_camera_raw_bundle_from_pack_perspective(const cecs_camera_pack pack, const float aspect_ratio);

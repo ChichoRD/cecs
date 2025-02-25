@@ -29,12 +29,12 @@ inline cecs_vec3_f32 cecs_versor_f32_rotate(const cecs_versor_f32 uq, const cecs
         ),
         cecs_vec3_f32_mul(
             v,
-            uq.r * 2.0f
+            uq.r
         )
     );
     return cecs_vec3_f32_add(
         v,
-        cecs_vec3_f32_cross((cecs_vec3_f32){uq.i, uq.j, uq.k}, u)
+        cecs_vec3_f32_mul(cecs_vec3_f32_cross((cecs_vec3_f32){uq.i, uq.j, uq.k}, u), 2.0f)
     );
 }
 

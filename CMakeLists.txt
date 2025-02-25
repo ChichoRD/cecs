@@ -157,7 +157,7 @@ if(CECS_GRAPHICS)
             "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/main.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/examples/graphics_app/src/test_pass.c"
             ${CECS_GRAPHICS_SOURCES}
-            ${CECS_MATH_SOURCES}
+            # ${CECS_MATH_SOURCES}
         )
         target_include_directories(
             ${PROJECT_NAME}

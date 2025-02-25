@@ -15,16 +15,16 @@
 #include "test_pass.h"
 
 static cecs_mesh_builder *mesh_builder_configure_square(cecs_mesh_builder *builder) {
-    cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(position2_f32_attribute),
-        (position2_f32_attribute[]) {
+    cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(position3_f32_attribute),
+        (position3_f32_attribute[]) {
             // quad 4 verts
-            { .x = -0.5f, .y = -0.5f },
-            { .x = 0.5f, .y = -0.5f },
-            { .x = 0.5f, .y = 0.5f },
-            { .x = -0.5f, .y = 0.5f },
+            { .x = -0.5f, .y = -0.5f, .z = -0.5f },
+            { .x =  0.5f, .y = -0.5f, .z = -0.5f },
+            { .x =  0.5f, .y =  0.5f, .z = -0.5f },
+            { .x = -0.5f, .y =  0.5f, .z = -0.5f },
         },
         4,
-        sizeof(position2_f32_attribute)
+        sizeof(position3_f32_attribute)
     );
     cecs_mesh_builder_set_indices(builder, (cecs_vertex_index_u16[]) {
         0, 1, 2, 2, 3, 0
@@ -80,9 +80,9 @@ int main(void) {
     cecs_file_mesh_builder_gltf_set_all_vertex_attributes(
         &builder,
         cgltf_attribute_type_position,
-        CECS_COMPONENT_ID(position2_f32_attribute),
-        sizeof(position2_f32_attribute),
-        cecs_attribute_copy_expect_larger_copy_padded
+        CECS_COMPONENT_ID(position3_f32_attribute),
+        sizeof(position3_f32_attribute),
+        cecs_attribute_copy_expect_exact
     );
     cecs_file_mesh_builder_gltf_set_all_vertex_attributes(
         &builder,
@@ -138,28 +138,29 @@ int main(void) {
         1,
         sizeof(cecs_texture_subrect2_f32_attribute)
     );
-    cecs_instance_builder_set_instance_attribute(&builder_instance, CECS_COMPONENT_ID(instance_position2_f32_attribute),
-        (instance_position2_f32_attribute[]) {
-            { .x = 0.0f, .y = 0.0f }
+    cecs_instance_builder_set_instance_attribute(&builder_instance, CECS_COMPONENT_ID(instance_position3_f32_attribute),
+        (instance_position3_f32_attribute[]) {
+            { .x = 0.0f, .y = 0.0f, .z = 0.0f },
         },
         1,
-        sizeof(instance_position2_f32_attribute)
+        sizeof(instance_position3_f32_attribute)
     );
     cecs_instance_group group = cecs_instance_builder_build_into_and_clear(&world, &builder_instance, &system.context);
     CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, id, &group);
     cecs_arena_free(&builder_arena);
 
-    test_pass pass = test_pass_create(&system.context, (cecs_render_target_info){
+    const cecs_render_target_info target_info = {
         .format = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration.format,
         .sample_count = 1,
         .aspect_ratio = 640.0f / 480.0f,
-    }, &system.world.world.resources.resources_arena);
+    };
+    test_pass pass = test_pass_create(&system.context, target_info, &system.world.world.resources.resources_arena);
     
     WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
     cecs_camera_pack camera = (cecs_camera_pack){
         .bundle = (cecs_camera_bundle){
-            .camera = cecs_camera_create_perspective(3.14f / 2.0f, 100.0f, 0.3f),
-            .position = (cecs_position3_f32){ .x = 0.0f, .y = 0.0f, .z = -2.0f },
+            .camera = cecs_camera_create_perspective(3.14f / 2.0f, 250.0f, 0.3f),
+            .position = (cecs_position3_f32){ .x = 0.0f, .y = 0.0f, .z = -200.0f },
             .orientation = cecs_versor_packed_f32_identity,
         },
         .near = 0.3f,
@@ -187,9 +188,28 @@ int main(void) {
             .w = 0.0f,
         }));
 
+        const cecs_radians_f32 angle = (float)fmod(t_sec, 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647093844609550582231725359408128481117450284102701938521105559644622948954930381964428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273724587006606315588174881520920962829254091715364367892590360011330530548820466521384146951941511609433057270365759591953092186117381932611793105118548074462379962749567351885752724891227938183011949129833673362440656643086021394946395224737190702179860943702770539217176293176752384674818467669405132000568127145263560827785771342757789609173637178721468440901224953430146549585371050792279689258923542019956112129021960864034418159813629774771309960518707211349999998372978049951059731732816096318595024459455346908302642522308253344685035261931188171010003137838752886587533208381420617177669147303598253490428755468731159562863882353787593751957781857780532171226806613001927876611195909216420198938095257201065485863278865936153381827968230301952035301852968995773622599413891249721775283479131515574857242454150695950829533116861727855889075098381754637464939319255060400927701671139009848824012858361603563707660104710181942955596198946767837449448255379774726847104047534646208046684259069491293313677028989152104752162056966024058038150193511253382430035587640247496473263914199272604269922796782354781636009341721641219924586315030286182974555706749838505494588586926995690927210797 * 2.0f)
+            - 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647093844609550582231725359408128481117450284102701938521105559644622948954930381964428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273724587006606315588174881520920962829254091715364367892590360011330530548820466521384146951941511609433057270365759591953092186117381932611793105118548074462379962749567351885752724891227938183011949129833673362440656643086021394946395224737190702179860943702770539217176293176752384674818467669405132000568127145263560827785771342757789609173637178721468440901224953430146549585371050792279689258923542019956112129021960864034418159813629774771309960518707211349999998372978049951059731732816096318595024459455346908302642522308253344685035261931188171010003137838752886587533208381420617177669147303598253490428755468731159562863882353787593751957781857780532171226806613001927876611195909216420198938095257201065485863278865936153381827968230301952035301852968995773622599413891249721775283479131515574857242454150695950829533116861727855889075098381754637464939319255060400927701671139009848824012858361603563707660104710181942955596198946767837449448255379774726847104047534646208046684259069491293313677028989152104752162056966024058038150193511253382430035587640247496473263914199272604269922796782354781636009341721641219924586315030286182974555706749838505494588586926995690927210797;
+        const cecs_versor_f32 orientation = cecs_versor_f32_axis_angle((cecs_vec3_f32){ 0.0f, 1.0f, 0.0f }, angle);
+        const cecs_orientation3_f32 orientation_packed = cecs_versor_packed_f32_pack(orientation);
+
+        static const float radius = 200.0f; 
+        const cecs_position3_f32 position = (cecs_position3_f32){
+            .x = (float)sin(angle) * radius,
+            .y = 0.0f,
+            .z = (float)cos(angle) * radius,
+        };
+        camera.bundle.orientation = orientation_packed;
+        camera.bundle.position = position;
+        
+        const cecs_vec3_f32 forward = cecs_versor_f32_rotate(cecs_versor_f32_of(orientation), (cecs_vec3_f32){ 0.0f, 0.0f, 1.0f });
+        const cecs_vec3_f32 to_zero = { -position.x, -position.y, -position.z };
+        printf("forward: %f %f %f\n", forward.x, forward.y, forward.z);
+        printf("to_zero: %f %f %f\n", to_zero.x, to_zero.y, to_zero.z);
+
         cecs_surface_render_target surface_target;
         if (cecs_graphics_context_get_surface_render_target(&system.context, &surface_target)) {
-            test_pass_draw(&pass, &world, &system, &surface_target, camera);
+            test_pass_draw(&pass, &world, &system, &surface_target, &target_info, camera);
             cecs_graphics_context_present_surface_render_target(&system.context, &surface_target);
         } else {
             render_error = true;

@@ -3,7 +3,7 @@
 
 #include <webgpu/webgpu.h>
 #include <cecs_graphics.h>
-#include <cecs_graphics/core/spatial/cecs_camera.h>
+#include <core/spatial/cecs_camera.h>
 
 
 typedef struct test_pass {
@@ -27,20 +27,21 @@ void test_pass_draw(
     const cecs_camera_pack camera
 );
 
-typedef struct position2_f32_attribute {
+typedef struct position3_f32_attribute {
     float x;
     float y;
-} position2_f32_attribute;
-CECS_COMPONENT_DECLARE(position2_f32_attribute);
-WGPUVertexBufferLayout position2_f32_attribute_layout(
+    float z;
+} position3_f32_attribute;
+CECS_COMPONENT_DECLARE(position3_f32_attribute);
+WGPUVertexBufferLayout position3_f32_attribute_layout(
     uint32_t shader_location,
     WGPUVertexAttribute out_attributes[],
     size_t out_attributes_capacity
 );
 
-typedef position2_f32_attribute instance_position2_f32_attribute;
-CECS_COMPONENT_DECLARE(instance_position2_f32_attribute);
-WGPUVertexBufferLayout instance_position2_f32_attribute_layout(
+typedef position3_f32_attribute instance_position3_f32_attribute;
+CECS_COMPONENT_DECLARE(instance_position3_f32_attribute);
+WGPUVertexBufferLayout instance_position3_f32_attribute_layout(
     const uint32_t shader_location,
     const WGPUVertexStepMode step_mode,
     WGPUVertexAttribute out_attributes[const],

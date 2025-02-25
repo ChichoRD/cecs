@@ -165,10 +165,10 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .module = shader_module,
                 .bufferCount = 5,
                 .buffers = (WGPUVertexBufferLayout[]) {
-                    position2_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
+                    position3_f32_attribute_layout(0, (WGPUVertexAttribute[1]){0}, 1),
                     uv2_f32_attribute_layout(1, (WGPUVertexAttribute[1]){0}, 1),
                     
-                    instance_position2_f32_attribute_layout(2, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
+                    instance_position3_f32_attribute_layout(2, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
                     cecs_texture_subrect2_f32_attribute_layout(3, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
                     cecs_texture_in_bank_range2_u8_attribute_layout(4, WGPUVertexStepMode_Instance, (WGPUVertexAttribute[1]){0}, 1),
                 },
@@ -207,6 +207,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
         .local_bgl = local_bgl,
         .local_texture_bgl = local_texture_bgl,
         .global_bg = global_bg,
+        .global_uniform_buffer = global_uniform_buffer,
     };
 }
 
@@ -325,7 +326,7 @@ static void test_pass_draw_inner(
     wgpuRenderPassEncoderSetPipeline(render_pass, pass->pipeline);
 
     cecs_buffer_storage_attachment *position_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
-        position2_f32_attribute,
+        position3_f32_attribute,
         &system->world
     );
     cecs_buffer_storage_attachment *uv_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
@@ -333,7 +334,7 @@ static void test_pass_draw_inner(
         &system->world
     );
     cecs_buffer_storage_attachment *instance_position_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
-        instance_position2_f32_attribute,
+        instance_position3_f32_attribute,
         &system->world
     );
     cecs_buffer_storage_attachment *instance_subrect_buffer = CECS_GRAPHICS_WORLD_GET_BUFFER_ATTACHMENTS(
@@ -391,13 +392,13 @@ static void test_pass_draw_inner(
         // TODO: jump by batches instead of by mesh
         cecs_component_iterator_current(&it, &handle);
         cecs_raw_stream position = cecs_mesh_get_raw_vertex_stream(
-            *handle.cecs_mesh_component, sizeof(position2_f32_attribute), position_buffer
+            *handle.cecs_mesh_component, sizeof(position3_f32_attribute), position_buffer
         );
         cecs_raw_stream uv = cecs_mesh_get_raw_vertex_stream(
             *handle.cecs_mesh_component, sizeof(uv2_f32_attribute), uv_buffer
         );
         cecs_raw_stream instance_position = cecs_instance_group_get_raw_instance_stream(
-            *handle.cecs_instance_group_component, sizeof(instance_position2_f32_attribute), instance_position_buffer
+            *handle.cecs_instance_group_component, sizeof(instance_position3_f32_attribute), instance_position_buffer
         );
         cecs_raw_stream instance_subrect = cecs_instance_group_get_raw_instance_stream(
             *handle.cecs_instance_group_component, sizeof(cecs_texture_subrect2_f32_attribute), instance_subrect_buffer
@@ -539,29 +540,29 @@ void test_pass_draw(
     wgpuCommandBufferRelease(render_command_buffer);
 }
 
-CECS_COMPONENT_DEFINE(position2_f32_attribute);
-WGPUVertexBufferLayout position2_f32_attribute_layout(
+CECS_COMPONENT_DEFINE(position3_f32_attribute);
+WGPUVertexBufferLayout position3_f32_attribute_layout(
     uint32_t shader_location,
     WGPUVertexAttribute out_attributes[],
     size_t out_attributes_capacity
 ) {
     assert(out_attributes_capacity >= 1 && "error: out attributes capacity must be at least 1");
     out_attributes[0] = (WGPUVertexAttribute) {
-        .format = WGPUVertexFormat_Float32x2,
+        .format = WGPUVertexFormat_Float32x3,
         .offset = 0,
         .shaderLocation = shader_location,
     };
 
     return (WGPUVertexBufferLayout) {
-        .arrayStride = sizeof(position2_f32_attribute),
+        .arrayStride = sizeof(position3_f32_attribute),
         .stepMode = WGPUVertexStepMode_Vertex,
         .attributeCount = 1,
         .attributes = out_attributes,
     };
 }
 
-CECS_COMPONENT_DEFINE(instance_position2_f32_attribute);
-WGPUVertexBufferLayout instance_position2_f32_attribute_layout(
+CECS_COMPONENT_DEFINE(instance_position3_f32_attribute);
+WGPUVertexBufferLayout instance_position3_f32_attribute_layout(
     const uint32_t shader_location,
     const WGPUVertexStepMode step_mode,
     WGPUVertexAttribute out_attributes[const],
@@ -569,13 +570,13 @@ WGPUVertexBufferLayout instance_position2_f32_attribute_layout(
 ) {
     assert(out_attributes_capacity >= 1 && "error: out attributes capacity must be at least 1");
     out_attributes[0] = (WGPUVertexAttribute) {
-        .format = WGPUVertexFormat_Float32x2,
+        .format = WGPUVertexFormat_Float32x3,
         .offset = 0,
         .shaderLocation = shader_location,
     };
 
     return (WGPUVertexBufferLayout) {
-        .arrayStride = sizeof(instance_position2_f32_attribute),
+        .arrayStride = sizeof(instance_position3_f32_attribute),
         .stepMode = step_mode,
         .attributeCount = 1,
         .attributes = out_attributes,
