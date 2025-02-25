@@ -59,6 +59,13 @@ inline cecs_vec3_f32 cecs_mat4_f32_mul_vec3(const cecs_mat4_f32 m, const cecs_ve
         .z = m.e0.z * v.x + m.e1.z * v.y + m.e2.z * v.z
     };
 }
+inline cecs_vec3_f32 cecs_mat4_f32_mul_vec3_ptr(const cecs_mat4_f32 *m, const cecs_vec3_f32 v) {
+    return (cecs_vec3_f32){
+        .x = m->e0.x * v.x + m->e1.x * v.y + m->e2.x * v.z,
+        .y = m->e0.y * v.x + m->e1.y * v.y + m->e2.y * v.z,
+        .z = m->e0.z * v.x + m->e1.z * v.y + m->e2.z * v.z
+    };
+}
 
 inline cecs_mat4_f32 cecs_mat4_f32_scale(const cecs_mat4_f32 m, const float s) {
     return (cecs_mat4_f32){

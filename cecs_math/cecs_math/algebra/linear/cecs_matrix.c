@@ -24,6 +24,7 @@ cecs_mat4_f32 cecs_mat4_f32_into_columns(const float raw[16]) {
 extern inline cecs_mat4_f32 cecs_mat4_f32_mul(const cecs_mat4_f32 a, const cecs_mat4_f32 b);
 extern inline cecs_vec4_f32 cecs_mat4_f32_mul_vec4(const cecs_mat4_f32 m, const cecs_vec4_f32 v);
 extern inline cecs_vec3_f32 cecs_mat4_f32_mul_vec3(const cecs_mat4_f32 m, const cecs_vec3_f32 v);
+extern inline cecs_vec3_f32 cecs_mat4_f32_mul_vec3_ptr(const cecs_mat4_f32 *m, const cecs_vec3_f32 v);
 
 extern inline float cecs_mat4_f32_trace(const cecs_mat4_f32 m);
 extern inline cecs_mat4_f32 cecs_mat4_f32_transpose(const cecs_mat4_f32 m);
