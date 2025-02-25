@@ -44,9 +44,9 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
     WGPUBuffer global_uniform_buffer = cecs_wgpu_buffer_create_with_data(
         context->device,
         WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
-        sizeof(camera_matrix_uniform),
-        &(camera_matrix_uniform){0},
-        sizeof(camera_matrix_uniform)
+        sizeof(camera_bundle_uniform),
+        &(camera_bundle_uniform){0},
+        sizeof(camera_bundle_uniform)
     );
 
     WGPUBindGroupLayout local_bgl = wgpuDeviceCreateBindGroupLayout(context->device, &(WGPUBindGroupLayoutDescriptor) {
@@ -104,7 +104,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .buffer = (WGPUBufferBindingLayout) {
                     .type = WGPUBufferBindingType_Uniform,
                     .hasDynamicOffset = false,
-                    .minBindingSize = sizeof(camera_matrix_uniform),
+                    .minBindingSize = sizeof(camera_bundle_uniform),
                     .nextInChain = NULL,
                 },
             },
@@ -127,7 +127,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .binding = 0,
                 .buffer = global_uniform_buffer,
                 .offset = 0,
-                .size = sizeof(camera_matrix_uniform),
+                .size = sizeof(camera_bundle_uniform),
             },
             {
                 .binding = 1,
@@ -294,6 +294,8 @@ static void test_pass_draw_inner(
     cecs_world *world,
     cecs_graphics_system *system,
     cecs_render_target *target,
+    const cecs_render_target_info *target_info,
+    const cecs_camera_pack camera,
     WGPURenderPassEncoder render_pass,
     WGPUBindGroup out_local_bind_groups[],
     size_t in_local_bind_groups_capacity,
@@ -343,7 +345,17 @@ static void test_pass_draw_inner(
         &system->world
     );
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
-    wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
+    
+    {
+        //assert(CECS_IS_ALIGNED_TO_POW2(sizeof(cecs_camera_bundle), CECS_WGPU_COPY_BUFFER_ALIGNMENT));
+        assert(CECS_IS_ALIGNED_TO_POW2(sizeof(cecs_camera_raw_bundle), CECS_WGPU_COPY_BUFFER_ALIGNMENT));
+        const cecs_camera_raw_bundle raw_bundle = cecs_camera_raw_bundle_from_pack(
+            camera,
+            target_info->aspect_ratio
+        );
+        wgpuQueueWriteBuffer(system->context.queue, pass->global_uniform_buffer, 0, &raw_bundle, sizeof(cecs_camera_raw_bundle));
+        wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
+    }
 
     // cecs_component_storage *texture_storage = &cecs_world_components_get_component_storage_expect(
     //     &system->world.world.components, CECS_COMPONENT_ID(cecs_texture)
@@ -447,7 +459,14 @@ static void test_pass_draw_inner(
     cecs_arena_free(&frame_arena);
 }
 
-void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *system, cecs_render_target *target) {
+void test_pass_draw(
+    test_pass *pass,
+    cecs_world *world,
+    cecs_graphics_system *system,
+    cecs_render_target *target,
+    const cecs_render_target_info *target_info,
+    const cecs_camera_pack camera
+) {
     // TODO: make check and sync procedure
 
     const WGPUCommandEncoderDescriptor render_pass_encoder_descriptor = {
@@ -485,7 +504,16 @@ void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *sy
 
     WGPUBindGroup local_bind_groups[2];
     size_t local_bind_groups_count;
-    test_pass_draw_inner(pass, world, system, target, render_pass, local_bind_groups, 2, &local_bind_groups_count);
+    test_pass_draw_inner(
+        pass,
+        world,
+        system,
+        target,
+        target_info,
+        camera,
+        render_pass,
+        local_bind_groups, 2, &local_bind_groups_count
+    );
 
     wgpuRenderPassEncoderEnd(render_pass);
     for (size_t i = 0; i < local_bind_groups_count; ++i) {
@@ -596,7 +624,7 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
     };
 }
 
-CECS_COMPONENT_DEFINE(camera_matrix_uniform);
+CECS_COMPONENT_DEFINE(camera_bundle_uniform);
 CECS_COMPONENT_DEFINE(color4_f32_uniform);
 
 CECS_COMPONENT_DEFINE(position4_f32_uniform);

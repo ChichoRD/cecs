@@ -17,12 +17,33 @@ struct vertex_output {
     @location(2) texture_range: vec2<u32>,
 };
 
-@group(0) @binding(0) var<uniform> view_proj: mat4x4<f32>;
+
+struct camera {
+    fov: f32,
+    depth_range: f32,
+};
+
+// TODO: pack
+struct camera_bundle {
+    orientation: vec3<f32>,
+    position: vec3<f32>,
+    //padding: f32,
+    cam: camera,
+};
+
+struct camera_raw_bundle {
+    projection_pack: vec4<f32>,
+    orientation: vec4<f32>,
+    position: vec3<f32>,
+};
+
+@group(0) @binding(0) var<uniform> cam: camera_raw_bundle;
 @group(1) @binding(1) var<uniform> position: vec4<f32>;
 @vertex
 fn vs_main(v_input: vertex_input, i_input: instance_input) -> vertex_output {
     var out: vertex_output;
     //let up_alignment = dot(position.xy + i_input.position, vec2f(0.0, 1.0)) * 0.5 + 0.5;
+    
     
     out.position = vec4<f32>(v_input.position * 0.005 + position.xy + i_input.position, 0.0, 1.0);
     out.uv = v_input.uv;

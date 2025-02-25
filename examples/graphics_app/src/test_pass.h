@@ -3,6 +3,8 @@
 
 #include <webgpu/webgpu.h>
 #include <cecs_graphics.h>
+#include <cecs_graphics/core/spatial/cecs_camera.h>
+
 
 typedef struct test_pass {
     WGPURenderPipeline pipeline;
@@ -16,7 +18,14 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
 void test_pass_free(test_pass *pass);
 
 // TODO: array of targets
-void test_pass_draw(test_pass *pass, cecs_world *world, cecs_graphics_system *system, cecs_render_target *target);
+void test_pass_draw(
+    test_pass *pass,
+    cecs_world *world,
+    cecs_graphics_system *system,
+    cecs_render_target *target,
+    const cecs_render_target_info *target_info,
+    const cecs_camera_pack camera
+);
 
 typedef struct position2_f32_attribute {
     float x;
@@ -61,9 +70,11 @@ WGPUVertexBufferLayout color3_f32_attribute_layout(
     size_t out_attributes_capacity
 );
 
-typedef float camera_matrix_uniform[4][4];
-CECS_COMPONENT_DECLARE(camera_matrix_uniform);
-CECS_UNIFORM_IS_ALIGNED_STATIC_ASSERT(camera_matrix_uniform);
+typedef struct camera_bundle_uniform {
+    cecs_camera_raw_bundle bundle;
+} camera_bundle_uniform;
+CECS_COMPONENT_DECLARE(camera_bundle_uniform);
+CECS_UNIFORM_IS_ALIGNED_STATIC_ASSERT(camera_bundle_uniform);
 
 typedef union color4_f32_uniform {
     struct {

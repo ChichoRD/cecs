@@ -88,6 +88,8 @@ typedef struct cecs_versor_packed_f32 {
     float j;
     float k;
 } cecs_versor_packed_f32;
+extern const cecs_versor_packed_f32 cecs_versor_packed_f32_identity;
+
 inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack(const cecs_versor_f32 uq) {
     return (cecs_versor_packed_f32){uq.i, uq.j, uq.k};
 }

@@ -30,6 +30,7 @@ extern inline cecs_quaternion_f32 cecs_quaternion_f32_rcp(const cecs_quaternion_
 extern inline cecs_versor_f32 cecs_versor_f32_of_norm(const cecs_quaternion_f32 q, const float norm);
 extern inline cecs_versor_f32 cecs_versor_f32_of(const cecs_quaternion_f32 q);
 
-
+#define CECS_VERSOR_PACKED_F32_IDENTITY {0.0f, 0.0f, 0.0f}
+const cecs_versor_packed_f32 cecs_versor_packed_f32_identity = CECS_VERSOR_PACKED_F32_IDENTITY;
 extern inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack(const cecs_versor_f32 q);
 extern inline cecs_versor_f32 cecs_versor_f32_unpack(const cecs_versor_packed_f32 q);

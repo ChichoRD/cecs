@@ -156,6 +156,15 @@ int main(void) {
     }, &system.world.world.resources.resources_arena);
     
     WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
+    cecs_camera_pack camera = (cecs_camera_pack){
+        .bundle = (cecs_camera_bundle){
+            .camera = cecs_camera_create_perspective(3.14f / 2.0f, 100.0f, 0.3f),
+            .position = (cecs_position3_f32){ .x = 0.0f, .y = 0.0f, .z = -2.0f },
+            .orientation = cecs_versor_packed_f32_identity,
+        },
+        .near = 0.3f,
+        .flags = cecs_camera_options_perspective,
+    };
     bool render_error = false;
     while (!glfwWindowShouldClose(window) && !render_error) {
         glfwPollEvents();
@@ -180,7 +189,7 @@ int main(void) {
 
         cecs_surface_render_target surface_target;
         if (cecs_graphics_context_get_surface_render_target(&system.context, &surface_target)) {
-            test_pass_draw(&pass, &world, &system, &surface_target);
+            test_pass_draw(&pass, &world, &system, &surface_target, camera);
             cecs_graphics_context_present_surface_render_target(&system.context, &surface_target);
         } else {
             render_error = true;
