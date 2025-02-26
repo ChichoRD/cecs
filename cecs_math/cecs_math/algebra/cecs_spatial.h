@@ -20,6 +20,15 @@ inline cecs_versor_f32 cecs_versor_f32_axis_angle(const cecs_vec3_f32 axis, cons
         .r = cosf(half_angle)
     };
 }
+inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle) {
+    const cecs_radians_f32 half_angle = angle * 0.5f;
+    const float s = sinf(half_angle);
+    return (cecs_versor_packed_f32){
+        .i = axis.x * s,
+        .j = axis.y * s,
+        .k = axis.z * s
+    };
+}
 
 inline cecs_vec3_f32 cecs_versor_f32_rotate(const cecs_versor_f32 uq, const cecs_vec3_f32 v) {
     const cecs_vec3_f32 u = cecs_vec3_f32_add(
@@ -52,20 +61,88 @@ inline cecs_quaternion_f32 cecs_quaternion_f32_arc(const cecs_vec3_f32 to, const
     };
 }
 inline cecs_versor_f32 cecs_versor_f32_arc(const cecs_vec3_f32 to, const cecs_vec3_f32 from) {
-    const float k_cos_theta = cecs_vec3_f32_dot(from, to);
-    const float k = sqrtf(cecs_vec3_f32_dot(from, from) * cecs_vec3_f32_dot(to, to));
-
-    const cecs_vec3_f32 axis = cecs_vec3_f32_cross(from, to);
-    return cecs_versor_f32_of_norm(
-        (cecs_quaternion_f32){
-            .i = axis.x,
-            .j = axis.y,
-            .k = axis.z,
-            .r = k_cos_theta
-        },
-        k
-    );
+    return cecs_versor_f32_of(cecs_quaternion_f32_arc(to, from));
 }
+inline cecs_versor_f32 cecs_versor_f32_look_z(const cecs_vec3_f32 forward) {
+    // k_cos_theta = forward.z
+    const float z_sqr = forward.z * forward.z;
+    const cecs_vec2_f32 axis_xy = (cecs_vec2_f32){
+        .x = -forward.y,
+        .y = forward.x
+        // z = 0.0f
+    };
+
+    const float axis_xy_sqr = axis_xy.x * axis_xy.x + axis_xy.y * axis_xy.y;
+    const float k_sqr = axis_xy_sqr + z_sqr;
+
+    // cecs_versor_f32_of_norm(
+    //     (cecs_quaternion_f32){
+    //         .i = axis.x,         -> -forward.y
+    //         .j = axis.y,         -> forward.x
+    //         .k = axis.z,         -> 0.0f
+    //         .r = k_cos_theta     -> forward.z
+    //     },
+    //     k                        -> cecs_vec3_f32_length(forward)
+    // );
+
+    // const cecs_quaternion_f32 q = {
+    //     .i = axis_xy.x,
+    //     .j = axis_xy.y,
+    //     .k = 0.0f,
+    //     .r = forward.z + k
+    // };
+
+    // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + (forward.z + k)^2
+    // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + forward.z^2 + 2 * forward.z * k + k^2
+    const float k = sqrtf(k_sqr);
+    const float norm = 1.0f / sqrtf(axis_xy_sqr + z_sqr + 2.0f * forward.z * k + k_sqr);
+    return (cecs_versor_f32) {
+        .i = axis_xy.x * norm,
+        .j = axis_xy.y * norm,
+        .k = 0.0f,
+        .r = (forward.z + k) * norm
+    };
+}
+inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_look_z(const cecs_vec3_f32 forward) {
+    // k_cos_theta = forward.z
+    const float z_sqr = forward.z * forward.z;
+    const cecs_vec2_f32 axis_xy = (cecs_vec2_f32){
+        .x = -forward.y,
+        .y = forward.x
+        // z = 0.0f
+    };
+
+    const float axis_xy_sqr = axis_xy.x * axis_xy.x + axis_xy.y * axis_xy.y;
+    const float k_sqr = axis_xy_sqr + z_sqr;
+
+    // cecs_versor_f32_of_norm(
+    //     (cecs_quaternion_f32){
+    //         .i = axis.x,         -> -forward.y
+    //         .j = axis.y,         -> forward.x
+    //         .k = axis.z,         -> 0.0f
+    //         .r = k_cos_theta     -> forward.z
+    //     },
+    //     k                        -> cecs_vec3_f32_length(forward)
+    // );
+
+    // const cecs_quaternion_f32 q = {
+    //     .i = axis_xy.x,
+    //     .j = axis_xy.y,
+    //     .k = 0.0f,
+    //     .r = forward.z + k
+    // };
+
+    // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + (forward.z + k)^2
+    // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + forward.z^2 + 2 * forward.z * k + k^2
+    const float k = sqrtf(k_sqr);
+    const float norm = 1.0f / sqrtf(axis_xy_sqr + z_sqr + 2.0f * forward.z * k + k_sqr);
+    return (cecs_versor_packed_f32) {
+        .i = axis_xy.x * norm,
+        .j = axis_xy.y * norm,
+        .k = 0.0f,
+    };
+} 
+
 
 
 typedef cecs_vec4_f32 cecs_hcoord4_f32;

@@ -1,10 +1,13 @@
 #include "cecs_spatial.h"
 
 extern inline cecs_versor_f32 cecs_versor_f32_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle);
+extern inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle);
 extern inline cecs_vec3_f32 cecs_versor_f32_rotate(const cecs_versor_f32 uq, const cecs_vec3_f32 v);
 
 extern inline cecs_quaternion_f32 cecs_quaternion_f32_arc(const cecs_vec3_f32 to, const cecs_vec3_f32 from);
 extern inline cecs_versor_f32 cecs_versor_f32_arc(const cecs_vec3_f32 to, const cecs_vec3_f32 from);
+extern inline cecs_versor_f32 cecs_versor_f32_look_z(const cecs_vec3_f32 forward);
+extern inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_look_z(const cecs_vec3_f32 forward);
 
 
 extern inline cecs_hpoint3_f32 cecs_hpoint3_f32_pack(const cecs_hcoord4_f32 coord);
