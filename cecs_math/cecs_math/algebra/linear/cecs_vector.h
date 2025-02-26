@@ -179,23 +179,23 @@ inline float cecs_vec4_f32_length(const cecs_vec4_f32 u) {
     return sqrtf(cecs_vec4_f32_dot(u, u));
 }
 
-
-inline cecs_vec2_f32 cecs_vec2_f32_normalize_length(const cecs_vec2_f32 u, const float length) {
+// TODO: make bri'ish
+inline cecs_vec2_f32 cecs_vec2_f32_normalize_from_length(const cecs_vec2_f32 u, const float length) {
     return cecs_vec2_f32_div(u, length);
 }
-inline cecs_vec3_f32 cecs_vec3_f32_normalize_length(const cecs_vec3_f32 u, const float length) {
+inline cecs_vec3_f32 cecs_vec3_f32_normalize_from_length(const cecs_vec3_f32 u, const float length) {
     return cecs_vec3_f32_div(u, length);
 }
-inline cecs_vec4_f32 cecs_vec4_f32_normalize_length(const cecs_vec4_f32 u, const float length) {
+inline cecs_vec4_f32 cecs_vec4_f32_normalize_from_length(const cecs_vec4_f32 u, const float length) {
     return cecs_vec4_f32_div(u, length);
 }
 inline cecs_vec2_f32 cecs_vec2_f32_normalize(const cecs_vec2_f32 u) {
-    return cecs_vec2_f32_normalize_length(u, cecs_vec2_f32_length(u));
+    return cecs_vec2_f32_normalize_from_length(u, cecs_vec2_f32_length(u));
 }
 inline cecs_vec3_f32 cecs_vec3_f32_normalize(const cecs_vec3_f32 u) {
-    return cecs_vec3_f32_normalize_length(u, cecs_vec3_f32_length(u));
+    return cecs_vec3_f32_normalize_from_length(u, cecs_vec3_f32_length(u));
 }
 inline cecs_vec4_f32 cecs_vec4_f32_normalize(const cecs_vec4_f32 u) {
-    return cecs_vec4_f32_normalize_length(u, cecs_vec4_f32_length(u));
+    return cecs_vec4_f32_normalize_from_length(u, cecs_vec4_f32_length(u));
 }
 #endif

@@ -95,12 +95,12 @@ inline cecs_versor_f32 cecs_versor_f32_look_z(const cecs_vec3_f32 forward) {
     // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + (forward.z + k)^2
     // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + forward.z^2 + 2 * forward.z * k + k^2
     const float k = sqrtf(k_sqr);
-    const float norm = 1.0f / sqrtf(axis_xy_sqr + z_sqr + 2.0f * forward.z * k + k_sqr);
+    const float norm_rcp = 1.0f / sqrtf(axis_xy_sqr + z_sqr + 2.0f * forward.z * k + k_sqr);
     return (cecs_versor_f32) {
-        .i = axis_xy.x * norm,
-        .j = axis_xy.y * norm,
+        .i = axis_xy.x * norm_rcp,
+        .j = axis_xy.y * norm_rcp,
         .k = 0.0f,
-        .r = (forward.z + k) * norm
+        .r = (forward.z + k) * norm_rcp
     };
 }
 inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_look_z(const cecs_vec3_f32 forward) {
@@ -135,14 +135,28 @@ inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_look_z(const cecs_vec3
     // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + (forward.z + k)^2
     // |q|^2 = axis_xy.x^2 + axis_xy.y^2 + forward.z^2 + 2 * forward.z * k + k^2
     const float k = sqrtf(k_sqr);
-    const float norm = 1.0f / sqrtf(axis_xy_sqr + z_sqr + 2.0f * forward.z * k + k_sqr);
+    const float norm_rcp = 1.0f / sqrtf(axis_xy_sqr + z_sqr + 2.0f * forward.z * k + k_sqr);
     return (cecs_versor_packed_f32) {
-        .i = axis_xy.x * norm,
-        .j = axis_xy.y * norm,
+        .i = axis_xy.x * norm_rcp,
+        .j = axis_xy.y * norm_rcp,
         .k = 0.0f,
     };
 } 
 
+inline cecs_versor_f32 cecs_versor_f32_look_z_up(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    const cecs_vec3_f32 front = cecs_vec3_f32_normalize(forward); 
+    const cecs_vec3_f32 left = cecs_vec3_f32_normalize(cecs_vec3_f32_cross(upwards, front));
+    const cecs_vec3_f32 up = cecs_vec3_f32_cross(front, left);
+    
+    const float k = sqrtf(1.0f + left.x + up.y + front.z) * 0.5f;
+    const float k4_rcp = 0.25f / k;
+    return (cecs_quaternion_f32){
+        .r = k,
+        .i = (up.z - front.y) * k4_rcp,
+        .j = (front.x - left.z) * k4_rcp,
+        .k = (left.y - up.x) * k4_rcp,
+    };
+}
 
 
 typedef cecs_vec4_f32 cecs_hcoord4_f32;
