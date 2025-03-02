@@ -3,6 +3,8 @@
 
 #include <math.h>
 #include <assert.h>
+#include <stddef.h>
+#include "../../relations/cecs_ordering.h"
 
 typedef struct cecs_quaternion_f32 {
     float i;
@@ -74,12 +76,29 @@ inline cecs_quaternion_f32 cecs_quaternion_f32_rcp(const cecs_quaternion_f32 q) 
 }
 
 
-typedef cecs_quaternion_f32 cecs_versor_f32;
+typedef struct cecs_versor_f32 {
+    float i;
+    float j;
+    float k;
+    float r;
+} cecs_versor_f32;
+static_assert(sizeof(cecs_versor_f32) == sizeof(cecs_quaternion_f32), "static error: cecs_versor_f32 must be the same size as cecs_quaternion_f32");
+
+static_assert(offsetof(cecs_versor_f32, i) == offsetof(cecs_quaternion_f32, i), "static error: cecs_versor_f32.i must be at the same offset as cecs_quaternion_f32.i");
+static_assert(offsetof(cecs_versor_f32, j) == offsetof(cecs_quaternion_f32, j), "static error: cecs_versor_f32.j must be at the same offset as cecs_quaternion_f32.j");
+static_assert(offsetof(cecs_versor_f32, k) == offsetof(cecs_quaternion_f32, k), "static error: cecs_versor_f32.k must be at the same offset as cecs_quaternion_f32.k");
+static_assert(offsetof(cecs_versor_f32, r) == offsetof(cecs_quaternion_f32, r), "static error: cecs_versor_f32.r must be at the same offset as cecs_quaternion_f32.r");
+
 inline cecs_versor_f32 cecs_versor_f32_of_norm(const cecs_quaternion_f32 q, const float norm) {
-    return cecs_quaternion_f32_div(q, norm);
+    const cecs_quaternion_f32 uq = cecs_quaternion_f32_div(q, norm);
+    return (cecs_versor_f32){uq.i, uq.j, uq.k, uq.r};
 }
 inline cecs_versor_f32 cecs_versor_f32_of(const cecs_quaternion_f32 q) {
     return cecs_versor_f32_of_norm(q, cecs_quaternion_f32_norm(q));
+}
+
+inline cecs_quaternion_f32 cecs_quaternion_f32_as(const cecs_versor_f32 uq) {
+    return (cecs_quaternion_f32){uq.i, uq.j, uq.k, uq.r};
 }
 
 
@@ -88,13 +107,18 @@ typedef struct cecs_versor_packed_f32 {
     float j;
     float k;
 } cecs_versor_packed_f32;
+static_assert(offsetof(cecs_versor_packed_f32, i) == offsetof(cecs_versor_f32, i), "static error: cecs_versor_packed_f32.i must be at the same offset as cecs_versor_f32.i");
+static_assert(offsetof(cecs_versor_packed_f32, j) == offsetof(cecs_versor_f32, j), "static error: cecs_versor_packed_f32.j must be at the same offset as cecs_versor_f32.j");
+static_assert(offsetof(cecs_versor_packed_f32, k) == offsetof(cecs_versor_f32, k), "static error: cecs_versor_packed_f32.k must be at the same offset as cecs_versor_f32.k");
+
 extern const cecs_versor_packed_f32 cecs_versor_packed_f32_identity;
 
 inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack(const cecs_versor_f32 uq) {
     return (cecs_versor_packed_f32){uq.i, uq.j, uq.k};
 }
 inline cecs_versor_f32 cecs_versor_f32_unpack(const cecs_versor_packed_f32 uq) {
-    return (cecs_versor_f32){uq.i, uq.j, uq.k, sqrtf(1.0f - uq.i * uq.i - uq.j * uq.j - uq.k * uq.k)};
+    const float packed_norm_sqr = uq.i * uq.i + uq.j * uq.j + uq.k * uq.k;
+    return (cecs_versor_f32){uq.i, uq.j, uq.k, sqrtf(1.0f - cecs_min_f32(1.0f, packed_norm_sqr))};
 }
 
 #endif

@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
 #include <cecs_graphics.h>
+#include <memory.h>
 
 #include <math.h>
 #include <time.h>
@@ -54,6 +55,28 @@ static cecs_mesh_builder *mesh_builder_configure_square(cecs_mesh_builder *build
     return builder;
 }
 
+static cecs_quaternion_f32 rotate_camera_from_mouse_delta(const cecs_versor_f32 camera_uq, const cecs_vec2_f32 mouse_delta, const cecs_vec3_f32 upward) {
+    const float mouse_delta_length_sqr = cecs_vec2_f32_dot(mouse_delta, mouse_delta);
+    const float mouse_delta_length = sqrtf(mouse_delta_length_sqr);
+    const cecs_vec2_f32 mouse_delta_normalized = cecs_vec2_f32_normalize_from_length(mouse_delta, mouse_delta_length);
+    
+    // fwd^T = { u: u * fwd = 0}
+    // -> u.x * fwd.x + u.y + fwd.y + u.z * fwd.z = 0
+    // -> u.z = (-u.x * fwd.x - u.y * fwd.y) / fwd.z
+    const cecs_vec3_f32 forward = cecs_versor_f32_rotate(camera_uq, (cecs_vec3_f32){ 0.0f, 0.0f, 1.0f });
+    const cecs_vec3_f32 ortho = (cecs_vec3_f32){
+        mouse_delta_normalized.x * forward.z,
+        mouse_delta_normalized.y * forward.z,
+        -mouse_delta_normalized.x * forward.x - mouse_delta_normalized.y * forward.y
+    };
+
+    cecs_quaternion_f32 arc = cecs_quaternion_f32_arc(ortho, forward);
+    arc.r *= 64.0f / cecs_max_f32(1.0f, mouse_delta_length);
+
+    const cecs_vec3_f32 new_forward = cecs_versor_f32_rotate(cecs_versor_f32_of(arc), forward);
+    return cecs_quaternion_f32_look_z_up(new_forward, upward);
+}
+
 int main(void) {
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
@@ -62,7 +85,7 @@ int main(void) {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // <-- extra info for glfwCreateWindow
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow *window = glfwCreateWindow(640, 480, "Learn WebGPU", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(640, 480, "cecs_graphics with WebGPU!", NULL, NULL);
     if (window == NULL) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
@@ -174,6 +197,9 @@ int main(void) {
         .flags = cecs_camera_options_perspective,
     };
     bool render_error = false;
+    double mouse_x = 0.0;
+    double mouse_y = 0.0;
+    glfwGetCursorPos(window, &mouse_x, &mouse_y);
     while (!glfwWindowShouldClose(window) && !render_error) {
         glfwPollEvents();
 
@@ -206,12 +232,38 @@ int main(void) {
             .z = (float)sin(-angle - 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647093844609550582231725359408128481117450284102701938521105559644622948954930381964428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273724587006606315588174881520920962829254091715364367892590360011330530548820466521384146951941511609433057270365759591953092186117381932611793105118548074462379962749567351885752724891227938183011949129833673362440656643086021394946395224737190702179860943702770539217176293176752384674818467669405132000568127145263560827785771342757789609173637178721468440901224953430146549585371050792279689258923542019956112129021960864034418159813629774771309960518707211349999998372978049951059731732816096318595024459455346908302642522308253344685035261931188171010003137838752886587533208381420617177669147303598253490428755468731159562863882353787593751957781857780532171226806613001927876611195909216420198938095257201065485863278865936153381827968230301952035301852968995773622599413891249721775283479131515574857242454150695950829533116861727855889075098381754637464939319255060400927701671139009848824012858361603563707660104710181942955596198946767837449448255379774726847104047534646208046684259069491293313677028989152104752162056966024058038150193511253382430035587640247496473263914199272604269922796782354781636009341721641219924586315030286182974555706749838505494588586926995690927210797 * 0.5) * radius,
         };
         const cecs_vec3_f32 forward = (cecs_vec3_f32){-position.x, -position.y, -position.z};
-        const cecs_orientation3_f32 orientation_packed = cecs_versor_packed_f32_pack(cecs_versor_f32_look_z_up(
+        const cecs_orientation4_f32 orientation = cecs_versor_f32_look_z_up(
             forward,
             (cecs_vec3_f32){0.0f, 1.0f, 0.0f}
-        ));
-        camera.bundle.position = position;
-        camera.bundle.orientation = orientation_packed;
+        );
+
+        double mouse_x_new;
+        double mouse_y_new;
+        glfwGetCursorPos(window, &mouse_x_new, &mouse_y_new);
+        cecs_vec2_f32 mouse_delta = (cecs_vec2_f32){
+            .x = (float)(mouse_x_new - mouse_x) * 0.3f,
+            .y = (float)(mouse_y - mouse_y_new) * 0.3f,
+        };
+        if (mouse_delta.x != 0.0 || mouse_delta.y != 0.0) {
+            const cecs_versor_f32 camera_uq = cecs_versor_f32_unpack(camera.bundle.orientation);
+            const cecs_quaternion_f32 displaced_orientation = (rotate_camera_from_mouse_delta(
+                camera_uq,
+                mouse_delta,
+                (cecs_vec3_f32){0.0f, 1.0f, 0.0f}
+            ));
+
+            const cecs_versor_f32 displaced_orientation_normalized = cecs_versor_f32_of(displaced_orientation);
+            const cecs_orientation3_f32 orientation_packed = cecs_versor_packed_f32_pack(displaced_orientation_normalized);
+
+            assert(!isnan(displaced_orientation_normalized.i));
+            camera.bundle.orientation = orientation_packed;
+        }
+        //camera.bundle.orientation = cecs_versor_packed_f32_pack(orientation);
+        
+        mouse_x = mouse_x_new;
+        mouse_y = mouse_y_new;
+        //camera.bundle.position = position;
+
         cecs_surface_render_target surface_target;
         if (cecs_graphics_context_get_surface_render_target(&system.context, &surface_target)) {
             test_pass_draw(&pass, &world, &system, &surface_target, &target_info, camera);

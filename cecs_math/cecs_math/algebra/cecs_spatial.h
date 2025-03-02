@@ -30,6 +30,16 @@ inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_axis_angle(const cecs_
     };
 }
 
+inline cecs_quaternion_f32 cecs_quaternion_f32_axis_cos(const cecs_vec3_f32 axis, const float cos_angle) {
+    const float sin_angle = sqrtf(1.0f - cos_angle * cos_angle);
+    return (cecs_quaternion_f32){
+        .i = axis.x * sin_angle,
+        .j = axis.y * sin_angle,
+        .k = axis.z * sin_angle,
+        .r = cos_angle + 1.0f
+    };
+}
+
 inline cecs_vec3_f32 cecs_versor_f32_rotate(const cecs_versor_f32 uq, const cecs_vec3_f32 v) {
     const cecs_vec3_f32 u = cecs_vec3_f32_add(
         cecs_vec3_f32_cross(
@@ -141,7 +151,7 @@ inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_look_z(const cecs_vec3
         .j = axis_xy.y * norm_rcp,
         .k = 0.0f,
     };
-} 
+}
 
 inline cecs_versor_f32 cecs_versor_f32_look_z_up(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
     const cecs_vec3_f32 front = cecs_vec3_f32_normalize(forward); 
@@ -150,11 +160,33 @@ inline cecs_versor_f32 cecs_versor_f32_look_z_up(const cecs_vec3_f32 forward, co
     
     const float k = sqrtf(1.0f + left.x + up.y + front.z) * 0.5f;
     const float k4_rcp = 0.25f / k;
-    return (cecs_quaternion_f32){
+    return (cecs_versor_f32){
         .r = k,
         .i = (up.z - front.y) * k4_rcp,
         .j = (front.x - left.z) * k4_rcp,
         .k = (left.y - up.x) * k4_rcp,
+    };
+}
+inline cecs_quaternion_f32 cecs_quaternion_f32_look_z_up(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    const cecs_vec3_f32 front = cecs_vec3_f32_normalize(forward); 
+    const cecs_vec3_f32 left = cecs_vec3_f32_normalize(cecs_vec3_f32_cross(upwards, front));
+    const cecs_vec3_f32 up = cecs_vec3_f32_cross(front, left);
+    
+    // const float k = sqrtf(1.0f + left.x + up.y + front.z) * 0.5f;
+    // const float k4_rcp = 0.25f / k;
+    // return (cecs_versor_f32){
+    //     .r = k,
+    //     .i = (up.z - front.y) * k4_rcp,
+    //     .j = (front.x - left.z) * k4_rcp,
+    //     .k = (left.y - up.x) * k4_rcp,
+    // };
+
+    // *= k / 0.25
+    return (cecs_quaternion_f32){
+        .r = (1.0f + left.x + up.y + front.z),
+        .i = (up.z - front.y),
+        .j = (front.x - left.z),
+        .k = (left.y - up.x),
     };
 }
 

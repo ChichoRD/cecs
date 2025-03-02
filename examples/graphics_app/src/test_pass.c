@@ -189,7 +189,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .topology = WGPUPrimitiveTopology_TriangleList,
                 .stripIndexFormat = WGPUIndexFormat_Undefined,
                 .frontFace = WGPUFrontFace_CCW,
-                .cullMode = WGPUCullMode_None,
+                .cullMode = WGPUCullMode_Back,
             },
             .depthStencil = NULL, // TODO: when depth buffer is implemented
             .multisample = (WGPUMultisampleState) {
@@ -425,7 +425,7 @@ static void test_pass_draw_inner(
             wgpuRenderPassEncoderSetBindGroup(render_pass, 2, out_local_bind_groups[1], 0, NULL);
             last_texture_bank = handle.cecs_texture_in_bank_reference_component->texture_id;
         }
-
+        
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, cecs_buffer_storage_attachment_get_buffer(position_buffer), position.offset, position.size);
         wgpuRenderPassEncoderSetVertexBuffer(render_pass, 1, cecs_buffer_storage_attachment_get_buffer(uv_buffer), uv.offset, uv.size);
 
