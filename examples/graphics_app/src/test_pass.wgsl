@@ -75,9 +75,8 @@ fn vs_main(v_input: vertex_input, i_input: instance_input) -> vertex_output {
     let position_world = i_input.position * 100.0 + v_input.position * 0.25;
     let position_view = cecs_versor_f32_rotate_rcp(cam.orientation, position_world.xyz - cam.position);
     let position_clip = cecs_project_point_perspective(cam.projection_pack, position_view.xyz);
-    let position_ndc = position_clip.xyz / position_clip.w;
 
-    out.position_frame = vec4<f32>(position_ndc, 1.0);
+    out.position_frame = position_clip;
     out.position_world = position_world;
     out.uv = v_input.uv;
     out.uv_subrect = i_input.uv_subrect;
@@ -95,5 +94,5 @@ fn fs_main(input: vertex_output) -> @location(0) vec4<f32> {
     let extreme = step(vec3f(m), input.position_world);
     
     let sample = textureSample(albedo_texture, texture_sampler, input.uv * input.uv_subrect, input.texture_range[0]);
-    return vec4f((sample.rgb * 0.1 + extreme * 0.9) , sample.a);
+    return vec4f((sample.rgb) , sample.a);
 }

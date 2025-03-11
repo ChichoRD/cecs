@@ -71,9 +71,10 @@ static cecs_quaternion_f32 rotate_camera_from_mouse_delta(const cecs_versor_f32 
     };
 
     cecs_quaternion_f32 arc = cecs_quaternion_f32_arc(ortho, forward);
-    arc.r *= 64.0f / cecs_max_f32(1.0f, mouse_delta_length);
+    arc.r *= 256.0f / cecs_max_f32(1.0f, mouse_delta_length);
 
     const cecs_vec3_f32 new_forward = cecs_versor_f32_rotate(cecs_versor_f32_of(arc), forward);
+    //printf("new_forward: %f, %f, %f\n", new_forward.x, new_forward.y, new_forward.z);
     return cecs_quaternion_f32_look_z_up(new_forward, upward);
 }
 

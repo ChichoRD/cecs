@@ -191,7 +191,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .frontFace = WGPUFrontFace_CCW,
                 .cullMode = WGPUCullMode_Back,
             },
-            .depthStencil = NULL, // TODO: when depth buffer is implemented
+            .depthStencil = NULL,
             .multisample = (WGPUMultisampleState) {
                 .count = target_info.sample_count,
                 .mask = ~0u,

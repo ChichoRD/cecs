@@ -1,6 +1,8 @@
 #ifndef CECS_DYNAMIC_WGPU_BUFFER_H
 #define CECS_DYNAMIC_WGPU_BUFFER_H
 
+// TODO: sparse set-like buffer staging
+
 #include <webgpu/webgpu.h>
 #include <cecs_core/cecs_core.h>
 #include <stdint.h>
