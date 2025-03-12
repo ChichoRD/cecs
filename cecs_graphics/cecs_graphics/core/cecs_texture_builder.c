@@ -36,6 +36,7 @@ cecs_texture_builder *cecs_texture_builder_load_into(
     const char *path,
     const uint_fast8_t texture_slot 
 ) {
+    const bool texture_builder_empty = cecs_texture_builder_is_empty(builder);
     if (texture_slot == builder->used_texture_slots) {
         assert(texture_slot < CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT && "error: cannot use more texture slots than the defined maximum");
         assert(builder->texture_data[builder->used_texture_slots] == NULL && "error: texture data must be NULL if texture slot is unused");
@@ -74,7 +75,7 @@ cecs_texture_builder *cecs_texture_builder_load_into(
         .depthOrArrayLayers = 1,
     };
     
-    if (cecs_texture_builder_is_empty(builder)) {
+    if (texture_builder_empty) {
         builder->texture_descriptor = (WGPUTextureDescriptor){
             .nextInChain = NULL,
             .dimension = builder->texture_descriptor.dimension,
@@ -299,9 +300,14 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(
             mip_buffer_size,
             mip_chain_size
         );
+
+        builder->texture_data[texture_slot] = texture_data;
         *out_mipmaps_size = mip_chain_size;
-    } else {
+    } else if (builder->texture_descriptor.mipLevelCount == 1) {
         *out_mipmaps_size = texture_size;
+    } else {
+        assert(false && "unreachable: it is ill defined to call this function with mip level count other than 1");
+        exit(EXIT_FAILURE);
     }
 
     const uint32_t side_sum = builder->texture_descriptor.size.width + builder->texture_descriptor.size.height;
@@ -328,8 +334,8 @@ WGPUTexture cecs_texture_builder_build_alloc(
     cecs_texture_builder_configure_mipmaps(
         builder,
         cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size),
-        &mipmaps_size,
-        texture_slot
+        texture_slot,
+        &mipmaps_size
     );
     WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
 
@@ -387,13 +393,13 @@ extern inline uint_fast8_t cecs_texture_builder_build_range(
 cecs_texture_bank *cecs_texture_bank_find_allocated_or_null(
     cecs_graphics_world *world,
     cecs_arena *iteration_arena,
-    const cecs_texture_bank_id_descriptor texture_bank_id_descriptor,
+    const cecs_texture_bank_id_descriptor bank_descriptor,
     const uint_fast8_t required_slots_count,
     cecs_entity_id *out_bank_entity_id,
     uint_fast8_t *out_first_slot_index
 ) {
     cecs_texture_bank *bank = NULL;
-    const cecs_component_id texture_bank_id = cecs_component_id_from_texture_resource_id_descriptor(texture_bank_id_descriptor);
+    const cecs_component_id texture_bank_id = cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor);
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_texture_bank) handle;
     cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->world.components, iteration_arena, 
         CECS_COMPONENT_GROUP_FROM_IDS(
@@ -424,16 +430,11 @@ cecs_texture_bank *cecs_texture_bank_find_allocated_or_null(
 cecs_texture_bank *cecs_texture_bank_allocate(
     cecs_graphics_world *world,
     WGPUDevice device,
-    const cecs_texture_bank_id_descriptor texture_bank_id_descriptor,
+    const cecs_texture_bank_id_descriptor bank_descriptor,
     const uint32_t sample_count,
     cecs_entity_id *out_bank_entity_id
 ) {
-    cecs_texture_bank bank = cecs_texture_bank_create(device, cecs_texture_bank_id_descriptor_create_free(
-        texture_bank_id_descriptor.flags.size,
-        texture_bank_id_descriptor.flags.mip_level_count,
-        texture_bank_id_descriptor.format,
-        texture_bank_id_descriptor.flags.usage
-    ), sample_count);
+    cecs_texture_bank bank = cecs_texture_bank_create(device, bank_descriptor, sample_count);
 
     *out_bank_entity_id = cecs_world_add_entity(&world->world);
     return cecs_world_set_component_relation(
@@ -442,7 +443,7 @@ cecs_texture_bank *cecs_texture_bank_allocate(
         CECS_COMPONENT_ID(cecs_texture_bank),
         &bank,
         sizeof(cecs_texture_bank),
-        cecs_component_id_from_texture_resource_id_descriptor(texture_bank_id_descriptor)
+        cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
     );
 }
 
@@ -512,7 +513,7 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
     const cecs_texture_size_pow2 size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, 0, &mipmaps_size);
     for (uint_fast8_t i = 1; i < builder->used_texture_slots; i++) {
         size_t mip_size;
-        const cecs_texture_size_pow2 size = cecs_texture_builder_configure_mipmaps(builder, mip_count, i, mip_size);
+        const cecs_texture_size_pow2 size = cecs_texture_builder_configure_mipmaps(builder, mip_count, i, &mip_size);
         
         assert(size == size_pow2 && "error: texture pow2 size must match for all textures");
         assert(mip_size == mipmaps_size && "error: mipmaps size must match for all textures");

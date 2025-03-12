@@ -80,7 +80,7 @@ typedef union cecs_texture_bank_id {
     cecs_texture_bank_id_descriptor descriptor;
     cecs_component_id id;
 } cecs_texture_bank_id;
-cecs_component_id cecs_component_id_from_texture_resource_id_descriptor(cecs_texture_bank_id_descriptor descriptor) {
+inline cecs_component_id cecs_component_id_from_texture_resource_id_descriptor(cecs_texture_bank_id_descriptor descriptor) {
     assert(
         descriptor.flags.size != cecs_texture_size_none
         && "error: invalid cecs_texture_resource_id_descriptor"
