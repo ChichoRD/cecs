@@ -27,6 +27,28 @@ cecs_stbi_allocator *cecs_stbi_allocator_get_current_allocator(void) {
     return &texture_builder_stbi_allocator;
 }
 
+bool cecs_stbi_info_from(const char *path, cecs_stbi_info *out_info) {
+    int width;
+    int height;
+    int channels;
+    if (!stbi_info(path, &width, &height, &channels)) {
+        return false;
+    }
+    
+    out_info->width = (uint_least32_t)width;
+    out_info->height = (uint_least32_t)height;
+    out_info->channels = (uint_least8_t)channels;
+    return true;
+}
+cecs_stbi_info cecs_stbi_info_from_expect(const char *path) {
+    cecs_stbi_info info;
+    if (!cecs_stbi_info_from(path, &info)) {
+        assert(false && "fatal error: failed to get stbi info");
+        exit(EXIT_FAILURE);
+    }
+    return info;
+}
+
 void *cecs_stbi_malloc(size_t size) {
     assert(texture_builder_stbi_allocator.current_arena != NULL && "error: stbi allocator must be set");
     const uint64_t total_size = size + sizeof(cecs_stbi_allocation_header);

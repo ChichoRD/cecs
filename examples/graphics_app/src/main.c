@@ -140,6 +140,27 @@ int main(void) {
         "../../examples/graphics_app/assets/DuckCM.png",
         0
     );
+    uint8_t *pattern_texture;
+    {
+        const uint32_t width = builder_texture.texture_descriptor.size.width;
+        const uint32_t height = builder_texture.texture_descriptor.size.height;
+        const uint_fast8_t bytes_per_texel = builder_texture.descriptor.bytes_per_texel; 
+        pattern_texture = cecs_arena_alloc(
+            &builder_arena,
+            width * height * bytes_per_texel
+        );
+        for (uint32_t i = 0; i < width; ++i) {
+            for (uint32_t j = 0; j < height; ++j) {
+                const uint32_t index = (j * width + i) * bytes_per_texel;
+                pattern_texture[index + 0] = (uint8_t)(i * 255 / width);
+                pattern_texture[index + 1] = (uint8_t)(j * 255 / height);
+                pattern_texture[index + 2] = 0;
+                pattern_texture[index + 3] = 255;
+            }
+        }
+    }
+    ++builder_texture.used_texture_slots;
+    cecs_texture_builder_take_into(&builder_texture, pattern_texture, 1);
     cecs_texture_in_bank_bundle bank = cecs_texture_builder_build_in_bank(&builder_texture, &system.context, &(WGPUTextureViewDescriptor){
         .arrayLayerCount = 1,
         .baseArrayLayer = 0,

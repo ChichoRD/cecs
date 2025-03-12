@@ -43,6 +43,11 @@ typedef enum cecs_texture_size_pow2 {
 } cecs_texture_size_pow2;
 typedef uint8_t cecs_texture_bank_size_flag;
 
+size_t cecs_texture_size_pow2_mipmaps_buffer_texels(const cecs_texture_size_pow2 size, const uint_fast8_t mip_count);
+uint_fast8_t cecs_texture_size_pow2_max_mip_count(const cecs_texture_size_pow2 size, const uint32_t largest_side_size);
+cecs_texture_size_pow2 cecs_texture_size_pow2_ensure(const WGPUExtent3D size, uint32_t *out_largest_side_size);
+
+
 typedef uint8_t cecs_texture_usage_flags_packed; 
 typedef struct cecs_texture_bank_flags {
     cecs_texture_bank_status_flag slots_full : 1;

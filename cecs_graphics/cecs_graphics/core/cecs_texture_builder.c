@@ -6,12 +6,46 @@
 #include "builder/cecs_stbi.h"
 #include "cecs_texture_builder.h"
 
+extern inline cecs_texture_builder_base cecs_texture_builder_base_create(
+    const WGPUTextureDescriptor descriptor,
+    cecs_graphics_world *world,
+    cecs_arena *texture_arena
+);
+
+WGPUTexture cecs_texture_builder_base_build_alloc(
+    cecs_texture_builder_base *builder,
+    cecs_graphics_context *context
+) {
+    WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->descriptor);
+    if (texture == NULL) {
+        assert(false && "fatal error: failed to create texture");
+        exit(EXIT_FAILURE);
+    }
+    return texture;
+}
+
+size_t cecs_texture_builder_base_write_mipmaps(
+    WGPUTexture destination,
+    cecs_texture_builder_base *builder,
+    cecs_graphics_context *context,
+    const WGPUTextureAspect aspect,
+    const cecs_mipmaps_write_descriptor mipmaps
+) {
+    return cecs_write_mipmaps(
+        destination,
+        context->queue,
+        &builder->descriptor,
+        aspect,
+        mipmaps
+    );
+}
+
 cecs_texture_builder cecs_texture_builder_create(
     cecs_graphics_world *world,
     cecs_arena *texture_arena,
     const cecs_texture_builder_descriptor descriptor,
-    const cecs_texture_builder_wgpu_descriptor wgpu_descriptor
-) {
+    const cecs_texture_builder_wgpu_descriptor wgpu_descriptor)
+{
     assert(descriptor.bytes_per_texel > 0 && "error: bytes per pixel must be greater than 0");
     assert(descriptor.channel_count > 0 && "error: channel count must be greater than 0");
 
@@ -60,6 +94,7 @@ cecs_texture_builder *cecs_texture_builder_load_into(
     int channels;
     cecs_stbi_allocator_get_current_allocator()->current_arena = builder->texture_arena;
     uint8_t *texture_data = stbi_load(path, &width, &height, &channels, builder->descriptor.channel_count);
+    //stbi_load
     cecs_stbi_allocator_get_current_allocator()->current_arena = NULL;
     assert(channels == builder->descriptor.channel_count && "error unexpected: channel count mismatch");
 
@@ -80,7 +115,7 @@ cecs_texture_builder *cecs_texture_builder_load_into(
             .nextInChain = NULL,
             .dimension = builder->texture_descriptor.dimension,
             .format = builder->texture_descriptor.format,
-            .mipLevelCount = 1,
+            .mipLevelCount = 0,
             .sampleCount = 1,
             .size = size,
             .usage = builder->texture_descriptor.usage,
@@ -194,31 +229,37 @@ size_t cecs_generate_mipmaps(
 }
 
 size_t cecs_write_mipmaps(
+    WGPUTexture destination,
     WGPUQueue queue,
-    WGPUTexture texture,
     const WGPUTextureDescriptor *descriptor,
-    const uint8_t *texture_data,
-    const uint_fast8_t bytes_per_texel,
     const WGPUTextureAspect aspect,
-    const uint32_t destination_layer
+    const cecs_mipmaps_write_descriptor mipmaps
 ) {
-    assert(texture_data != NULL && "error: texture data must be set");
+    assert(mipmaps.source_texels != NULL && "error: source texels must be set");
+    assert(mipmaps.source_size > 0 && "error: source size must be greater than 0");
+    assert(mipmaps.bytes_per_texel > 0 && "error: bytes per texel must be greater than 0");
 
-    const uint8_t *source_data = texture_data;
+
+    const uint8_t *source_mip_start = mipmaps.source_texels;
+    const uint8_t *const source_data_end = source_mip_start + mipmaps.source_size;
+
     for (uint32_t i = 0; i < descriptor->mipLevelCount; i++) {
         const uint32_t mip_width = cecs_max_u32(descriptor->size.width >> i, 1);
         const uint32_t mip_height = cecs_max_u32(descriptor->size.height >> i, 1);
-        const uint32_t mip_bytes_per_row = mip_width * bytes_per_texel;
+        const uint32_t mip_bytes_per_row = mip_width * mipmaps.bytes_per_texel;
         const size_t mip_texture_size = mip_bytes_per_row * mip_height;
 
-        const WGPUImageCopyTexture destination = (WGPUImageCopyTexture){
+        const uint8_t *const source_mip_end = source_mip_start + mip_texture_size;
+        assert(source_mip_end <= source_data_end && "error: source data must not exceed source size"); 
+
+        const WGPUImageCopyTexture destination_mip = (WGPUImageCopyTexture){
             .nextInChain = NULL,
-            .texture = texture,
+            .texture = destination,
             .mipLevel = i,
-            .origin = (WGPUOrigin3D){0, 0, destination_layer},
+            .origin = (WGPUOrigin3D){0, 0, (uint32_t)mipmaps.destination_layer},
             .aspect = aspect,
         };
-        const WGPUTextureDataLayout source = (WGPUTextureDataLayout){
+        const WGPUTextureDataLayout source_mip = (WGPUTextureDataLayout){
             .nextInChain = NULL,
             .offset = 0,
             .bytesPerRow = mip_bytes_per_row,
@@ -229,10 +270,10 @@ size_t cecs_write_mipmaps(
             .height = mip_height,
             .depthOrArrayLayers = 1,
         };
-        wgpuQueueWriteTexture(queue, &destination, source_data, mip_texture_size, &source, &mip_size);
-        source_data += mip_texture_size;
+        wgpuQueueWriteTexture(queue, &destination_mip, source_mip_start, mip_texture_size, &source_mip, &mip_size);
+        source_mip_start = source_mip_end;
     }
-    return source_data - texture_data;
+    return source_mip_start - mipmaps.source_texels;
 }
 
 static inline uint_fast8_t cecs_texture_builder_mip_count(const WGPUExtent3D size, uint32_t *out_largest_side_size) {
@@ -251,6 +292,7 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(
     size_t *out_mipmaps_size
 ) {
     assert(texture_slot < builder->used_texture_slots && "error: texture slot must be used");
+    assert(builder->texture_descriptor.mipLevelCount == mip_count && "error: mip count must match the configured mip count");
 
     uint8_t *texture_data = builder->texture_data[texture_slot];
     assert(texture_data != NULL && "error: texture data must be set");
@@ -264,10 +306,8 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(
         builder->texture_descriptor.size.width * builder->texture_descriptor.size.height;
     const size_t texture_size =
         texture_texels * builder->descriptor.bytes_per_texel;
-    if (
-        (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps)
-        && builder->texture_descriptor.mipLevelCount == 1
-    ) {
+    if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps) {
+
         const uint_fast8_t side_log2_difference =
             mip_count
             - cecs_log2_u32(min_side)
@@ -293,7 +333,6 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(
         );
 
         assert(mip_chain_size <= mip_buffer_size && "fatal error: not allocated enough memory for mip chain");
-        builder->texture_descriptor.mipLevelCount = mip_count;
         texture_data = cecs_arena_realloc(
             builder->texture_arena,
             mip_texels,
@@ -303,11 +342,8 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(
 
         builder->texture_data[texture_slot] = texture_data;
         *out_mipmaps_size = mip_chain_size;
-    } else if (builder->texture_descriptor.mipLevelCount == 1) {
-        *out_mipmaps_size = texture_size;
     } else {
-        assert(false && "unreachable: it is ill defined to call this function with mip level count other than 1");
-        exit(EXIT_FAILURE);
+        *out_mipmaps_size = texture_size;
     }
 
     const uint32_t side_sum = builder->texture_descriptor.size.width + builder->texture_descriptor.size.height;
@@ -456,14 +492,14 @@ cecs_texture_bank_status cecs_texture_bank_use(
     bank->used_slots_mask |= mask;
     return cecs_texture_bank_is_full(bank) ? cecs_texture_bank_status_full : cecs_texture_bank_status_free;
 }
-cecs_texture_bank *cecs_texture_bank_release(
+cecs_texture_bank_status cecs_texture_bank_release(
     cecs_texture_bank *bank,
     const uint_fast8_t first_slot_index,
     const uint_fast8_t slot_count
 ) {
     const cecs_texture_bank_slot_mask mask = cecs_texture_bank_slot_mask_from_range(first_slot_index, slot_count);
     bank->used_slots_mask &= ~mask;
-    return bank;
+    return cecs_texture_bank_is_empty(bank) ? cecs_texture_bank_status_free : cecs_texture_bank_status_free;
 }
 cecs_texture_bank *cecs_texture_bank_use_and_relocate(
     cecs_graphics_world *world,
@@ -496,6 +532,37 @@ cecs_texture_bank *cecs_texture_bank_use_and_relocate(
     }
     return new_bank;
 }
+cecs_texture_bank *cecs_texture_bank_release_and_relocate(
+    cecs_graphics_world *world,
+    cecs_texture_bank *bank,
+    cecs_texture_bank_id_descriptor bank_descriptor,
+    const cecs_entity_id bank_entity_id,
+    const uint_fast8_t first_slot_index,
+    const uint_fast8_t slot_count
+) {
+    cecs_texture_bank *new_bank = bank;
+    if (cecs_texture_bank_release(bank, first_slot_index, slot_count) == cecs_texture_bank_status_free) {
+        cecs_world_remove_component_relation(
+            &world->world,
+            bank_entity_id,
+            CECS_COMPONENT_ID(cecs_texture_bank),
+            bank,
+            cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
+        );
+
+        bank_descriptor.flags.slots_full = cecs_texture_bank_status_free;
+        new_bank = cecs_world_set_component_relation(
+            &world->world,
+            bank_entity_id,
+            CECS_COMPONENT_ID(cecs_texture_bank),
+            bank,
+            sizeof(cecs_texture_bank),
+            cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
+        );
+        *bank = (cecs_texture_bank){0};
+    }
+    return new_bank;
+}
 
 cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
     cecs_texture_builder *builder,
@@ -510,6 +577,7 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
     static_assert(sizeof(cecs_texture_size_pow2) == sizeof(uint32_t), "static error: expected sizeof cecs_texture_size_pow2 to be 4 bytes");
     
     size_t mipmaps_size;
+    builder->texture_descriptor.mipLevelCount = mip_count;
     const cecs_texture_size_pow2 size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, 0, &mipmaps_size);
     for (uint_fast8_t i = 1; i < builder->used_texture_slots; i++) {
         size_t mip_size;
