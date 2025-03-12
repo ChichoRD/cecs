@@ -1,5 +1,6 @@
 #include "cecs_camera.h"
 #include <stdbool.h>
+#include <stdlib.h>
 
 cecs_camera cecs_camera_create_orthographic(const float half_height, const float far, const float near) {
     assert(half_height > 0.0f && "fatal error: orthographic projection half height must be positive");
@@ -94,5 +95,10 @@ cecs_camera_raw_bundle cecs_camera_raw_bundle_from_pack(const cecs_camera_pack p
     } else {
         assert(false && "fatal error: camera pack must be either orthographic or perspective");
         return (cecs_camera_raw_bundle){0};
+    }
+
+    if (pack.flags & cecs_camera_options_z_infinite) {
+        assert(false && "unimplemented: infinite z depth");
+        exit(EXIT_FAILURE);
     }
 }

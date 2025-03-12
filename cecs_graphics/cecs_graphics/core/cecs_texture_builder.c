@@ -36,11 +36,6 @@ cecs_texture_builder *cecs_texture_builder_load_into(
     const char *path,
     const uint_fast8_t texture_slot 
 ) {
-    assert(
-        !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
-        && "error: flags were set to generate empty texture, cannot load it from file"
-    );
-
     if (texture_slot == builder->used_texture_slots) {
         assert(texture_slot < CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT && "error: cannot use more texture slots than the defined maximum");
         assert(builder->texture_data[builder->used_texture_slots] == NULL && "error: texture data must be NULL if texture slot is unused");
@@ -104,10 +99,6 @@ cecs_texture_builder *cecs_texture_builder_load_into(
     return cecs_texture_builder_take_into(builder, texture_data, texture_slot);
 }
 cecs_texture_builder *cecs_texture_builder_take_into(cecs_texture_builder *builder, uint8_t *texture_data, const uint_fast8_t texture_slot) {
-    assert(
-        !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
-        && "error: flags were set to generate empty texture, cannot set data"
-    );
     assert(texture_slot < builder->used_texture_slots && "error: texture slot must be used");
     
     builder->texture_data[texture_slot] = texture_data;
@@ -393,96 +384,116 @@ extern inline uint_fast8_t cecs_texture_builder_build_range(
     cecs_texture out_textures[const restrict static 1]
 );
 
-#ifndef CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS
-#define CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS 64
-#endif
-static_assert(
-    CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS <= CHAR_BIT * sizeof(cecs_texture_bank_slot_mask),
-    "static error: default array layers must be less than or equal to the number of bits in the slot mask"
-);
-
-static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
-    cecs_texture_builder *builder,
-    cecs_graphics_context *context,
+cecs_texture_bank *cecs_texture_bank_find_allocated_or_null(
+    cecs_graphics_world *world,
+    cecs_arena *iteration_arena,
     const cecs_texture_bank_id_descriptor texture_bank_id_descriptor,
     const uint_fast8_t required_slots_count,
     cecs_entity_id *out_bank_entity_id,
-    uint_fast8_t *out_slot_index,
-    uint_fast8_t *out_slot_mask
+    uint_fast8_t *out_first_slot_index
 ) {
+    cecs_texture_bank *bank = NULL;
     const cecs_component_id texture_bank_id = cecs_component_id_from_texture_resource_id_descriptor(texture_bank_id_descriptor);
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_texture_bank) handle;
-    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&builder->world->world.components, builder->texture_arena, 
+    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->world.components, iteration_arena, 
         CECS_COMPONENT_GROUP_FROM_IDS(
             cecs_component_access_inmmutable, cecs_component_group_search_all, CECS_RELATION_ID(cecs_texture_bank, texture_bank_id)
         )
     );
     for (
-        cecs_component_iterator_begin_iter(&it, builder->texture_arena);
+        cecs_component_iterator_begin_iter(&it, iteration_arena);
         !cecs_component_iterator_done(&it);
         cecs_component_iterator_next(&it)
     ) {
         const cecs_entity_id entity = cecs_component_iterator_current(&it, (void **)&handle);
-        assert(!cecs_texture_bank_is_full(handle.cecs_texture_bank_component) && "fatal error: texture bank is full, tag mismatch");
+        bank = handle.cecs_texture_bank_component;
+        assert(!cecs_texture_bank_is_full(bank) && "fatal error: texture bank is full, tag mismatch");
 
-        uint_fast8_t slot_index;
-        cecs_texture_bank_slot_mask slot_mask = cecs_texture_bank_get_free_slot_range_mask(
-            handle.cecs_texture_bank_component,
-            required_slots_count,
-            &slot_index
-        );
+        const uint_fast8_t slot_index = cecs_texture_bank_first_free_slot_index(bank, required_slots_count);
 
         extern inline uint_fast8_t cecs_texture_bank_slot_count(const cecs_texture_bank *bank);
         if (slot_index < cecs_texture_bank_slot_count(handle.cecs_texture_bank_component)) {
             *out_bank_entity_id = entity;
-            *out_slot_index = slot_index;
-            *out_slot_mask = slot_mask;
-            return handle.cecs_texture_bank_component;
+            *out_first_slot_index = slot_index;
+            break;
         }
     }
     cecs_component_iterator_end_iter(&it);
-
-
-    static const uint32_t cecs_texture_bank_default_array_layers = CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS;
-    const uint32_t texture_size = 1 << texture_bank_id_descriptor.flags.size;
-    WGPUTexture bank_texture = wgpuDeviceCreateTexture(context->device, &(WGPUTextureDescriptor){
-        .dimension = WGPUTextureDimension_2D,
-        .format = texture_bank_id_descriptor.format,
-        .usage = (uint32_t)texture_bank_id_descriptor.flags.usage,
-        .size = (WGPUExtent3D){
-            .width = texture_size,
-            .height = texture_size,
-            .depthOrArrayLayers = cecs_texture_bank_default_array_layers,
-        },
-        .sampleCount = builder->texture_descriptor.sampleCount,
-        .mipLevelCount = (uint32_t)texture_bank_id_descriptor.flags.mip_level_count,
-    });
-    
-    const cecs_entity_id bank_entity_id = cecs_world_add_entity(&builder->world->world);
-    cecs_texture_bank *bank = cecs_world_set_component_relation(
-        &builder->world->world,
-        bank_entity_id,
-        CECS_COMPONENT_ID(cecs_texture_bank),
-        &(cecs_texture_bank){
-            .texture = bank_texture,
-            .texture_view = wgpuTextureCreateView(bank_texture, &(WGPUTextureViewDescriptor){
-                .format = texture_bank_id_descriptor.format,
-                .dimension = WGPUTextureViewDimension_2DArray,
-                .baseMipLevel = 0,
-                .mipLevelCount = builder->texture_descriptor.mipLevelCount,
-                .baseArrayLayer = 0,
-                .arrayLayerCount = cecs_texture_bank_default_array_layers,
-            }),
-            .used_slots_mask = 0,
-        },
-        sizeof(cecs_texture_bank),
-        texture_bank_id
-    );
-
-    *out_bank_entity_id = bank_entity_id;
-    *out_slot_index = 0;
-    *out_slot_mask = (1 << required_slots_count) - 1;
     return bank;
+}
+cecs_texture_bank *cecs_texture_bank_allocate(
+    cecs_graphics_world *world,
+    WGPUDevice device,
+    const cecs_texture_bank_id_descriptor texture_bank_id_descriptor,
+    const uint32_t sample_count,
+    cecs_entity_id *out_bank_entity_id
+) {
+    cecs_texture_bank bank = cecs_texture_bank_create(device, cecs_texture_bank_id_descriptor_create_free(
+        texture_bank_id_descriptor.flags.size,
+        texture_bank_id_descriptor.flags.mip_level_count,
+        texture_bank_id_descriptor.format,
+        texture_bank_id_descriptor.flags.usage
+    ), sample_count);
+
+    *out_bank_entity_id = cecs_world_add_entity(&world->world);
+    return cecs_world_set_component_relation(
+        &world->world,
+        *out_bank_entity_id,
+        CECS_COMPONENT_ID(cecs_texture_bank),
+        &bank,
+        sizeof(cecs_texture_bank),
+        cecs_component_id_from_texture_resource_id_descriptor(texture_bank_id_descriptor)
+    );
+}
+
+cecs_texture_bank_status cecs_texture_bank_use(
+    cecs_texture_bank *bank,
+    const uint_fast8_t first_slot_index,
+    const uint_fast8_t slot_count
+) {
+    const cecs_texture_bank_slot_mask mask = cecs_texture_bank_slot_mask_from_range(first_slot_index, slot_count);
+    bank->used_slots_mask |= mask;
+    return cecs_texture_bank_is_full(bank) ? cecs_texture_bank_status_full : cecs_texture_bank_status_free;
+}
+cecs_texture_bank *cecs_texture_bank_release(
+    cecs_texture_bank *bank,
+    const uint_fast8_t first_slot_index,
+    const uint_fast8_t slot_count
+) {
+    const cecs_texture_bank_slot_mask mask = cecs_texture_bank_slot_mask_from_range(first_slot_index, slot_count);
+    bank->used_slots_mask &= ~mask;
+    return bank;
+}
+cecs_texture_bank *cecs_texture_bank_use_and_relocate(
+    cecs_graphics_world *world,
+    cecs_texture_bank *bank,
+    cecs_texture_bank_id_descriptor bank_descriptor,
+    const cecs_entity_id bank_entity_id,
+    const uint_fast8_t first_slot_index,
+    const uint_fast8_t slot_count
+) {
+    cecs_texture_bank *new_bank = bank;
+    if (cecs_texture_bank_use(bank, first_slot_index, slot_count) == cecs_texture_bank_status_full) {
+        cecs_world_remove_component_relation(
+            &world->world,
+            bank_entity_id,
+            CECS_COMPONENT_ID(cecs_texture_bank),
+            bank,
+            cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
+        );
+
+        bank_descriptor.flags.slots_full = cecs_texture_bank_status_full;
+        new_bank = cecs_world_set_component_relation(
+            &world->world,
+            bank_entity_id,
+            CECS_COMPONENT_ID(cecs_texture_bank),
+            bank,
+            sizeof(cecs_texture_bank),
+            cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
+        );
+        *bank = (cecs_texture_bank){0};
+    }
+    return new_bank;
 }
 
 cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
@@ -491,113 +502,75 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
     const WGPUTextureViewDescriptor *view_descriptor
 ) {
     assert(builder->used_texture_slots > 0 && "error: must have at least one texture slot used");
-    uint_fast8_t empty_slots = 0;
-    for (uint_fast8_t i = 0; i < builder->used_texture_slots; i++) {
-        if (builder->texture_data[i] == NULL) {
-            ++empty_slots;
-        }
-    }
-
-    if (empty_slots == builder->used_texture_slots) {
-        assert(
-            (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
-            && "error: texture slots must be either all empty iff flags are set to generate empty texture"
-        );
-    } else if (empty_slots == 0) {
-        assert(
-            !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
-            && "error: texture slots must be either all used iff flags are not set to generate empty texture"
-        );
-    } else {
-        assert(false && "fatal error: texture slots must be either all empty or all used");
-        exit(EXIT_FAILURE);
-    }
     
     uint32_t largest_side_size;
     const uint_fast8_t mip_count = cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size);
     
-    cecs_texture_size_pow2 size_pow2;
     static_assert(sizeof(cecs_texture_size_pow2) == sizeof(uint32_t), "static error: expected sizeof cecs_texture_size_pow2 to be 4 bytes");
-
-    size_t mipmaps_size = 0;
-    if (empty_slots == 0) {
-        size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, 0, &mipmaps_size);
-        for (uint_fast8_t i = 1; i < builder->used_texture_slots; i++) {
-            size_t mip_size;
-            const cecs_texture_size_pow2 size = cecs_texture_builder_configure_mipmaps(builder, mip_count, i, mip_size);
-            
-            assert(size == size_pow2 && "error: texture pow2 size must match for all textures");
-            assert(mip_size == mipmaps_size && "error: mipmaps size must match for all textures");
-        }
-    } else {
-        size_pow2 = cecs_texture_builder_size_from_mip_count(cecs_is_pow2_u32(largest_side_size) ? mip_count - 1 : mip_count);
+    
+    size_t mipmaps_size;
+    const cecs_texture_size_pow2 size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, 0, &mipmaps_size);
+    for (uint_fast8_t i = 1; i < builder->used_texture_slots; i++) {
+        size_t mip_size;
+        const cecs_texture_size_pow2 size = cecs_texture_builder_configure_mipmaps(builder, mip_count, i, mip_size);
+        
+        assert(size == size_pow2 && "error: texture pow2 size must match for all textures");
+        assert(mip_size == mipmaps_size && "error: mipmaps size must match for all textures");
     }
 
-    const uint32_t descriptor_mip_count = cecs_min_u32(
-        (uint32_t)size_pow2, (uint32_t)mip_count
-    ) + 1;
-    cecs_texture_bank_id_descriptor bank_descriptor = {
-        .flags = {
-            .slots_full = cecs_texture_bank_status_free,
-            .size = size_pow2,
-            .mip_level_count = descriptor_mip_count,
-            .usage = builder->texture_descriptor.usage,
-        },
-        .format = builder->texture_descriptor.format,
-    };
-    
+    const cecs_texture_bank_id_descriptor bank_descriptor = cecs_texture_bank_id_descriptor_create_free(
+        size_pow2,
+        mip_count,
+        builder->texture_descriptor.format,
+        builder->texture_descriptor.usage
+    );
     cecs_entity_id bank_entity_id;
     uint_fast8_t slot_index;
-    uint_fast8_t slot_mask;
-    cecs_texture_bank *bank = cecs_texture_builder_get_or_allocate_bank(
-        builder,
-        context,
+    cecs_texture_bank *bank = cecs_texture_bank_find_allocated_or_null(
+        builder->world,
+        builder->texture_arena,
         bank_descriptor,
         builder->used_texture_slots,
         &bank_entity_id,
-        &slot_index,
-        &slot_mask
+        &slot_index
+    );
+    if (bank == NULL) {
+        bank = cecs_texture_bank_allocate(
+            builder->world,
+            context->device,
+            bank_descriptor,
+            builder->texture_descriptor.sampleCount,
+            &bank_entity_id
+        );
+        slot_index = 0;
+    }
+    bank = cecs_texture_bank_use_and_relocate(
+        builder->world,
+        bank,
+        bank_descriptor,
+        bank_entity_id,
+        slot_index,
+        builder->used_texture_slots
     );
 
-    bank->used_slots_mask |= slot_mask;
-    if (cecs_texture_bank_is_full(bank)) {
-        cecs_world_remove_component_relation(
-            &builder->world->world,
-            bank_entity_id,
-            CECS_COMPONENT_ID(cecs_texture_bank),
-            bank,
-            cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
-        );
-
-        bank_descriptor.flags.slots_full = cecs_texture_bank_status_full;
-        cecs_world_set_component_relation(
-            &builder->world->world,
-            bank_entity_id,
-            CECS_COMPONENT_ID(cecs_texture_bank),
-            bank,
-            sizeof(cecs_texture_bank),
-            cecs_component_id_from_texture_resource_id_descriptor(bank_descriptor)
-        );
-    }
-
-    if (builder->texture_data != NULL) {
-        assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+    assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+    cecs_stbi_allocator_get_current_allocator()->current_arena = builder->texture_arena;
+    for (uint_fast8_t i = 0; i < builder->used_texture_slots; i++) {
+        uint8_t *const texture_data = builder->texture_data[i];
         size_t write_size = cecs_write_mipmaps(
             context->queue,
             bank->texture,
             &builder->texture_descriptor, 
-            builder->texture_data,
+            texture_data,
             builder->descriptor.bytes_per_texel,
             view_descriptor->aspect,
-            slot_index
+            slot_index + i
         );
         assert(write_size == mipmaps_size && "error: writen size does not match mipmaps size");
-
-        cecs_stbi_allocator_get_current_allocator()->current_arena = builder->texture_arena;
-        stbi_image_free(builder->texture_data);
-        cecs_stbi_allocator_get_current_allocator()->current_arena = NULL;
+        stbi_image_free(texture_data);
     }
-
+    cecs_stbi_allocator_get_current_allocator()->current_arena = NULL;
+    
     float bank_width = (float)wgpuTextureGetWidth(bank->texture);
     float bank_height = (float)wgpuTextureGetHeight(bank->texture);
     return (cecs_texture_in_bank_bundle){

@@ -18,7 +18,7 @@ CECS_COMPONENT_DECLARE(cecs_texture);
 
 
 typedef enum cecs_texture_bank_status {
-    cecs_texture_bank_status_free,
+    cecs_texture_bank_status_free = 0,
     cecs_texture_bank_status_full,
 } cecs_texture_bank_status;
 typedef uint8_t cecs_texture_bank_status_flag;
@@ -63,15 +63,44 @@ static_assert(
     sizeof(cecs_texture_bank_id_descriptor) == sizeof(cecs_component_id),
     "static error: cecs_texture_resource_id_descriptor size must be equal to cecs_component_id size"
 );
+cecs_texture_bank_id_descriptor cecs_texture_bank_id_descriptor_create_full(
+    const cecs_texture_size_pow2 size,
+    const uint_fast8_t mip_level_count,
+    const WGPUTextureFormat format,
+    const WGPUTextureUsage usage
+);
+cecs_texture_bank_id_descriptor cecs_texture_bank_id_descriptor_create_free(
+    const cecs_texture_size_pow2 size,
+    const uint_fast8_t mip_level_count,
+    const WGPUTextureFormat format,
+    const WGPUTextureUsage usage
+);
 
 typedef union cecs_texture_bank_id {
     cecs_texture_bank_id_descriptor descriptor;
     cecs_component_id id;
 } cecs_texture_bank_id;
+cecs_component_id cecs_component_id_from_texture_resource_id_descriptor(cecs_texture_bank_id_descriptor descriptor) {
+    assert(
+        descriptor.flags.size != cecs_texture_size_none
+        && "error: invalid cecs_texture_resource_id_descriptor"
+    );
 
-cecs_component_id cecs_component_id_from_texture_resource_id_descriptor(cecs_texture_bank_id_descriptor descriptor);
+    return (cecs_texture_bank_id) {
+        .descriptor = descriptor
+    }.id;
+}
 
 typedef uint64_t cecs_texture_bank_slot_mask;
+#ifndef CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS
+#define CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS 64
+#endif
+static_assert(
+    CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS <= CHAR_BIT * sizeof(cecs_texture_bank_slot_mask),
+    "static error: default array layers must be less than or equal to the number of bits in the slot mask"
+);
+extern const uint32_t cecs_texture_bank_default_array_layers;
+
 typedef struct cecs_texture_bank {
     WGPUTexture texture;
     WGPUTextureView texture_view;
@@ -79,6 +108,11 @@ typedef struct cecs_texture_bank {
 } cecs_texture_bank;
 CECS_COMPONENT_DECLARE(cecs_texture_bank);
 
+cecs_texture_bank cecs_texture_bank_create(
+    WGPUDevice device,
+    const cecs_texture_bank_id_descriptor texture_bank_id_descriptor,
+    const uint32_t sample_count
+);
 inline uint_fast8_t cecs_texture_bank_slot_count(const cecs_texture_bank *bank) {
     return (uint_fast8_t)wgpuTextureGetDepthOrArrayLayers(bank->texture);
 }
@@ -87,8 +121,9 @@ bool cecs_texture_bank_has_free_slots(const cecs_texture_bank *bank);
 bool cecs_texture_bank_is_full(const cecs_texture_bank *bank);
 bool cecs_texture_bank_is_empty(const cecs_texture_bank *bank);
 
-cecs_texture_bank_slot_mask cecs_texture_bank_get_free_slot_range_mask(const cecs_texture_bank *bank, const uint_fast8_t count, uint_fast8_t *out_slot_index);
 
+uint_fast8_t cecs_texture_bank_first_free_slot_index(const cecs_texture_bank *bank, const uint_fast8_t required_slots);
+cecs_texture_bank_slot_mask cecs_texture_bank_slot_mask_from_range(const uint_fast8_t start_index, const uint_fast8_t slot_count);
 
 typedef cecs_texture_reference cecs_texture_in_bank_reference;
 CECS_COMPONENT_DECLARE(cecs_texture_in_bank_reference);
