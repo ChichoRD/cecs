@@ -23,6 +23,15 @@ WGPUTexture cecs_texture_builder_base_build_alloc(
     }
     return texture;
 }
+extern inline cecs_graphics_world *cecs_texture_builder_base_world(cecs_texture_builder_base *builder);
+extern inline cecs_arena *cecs_texture_builder_base_arena(cecs_texture_builder_base *builder);
+
+cecs_texture_size_pow2 cecs_texture_builder_base_ensured_size(
+    const cecs_texture_builder_base *builder,
+    uint32_t *out_largest_side_size
+) {
+    return cecs_texture_size_pow2_ensure(builder->descriptor.size, out_largest_side_size);
+}
 
 size_t cecs_texture_builder_base_write_mipmaps(
     WGPUTexture destination,

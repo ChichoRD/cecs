@@ -24,14 +24,20 @@ inline cecs_texture_builder_base cecs_texture_builder_base_create(
         .texture_arena = texture_arena
     };
 }
+inline cecs_graphics_world *cecs_texture_builder_base_world(cecs_texture_builder_base *builder) {
+    return builder->world;
+}
+inline cecs_arena *cecs_texture_builder_base_arena(cecs_texture_builder_base *builder) {
+    return builder->texture_arena;
+}
 
 WGPUTexture cecs_texture_builder_base_build_alloc(
     cecs_texture_builder_base *builder,
     cecs_graphics_context *context
 );
-
-size_t cecs_texture_builder_base_mipmaps_buffer_size(
-    const cecs_texture_builder_base *builder
+cecs_texture_size_pow2 cecs_texture_builder_base_ensured_size(
+    const cecs_texture_builder_base *builder,
+    uint32_t *out_largest_side_size 
 );
 
 typedef struct cecs_mipmaps_write_descriptor {
@@ -48,12 +54,11 @@ size_t cecs_texture_builder_base_write_mipmaps(
     const cecs_mipmaps_write_descriptor mipmaps
 );
 
+
 typedef enum cecs_texture_builder_descriptor_config {
     cecs_texture_builder_descriptor_config_none = 0,
     cecs_texture_builder_descriptor_config_generate_mipmaps = 1 << 0,
     cecs_texture_builder_descriptor_config_alloc_mipmaps = 1 << 1,
-    cecs_texture_builder_descriptor_config_is_depth = 1 << 2,
-    cecs_texture_builder_descriptor_config_is_stencil = 1 << 3,
 } cecs_texture_builder_descriptor_config;
 typedef uint8_t cecs_texture_builder_descriptor_config_flags;
 
@@ -80,9 +85,8 @@ static_assert(
 );
 
 typedef struct cecs_texture_builder {
-    cecs_graphics_world *world;
-    cecs_arena *texture_arena;
-    WGPUTextureDescriptor texture_descriptor;
+    static_assert(false);
+    cecs_texture_builder_base base;
     cecs_texture_builder_descriptor descriptor;
     uint8_t *texture_data[CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT];
     cecs_texture_builder_texture_count used_texture_slots;
@@ -124,7 +128,6 @@ WGPUExtent3D cecs_generate_next_mip(
     const uint_fast8_t bytes_per_texel,
     uint8_t out_next_mip_texels[const restrict]
 );
-
 size_t cecs_generate_mipmaps(
     const WGPUExtent3D mip_size,
     const uint8_t *mip_texels,
