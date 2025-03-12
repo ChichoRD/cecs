@@ -130,13 +130,15 @@ int main(void) {
         .bytes_per_texel = 4,
         .channel_count = 4,
         .flags = cecs_texture_builder_descriptor_config_generate_mipmaps
+    }, (cecs_texture_builder_wgpu_descriptor){
+        .dimension = WGPUTextureDimension_2D,
+        .format = WGPUTextureFormat_RGBA8Unorm,
+        .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
     });
-    cecs_texture_builder_load_from(
+    cecs_texture_builder_load_into(
         &builder_texture,
         "../../examples/graphics_app/assets/DuckCM.png",
-        WGPUTextureDimension_2D,
-        WGPUTextureFormat_RGBA8Unorm,
-        WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding
+        0
     );
     cecs_texture_in_bank_bundle bank = cecs_texture_builder_build_in_bank(&builder_texture, &system.context, &(WGPUTextureViewDescriptor){
         .arrayLayerCount = 1,

@@ -9,7 +9,8 @@
 cecs_texture_builder cecs_texture_builder_create(
     cecs_graphics_world *world,
     cecs_arena *texture_arena,
-    cecs_texture_builder_descriptor descriptor
+    const cecs_texture_builder_descriptor descriptor,
+    const cecs_texture_builder_wgpu_descriptor wgpu_descriptor
 ) {
     assert(descriptor.bytes_per_texel > 0 && "error: bytes per pixel must be greater than 0");
     assert(descriptor.channel_count > 0 && "error: channel count must be greater than 0");
@@ -18,24 +19,45 @@ cecs_texture_builder cecs_texture_builder_create(
     return (cecs_texture_builder){
         .world = world,
         .texture_arena = texture_arena,
-        .texture_descriptor = {0},
+        .texture_descriptor = {
+            .dimension = wgpu_descriptor.dimension,
+            .format = wgpu_descriptor.format,
+            .usage = wgpu_descriptor.usage,
+        },
         .descriptor = descriptor,
-        .texture_data = NULL,
+        .texture_data = {0},
+        .used_texture_slots = 0,
     };
 }
+extern inline bool cecs_texture_builder_is_empty(const cecs_texture_builder *builder);
 
-cecs_texture_builder *cecs_texture_builder_load_from(
+cecs_texture_builder *cecs_texture_builder_load_into(
     cecs_texture_builder *builder,
     const char *path,
-    const WGPUTextureDimension dimension,
-    const WGPUTextureFormat format,
-    const WGPUTextureUsage usage
+    const uint_fast8_t texture_slot 
 ) {
-    assert(builder->texture_data == NULL && "error: texture data must be NULL");
     assert(
         !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
         && "error: flags were set to generate empty texture, cannot load it from file"
     );
+
+    if (texture_slot == builder->used_texture_slots) {
+        assert(texture_slot < CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT && "error: cannot use more texture slots than the defined maximum");
+        assert(builder->texture_data[builder->used_texture_slots] == NULL && "error: texture data must be NULL if texture slot is unused");
+        ++builder->used_texture_slots;
+    } else if (texture_slot < builder->used_texture_slots) {
+        if (builder->texture_data[texture_slot] == NULL) {
+            assert(false && "fatal error: texture slot is used but texture data is NULL");
+            exit(EXIT_FAILURE);
+        }
+        
+        assert(builder->used_texture_slots < CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT && "error: cannot use more texture slots than the defined maximum");
+        builder->texture_data[builder->used_texture_slots] = NULL;
+        // TODO: try to reuse texture slot memory
+    } else {
+        assert(false && "error: can only load into either a used texture slot or the first unused slot");
+        exit(EXIT_FAILURE);
+    }
 
     int width;
     int height;
@@ -56,51 +78,71 @@ cecs_texture_builder *cecs_texture_builder_load_from(
         .height = (uint32_t)height,
         .depthOrArrayLayers = 1,
     };
-    const WGPUTextureDescriptor texture_descriptor = {
-        .nextInChain = NULL,
-        .dimension = dimension,
-        .format = format,
-        .mipLevelCount = 1,
-        .sampleCount = 1,
-        .size = size,
-        .usage = usage,
-        .viewFormatCount = 0,
-        .viewFormats = NULL,
-    };
+    
+    if (cecs_texture_builder_is_empty(builder)) {
+        builder->texture_descriptor = (WGPUTextureDescriptor){
+            .nextInChain = NULL,
+            .dimension = builder->texture_descriptor.dimension,
+            .format = builder->texture_descriptor.format,
+            .mipLevelCount = 1,
+            .sampleCount = 1,
+            .size = size,
+            .usage = builder->texture_descriptor.usage,
+            .viewFormatCount = 0,
+            .viewFormats = NULL,
+        };
+    } else if (builder->texture_descriptor.size.width != size.width || builder->texture_descriptor.size.height != size.height) {
+        assert(false && "error: texture size must match the size of the first loaded texture");
+        exit(EXIT_FAILURE);
+    }
 
     if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_mipmaps) {
         builder->descriptor.flags |= cecs_texture_builder_descriptor_config_alloc_mipmaps;
     }
 
     //static_assert(false, "TODO: handle loading multiple (clearing builder after build); set to NULL prior");
-    return cecs_texture_builder_set_data(builder, texture_data, texture_descriptor);
+    return cecs_texture_builder_take_into(builder, texture_data, texture_slot);
 }
-
-cecs_texture_builder *cecs_texture_builder_set_data(cecs_texture_builder *builder, uint8_t *texture_data, const WGPUTextureDescriptor texture_descriptor) {
+cecs_texture_builder *cecs_texture_builder_take_into(cecs_texture_builder *builder, uint8_t *texture_data, const uint_fast8_t texture_slot) {
     assert(
         !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
         && "error: flags were set to generate empty texture, cannot set data"
     );
+    assert(texture_slot < builder->used_texture_slots && "error: texture slot must be used");
     
-    builder->texture_data = texture_data;
-    builder->texture_descriptor = texture_descriptor;
+    builder->texture_data[texture_slot] = texture_data;
     return builder;
 }
 
-cecs_texture_builder *cecs_texture_builder_set_descriptor(cecs_texture_builder *builder, const WGPUTextureDescriptor texture_descriptor) {
-    builder->texture_descriptor = texture_descriptor;
+cecs_texture_builder *cecs_texture_builder_clear_and_set(
+    cecs_texture_builder *builder,
+    const cecs_texture_builder_descriptor descriptor,
+    const cecs_texture_builder_wgpu_descriptor wgpu_descriptor
+) {
+    builder->descriptor = descriptor;
+    builder->texture_descriptor = (WGPUTextureDescriptor){
+        .dimension = wgpu_descriptor.dimension,
+        .format = wgpu_descriptor.format,
+        .usage = wgpu_descriptor.usage,
+    };
+    builder->used_texture_slots = 0;
+    memset(builder->texture_data, 0, sizeof(builder->texture_data));
     return builder;
 }
-
-extern inline uint32_t cecs_max_u32(uint32_t a, uint32_t b);
-extern inline uint32_t cecs_min_u32(uint32_t a, uint32_t b);
+cecs_texture_builder *cecs_texture_builder_clear(cecs_texture_builder *builder) {
+    builder->descriptor = (cecs_texture_builder_descriptor){0};
+    builder->texture_descriptor = (WGPUTextureDescriptor){0};
+    builder->used_texture_slots = 0;
+    memset(builder->texture_data, 0, sizeof(builder->texture_data));
+    return builder;
+}
 
 WGPUExtent3D cecs_generate_next_mip(
     const WGPUExtent3D mip_size,
     const uint8_t *restrict mip_texels,
     const uint_fast8_t bytes_per_texel,
-    uint8_t out_next_mip_texels[const restrict]
-) {
+    uint8_t out_next_mip_texels[const restrict])
+{
     const WGPUExtent3D next_mip_size = {
         .width = cecs_max_u32(mip_size.width >> 1, 1),
         .height = cecs_max_u32(mip_size.height >> 1, 1),
@@ -202,7 +244,6 @@ size_t cecs_write_mipmaps(
 }
 
 static inline uint_fast8_t cecs_texture_builder_mip_count(const WGPUExtent3D size, uint32_t *out_largest_side_size) {
-    extern inline uint_fast8_t cecs_log2_u32(uint32_t n);
     *out_largest_side_size = cecs_max_u32(size.width, size.height);
     return cecs_log2_u32(*out_largest_side_size) + 1;
 }
@@ -211,9 +252,16 @@ static inline cecs_texture_size_pow2 cecs_texture_builder_size_from_mip_count(co
     return (cecs_texture_size_pow2)(mip_count);
 }
 
-extern inline bool cecs_is_pow2_u32(uint32_t n);
-static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_texture_builder *builder, const uint_fast8_t mip_count, size_t *out_mipmaps_size) {
-    assert(builder->texture_data != NULL && "error: texture data must be set");
+static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(
+    cecs_texture_builder *builder,
+    const uint_fast8_t mip_count,
+    const uint_fast8_t texture_slot,
+    size_t *out_mipmaps_size
+) {
+    assert(texture_slot < builder->used_texture_slots && "error: texture slot must be used");
+
+    uint8_t *texture_data = builder->texture_data[texture_slot];
+    assert(texture_data != NULL && "error: texture data must be set");
     const uint32_t min_side = cecs_min_u32(builder->texture_descriptor.size.width, builder->texture_descriptor.size.height);
 
     // 17px -> 5 size, 5 mip, 5 log
@@ -239,9 +287,9 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_textur
         uint8_t *mip_texels;
         if (builder->descriptor.flags & cecs_texture_builder_descriptor_config_alloc_mipmaps) {
             mip_texels =
-                cecs_arena_realloc(builder->texture_arena, builder->texture_data, texture_size, mip_buffer_size);
+                cecs_arena_realloc(builder->texture_arena, texture_data, texture_size, mip_buffer_size);
         } else {
-            mip_texels = builder->texture_data;
+            mip_texels = texture_data;
         }
 
         const size_t mip_chain_size = cecs_generate_mipmaps(
@@ -254,7 +302,7 @@ static cecs_texture_size_pow2 cecs_texture_builder_configure_mipmaps(cecs_textur
 
         assert(mip_chain_size <= mip_buffer_size && "fatal error: not allocated enough memory for mip chain");
         builder->texture_descriptor.mipLevelCount = mip_count;
-        builder->texture_data = cecs_arena_realloc(
+        texture_data = cecs_arena_realloc(
             builder->texture_arena,
             mip_texels,
             mip_buffer_size,
@@ -273,51 +321,62 @@ WGPUTexture cecs_texture_builder_build_alloc(
     cecs_texture_builder *builder,
     cecs_graphics_context *context,
     const WGPUTextureViewDescriptor *view_descriptor,
-    const uint32_t write_destination_layer
+    const uint32_t write_destination_layer,
+    const uint_fast8_t texture_slot
 ) {
-    assert(
-        (builder->texture_data == NULL) == !!(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
-        && "error: texture data must be NULL iff flags are set to generate empty texture"
-    );
-    if (builder->texture_data == NULL) {
-        return wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
-    } else {
-        uint32_t largest_side_size;
-        size_t mipmaps_size;
-        cecs_texture_builder_configure_mipmaps(
-            builder,
-            cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size),
-            &mipmaps_size
-        );
-        WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
-
-        assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
-        size_t write_size = cecs_write_mipmaps(
-            context->queue,
-            texture,
-            &builder->texture_descriptor, 
-            builder->texture_data,
-            builder->descriptor.bytes_per_texel,
-            view_descriptor->aspect,
-            write_destination_layer
-        );
-        assert(write_size == mipmaps_size && "error: writen size does not match mipmaps size");
-
-        cecs_stbi_allocator_get_current_allocator()->current_arena = builder->texture_arena;
-        stbi_image_free(builder->texture_data);
-        cecs_stbi_allocator_get_current_allocator()->current_arena = NULL;
-
-        return texture;
+    assert(texture_slot < builder->used_texture_slots && "error: texture slot must be used");
+    uint8_t *texture_data = builder->texture_data[texture_slot];
+    
+    if (texture_data == NULL) {
+        assert(false && "fatal error: texture data must be set if texture slot is used");
+        exit(EXIT_FAILURE);
     }
+    
+    uint32_t largest_side_size;
+    size_t mipmaps_size;
+    cecs_texture_builder_configure_mipmaps(
+        builder,
+        cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size),
+        &mipmaps_size,
+        texture_slot
+    );
+    WGPUTexture texture = wgpuDeviceCreateTexture(context->device, &builder->texture_descriptor);
+
+    assert(builder->texture_descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+    size_t write_size = cecs_write_mipmaps(
+        context->queue,
+        texture,
+        &builder->texture_descriptor, 
+        texture_data,
+        builder->descriptor.bytes_per_texel,
+        view_descriptor->aspect,
+        write_destination_layer
+    );
+    assert(write_size == mipmaps_size && "error: writen size does not match mipmaps size");
+
+    cecs_stbi_allocator_get_current_allocator()->current_arena = builder->texture_arena;
+    stbi_image_free(texture_data);
+    cecs_stbi_allocator_get_current_allocator()->current_arena = NULL;
+
+    return texture;
 }
+extern inline uint_fast8_t cecs_texture_builder_build_alloc_range(
+    cecs_texture_builder *builder,
+    cecs_graphics_context *context,
+    const WGPUTextureViewDescriptor *view_descriptor,
+    const uint32_t write_destination_layer,
+    const cecs_exclusive_range slot_range,
+    WGPUTexture out_textures[const restrict static 1]
+);
 
 cecs_texture cecs_texture_builder_build(
     cecs_texture_builder *builder,
     cecs_graphics_context *context,
     const WGPUTextureViewDescriptor *view_descriptor,
-    const uint32_t write_destination_layer
+    const uint32_t write_destination_layer,
+    const uint_fast8_t texture_slot
 ) {
-    WGPUTexture texture = cecs_texture_builder_build_alloc(builder, context, view_descriptor, write_destination_layer);
+    WGPUTexture texture = cecs_texture_builder_build_alloc(builder, context, view_descriptor, write_destination_layer, texture_slot);
     WGPUTextureView texture_view = wgpuTextureCreateView(texture, view_descriptor);
     wgpuTextureRelease(texture);
     return (cecs_texture){
@@ -325,6 +384,22 @@ cecs_texture cecs_texture_builder_build(
         .extent = builder->texture_descriptor.size
     };
 }
+extern inline uint_fast8_t cecs_texture_builder_build_range(
+    cecs_texture_builder *builder,
+    cecs_graphics_context *context,
+    const WGPUTextureViewDescriptor *view_descriptor,
+    const uint32_t write_destination_layer,
+    const cecs_exclusive_range slot_range,
+    cecs_texture out_textures[const restrict static 1]
+);
+
+#ifndef CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS
+#define CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS 64
+#endif
+static_assert(
+    CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS <= CHAR_BIT * sizeof(cecs_texture_bank_slot_mask),
+    "static error: default array layers must be less than or equal to the number of bits in the slot mask"
+);
 
 static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
     cecs_texture_builder *builder,
@@ -369,19 +444,9 @@ static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
     cecs_component_iterator_end_iter(&it);
 
 
-    static const uint32_t cecs_texture_bank_default_array_layers = 64;
-    cecs_texture_builder bank_builder = cecs_texture_builder_create(
-        builder->world,
-        builder->texture_arena,
-        (cecs_texture_builder_descriptor){
-            .bytes_per_texel = builder->descriptor.bytes_per_texel,
-            .channel_count = builder->descriptor.channel_count,
-            .flags = cecs_texture_builder_descriptor_config_generate_empty,
-        }
-    );
-
+    static const uint32_t cecs_texture_bank_default_array_layers = CECS_TEXTURE_BANK_DEFAULT_ARRAY_LAYERS;
     const uint32_t texture_size = 1 << texture_bank_id_descriptor.flags.size;
-    cecs_texture_builder_set_descriptor_no_data(&bank_builder, (WGPUTextureDescriptor){
+    WGPUTexture bank_texture = wgpuDeviceCreateTexture(context->device, &(WGPUTextureDescriptor){
         .dimension = WGPUTextureDimension_2D,
         .format = texture_bank_id_descriptor.format,
         .usage = (uint32_t)texture_bank_id_descriptor.flags.usage,
@@ -393,15 +458,6 @@ static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
         .sampleCount = builder->texture_descriptor.sampleCount,
         .mipLevelCount = (uint32_t)texture_bank_id_descriptor.flags.mip_level_count,
     });
-    // TODO: cecs_texture_bank_create
-    WGPUTexture bank_texture = cecs_texture_builder_build_alloc(&bank_builder, context, &(WGPUTextureViewDescriptor){
-        .format = texture_bank_id_descriptor.format,
-        .dimension = WGPUTextureViewDimension_2DArray,
-        .baseMipLevel = 0,
-        .mipLevelCount = (uint32_t)texture_bank_id_descriptor.flags.mip_level_count,
-        .baseArrayLayer = 0,
-        .arrayLayerCount = cecs_texture_bank_default_array_layers,
-    }, 0);
     
     const cecs_entity_id bank_entity_id = cecs_world_add_entity(&builder->world->world);
     cecs_texture_bank *bank = cecs_world_set_component_relation(
@@ -435,17 +491,45 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
     cecs_graphics_context *context,
     const WGPUTextureViewDescriptor *view_descriptor
 ) {
-    assert(
-        (builder->texture_data == NULL) == !!(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
-        && "error: texture data must be NULL iff flags are set to generate empty texture"
-    );
+    assert(builder->used_texture_slots > 0 && "error: must have at least one texture slot used");
+    uint_fast8_t empty_slots = 0;
+    for (uint_fast8_t i = 0; i < builder->used_texture_slots; i++) {
+        if (builder->texture_data[i] == NULL) {
+            ++empty_slots;
+        }
+    }
+
+    if (empty_slots == builder->used_texture_slots) {
+        assert(
+            (builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
+            && "error: texture slots must be either all empty iff flags are set to generate empty texture"
+        );
+    } else if (empty_slots == 0) {
+        assert(
+            !(builder->descriptor.flags & cecs_texture_builder_descriptor_config_generate_empty)
+            && "error: texture slots must be either all used iff flags are not set to generate empty texture"
+        );
+    } else {
+        assert(false && "fatal error: texture slots must be either all empty or all used");
+        exit(EXIT_FAILURE);
+    }
+    
     uint32_t largest_side_size;
     const uint_fast8_t mip_count = cecs_texture_builder_mip_count(builder->texture_descriptor.size, &largest_side_size);
     
     cecs_texture_size_pow2 size_pow2;
+    static_assert(sizeof(cecs_texture_size_pow2) == sizeof(uint32_t), "static error: expected sizeof cecs_texture_size_pow2 to be 4 bytes");
+
     size_t mipmaps_size = 0;
-    if (builder->texture_data != NULL) {
-        size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, &mipmaps_size);
+    if (empty_slots == 0) {
+        size_pow2 = cecs_texture_builder_configure_mipmaps(builder, mip_count, 0, &mipmaps_size);
+        for (uint_fast8_t i = 1; i < builder->used_texture_slots; i++) {
+            size_t mip_size;
+            const cecs_texture_size_pow2 size = cecs_texture_builder_configure_mipmaps(builder, mip_count, i, mip_size);
+            
+            assert(size == size_pow2 && "error: texture pow2 size must match for all textures");
+            assert(mip_size == mipmaps_size && "error: mipmaps size must match for all textures");
+        }
     } else {
         size_pow2 = cecs_texture_builder_size_from_mip_count(cecs_is_pow2_u32(largest_side_size) ? mip_count - 1 : mip_count);
     }
@@ -470,7 +554,7 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
         builder,
         context,
         bank_descriptor,
-        1,
+        builder->used_texture_slots,
         &bank_entity_id,
         &slot_index,
         &slot_mask
@@ -521,7 +605,7 @@ cecs_texture_in_bank_bundle cecs_texture_builder_build_in_bank(
         .reference = (cecs_texture_in_bank_reference){bank_entity_id},
         .range = (cecs_texture_in_bank_range){
             .slot_index = slot_index,
-            .slot_range = 1,
+            .slot_range = builder->used_texture_slots,
         },
         .subrect = (cecs_texture_subrect2_f32){
             .normalized_width = builder->texture_descriptor.size.width / bank_width,

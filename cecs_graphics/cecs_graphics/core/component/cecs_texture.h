@@ -24,22 +24,22 @@ typedef enum cecs_texture_bank_status {
 typedef uint8_t cecs_texture_bank_status_flag;
 
 typedef enum cecs_texture_size_pow2 {
-    cecs_texture_bank_size_none = 0,
-    cecs_texture_bank_size_2x2,
-    cecs_texture_bank_size_4x4,
-    cecs_texture_bank_size_8x8,
-    cecs_texture_bank_size_16x16,
-    cecs_texture_bank_size_32x32,
-    cecs_texture_bank_size_64x64,
-    cecs_texture_bank_size_128x128,
-    cecs_texture_bank_size_256x256,
-    cecs_texture_bank_size_512x512,
-    cecs_texture_bank_size_1024x1024,
-    cecs_texture_bank_size_2048x2048,
-    cecs_texture_bank_size_4096x4096,
-    cecs_texture_bank_size_8192x8192,
-    cecs_texture_bank_size_16384x16384,
-    cecs_texture_bank_size_32768x32768,
+    cecs_texture_size_none = 0,
+    cecs_texture_size_2x2,
+    cecs_texture_size_4x4,
+    cecs_texture_size_8x8,
+    cecs_texture_size_16x16,
+    cecs_texture_size_32x32,
+    cecs_texture_size_64x64,
+    cecs_texture_size_128x128,
+    cecs_texture_size_256x256,
+    cecs_texture_size_512x512,
+    cecs_texture_size_1024x1024,
+    cecs_texture_size_2048x2048,
+    cecs_texture_size_4096x4096,
+    cecs_texture_size_8192x8192,
+    cecs_texture_size_16384x16384,
+    cecs_texture_size_32768x32768,
 } cecs_texture_size_pow2;
 typedef uint8_t cecs_texture_bank_size_flag;
 
