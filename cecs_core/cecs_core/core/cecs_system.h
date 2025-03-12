@@ -15,8 +15,8 @@ static inline cecs_world_system cecs_world_system_create(cecs_component_iterator
         .descriptor = descriptor
     };
 }
-#define CECS_WORLD_SYSTEM_CREATE_GROUPED(...) cecs_world_system_create(CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED(__VA_ARGS__))
-#define CECS_WORLD_SYSTEM_CREATE_GROUPED_FROM_IDS(...) cecs_world_system_create(CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED(__VA_ARGS__))
+#define CECS_WORLD_SYSTEM_CREATE_GROUPED(...) cecs_world_system_create(CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPED(__VA_ARGS__))
+#define CECS_WORLD_SYSTEM_CREATE_GROUPED_FROM_IDS(...) cecs_world_system_create(CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPED(__VA_ARGS__))
 
 #define CECS_WORLD_SYSTEM_CREATE(access, search, ...) CECS_WORLD_SYSTEM_CREATE_GROUPED(CECS_COMPONENT_GROUP(access, search, __VA_ARGS__))
 #define CECS_WORLD_SYSTEM_CREATE_FROM_IDS(access, search, ...) CECS_WORLD_SYSTEM_CREATE_GROUPED(CECS_COMPONENT_GROUP_FROM_IDS(access, search, __VA_ARGS__))

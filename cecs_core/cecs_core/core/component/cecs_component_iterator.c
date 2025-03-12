@@ -213,7 +213,7 @@ cecs_component_iterator cecs_component_iterator_create(
     }
 
     return (cecs_component_iterator) {
-        .descriptor = { .groupped = descriptor_filtered },
+        .descriptor = { .grouped = descriptor_filtered },
         .entities_iterator = cecs_hibitset_iterator_create_owned_at_first(set),
         .creation_checksum = world_components->checksum,
         .world_components = world_components,
@@ -306,12 +306,12 @@ static size_t cecs_component_iteration_group_ensure_access_and_collect_storages(
 }
 
 [[maybe_unused]]
-static cecs_component_iterator_descriptor_flat cecs_component_iterator_descriptor_flat_from_groupped(
+static cecs_component_iterator_descriptor_flat cecs_component_iterator_descriptor_flat_from_grouped(
     const cecs_component_iterator *iterator,
     cecs_world_components *world_components,
     cecs_arena *iterator_temporary_arena
 ) {
-    const cecs_component_iterator_descriptor descriptor = iterator->descriptor.groupped;
+    const cecs_component_iterator_descriptor descriptor = iterator->descriptor.grouped;
     cecs_component_iterator_descriptor_flat flat_descriptor = {
         .entity_range = descriptor.entity_range,
         .components = cecs_arena_alloc(iterator_temporary_arena, iterator->component_count * sizeof(cecs_component_id))
@@ -330,12 +330,12 @@ static cecs_component_iterator_descriptor_flat cecs_component_iterator_descripto
 }
 
 [[maybe_unused]]
-static cecs_component_iterator_descriptor_storages cecs_component_iterator_descriptor_storages_from_groupped(
+static cecs_component_iterator_descriptor_storages cecs_component_iterator_descriptor_storages_from_grouped(
     const cecs_component_iterator *iterator,
     cecs_world_components *world_components,
     cecs_arena *iterator_temporary_arena
 ) {
-    const cecs_component_iterator_descriptor descriptor = iterator->descriptor.groupped;
+    const cecs_component_iterator_descriptor descriptor = iterator->descriptor.grouped;
     cecs_component_iterator_descriptor_storages storages_descriptor = {
         .entity_range = descriptor.entity_range,
         .storages = cecs_arena_alloc(iterator_temporary_arena, iterator->component_count * sizeof(cecs_sized_component_storage*))
@@ -374,14 +374,14 @@ cecs_entity_id cecs_component_iterator_begin_iter(cecs_component_iterator *it, c
             && "fatal error: component iterator must not have collected components or storages if collected flag is unset"
         );
 #if CECS_COMPONENT_ITERATOR_COLLECT_STORAGES
-        it->descriptor.storages = cecs_component_iterator_descriptor_storages_from_groupped(
+        it->descriptor.storages = cecs_component_iterator_descriptor_storages_from_grouped(
             it,
             it->world_components,
             iterator_temporary_arena
         );
         it->flags |= cecs_component_iterator_status_collected_storages;
 #elif CECS_COMPONENT_ITERATOR_COLLECT_COMPONENTS
-        it->descriptor.flattened = cecs_component_iterator_descriptor_flat_from_groupped(
+        it->descriptor.flattened = cecs_component_iterator_descriptor_flat_from_grouped(
             it,
             it->world_components,
             iterator_temporary_arena

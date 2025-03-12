@@ -374,7 +374,7 @@ static void test_pass_draw_inner(
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(
         cecs_mesh, cecs_instance_group, cecs_index_stream, cecs_raw_color_stream, cecs_raw_position_stream, cecs_texture_in_bank_reference
     ) handle;
-    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(&world->components, &frame_arena,
+    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, &frame_arena,
         CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, cecs_mesh, cecs_instance_group),
         CECS_COMPONENT_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_and_any, cecs_index_stream),
         CECS_COMPONENT_GROUP_FROM_IDS(cecs_component_access_inmmutable, cecs_component_group_search_all,

@@ -125,7 +125,7 @@ cecs_buffer_storage_attachment *cecs_graphics_system_sync_uniform_components(
         uint8_t *stage = uniform_buffer->buffer.element_buffer.buffer.stage;
 
         CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_uniform_raw_stream, void) handle;
-        cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(&world->components, sync_arena,
+        cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&world->components, sync_arena,
             CECS_COMPONENT_GROUP_FROM_IDS(cecs_component_access_inmmutable, cecs_component_group_search_all,
                 CECS_RELATION_ID(cecs_uniform_raw_stream, component_id), component_id
             )

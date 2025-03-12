@@ -412,8 +412,7 @@ static cecs_texture_bank *cecs_texture_builder_get_or_allocate_bank(
 ) {
     const cecs_component_id texture_bank_id = cecs_component_id_from_texture_resource_id_descriptor(texture_bank_id_descriptor);
     CECS_COMPONENT_ITERATION_HANDLE_STRUCT(cecs_texture_bank) handle;
-    // FIXME: correct typo in `GROUPPED`
-    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(&builder->world->world.components, builder->texture_arena, 
+    cecs_component_iterator it = CECS_COMPONENT_ITERATOR_CREATE_GROUPED(&builder->world->world.components, builder->texture_arena, 
         CECS_COMPONENT_GROUP_FROM_IDS(
             cecs_component_access_inmmutable, cecs_component_group_search_all, CECS_RELATION_ID(cecs_texture_bank, texture_bank_id)
         )
