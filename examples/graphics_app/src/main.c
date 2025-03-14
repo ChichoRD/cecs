@@ -128,10 +128,25 @@ int main(void) {
     static const char *texture_path = "../../examples/graphics_app/assets/DuckCM.png";
     cecs_file_texture2_builder builder_texture = cecs_file_texture2_builder_create_for_lower(&system.world, &builder_arena, (cecs_file_texture2_builder_descriptor){
         .channel_count = 4,
-        .descriptor =(WGPUTextureDescriptor){
-            .dimension = WGPUTextureDimension_2D,
-            .format = WGPUTextureFormat_RGBA8Unorm,
-            .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
+        .descriptor = (cecs_mem_texture_builder_descriptor){
+            .descriptor = (WGPUTextureDescriptor){
+                .dimension = WGPUTextureDimension_2D,
+                .format = WGPUTextureFormat_RGBA8Unorm,
+                .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
+                .sampleCount = 1,
+                .viewFormatCount = 0,
+                .size = (WGPUExtent3D){
+                    .width = 1,
+                    .height = 1,
+                    .depthOrArrayLayers = 1,
+                },
+                .mipLevelCount = 0
+            },
+            .configuration = (cecs_mem_texture_builder_configuration_descriptor){
+                .bytes_per_texel = 4,
+                .max_mip_level = cecs_mem_texture_builder_max_mip_level,
+                .flags = cecs_mem_texture_builder_descriptor_config_generate_mipmaps,
+            }
         }
     }, texture_path);
     cecs_file_texture2_builder_load_into(
@@ -141,15 +156,13 @@ int main(void) {
     );
 
     cecs_mem_texture_builder builder_texture_mem = cecs_mem_texture_builder_create(&system.world, &builder_arena, (cecs_mem_texture_builder_descriptor){
-        .descriptor = builder_texture.builder.descriptor.descriptor,
-        .bytes_per_texel = 4,
-        .max_mip_level = cecs_mem_texture_builder_max_mip_level,
-        .flags = cecs_mem_texture_builder_descriptor_config_generate_mipmaps,
+        .descriptor = builder_texture.builder.builder.descriptor,
+        .configuration = builder_texture.builder.descriptor,
     });
     uint8_t *pattern_texture;
     {
-        const uint32_t width = builder_texture_mem.descriptor.descriptor.size.width;
-        const uint32_t height = builder_texture_mem.descriptor.descriptor.size.height;
+        const uint32_t width = builder_texture_mem.builder.descriptor.size.width;
+        const uint32_t height = builder_texture_mem.builder.descriptor.size.height;
         const uint_fast8_t bytes_per_texel = builder_texture_mem.descriptor.bytes_per_texel; 
         pattern_texture = cecs_arena_alloc(
             &builder_arena,
@@ -173,7 +186,7 @@ int main(void) {
         .baseMipLevel = 0,
         .dimension = WGPUTextureViewDimension_2D,
         .format = WGPUTextureFormat_RGBA8Unorm,
-        .mipLevelCount = builder_texture.builder.descriptor.descriptor.mipLevelCount,
+        .mipLevelCount = builder_texture.builder.builder.descriptor.mipLevelCount,
         .aspect = WGPUTextureAspect_All,
     }, 2);
     cecs_texture_in_bank_bundle bank_pattern = cecs_mem_texture_builder_build_in_bank(&builder_texture_mem, &system.context, &(WGPUTextureViewDescriptor){
@@ -182,7 +195,7 @@ int main(void) {
         .baseMipLevel = 0,
         .dimension = WGPUTextureViewDimension_2D,
         .format = WGPUTextureFormat_RGBA8Unorm,
-        .mipLevelCount = builder_texture_mem.descriptor.descriptor.mipLevelCount,
+        .mipLevelCount = builder_texture_mem.builder.descriptor.mipLevelCount,
         .aspect = WGPUTextureAspect_All,
     }, 1, 0);
     assert(bank.reference.texture_id == bank_pattern.reference.texture_id);

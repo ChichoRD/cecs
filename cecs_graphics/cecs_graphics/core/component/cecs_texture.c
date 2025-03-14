@@ -67,7 +67,7 @@ uint_fast8_t cecs_texture_size_pow2_max_mip_count(const cecs_texture_size_pow2 s
 }
 cecs_texture_size_pow2 cecs_texture_size_pow2_ensure(const WGPUExtent3D size, uint32_t *out_largest_side_size) {
     *out_largest_side_size = cecs_max_u32(size.width, size.height);
-    return (cecs_texture_size_pow2)(cecs_log2_u32(*out_largest_side_size) + 1);
+    return (cecs_texture_size_pow2)(cecs_log2_u32(*out_largest_side_size - 1) + 1);
 }
 
 cecs_texture_bank_id_descriptor cecs_texture_bank_id_descriptor_create_full(
@@ -143,7 +143,8 @@ cecs_texture_bank_slot_mask cecs_texture_bank_slot_mask_from_range(const uint_fa
 cecs_texture_bank cecs_texture_bank_create(
     WGPUDevice device,
     const cecs_texture_bank_id_descriptor texture_bank_id_descriptor,
-    const uint32_t sample_count) {
+    const uint32_t sample_count
+) {
     assert(
         texture_bank_id_descriptor.flags.size != cecs_texture_size_none
         && "error: invalid cecs_texture_resource_id_descriptor, size must be non-zero"

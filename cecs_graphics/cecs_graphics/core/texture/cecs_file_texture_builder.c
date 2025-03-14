@@ -74,14 +74,15 @@ cecs_file_texture2_builder *cecs_file_texture2_builder_load_into(cecs_file_textu
         exit(EXIT_FAILURE);
         return builder;
     }
-    assert((uint32_t)width == builder->builder.descriptor.descriptor.size.width && "error: width must match requirements");
-    assert((uint32_t)height == builder->builder.descriptor.descriptor.size.height && "error: height must match requirements");
+    assert((uint32_t)width == builder->builder.builder.descriptor.size.width && "error: width must match requirements");
+    assert((uint32_t)height == builder->builder.builder.descriptor.size.height && "error: height must match requirements");
     assert((uint32_t)channels == builder->channel_count && "error unexpected: channel count mismatch");
 
     if (builder->builder.descriptor.flags & cecs_mem_texture_builder_descriptor_config_generate_mipmaps) {
         builder->builder.descriptor.flags |= cecs_mem_texture_builder_descriptor_config_alloc_mipmaps;
     }
-    return cecs_mem_texture_builder_take_into_mut(builder, texture_data, texture_slot);
+    cecs_mem_texture_builder_take_into_mut(&builder->builder, texture_data, texture_slot);
+    return builder;
 }
 
 size_t cecs_file_texture2_builder_build_alloc(
@@ -114,7 +115,7 @@ cecs_texture_in_bank_bundle cecs_file_texture2_builder_build_in_bank(
     const size_t bundle_range_capacity
 ) {
     cecs_texture_in_bank_bundle bundle = cecs_mem_texture_builder_build_in_bank(
-        builder,
+        &builder->builder,
         context,
         view_descriptor,
         bundle_range_capacity,

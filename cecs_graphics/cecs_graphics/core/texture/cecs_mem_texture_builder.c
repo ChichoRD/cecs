@@ -9,15 +9,15 @@ cecs_mem_texture_builder cecs_mem_texture_builder_create(
     cecs_arena *texture_arena,
     const cecs_mem_texture_builder_descriptor descriptor
 ) {
-    assert(descriptor.bytes_per_texel > 0 && "error: bytes per pixel must be greater than 0");
-    assert(descriptor.max_mip_level <= cecs_mem_texture_builder_max_mip_level && "error: max mip level must be less than or equal to the maximum mip level");
+    assert(descriptor.configuration.bytes_per_texel > 0 && "error: bytes per pixel must be greater than 0");
+    assert(descriptor.configuration.max_mip_level <= cecs_mem_texture_builder_max_mip_level && "error: max mip level must be less than or equal to the maximum mip level");
     return (cecs_mem_texture_builder){
         .builder = cecs_texture_builder_create(
             descriptor.descriptor,
             world,
             texture_arena
         ),
-        .descriptor = descriptor,
+        .descriptor = descriptor.configuration,
         .textures_bytes = {0},
         .used_texture_slots = 0,
     };
@@ -48,6 +48,7 @@ cecs_mem_texture_builder *cecs_mem_texture_builder_take_into_mut(
     }
 
     builder->textures_bytes[texture_slot] = texture_data;
+    return builder;
 }
 
 static size_t cecs_mem_texture_builder_generate_mipchain(
@@ -65,7 +66,7 @@ static size_t cecs_mem_texture_builder_generate_mipchain(
     const size_t mip0_size = cecs_mem_texture_builder_mip0_size(builder);
 
     if (builder->descriptor.flags & cecs_mem_texture_builder_descriptor_config_alloc_mipmaps) {
-        builder->descriptor.descriptor.mipLevelCount = mip_count;
+        builder->builder.descriptor.mipLevelCount = mip_count;
         for (cecs_texture_builder_texture_count i = 0; i < count; i++) {
             builder->textures_bytes[i] = cecs_arena_realloc(
                 cecs_texture_builder_arena(&builder->builder),
@@ -79,7 +80,7 @@ static size_t cecs_mem_texture_builder_generate_mipchain(
                 builder->textures_bytes[i],
                 builder->descriptor.bytes_per_texel,
                 mip_count,
-                builder->textures_bytes[i] + mip0_size
+                builder->textures_bytes[i] + mip0_size * (depth_start_layer + 1)
             );
         }
     } else {
@@ -90,7 +91,7 @@ static size_t cecs_mem_texture_builder_generate_mipchain(
                 builder->textures_bytes[i],
                 builder->descriptor.bytes_per_texel,
                 mip_count,
-                builder->textures_bytes[i] + mip0_size
+                builder->textures_bytes[i] + mip0_size * (depth_start_layer + 1)
             );
         }
     }
@@ -105,7 +106,7 @@ size_t cecs_mem_texture_builder_build_alloc(
     const size_t destination_textures_capacity,
     const uint32_t depth_start_layer
 ) {
-    assert(builder->descriptor.descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+    assert(builder->builder.descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
     const size_t write_count = cecs_min(
         (size_t)builder->used_texture_slots,
         destination_textures_capacity
@@ -130,7 +131,7 @@ size_t cecs_mem_texture_builder_build_alloc(
     } else {
         mipmaps_size = cecs_mem_texture_builder_mip0_size(builder);
         assert(
-            view_descriptor->mipLevelCount == builder->descriptor.descriptor.mipLevelCount
+            view_descriptor->mipLevelCount == builder->builder.descriptor.mipLevelCount
             && "error: mip level count must match descriptor mip level count if mipmaps are not generated"
         );
     }
@@ -168,7 +169,7 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
     const size_t bundle_range_capacity,
     const uint32_t depth_start_layer
 ) {
-    assert(builder->descriptor.descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
+    assert(builder->builder.descriptor.usage & WGPUTextureUsage_CopyDst && "error: texture must be copyable");
     const size_t write_count = cecs_min(
         (size_t)builder->used_texture_slots,
         bundle_range_capacity
@@ -192,7 +193,7 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
     } else {
         mipmaps_size = cecs_mem_texture_builder_mip0_size(builder);
         assert(
-            view_descriptor->mipLevelCount == builder->descriptor.descriptor.mipLevelCount
+            view_descriptor->mipLevelCount == builder->builder.descriptor.mipLevelCount
             && "error: mip level count must match descriptor mip level count if mipmaps are not generated"
         );
     }
@@ -201,13 +202,13 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
     const cecs_texture_bank_id_descriptor bank_descriptor = cecs_texture_bank_id_descriptor_create_free(
         texture_size,
         mip_count,
-        builder->descriptor.descriptor.format,
-        builder->descriptor.descriptor.usage
+        builder->builder.descriptor.format,
+        builder->builder.descriptor.usage
     );
 
     cecs_entity_id bank_entity_id;
     uint_fast8_t slot_index;
-    cecs_world *world = cecs_texture_builder_world(&builder->builder);
+    cecs_graphics_world *world = cecs_texture_builder_world(&builder->builder);
     cecs_texture_bank *bank = cecs_texture_bank_find_allocated_or_null(
         world,
         cecs_texture_builder_arena(&builder->builder),
@@ -221,7 +222,7 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
             world,
             context->device,
             bank_descriptor,
-            builder->descriptor.descriptor.sampleCount,
+            builder->builder.descriptor.sampleCount,
             &bank_entity_id
         );
         slot_index = 0;
@@ -236,11 +237,6 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
     );
 
     for (uint_fast8_t i = 0; i < write_count; i++) {
-        WGPUTexture texture = cecs_texture_builder_build_alloc(
-            &builder->builder,
-            context
-        );
-        
         const cecs_mipmaps_write_descriptor mipmaps = {
             .source_texels = builder->textures_bytes[i] + mipmaps_size * depth_start_layer,
             .source_size = mipmaps_size,
@@ -249,12 +245,13 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
         };
     
         const size_t write_size = cecs_write_mipmaps(
-            texture,
+            bank->texture,
             context->queue,
             &builder->builder.descriptor,
             view_descriptor->aspect,
             mipmaps
         );
+        (void)write_size;
     }
     
     float bank_width = (float)wgpuTextureGetWidth(bank->texture);
@@ -266,8 +263,8 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
             .slot_range = builder->used_texture_slots,
         },
         .subrect = (cecs_texture_subrect2_f32){
-            .normalized_width = builder->descriptor.descriptor.size.width / bank_width,
-            .normalized_height = builder->descriptor.descriptor.size.height / bank_height,
+            .normalized_width = builder->builder.descriptor.size.width / bank_width,
+            .normalized_height = builder->builder.descriptor.size.height / bank_height,
         },
     };
 }

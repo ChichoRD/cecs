@@ -13,18 +13,21 @@ typedef enum cecs_mem_texture_builder_descriptor_config {
 } cecs_texture_builder_descriptor_config;
 typedef uint8_t cecs_mem_texture_builder_descriptor_config_flags;
 
-typedef struct cecs_mem_texture_builder_descriptor {
-    WGPUTextureDescriptor descriptor;
+typedef struct cecs_mem_texture_builder_configuration_descriptor {
     uint8_t bytes_per_texel;
     uint8_t max_mip_level;
     cecs_mem_texture_builder_descriptor_config_flags flags;
+} cecs_mem_texture_builder_configuration_descriptor;
+typedef struct cecs_mem_texture_builder_descriptor {
+    WGPUTextureDescriptor descriptor;
+    cecs_mem_texture_builder_configuration_descriptor configuration;
 } cecs_mem_texture_builder_descriptor;
 
 
 typedef struct cecs_mem_texture_builder {
     cecs_texture_builder builder;
-    cecs_mem_texture_builder_descriptor descriptor;
-    const uint8_t *textures_bytes[CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT];
+    cecs_mem_texture_builder_configuration_descriptor descriptor;
+    uint8_t *textures_bytes[CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT];
     cecs_texture_builder_texture_count used_texture_slots;
 } cecs_mem_texture_builder;
 
