@@ -4,6 +4,8 @@
 #include "builder/cecs_texture_builder.h"
 #include "cecs_texture_bank.h"
 
+extern const uint8_t cecs_mem_texture_builder_max_mip_level;
+
 typedef enum cecs_mem_texture_builder_descriptor_config {
     cecs_mem_texture_builder_descriptor_config_none = 0,
     cecs_mem_texture_builder_descriptor_config_generate_mipmaps = 1 << 0,
@@ -49,7 +51,7 @@ cecs_mem_texture_builder *cecs_mem_texture_builder_take_into_mut(
 size_t cecs_mem_texture_builder_build_alloc(
     cecs_mem_texture_builder *builder,
     cecs_graphics_context *context,
-    const WGPUTextureViewDescriptor *view_descriptor,
+    WGPUTextureViewDescriptor *view_descriptor,
     WGPUTexture destination_textures[const restrict static 1],
     const size_t destination_textures_capacity,
     const uint32_t depth_start_layer
@@ -57,7 +59,7 @@ size_t cecs_mem_texture_builder_build_alloc(
 cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
     cecs_mem_texture_builder *builder,
     cecs_graphics_context *context,
-    const WGPUTextureViewDescriptor *view_descriptor,
+    WGPUTextureViewDescriptor *view_descriptor,
     const size_t bundle_range_capacity,
     const uint32_t depth_start_layer
 );

@@ -2,7 +2,7 @@
 #include <cecs_math/relations/cecs_ordering.h>
 
 #define CECS_MEM_TEXTURE_BUILDER_MAX_MIP_LEVEL ((1 << CHAR_BIT) - 2)
-static const uint8_t cecs_mem_texture_builder_max_mip_level = CECS_MEM_TEXTURE_BUILDER_MAX_MIP_LEVEL;
+const uint8_t cecs_mem_texture_builder_max_mip_level = CECS_MEM_TEXTURE_BUILDER_MAX_MIP_LEVEL;
 
 cecs_mem_texture_builder cecs_mem_texture_builder_create(
     cecs_graphics_world *world,
@@ -30,7 +30,6 @@ cecs_mem_texture_builder *cecs_mem_texture_builder_take_into_mut(
     uint8_t *texture_data,
     const uint_fast8_t texture_slot
 ) {
-    const bool builder_empty = cecs_texture_builder_is_empty(builder);
     if (texture_slot == builder->used_texture_slots) {
         assert(texture_slot < CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT && "error: cannot use more texture slots than the defined maximum");
         assert(builder->textures_bytes[builder->used_texture_slots] == NULL && "error: texture data must be NULL if texture slot is unused");
@@ -243,7 +242,7 @@ cecs_texture_in_bank_bundle cecs_mem_texture_builder_build_in_bank(
         );
         
         const cecs_mipmaps_write_descriptor mipmaps = {
-            .source_texels = builder->textures_bytes[i],
+            .source_texels = builder->textures_bytes[i] + mipmaps_size * depth_start_layer,
             .source_size = mipmaps_size,
             .bytes_per_texel = builder->descriptor.bytes_per_texel,
             .destination_layer = slot_index + i,

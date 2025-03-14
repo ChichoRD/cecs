@@ -125,26 +125,32 @@ int main(void) {
     cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, builder.mesh_builders, &system.context, &index_stream);
     cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
 
-    // TODO: add suport for multi texture functions 
-    cecs_texture_builder builder_texture = cecs_texture_builder_create(&system.world, &builder_arena, (cecs_texture_builder_descriptor){
-        .bytes_per_texel = 4,
+    static const char *texture_path = "../../examples/graphics_app/assets/DuckCM.png";
+    cecs_file_texture2_builder builder_texture = cecs_file_texture2_builder_create_for_lower(&system.world, &builder_arena, (cecs_file_texture2_builder_descriptor){
         .channel_count = 4,
-        .flags = cecs_texture_builder_descriptor_config_generate_mipmaps
-    }, (cecs_texture_builder_wgpu_descriptor){
-        .dimension = WGPUTextureDimension_2D,
-        .format = WGPUTextureFormat_RGBA8Unorm,
-        .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
-    });
-    cecs_texture_builder_load_into(
+        .descriptor =(WGPUTextureDescriptor){
+            .dimension = WGPUTextureDimension_2D,
+            .format = WGPUTextureFormat_RGBA8Unorm,
+            .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
+        }
+    }, texture_path);
+    cecs_file_texture2_builder_load_into(
         &builder_texture,
         "../../examples/graphics_app/assets/DuckCM.png",
         0
     );
+
+    cecs_mem_texture_builder builder_texture_mem = cecs_mem_texture_builder_create(&system.world, &builder_arena, (cecs_mem_texture_builder_descriptor){
+        .descriptor = builder_texture.builder.descriptor.descriptor,
+        .bytes_per_texel = 4,
+        .max_mip_level = cecs_mem_texture_builder_max_mip_level,
+        .flags = cecs_mem_texture_builder_descriptor_config_generate_mipmaps,
+    });
     uint8_t *pattern_texture;
     {
-        const uint32_t width = builder_texture.texture_descriptor.size.width;
-        const uint32_t height = builder_texture.texture_descriptor.size.height;
-        const uint_fast8_t bytes_per_texel = builder_texture.descriptor.bytes_per_texel; 
+        const uint32_t width = builder_texture_mem.descriptor.descriptor.size.width;
+        const uint32_t height = builder_texture_mem.descriptor.descriptor.size.height;
+        const uint_fast8_t bytes_per_texel = builder_texture_mem.descriptor.bytes_per_texel; 
         pattern_texture = cecs_arena_alloc(
             &builder_arena,
             width * height * bytes_per_texel
@@ -159,18 +165,29 @@ int main(void) {
             }
         }
     }
-    ++builder_texture.used_texture_slots;
-    cecs_texture_builder_take_into(&builder_texture, pattern_texture, 1);
-    cecs_texture_in_bank_bundle bank = cecs_texture_builder_build_in_bank(&builder_texture, &system.context, &(WGPUTextureViewDescriptor){
+    cecs_mem_texture_builder_take_into_mut(&builder_texture_mem, pattern_texture, 0);
+
+    cecs_texture_in_bank_bundle bank = cecs_file_texture2_builder_build_in_bank(&builder_texture, &system.context, &(WGPUTextureViewDescriptor){
         .arrayLayerCount = 1,
         .baseArrayLayer = 0,
         .baseMipLevel = 0,
         .dimension = WGPUTextureViewDimension_2D,
         .format = WGPUTextureFormat_RGBA8Unorm,
-        .mipLevelCount = builder_texture.texture_descriptor.mipLevelCount,
+        .mipLevelCount = builder_texture.builder.descriptor.descriptor.mipLevelCount,
         .aspect = WGPUTextureAspect_All,
-    });
+    }, 2);
+    cecs_texture_in_bank_bundle bank_pattern = cecs_mem_texture_builder_build_in_bank(&builder_texture_mem, &system.context, &(WGPUTextureViewDescriptor){
+        .arrayLayerCount = 1,
+        .baseArrayLayer = 0,
+        .baseMipLevel = 0,
+        .dimension = WGPUTextureViewDimension_2D,
+        .format = WGPUTextureFormat_RGBA8Unorm,
+        .mipLevelCount = builder_texture_mem.descriptor.descriptor.mipLevelCount,
+        .aspect = WGPUTextureAspect_All,
+    }, 1, 0);
+    assert(bank.reference.texture_id == bank_pattern.reference.texture_id);
     CECS_WORLD_SET_COMPONENT(cecs_texture_in_bank_reference, &world, id, &bank.reference);
+    
     
     cecs_instance_builder builder_instance = cecs_instance_builder_create(&system.world, (cecs_instance_builder_descriptor){
         .instance_attributes_expected_count = 2,

@@ -1,4 +1,5 @@
 #include "cecs_texture_builder.h"
+#include <cecs_math/relations/cecs_ordering.h>
 
 WGPUExtent3D cecs_generate_next_mip(
     const WGPUExtent3D mip_size,

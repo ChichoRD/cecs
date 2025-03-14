@@ -4,14 +4,12 @@
 #include "cecs_mem_texture_builder.h"
 #include "cecs_texture_bank.h"
 
-
 typedef uint8_t cecs_file_texture2_builder_descriptor_channel_count;
 typedef struct cecs_file_texture2_builder_descriptor {
     cecs_mem_texture_builder_descriptor descriptor;
     cecs_file_texture2_builder_descriptor_channel_count channel_count;
 } cecs_file_texture2_builder_descriptor;
 typedef struct cecs_file_texture2_builder {
-    static_assert(false);
     cecs_mem_texture_builder builder;
     cecs_file_texture2_builder_descriptor_channel_count channel_count;
 } cecs_file_texture2_builder;
@@ -62,21 +60,15 @@ cecs_file_texture2_builder *cecs_file_texture2_builder_load_into(
 size_t cecs_file_texture2_builder_build_alloc(
     cecs_file_texture2_builder *builder,
     cecs_graphics_context *context,
-    const WGPUTextureViewDescriptor *view_descriptor,
+    WGPUTextureViewDescriptor *view_descriptor,
     WGPUTexture destination_textures[const restrict static 1],
     const size_t destination_textures_capacity
 );
-cecs_texture cecs_file_texture_builder_build(
-    cecs_texture_builder *builder,
+cecs_texture_in_bank_bundle cecs_file_texture2_builder_build_in_bank(
+    cecs_file_texture2_builder *builder,
     cecs_graphics_context *context,
-    const WGPUTextureViewDescriptor *view_descriptor,
-    const uint32_t write_destination_layer,
-    const uint_fast8_t texture_slot
-);
-cecs_texture_in_bank_bundle cecs_file_texture_builder_build_in_bank(
-    cecs_texture_builder *builder,
-    cecs_graphics_context *context,
-    const WGPUTextureViewDescriptor *view_descriptor
+    WGPUTextureViewDescriptor *view_descriptor,
+    const size_t bundle_range_capacity
 );
 
 #endif

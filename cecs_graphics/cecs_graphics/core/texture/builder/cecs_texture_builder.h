@@ -1,8 +1,20 @@
 #ifndef CECS_TEXTURE_BUILDER_H
 #define CECS_TEXTURE_BUILDER_H
 
-#include "../cecs_graphics_world.h"
-#include "../component/cecs_texture.h"
+#include "../../cecs_graphics_world.h"
+#include "../../component/cecs_texture.h"
+
+typedef uint8_t cecs_texture_builder_texture_count;
+#define CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT_DEFAULT 8
+
+#ifndef CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT
+#define CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT_DEFAULT
+#endif
+static_assert(
+    CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT <= CHAR_BIT * sizeof(cecs_texture_builder_texture_count),
+    "CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT must be less than or equal to CHAR_BIT * sizeof(cecs_texture_builder_texture_count)"
+);
+
 
 WGPUExtent3D cecs_generate_next_mip(
     const WGPUExtent3D mip_size,
@@ -18,6 +30,12 @@ size_t cecs_generate_mipmaps(
     uint8_t out_mipmaps_start[]
 );
 
+typedef struct cecs_mipmaps_write_descriptor {
+    const uint8_t *source_texels;
+    size_t source_size;
+    uint8_t bytes_per_texel;
+    uint8_t destination_layer;
+} cecs_mipmaps_write_descriptor;
 // adapted from source: https://github.com/eliemichel/LearnWebGPU-Code/tree/step075-vanilla
 size_t cecs_write_mipmaps(
     WGPUTexture destination,
@@ -27,8 +45,8 @@ size_t cecs_write_mipmaps(
     const cecs_mipmaps_write_descriptor mipmaps
 );
 
-// TODO: single block arena (with support for external allocation)
 
+// TODO: single block arena (with support for external allocation)
 typedef struct cecs_texture_builder {
     WGPUTextureDescriptor descriptor;
     cecs_graphics_world *world;
@@ -65,12 +83,6 @@ inline uint64_t cecs_texture_builder_mip0_texel_count(const cecs_texture_builder
     return builder->descriptor.size.width * builder->descriptor.size.height * builder->descriptor.size.depthOrArrayLayers;
 }
 
-typedef struct cecs_mipmaps_write_descriptor {
-    const uint8_t *source_texels;
-    size_t source_size;
-    uint8_t bytes_per_texel;
-    uint8_t destination_layer;
-} cecs_mipmaps_write_descriptor;
 size_t cecs_texture_builder_write_mipmaps(
     WGPUTexture destination,
     cecs_texture_builder *builder,
@@ -79,16 +91,5 @@ size_t cecs_texture_builder_write_mipmaps(
     const cecs_mipmaps_write_descriptor mipmaps
 );
 
-
-typedef uint8_t cecs_texture_builder_texture_count;
-#define CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT_DEFAULT 8
-
-#ifndef CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT
-#define CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT_DEFAULT
-#endif
-static_assert(
-    CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT <= CHAR_BIT * sizeof(cecs_texture_builder_texture_count),
-    "CECS_TEXTURE_BUILDER_MAX_TEXTURE_COUNT must be less than or equal to CHAR_BIT * sizeof(cecs_texture_builder_texture_count)"
-);
 
 #endif
