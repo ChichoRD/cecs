@@ -6,54 +6,6 @@
 #include "cecs_graphics_world.h"
 #include "component/cecs_texture.h"
 
-// TODO: single block arena (with support for external allocation)
-// TODO: texture builder base
-typedef struct cecs_texture_builder_base {
-    WGPUTextureDescriptor descriptor;
-    cecs_graphics_world *world;
-    cecs_arena *texture_arena;
-} cecs_texture_builder_base;
-inline cecs_texture_builder_base cecs_texture_builder_base_create(
-    const WGPUTextureDescriptor descriptor,
-    cecs_graphics_world *world,
-    cecs_arena *texture_arena
-) {
-    return (cecs_texture_builder_base){
-        .descriptor = descriptor,
-        .world = world,
-        .texture_arena = texture_arena
-    };
-}
-inline cecs_graphics_world *cecs_texture_builder_base_world(cecs_texture_builder_base *builder) {
-    return builder->world;
-}
-inline cecs_arena *cecs_texture_builder_base_arena(cecs_texture_builder_base *builder) {
-    return builder->texture_arena;
-}
-
-WGPUTexture cecs_texture_builder_base_build_alloc(
-    cecs_texture_builder_base *builder,
-    cecs_graphics_context *context
-);
-cecs_texture_size_pow2 cecs_texture_builder_base_ensured_size(
-    const cecs_texture_builder_base *builder,
-    uint32_t *out_largest_side_size 
-);
-
-typedef struct cecs_mipmaps_write_descriptor {
-    const uint8_t *source_texels;
-    size_t source_size;
-    uint8_t bytes_per_texel;
-    uint8_t destination_layer;
-} cecs_mipmaps_write_descriptor;
-size_t cecs_texture_builder_base_write_mipmaps(
-    WGPUTexture destination,
-    cecs_texture_builder_base *builder,
-    cecs_graphics_context *context,
-    const WGPUTextureAspect aspect,
-    const cecs_mipmaps_write_descriptor mipmaps
-);
-
 
 typedef enum cecs_texture_builder_descriptor_config {
     cecs_texture_builder_descriptor_config_none = 0,

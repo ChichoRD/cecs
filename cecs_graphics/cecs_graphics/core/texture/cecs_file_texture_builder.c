@@ -3,11 +3,11 @@
 
 #include <cecs_math/cecs_math.h>
 
-#include "builder/cecs_stbi.h"
+#include "../builder/cecs_stbi.h"
 #include "cecs_texture_builder.h"
 
 
-cecs_texture_builder cecs_texture_builder_create(
+cecs_texture_builder cecs_file_texture2_builder_create(
     cecs_graphics_world *world,
     cecs_arena *texture_arena,
     const cecs_texture_builder_descriptor descriptor,
