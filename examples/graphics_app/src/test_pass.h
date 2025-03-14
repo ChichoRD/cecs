@@ -12,9 +12,10 @@ typedef struct test_pass {
     WGPUBindGroupLayout local_texture_bgl;
     WGPUBindGroup global_bg;
     WGPUBuffer global_uniform_buffer;
+    const cecs_texture *depth_texture;
 } test_pass;
 
-test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena);
+test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena, const cecs_texture *depth_texture);
 void test_pass_free(test_pass *pass);
 
 // TODO: array of targets

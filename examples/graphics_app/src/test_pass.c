@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "test_pass.h"
 
-test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena) {
+test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena, const cecs_texture * depth_texture) {
     FILE *shader_file = NULL;
     assert(
         fopen_s(&shader_file, "../../examples/graphics_app/src/test_pass.wgsl", "r") == 0
@@ -191,7 +191,29 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
                 .frontFace = WGPUFrontFace_CCW,
                 .cullMode = WGPUCullMode_Back,
             },
-            .depthStencil = NULL,
+            .depthStencil = &(WGPUDepthStencilState){
+                .depthBias = 0,
+                .depthBiasClamp = 0.0f,
+                .depthBiasSlopeScale = 0.0f,
+                .depthCompare = WGPUCompareFunction_Less,
+                .depthWriteEnabled = true,
+                .format = WGPUTextureFormat_Depth24Plus,
+                .nextInChain = NULL,
+                .stencilBack = (WGPUStencilFaceState) {
+                    .compare = WGPUCompareFunction_Always,
+                    .failOp = WGPUStencilOperation_Keep,
+                    .depthFailOp = WGPUStencilOperation_Keep,
+                    .passOp = WGPUStencilOperation_Keep,
+                },
+                .stencilFront = (WGPUStencilFaceState) {
+                    .compare = WGPUCompareFunction_Always,
+                    .failOp = WGPUStencilOperation_Keep,
+                    .depthFailOp = WGPUStencilOperation_Keep,
+                    .passOp = WGPUStencilOperation_Keep,
+                },
+                .stencilReadMask = UINT32_MAX,
+                .stencilWriteMask = UINT32_MAX,
+            },
             .multisample = (WGPUMultisampleState) {
                 .count = target_info.sample_count,
                 .mask = ~0u,
@@ -208,6 +230,7 @@ test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_in
         .local_texture_bgl = local_texture_bgl,
         .global_bg = global_bg,
         .global_uniform_buffer = global_uniform_buffer,
+        .depth_texture = depth_texture,
     };
 }
 
@@ -491,12 +514,24 @@ void test_pass_draw(
 //#endif // NOT WEBGPU_BACKEND_WGPU
     };
 
+    WGPURenderPassDepthStencilAttachment depth_attachment = {
+        .view = pass->depth_texture->texture_view,
+        .depthClearValue = 1.0f,
+        .depthLoadOp = WGPULoadOp_Clear,
+        .depthStoreOp = WGPUStoreOp_Store,
+        .depthReadOnly = false,
+        .stencilClearValue = 0x0,
+        .stencilLoadOp = WGPULoadOp_Clear,
+        .stencilStoreOp = WGPUStoreOp_Store,
+        .stencilReadOnly = true,
+    };
+
     WGPURenderPassDescriptor render_pass_descriptor = {
         .nextInChain = NULL,
         .label = "Learn WGPU Render Pass",
         .colorAttachmentCount = 1,
         .colorAttachments = &color_attachment,
-        .depthStencilAttachment = NULL,
+        .depthStencilAttachment = &depth_attachment,
         .timestampWrites = NULL,
     };
     WGPURenderPassEncoder render_pass =
