@@ -66,6 +66,89 @@ static cecs_quaternion_f32 rotate_camera_from_mouse_delta(
     return cecs_quaternion_f32_product(yaw, cecs_quaternion_f32_product(cecs_quaternion_f32_as(camera_uq), pitch));
 }
 
+typedef struct cecs_window_resize_userdata {
+    cecs_graphics_system *system;
+    cecs_texture *depth_texture;
+    test_pass *pass;
+    cecs_world *world;
+    cecs_camera_pack *camera;
+} cecs_window_resize_userdata;
+
+static bool draw(cecs_world *world, cecs_graphics_system *system, test_pass *pass, const cecs_camera_pack *camera) {
+    cecs_surface_render_target surface_target;
+    if (cecs_graphics_context_get_surface_render_target(&system->context, &surface_target)) {
+        const WGPUSurfaceConfiguration configuration = CECS_OPTION_GET(cecs_optional_surface_context, system->context.surface_context).configuration;
+        const cecs_render_target_info target_info = {
+            .format = configuration.format,
+            .sample_count = 1,
+            .aspect_ratio = (float)configuration.width / (float)configuration.height,
+        };
+        test_pass_draw(pass, world, system, &surface_target, &target_info, *camera);
+        cecs_graphics_context_present_surface_render_target(&system->context, &surface_target);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static void cecs_window_resize(GLFWwindow* window, int width, int height) {
+    assert(width > 0);
+    assert(height > 0);
+
+    cecs_window_resize_userdata *userdata = glfwGetWindowUserPointer(window);
+    assert(userdata != NULL);
+
+    glfwGetFramebufferSize(window, &width, &height);
+    assert(width > 0);
+    assert(height > 0);
+
+    cecs_surface_context *surface = &CECS_OPTION_GET_UNCHECKED(cecs_optional_surface_context, userdata->system->context.surface_context);
+    wgpuSurfaceUnconfigure(surface->surface);
+    
+    
+    surface->configuration.width = (uint32_t)width;
+    surface->configuration.height = (uint32_t)height;
+    wgpuSurfaceConfigure(surface->surface, &surface->configuration);
+
+    wgpuTextureViewRelease(userdata->depth_texture->texture_view);
+    cecs_texture_builder builder_depth = cecs_texture_builder_create((WGPUTextureDescriptor) {
+        .dimension = WGPUTextureDimension_2D,
+        .format = WGPUTextureFormat_Depth24Plus,
+        .mipLevelCount = 1,
+        .nextInChain = NULL,
+        .sampleCount = 1,
+        .size = (WGPUExtent3D){
+            .width = width,
+            .height = height,
+            .depthOrArrayLayers = 1,
+        },
+        .usage = WGPUTextureUsage_RenderAttachment,
+        .viewFormatCount = 0,
+        .viewFormats = NULL,
+    }, &userdata->system->world, NULL);
+    WGPUTexture depth = cecs_texture_builder_build_alloc(&builder_depth, &userdata->system->context);
+    *userdata->depth_texture = (cecs_texture){
+        .texture_view = wgpuTextureCreateView(depth, &(WGPUTextureViewDescriptor){
+            .format = WGPUTextureFormat_Depth24Plus,
+            .dimension = WGPUTextureViewDimension_2D,
+            .baseMipLevel = 0,
+            .mipLevelCount = 1,
+            .baseArrayLayer = 0,
+            .arrayLayerCount = 1,
+            .aspect = WGPUTextureAspect_DepthOnly,
+        }),
+        .extent = (WGPUExtent3D){
+            .width = width,
+            .height = height,
+            .depthOrArrayLayers = 1,
+        },
+    };
+    wgpuTextureRelease(depth);
+
+    bool redraw = draw(userdata->world, userdata->system, userdata->pass, userdata->camera);
+    assert(redraw);
+}
+
 int main(void) {
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
@@ -73,16 +156,34 @@ int main(void) {
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // <-- extra info for glfwCreateWindow
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow *window = glfwCreateWindow(640, 480, "cecs_graphics with WebGPU!", NULL, NULL);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+    const int default_width = 1200;
+    const int default_height = 675;
+    {
+        int width;
+        int height;
+        glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), NULL, NULL, &width, &height);
+        glfwWindowHint(GLFW_POSITION_X, (width - default_width) / 2);
+        glfwWindowHint(GLFW_POSITION_Y, (height - default_height) / 2);
+    }
+
+    //glfwGetMonitorPhysicalSize
+    GLFWwindow *window = glfwCreateWindow(default_width, default_height, "cecs_graphics with WebGPU!", NULL, NULL);
     if (window == NULL) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
         return EXIT_FAILURE;
     }
+    int width;
+    int height;
+    glfwGetFramebufferSize(window, &width, &height);
+    assert(width > 0);
+    assert(height > 0);
 
     cecs_world world = cecs_world_create(64, 16, 4);
     cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
+
 
     cecs_arena builder_arena = cecs_arena_create();
     cecs_file_mesh_builder_gltf builder = cecs_file_mesh_builder_gltf_create(&system.world, (cecs_mesh_builder_descriptor){
@@ -220,13 +321,8 @@ int main(void) {
     cecs_instance_group group = cecs_instance_builder_build_into_and_clear(&world, &builder_instance, &system.context);
     CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, id, &group);
     
-    const cecs_render_target_info target_info = {
-        .format = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration.format,
-        .sample_count = 1,
-        .aspect_ratio = 640.0f / 480.0f,
-    };
     
-    const cecs_entity_id depth_entity = cecs_world_add_entity(&system.world);
+    const cecs_entity_id depth_entity = cecs_world_add_entity(&system.world.world);
     cecs_texture_builder builder_depth = cecs_texture_builder_create((WGPUTextureDescriptor) {
         .dimension = WGPUTextureDimension_2D,
         .format = WGPUTextureFormat_Depth24Plus,
@@ -234,8 +330,8 @@ int main(void) {
         .nextInChain = NULL,
         .sampleCount = 1,
         .size = (WGPUExtent3D){
-            .width = 640,
-            .height = 480,
+            .width = width,
+            .height = height,
             .depthOrArrayLayers = 1,
         },
         .usage = WGPUTextureUsage_RenderAttachment,
@@ -253,18 +349,25 @@ int main(void) {
             .arrayLayerCount = 1,
             .aspect = WGPUTextureAspect_DepthOnly,
         }),
-        .extent = (WGPUExtent3D){
-            .width = 640,
-            .height = 480,
-            .depthOrArrayLayers = 1,
-        },
+        .extent = builder_depth.descriptor.size,
     }));
     wgpuTextureRelease(depth);
-
-    cecs_arena_free(&builder_arena);
-    test_pass pass = test_pass_create(&system.context, target_info, &system.world.world.resources.resources_arena, depth_texture);
     
-    WGPUColor clear_color = { 0.9, 0.1, 0.2, 1.0 };
+    
+    cecs_arena_free(&builder_arena);
+    
+    test_pass pass; {
+        const WGPUSurfaceConfiguration configuration = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration;
+        const cecs_render_target_info target_info = {
+            .format = configuration.format,
+            .sample_count = 1,
+            .aspect_ratio = (float)configuration.width / (float)configuration.height,
+        };
+        pass = test_pass_create(&system.context, target_info, &system.world.world.resources.resources_arena, depth_texture);
+    }
+    
+    // cornflower blue
+    WGPUColor clear_color = (WGPUColor){ 0.392f, 0.584f, 0.929f, 1.0f };
     cecs_camera_pack camera = (cecs_camera_pack){
         .bundle = (cecs_camera_bundle){
             .camera = cecs_camera_create_perspective(3.14f / 2.0f, 400.0f, 4.0f),
@@ -274,17 +377,28 @@ int main(void) {
         .near = 4.0f,
         .flags = cecs_camera_options_perspective,
     };
+    cecs_window_resize_userdata resize_userdata = {
+        .system = &system,
+        .depth_texture = depth_texture,
+        .pass = &pass,
+        .world = &world,
+        .camera = &camera,
+    };
+    glfwSetWindowUserPointer(window, &resize_userdata);
+    glfwSetFramebufferSizeCallback(window, cecs_window_resize);
+
     bool render_error = false;
     double mouse_x = 0.0;
     double mouse_y = 0.0;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
-
+    
     cecs_vec3_f32 local_forward = { 0.0f, 0.0f, 1.0f };
     cecs_vec3_f32 local_upward = { 0.0f, 1.0f, 0.0f };
     cecs_vec3_f32 local_right = { 1.0f, 0.0f, 0.0f };
+    
     while (!glfwWindowShouldClose(window) && !render_error) {
         glfwPollEvents();
-
+        
         struct timespec t;
         timespec_get(&t, TIME_UTC);
         double t_sec = (double)t.tv_sec + (double)t.tv_nsec / 1e9;
@@ -318,68 +432,83 @@ int main(void) {
             forward,
             (cecs_vec3_f32){0.0f, 1.0f, 0.0f}
         );
-
+        
+        //camera.bundle.position = position;
+        //camera.bundle.orientation = cecs_versor_packed_f32_pack(orientation);
+        
         double mouse_x_new;
         double mouse_y_new;
         glfwGetCursorPos(window, &mouse_x_new, &mouse_y_new);
-        cecs_vec2_f32 mouse_delta = (cecs_vec2_f32){
-            .x = (float)(mouse_x_new - mouse_x) * 0.005f,
-            .y = (float)(mouse_y - mouse_y_new) * 0.005f,
-        };
-        if (mouse_delta.x != 0.0 || mouse_delta.y != 0.0) {
-            const cecs_versor_f32 camera_uq = cecs_versor_f32_unpack(camera.bundle.orientation);
-            static const cecs_vec3_f32 fix_upward = { 0.0f, 1.0f, 0.0f };
-            const cecs_quaternion_f32 displaced_orientation = (rotate_camera_from_mouse_delta(
-                camera_uq,
-                mouse_delta,
-                (cecs_vec3_f32){ 0.0f, 1.0f, 0.0f },
-                (cecs_vec3_f32){ 1.0f, 0.0f, 0.0f }
-            ));
-            const cecs_versor_f32 displaced_orientation_normalized = cecs_versor_f32_of(displaced_orientation);
-            local_forward = cecs_versor_f32_rotate(displaced_orientation_normalized, (cecs_vec3_f32){ 0.0f, 0.0f, 1.0f });
-            local_right = cecs_vec3_f32_cross(fix_upward, local_forward);
-            local_upward = cecs_vec3_f32_cross(local_forward, local_right);
-
-            const cecs_orientation3_f32 orientation_packed = cecs_versor_packed_f32_pack(displaced_orientation_normalized);
-
-            assert(!isnan(displaced_orientation_normalized.i));
-            camera.bundle.orientation = orientation_packed;
-        }
-        //camera.bundle.orientation = cecs_versor_packed_f32_pack(orientation);
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+            cecs_vec2_f32 mouse_delta = (cecs_vec2_f32){
+                .x = (float)(mouse_x_new - mouse_x) * 0.005f,
+                .y = (float)(mouse_y - mouse_y_new) * 0.005f,
+            };
+            
+            {
+                int content_width;
+                int content_height;
+                glfwGetWindowSize(window, &content_width, &content_height);
+    
+                const double wrapped_mouse_x0 = fmod(mouse_x_new, (double)(content_width - 1));
+                const double wrapped_mouse_y0 = fmod(mouse_y_new, (double)(content_height - 1));
         
+                const double wrapped_mouse_x1 = wrapped_mouse_x0 + content_width;
+                const double wrapped_mouse_y1 = wrapped_mouse_y0 + content_height;
+        
+                const double wrapped_mouse_x[2] = { wrapped_mouse_x0, wrapped_mouse_x1 };
+                const double wrapped_mouse_y[2] = { wrapped_mouse_y0, wrapped_mouse_y1 };
+                mouse_x_new = wrapped_mouse_x[mouse_x_new < 0.0];
+                mouse_y_new = wrapped_mouse_y[mouse_y_new < 0.0];
+                glfwSetCursorPos(window, mouse_x_new, mouse_y_new);
+            }
+    
+            if (mouse_delta.x != 0.0 || mouse_delta.y != 0.0) {
+                const cecs_versor_f32 camera_uq = cecs_versor_f32_unpack(camera.bundle.orientation);
+                const cecs_quaternion_f32 displaced_orientation = (rotate_camera_from_mouse_delta(
+                    camera_uq,
+                    mouse_delta,
+                    (cecs_vec3_f32){ 0.0f, 1.0f, 0.0f },
+                    (cecs_vec3_f32){ 1.0f, 0.0f, 0.0f }
+                ));
+                const cecs_versor_f32 displaced_orientation_normalized = cecs_versor_f32_of(displaced_orientation);
+                local_forward = cecs_versor_f32_rotate(displaced_orientation_normalized, (cecs_vec3_f32){ 0.0f, 0.0f, 1.0f });
+                local_right = cecs_versor_f32_rotate(displaced_orientation_normalized, (cecs_vec3_f32){ 1.0f, 0.0f, 0.0f });
+                local_upward = cecs_vec3_f32_cross(local_forward, local_right);
+    
+                const cecs_orientation3_f32 orientation_packed = cecs_versor_packed_f32_pack(displaced_orientation_normalized);
+    
+                assert(!isnan(displaced_orientation_normalized.i));
+                camera.bundle.orientation = orientation_packed;
+            }
+            
+            
+            static const float speed = 3.0f;
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                camera.bundle.position = cecs_vec3_f32_add(camera.bundle.position, cecs_vec3_f32_mul(local_forward, speed));
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                camera.bundle.position = cecs_vec3_f32_sub(camera.bundle.position, cecs_vec3_f32_mul(local_forward, speed));
+            }
+            
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                camera.bundle.position = cecs_vec3_f32_sub(camera.bundle.position, cecs_vec3_f32_mul(local_right, speed));
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                camera.bundle.position = cecs_vec3_f32_add(camera.bundle.position, cecs_vec3_f32_mul(local_right, speed));
+            }
+            
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+                camera.bundle.position = cecs_vec3_f32_add(camera.bundle.position, cecs_vec3_f32_mul(local_upward, speed));
+            }
+            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+                camera.bundle.position = cecs_vec3_f32_sub(camera.bundle.position, cecs_vec3_f32_mul(local_upward, speed));
+            }
+        }
         mouse_x = mouse_x_new;
         mouse_y = mouse_y_new;
-        //camera.bundle.position = position;
 
-        static const float speed = 3.0f;
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            camera.bundle.position = cecs_vec3_f32_add(camera.bundle.position, cecs_vec3_f32_mul(local_forward, speed));
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            camera.bundle.position = cecs_vec3_f32_sub(camera.bundle.position, cecs_vec3_f32_mul(local_forward, speed));
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            camera.bundle.position = cecs_vec3_f32_sub(camera.bundle.position, cecs_vec3_f32_mul(local_right, speed));
-        }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            camera.bundle.position = cecs_vec3_f32_add(camera.bundle.position, cecs_vec3_f32_mul(local_right, speed));
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-            camera.bundle.position = cecs_vec3_f32_add(camera.bundle.position, cecs_vec3_f32_mul(local_upward, speed));
-        }
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-            camera.bundle.position = cecs_vec3_f32_sub(camera.bundle.position, cecs_vec3_f32_mul(local_upward, speed));
-        }
-
-        cecs_surface_render_target surface_target;
-        if (cecs_graphics_context_get_surface_render_target(&system.context, &surface_target)) {
-            test_pass_draw(&pass, &world, &system, &surface_target, &target_info, camera);
-            cecs_graphics_context_present_surface_render_target(&system.context, &surface_target);
-        } else {
-            render_error = true;
-        }
+        render_error |= !draw(&world, &system, &pass, &camera);
     }
 
     cecs_graphics_system_free(&system);
