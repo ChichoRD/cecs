@@ -63,6 +63,7 @@ cecs_texture_bank_status cecs_texture_bank_use(
     const uint_fast8_t slot_count
 ) {
     const cecs_texture_bank_slot_mask mask = cecs_texture_bank_slot_mask_from_range(first_slot_index, slot_count);
+    assert((bank->used_slots_mask & mask) == 0 && "error: texture bank slot range is already in use");
     bank->used_slots_mask |= mask;
     return cecs_texture_bank_is_full(bank) ? cecs_texture_bank_status_full : cecs_texture_bank_status_free;
 }
@@ -72,6 +73,7 @@ cecs_texture_bank_status cecs_texture_bank_release(
     const uint_fast8_t slot_count
 ) {
     const cecs_texture_bank_slot_mask mask = cecs_texture_bank_slot_mask_from_range(first_slot_index, slot_count);
+    assert((bank->used_slots_mask & mask) == mask && "error: texture bank slot range is not in use");
     bank->used_slots_mask &= ~mask;
     return cecs_texture_bank_is_empty(bank) ? cecs_texture_bank_status_free : cecs_texture_bank_status_free;
 }

@@ -72,16 +72,11 @@ fn cecs_project_point_orthographic(pack: cecs_ortho_projection_packed4_f32, posi
 fn vs_main(v_input: vertex_input, i_input: instance_input) -> vertex_output {
     var out: vertex_output;
     
-    let position_world = i_input.position * 100.0 + vec3f(v_input.position.xy, -v_input.position.z) * 0.25;
+    let position_world = i_input.position + vec3f(v_input.position.xy, -v_input.position.z);
     var position_view = cecs_versor_f32_rotate_rcp(cam.orientation, position_world.xyz - cam.position);
-    position_view.x += cos(position_view.z / 10.0) * 5.0;
-    position_view.y += sin(position_view.z / 10.0) * 5.0;
+    position_view.x += cos(position_view.z) * 0.25;
+    position_view.y += sin(position_view.z) * 0.25;
     let position_clip = cecs_project_point_perspective(cam.projection_pack, position_view.xyz);
-
-    // let aspect_ratio = cam.projection_pack.y / cam.projection_pack.x;
-    // out.position_frame = vec4f(position_clip.x * aspect_ratio, position_clip.y, position_clip.zw);
-
-    // out.position_frame = vec4f(position_clip.xy * cam.projection_pack.xy, position_clip.zw);
 
     out.position_frame = position_clip;
     

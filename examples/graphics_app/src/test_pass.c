@@ -503,7 +503,7 @@ void test_pass_draw(
         .storeOp = WGPUStoreOp_Store,
         // TODO: camera with clear color
         // cornflower blue
-        .clearValue = (WGPUColor){ 0.71, 0.494, 0.863, 1.0f },
+        .clearValue = (WGPUColor){ 0.71 * 0.71, 0.494 * 0.494, 0.863 * 0.863, 1.0f },
         
 //#ifndef WEBGPU_BACKEND_WGPU
 //      .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,

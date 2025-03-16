@@ -163,7 +163,7 @@ bool cecs_file_mesh_builder_gltf_set_vertex_attribute(
     
     assert(mesh->primitives_count > 0 && "error: no primitives in mesh");
     cecs_arena *builder_arena = cecs_file_mesh_builder_gltf_arena(builder);
-
+    
     cecs_dynamic_array accessors = cecs_dynamic_array_create();
     size_t total_attribute_count = cecs_file_mesh_builder_gltf_collect_vertex_accessors(builder_arena, mesh, attribute_type, &accessors);
     if (total_attribute_count == 0) {
@@ -187,7 +187,57 @@ bool cecs_file_mesh_builder_gltf_set_vertex_attribute(
         );
         attributes += accessor->count * attribute_size;
     }
+    
+    if (attribute_type == cgltf_attribute_type_position) {
+        const cgltf_scene *scene = builder->data->scene;
+        assert(scene->nodes_count > 0 && "error: no nodes in scene");
+        
+        const cgltf_node *node = scene->nodes[0];
 
+        // TODO: rest of the matrix
+        // HACK: embedded here for now
+        cgltf_float scale[3] = { 1.0f, 1.0f, 1.0f };
+        if (node->has_scale) {
+            scale[0] = node->scale[0];
+            scale[1] = node->scale[1];
+            scale[2] = node->scale[2];
+        } else if (node->has_matrix) {
+            scale[0] = node->matrix[0];
+            scale[1] = node->matrix[5];
+            scale[2] = node->matrix[10];
+        }
+
+        if (scale[0] != 1.0f || scale[1] != 1.0f || scale[2] != 1.0f) {
+            float *position_attributes = (float *)attributes_start;
+            switch (attribute_size) {
+            case sizeof(float): {
+                for (size_t i = 0; i < total_attribute_count; i++) {
+                    position_attributes[i] *= scale[0];
+                }
+                break;
+            }
+            case sizeof(float) * 2: {
+                for (size_t i = 0; i < total_attribute_count; i++) {
+                    position_attributes[i * 2] *= scale[0];
+                    position_attributes[i * 2 + 1] *= scale[1];
+                }
+                break;
+            }
+            case sizeof(float) * 3: {
+                for (size_t i = 0; i < total_attribute_count; i++) {
+                    position_attributes[i * 3] *= scale[0];
+                    position_attributes[i * 3 + 1] *= scale[1];
+                    position_attributes[i * 3 + 2] *= scale[2];
+                }
+                break;
+            }
+            default: {
+                assert(false && "unhandled: unknown attribute size");
+                exit(EXIT_FAILURE);
+            }
+            }
+        }
+    }
     cecs_mesh_builder_set_vertex_attribute(
         &builder->mesh_builders[builder_index],
         attribute_id,
