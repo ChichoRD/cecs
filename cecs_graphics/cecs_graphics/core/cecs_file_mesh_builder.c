@@ -102,6 +102,7 @@ static void cecs_file_mesh_builder_gltf_unpack_attributes(
         break;
     }
     case cecs_attribute_copy_expect_larger_copy_padded: {
+        // TODO: optimize this option to alter *temporarily* accessor's count of elements and inversely floats per element
         assert(accessor_attribute_size >= attribute_size && "error: attribute size mismatch, with copy option expect larger");
         uint8_t *unpacked = cecs_arena_alloc(builder_arena, accessor_attribute_count * accessor_attribute_size);
         const cgltf_size unpacked_floats = cgltf_accessor_unpack_floats(accessor, unpacked, accessor_float_count);

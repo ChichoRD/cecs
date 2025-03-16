@@ -15,46 +15,6 @@
 
 #include "test_pass.h"
 
-static cecs_mesh_builder *mesh_builder_configure_square(cecs_mesh_builder *builder) {
-    cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(position3_f32_attribute),
-        (position3_f32_attribute[]) {
-            // quad 4 verts
-            { .x = -0.5f, .y = -0.5f, .z = -0.5f },
-            { .x =  0.5f, .y = -0.5f, .z = -0.5f },
-            { .x =  0.5f, .y =  0.5f, .z = -0.5f },
-            { .x = -0.5f, .y =  0.5f, .z = -0.5f },
-        },
-        4,
-        sizeof(position3_f32_attribute)
-    );
-    cecs_mesh_builder_set_indices(builder, (cecs_vertex_index_u16[]) {
-        0, 1, 2, 2, 3, 0
-    }, 6);
-    cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(color3_f32_attribute),
-        (color3_f32_attribute[]) {
-            // quad 4 colors
-            { .r = 1.0f, .g = 0.0f, .b = 0.0f },
-            { .r = 0.0f, .g = 1.0f, .b = 0.0f },
-            { .r = 0.0f, .g = 0.0f, .b = 1.0f },
-            { .r = 1.0f, .g = 1.0f, .b = 1.0f },
-        },
-        4,
-        sizeof(color3_f32_attribute)
-    );
-    cecs_mesh_builder_set_vertex_attribute(builder, CECS_COMPONENT_ID(uv2_f32_attribute),
-        (uv2_f32_attribute[]) {
-            // quad 4 uvs
-            { .u = 0.0f, .v = 1.0f },
-            { .u = 1.0f, .v = 1.0f },
-            { .u = 1.0f, .v = 0.0f },
-            { .u = 0.0f, .v = 0.0f },
-        },
-        4,
-        sizeof(uv2_f32_attribute)
-    );
-    return builder;
-}
-
 static cecs_quaternion_f32 rotate_camera_from_mouse_delta(
     const cecs_versor_f32 camera_uq,
     const cecs_vec2_f32 mouse_delta,
@@ -74,21 +34,49 @@ typedef struct cecs_window_resize_userdata {
     cecs_camera_pack *camera;
 } cecs_window_resize_userdata;
 
-static bool draw(cecs_world *world, cecs_graphics_system *system, test_pass *pass, const cecs_camera_pack *camera) {
+static bool draw(cecs_world *world, cecs_graphics_system *system, test_pass *pass, const cecs_camera_raw_bundle *camera) {
     cecs_surface_render_target surface_target;
     if (cecs_graphics_context_get_surface_render_target(&system->context, &surface_target)) {
-        const WGPUSurfaceConfiguration configuration = CECS_OPTION_GET(cecs_optional_surface_context, system->context.surface_context).configuration;
-        const cecs_render_target_info target_info = {
-            .format = configuration.format,
-            .sample_count = 1,
-            .aspect_ratio = (float)configuration.width / (float)configuration.height,
-        };
-        test_pass_draw(pass, world, system, &surface_target, &target_info, *camera);
+        test_pass_draw(pass, world, system, &surface_target, *camera);
         cecs_graphics_context_present_surface_render_target(&system->context, &surface_target);
         return true;
     } else {
         return false;
     }
+}
+
+static cecs_texture create_depth_texture(cecs_graphics_system *system, const uint32_t width, const uint32_t height) {
+    const WGPUExtent3D extent = {
+        .width = width,
+        .height = height,
+        .depthOrArrayLayers = 1,
+    };
+    cecs_texture_builder builder_depth = cecs_texture_builder_create((WGPUTextureDescriptor) {
+        .dimension = WGPUTextureDimension_2D,
+        .format = WGPUTextureFormat_Depth24Plus,
+        .mipLevelCount = 1,
+        .nextInChain = NULL,
+        .sampleCount = 1,
+        .size = extent,
+        .usage = WGPUTextureUsage_RenderAttachment,
+        .viewFormatCount = 0,
+        .viewFormats = NULL,
+    }, &system->world, NULL);
+    WGPUTexture depth = cecs_texture_builder_build_alloc(&builder_depth, &system->context);
+    const cecs_texture texture = {
+        .texture_view = wgpuTextureCreateView(depth, &(WGPUTextureViewDescriptor){
+            .format = WGPUTextureFormat_Depth24Plus,
+            .dimension = WGPUTextureViewDimension_2D,
+            .baseMipLevel = 0,
+            .mipLevelCount = 1,
+            .baseArrayLayer = 0,
+            .arrayLayerCount = 1,
+            .aspect = WGPUTextureAspect_DepthOnly,
+        }),
+        .extent = extent,
+    };
+    wgpuTextureRelease(depth);
+    return texture;
 }
 
 static void cecs_window_resize(GLFWwindow* window, int width, int height) {
@@ -105,54 +93,22 @@ static void cecs_window_resize(GLFWwindow* window, int width, int height) {
     cecs_surface_context *surface = &CECS_OPTION_GET_UNCHECKED(cecs_optional_surface_context, userdata->system->context.surface_context);
     wgpuSurfaceUnconfigure(surface->surface);
     
-    
     surface->configuration.width = (uint32_t)width;
     surface->configuration.height = (uint32_t)height;
     wgpuSurfaceConfigure(surface->surface, &surface->configuration);
 
     wgpuTextureViewRelease(userdata->depth_texture->texture_view);
-    cecs_texture_builder builder_depth = cecs_texture_builder_create((WGPUTextureDescriptor) {
-        .dimension = WGPUTextureDimension_2D,
-        .format = WGPUTextureFormat_Depth24Plus,
-        .mipLevelCount = 1,
-        .nextInChain = NULL,
-        .sampleCount = 1,
-        .size = (WGPUExtent3D){
-            .width = width,
-            .height = height,
-            .depthOrArrayLayers = 1,
-        },
-        .usage = WGPUTextureUsage_RenderAttachment,
-        .viewFormatCount = 0,
-        .viewFormats = NULL,
-    }, &userdata->system->world, NULL);
-    WGPUTexture depth = cecs_texture_builder_build_alloc(&builder_depth, &userdata->system->context);
-    *userdata->depth_texture = (cecs_texture){
-        .texture_view = wgpuTextureCreateView(depth, &(WGPUTextureViewDescriptor){
-            .format = WGPUTextureFormat_Depth24Plus,
-            .dimension = WGPUTextureViewDimension_2D,
-            .baseMipLevel = 0,
-            .mipLevelCount = 1,
-            .baseArrayLayer = 0,
-            .arrayLayerCount = 1,
-            .aspect = WGPUTextureAspect_DepthOnly,
-        }),
-        .extent = (WGPUExtent3D){
-            .width = width,
-            .height = height,
-            .depthOrArrayLayers = 1,
-        },
-    };
-    wgpuTextureRelease(depth);
+    *userdata->depth_texture = create_depth_texture(userdata->system, (uint32_t)width, (uint32_t)height);
 
-    bool redraw = draw(userdata->world, userdata->system, userdata->pass, userdata->camera);
+    const cecs_camera_raw_bundle camera = cecs_camera_raw_bundle_from_pack(*userdata->camera, (float)width / (float)height);
+    bool redraw = draw(userdata->world, userdata->system, userdata->pass, &camera);
     assert(redraw);
 }
 
-int main(void) {
+static bool init_window(GLFWwindow **out_window, size_t *out_width, size_t *out_height) {
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
-        return EXIT_FAILURE;
+        return false;
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // <-- extra info for glfwCreateWindow
@@ -168,28 +124,30 @@ int main(void) {
         glfwWindowHint(GLFW_POSITION_Y, (height - default_height) / 2);
     }
 
-    //glfwGetMonitorPhysicalSize
     GLFWwindow *window = glfwCreateWindow(default_width, default_height, "cecs_graphics with WebGPU!", NULL, NULL);
     if (window == NULL) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
-        return EXIT_FAILURE;
+        return false;
     }
+
     int width;
     int height;
     glfwGetFramebufferSize(window, &width, &height);
     assert(width > 0);
     assert(height > 0);
 
-    cecs_world world = cecs_world_create(64, 16, 4);
-    cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
+    *out_window = window;
+    *out_width = (size_t)width;
+    *out_height = (size_t)height;
+    return true;
+}
 
-
-    cecs_arena builder_arena = cecs_arena_create();
-    cecs_file_mesh_builder_gltf builder = cecs_file_mesh_builder_gltf_create(&system.world, (cecs_mesh_builder_descriptor){
+static cecs_mesh create_duck_mesh(cecs_world *world, cecs_graphics_system *system, cecs_arena *builder_arena, const char *filepath, cecs_index_stream *out_index_stream) {
+    cecs_file_mesh_builder_gltf builder = cecs_file_mesh_builder_gltf_create(&system->world, (cecs_mesh_builder_descriptor){
         .vertex_attributes_expected_count = 2,
         .index_format = WGPUIndexFormat_Uint16,
-    }, &builder_arena, "../../examples/graphics_app/assets/Duck.gltf");
+    }, builder_arena, filepath);
     cecs_file_mesh_builder_gltf_set_all_vertex_attributes(
         &builder,
         cgltf_attribute_type_position,
@@ -210,12 +168,15 @@ int main(void) {
     );
     
     assert(cecs_file_mesh_builder_gltf_mesh_count(&builder) == 1);
-    cecs_index_stream index_stream;
-    cecs_mesh mesh = cecs_mesh_builder_build_into_and_clear(&world, builder.mesh_builders, &system.context, &index_stream);
-    cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
+    return cecs_mesh_builder_build_into_and_clear(world, builder.mesh_builders, &system->context, out_index_stream);
+}
 
-    static const char *texture_path = "../../examples/graphics_app/assets/DuckCM.png";
-    cecs_file_texture2_builder builder_texture = cecs_file_texture2_builder_create_for_lower(&system.world, &builder_arena, (cecs_file_texture2_builder_descriptor){
+static cecs_texture_in_bank_bundle create_duck_file_texture(
+    cecs_graphics_system *system,
+    cecs_arena *builder_arena,
+    const char *filepath
+) {
+    cecs_file_texture2_builder builder_texture = cecs_file_texture2_builder_create_for_lower(&system->world, builder_arena, (cecs_file_texture2_builder_descriptor){
         .channel_count = 4,
         .descriptor = (cecs_mem_texture_builder_descriptor){
             .descriptor = (WGPUTextureDescriptor){
@@ -237,16 +198,49 @@ int main(void) {
                 .flags = cecs_mem_texture_builder_descriptor_config_generate_mipmaps,
             }
         }
-    }, texture_path);
+    }, filepath);
     cecs_file_texture2_builder_load_into(
         &builder_texture,
-        "../../examples/graphics_app/assets/DuckCM.png",
+        filepath,
         0
     );
 
-    cecs_mem_texture_builder builder_texture_mem = cecs_mem_texture_builder_create(&system.world, &builder_arena, (cecs_mem_texture_builder_descriptor){
-        .descriptor = builder_texture.builder.builder.descriptor,
-        .configuration = builder_texture.builder.descriptor,
+    return cecs_file_texture2_builder_build_in_bank(&builder_texture, &system->context, &(WGPUTextureViewDescriptor){
+        .arrayLayerCount = 1,
+        .baseArrayLayer = 0,
+        .baseMipLevel = 0,
+        .dimension = WGPUTextureViewDimension_2D,
+        .format = WGPUTextureFormat_RGBA8Unorm,
+        .mipLevelCount = builder_texture.builder.builder.descriptor.mipLevelCount,
+        .aspect = WGPUTextureAspect_All,
+    }, 2);
+}
+
+static cecs_texture_in_bank_bundle create_duck_pattern_texture(
+    cecs_graphics_system *system,
+    cecs_arena *builder_arena
+) {
+    cecs_mem_texture_builder builder_texture_mem = cecs_mem_texture_builder_create(&system->world, builder_arena, (cecs_mem_texture_builder_descriptor){
+        .descriptor = (WGPUTextureDescriptor){
+            .dimension = WGPUTextureDimension_2D,
+            .format = WGPUTextureFormat_RGBA8Unorm,
+            .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
+            .sampleCount = 1,
+            .viewFormatCount = 0,
+            .size = (WGPUExtent3D){
+                .width = 512,
+                .height = 512,
+                .depthOrArrayLayers = 1,
+            },
+            .mipLevelCount = 0
+        },
+        .configuration = (cecs_mem_texture_builder_configuration_descriptor){
+            .bytes_per_texel = 4,
+            .max_mip_level = cecs_mem_texture_builder_max_mip_level,
+            .flags =
+                cecs_mem_texture_builder_descriptor_config_generate_mipmaps
+                | cecs_mem_texture_builder_descriptor_config_alloc_mipmaps,
+        }
     });
     uint8_t *pattern_texture;
     {
@@ -254,7 +248,7 @@ int main(void) {
         const uint32_t height = builder_texture_mem.builder.descriptor.size.height;
         const uint_fast8_t bytes_per_texel = builder_texture_mem.descriptor.bytes_per_texel; 
         pattern_texture = cecs_arena_alloc(
-            &builder_arena,
+            builder_arena,
             width * height * bytes_per_texel
         );
         for (uint32_t i = 0; i < width; ++i) {
@@ -269,16 +263,7 @@ int main(void) {
     }
     cecs_mem_texture_builder_take_into_mut(&builder_texture_mem, pattern_texture, 0);
 
-    cecs_texture_in_bank_bundle bank = cecs_file_texture2_builder_build_in_bank(&builder_texture, &system.context, &(WGPUTextureViewDescriptor){
-        .arrayLayerCount = 1,
-        .baseArrayLayer = 0,
-        .baseMipLevel = 0,
-        .dimension = WGPUTextureViewDimension_2D,
-        .format = WGPUTextureFormat_RGBA8Unorm,
-        .mipLevelCount = builder_texture.builder.builder.descriptor.mipLevelCount,
-        .aspect = WGPUTextureAspect_All,
-    }, 2);
-    cecs_texture_in_bank_bundle bank_pattern = cecs_mem_texture_builder_build_in_bank(&builder_texture_mem, &system.context, &(WGPUTextureViewDescriptor){
+    return cecs_mem_texture_builder_build_in_bank(&builder_texture_mem, &system->context, &(WGPUTextureViewDescriptor){
         .arrayLayerCount = 1,
         .baseArrayLayer = 0,
         .baseMipLevel = 0,
@@ -287,74 +272,81 @@ int main(void) {
         .mipLevelCount = builder_texture_mem.builder.descriptor.mipLevelCount,
         .aspect = WGPUTextureAspect_All,
     }, 1, 0);
-    assert(bank.reference.texture_id == bank_pattern.reference.texture_id);
-    CECS_WORLD_SET_COMPONENT(cecs_texture_in_bank_reference, &world, id, &bank.reference);
-    
-    
-    cecs_instance_builder builder_instance = cecs_instance_builder_create(&system.world, (cecs_instance_builder_descriptor){
-        .instance_attributes_expected_count = 2,
-    }, &builder_arena);
+}
+
+static cecs_instance_group create_duck_instance(
+    cecs_world *world,
+    cecs_graphics_system *system,
+    cecs_arena *builder_arena,
+    const cecs_texture_in_bank_range2_u8_attribute textures[4],
+    const cecs_texture_subrect2_f32_attribute subrects[4]
+) {
+    cecs_instance_builder builder_instance = cecs_instance_builder_create(&system->world, (cecs_instance_builder_descriptor){
+        .instance_attributes_expected_count = 3,
+    }, builder_arena);
     cecs_instance_builder_set_instance_attribute(&builder_instance, CECS_COMPONENT_ID(cecs_texture_in_bank_range2_u8_attribute),
-        (cecs_texture_in_bank_range2_u8_attribute[]){
-            bank_pattern.range, bank.range, bank_pattern.range, bank.range
-        },
+        textures,
         4,
         sizeof(cecs_texture_in_bank_range2_u8_attribute)
     );
     cecs_instance_builder_set_instance_attribute(&builder_instance, CECS_COMPONENT_ID(cecs_texture_subrect2_f32_attribute),
-        (cecs_texture_subrect2_f32_attribute[]) {
-            bank_pattern.subrect, bank_pattern.subrect, bank.subrect, bank.subrect
-        },
+        subrects,
         4,
         sizeof(cecs_texture_subrect2_f32_attribute)
     );
     cecs_instance_builder_set_instance_attribute(&builder_instance, CECS_COMPONENT_ID(instance_position3_f32_attribute),
-        (instance_position3_f32_attribute[]) {
-            { .x = 0.0f, .y = 0.0f, .z = 0.0f},
-            { .x = 1.0f, .y = 0.0f, .z = 0.0f},
-            { .x = 0.0f, .y = 1.0f, .z = 0.0f},
-            { .x = 0.0f, .y = 0.0f, .z = 1.0f},
-        },
-        4,
-        sizeof(instance_position3_f32_attribute)
+    (instance_position3_f32_attribute[]) {
+        { .x = 0.0f, .y = 0.0f, .z = 0.0f},
+        { .x = 1.0f, .y = 0.0f, .z = 0.0f},
+        { .x = 0.0f, .y = 1.0f, .z = 0.0f},
+        { .x = 0.0f, .y = 0.0f, .z = 1.0f},
+    },
+    4,
+    sizeof(instance_position3_f32_attribute)
     );
-    cecs_instance_group group = cecs_instance_builder_build_into_and_clear(&world, &builder_instance, &system.context);
-    CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, id, &group);
-    
-    
-    const cecs_entity_id depth_entity = cecs_world_add_entity(&system.world.world);
-    cecs_texture_builder builder_depth = cecs_texture_builder_create((WGPUTextureDescriptor) {
-        .dimension = WGPUTextureDimension_2D,
-        .format = WGPUTextureFormat_Depth24Plus,
-        .mipLevelCount = 1,
-        .nextInChain = NULL,
-        .sampleCount = 1,
-        .size = (WGPUExtent3D){
-            .width = width,
-            .height = height,
-            .depthOrArrayLayers = 1,
+    return cecs_instance_builder_build_into_and_clear(world, &builder_instance, &system->context);
+}
+
+int main(void) {
+    GLFWwindow *window;
+    size_t width;
+    size_t height;
+    if (!init_window(&window, &width, &height)) {
+        return EXIT_FAILURE;
+    }
+
+    cecs_world world = cecs_world_create(64, 16, 4);
+    cecs_graphics_system system = cecs_graphics_system_create(1024, 8, window);
+
+    cecs_arena builder_arena = cecs_arena_create();
+    cecs_index_stream index_stream;
+    cecs_mesh mesh = create_duck_mesh(&world, &system, &builder_arena, "../../examples/graphics_app/assets/Duck.gltf", &index_stream);
+    cecs_texture_in_bank_bundle bank_image = create_duck_file_texture(&system, &builder_arena, "../../examples/graphics_app/assets/DuckCM.png");
+    cecs_texture_in_bank_bundle bank_pattern = create_duck_pattern_texture(&system, &builder_arena);
+    assert(bank_image.reference.texture_id == bank_pattern.reference.texture_id);
+
+    cecs_instance_group duck_instances = create_duck_instance(
+        &world,
+        &system,
+        &builder_arena,
+        (cecs_texture_in_bank_range2_u8_attribute[]){
+            bank_image.range, bank_pattern.range, bank_image.range, bank_pattern.range
         },
-        .usage = WGPUTextureUsage_RenderAttachment,
-        .viewFormatCount = 0,
-        .viewFormats = NULL,
-    }, &system.world, &builder_arena);
-    WGPUTexture depth = cecs_texture_builder_build_alloc(&builder_depth, &system.context);
-    cecs_texture *depth_texture = CECS_WORLD_SET_COMPONENT(cecs_texture, &system.world.world, depth_entity, &((cecs_texture){
-        .texture_view = wgpuTextureCreateView(depth, &(WGPUTextureViewDescriptor){
-            .format = WGPUTextureFormat_Depth24Plus,
-            .dimension = WGPUTextureViewDimension_2D,
-            .baseMipLevel = 0,
-            .mipLevelCount = 1,
-            .baseArrayLayer = 0,
-            .arrayLayerCount = 1,
-            .aspect = WGPUTextureAspect_DepthOnly,
-        }),
-        .extent = builder_depth.descriptor.size,
-    }));
-    wgpuTextureRelease(depth);
-    
-    
+        (cecs_texture_subrect2_f32_attribute[]){
+            bank_image.subrect, bank_pattern.subrect, bank_image.subrect, bank_pattern.subrect
+        }
+    );
     cecs_arena_free(&builder_arena);
+    
+    cecs_entity_id id = cecs_world_add_entity_with_indexed_mesh(&world, &mesh, &index_stream);
+    CECS_WORLD_SET_COMPONENT(cecs_texture_in_bank_reference, &world, id, &bank_image.reference);
+    CECS_WORLD_SET_COMPONENT(cecs_instance_group, &world, id, &duck_instances);
+
+    const cecs_entity_id depth_entity = cecs_world_add_entity(&system.world.world);
+    cecs_texture *depth_texture; {
+        cecs_texture depth = create_depth_texture(&system, (uint32_t)width, (uint32_t)height);
+        depth_texture = CECS_WORLD_SET_COMPONENT(cecs_texture, &system.world.world, depth_entity, &depth);
+    }
     
     test_pass pass; {
         const WGPUSurfaceConfiguration configuration = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration;
@@ -508,7 +500,9 @@ int main(void) {
         mouse_x = mouse_x_new;
         mouse_y = mouse_y_new;
 
-        render_error |= !draw(&world, &system, &pass, &camera);
+        const WGPUSurfaceConfiguration configuration = CECS_OPTION_GET(cecs_optional_surface_context, system.context.surface_context).configuration;
+        const cecs_camera_raw_bundle camera_raw = cecs_camera_raw_bundle_from_pack(camera, (float)configuration.width / (float)configuration.height);
+        render_error |= !draw(&world, &system, &pass, &camera_raw);
     }
 
     cecs_graphics_system_free(&system);

@@ -318,8 +318,7 @@ static void test_pass_draw_inner(
     cecs_world *world,
     cecs_graphics_system *system,
     cecs_render_target *target,
-    const cecs_render_target_info *target_info,
-    const cecs_camera_pack camera,
+    const cecs_camera_raw_bundle camera,
     WGPURenderPassEncoder render_pass,
     WGPUBindGroup out_local_bind_groups[],
     size_t in_local_bind_groups_capacity,
@@ -371,13 +370,8 @@ static void test_pass_draw_inner(
     cecs_exclusive_index_buffer_pair index_buffers = cecs_graphics_world_get_index_buffers(&system->world);
     
     {
-        //assert(CECS_IS_ALIGNED_TO_POW2(sizeof(cecs_camera_bundle), CECS_WGPU_COPY_BUFFER_ALIGNMENT));
         assert(CECS_IS_ALIGNED_TO_POW2(sizeof(cecs_camera_raw_bundle), CECS_WGPU_COPY_BUFFER_ALIGNMENT));
-        const cecs_camera_raw_bundle raw_bundle = cecs_camera_raw_bundle_from_pack(
-            camera,
-            target_info->aspect_ratio
-        );
-        wgpuQueueWriteBuffer(system->context.queue, pass->global_uniform_buffer, 0, &raw_bundle, sizeof(cecs_camera_raw_bundle));
+        wgpuQueueWriteBuffer(system->context.queue, pass->global_uniform_buffer, 0, &camera, sizeof(cecs_camera_raw_bundle));
         wgpuRenderPassEncoderSetBindGroup(render_pass, 0, pass->global_bg, 0, NULL);
     }
 
@@ -488,8 +482,7 @@ void test_pass_draw(
     cecs_world *world,
     cecs_graphics_system *system,
     cecs_render_target *target,
-    const cecs_render_target_info *target_info,
-    const cecs_camera_pack camera
+    const cecs_camera_raw_bundle camera
 ) {
     // TODO: make check and sync procedure
 
@@ -548,7 +541,6 @@ void test_pass_draw(
         world,
         system,
         target,
-        target_info,
         camera,
         render_pass,
         local_bind_groups, 2, &local_bind_groups_count

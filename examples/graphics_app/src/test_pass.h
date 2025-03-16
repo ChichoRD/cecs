@@ -24,8 +24,7 @@ void test_pass_draw(
     cecs_world *world,
     cecs_graphics_system *system,
     cecs_render_target *target,
-    const cecs_render_target_info *target_info,
-    const cecs_camera_pack camera
+    const cecs_camera_raw_bundle camera
 );
 
 typedef struct position3_f32_attribute {
