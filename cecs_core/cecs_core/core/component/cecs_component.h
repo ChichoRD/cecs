@@ -1,6 +1,8 @@
 #ifndef CECS_COMPONENT_H
 #define CECS_COMPONENT_H
 
+// TODO: strided copy
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "../../types/cecs_type_id.h"

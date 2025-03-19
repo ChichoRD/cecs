@@ -1,6 +1,9 @@
 #ifndef CECS_FLATMAP_H
 #define CECS_FLATMAP_H
 
+// TODO: robin hood hashing
+
+
 #include <stdint.h>
 #include <assert.h>
 

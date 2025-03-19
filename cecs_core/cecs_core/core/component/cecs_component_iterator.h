@@ -40,7 +40,7 @@ typedef struct cecs_component_iterator_descriptor_storages {
 } cecs_component_iterator_descriptor_storages;
 
 typedef union cecs_component_iterator_descriptor_union {
-    cecs_component_iterator_descriptor groupped;
+    cecs_component_iterator_descriptor grouped;
     cecs_component_iterator_descriptor_flat flattened;
     cecs_component_iterator_descriptor_storages storages;
 } cecs_component_iterator_descriptor_union;
@@ -122,32 +122,32 @@ void cecs_component_iterator_end_iter(cecs_component_iterator *it);
         cecs_is_prefab \
     )
 
-#define CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED_RAW(...) \
+#define CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPED_RAW(...) \
     (cecs_component_iterator_descriptor){ \
         .entity_range = {0, PTRDIFF_MAX}, \
         .groups = (cecs_component_iteration_group[]){ __VA_ARGS__ }, \
         .group_count = (sizeof((cecs_component_iteration_group[]){ __VA_ARGS__ }) / sizeof(cecs_component_iteration_group)) \
     }
-#define CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED(...) \
-    CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED_RAW( \
+#define CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPED(...) \
+    CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPED_RAW( \
         (CECS_COMPONENT_GROUP_DEFAULT_EXCLUDED), \
         __VA_ARGS__ \
     )
 
-#define CECS_COMPONENT_ITERATOR_CREATE_GROUPPED(world_components_reference, iterator_temporary_arena_reference, ...) \
+#define CECS_COMPONENT_ITERATOR_CREATE_GROUPED(world_components_reference, iterator_temporary_arena_reference, ...) \
     cecs_component_iterator_create( \
-        CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPPED(__VA_ARGS__), \
+        CECS_COMPONENT_ITERATOR_DESCRIPTOR_CREATE_GROUPED(__VA_ARGS__), \
         world_components_reference, \
         iterator_temporary_arena_reference \
     )
 
 #define CECS_COMPONENT_ITERATOR_CREATE(world_components_reference, iterator_temporary_arena_reference, ...) \
-    CECS_COMPONENT_ITERATOR_CREATE_GROUPPED( \
+    CECS_COMPONENT_ITERATOR_CREATE_GROUPED( \
         world_components_reference, iterator_temporary_arena_reference, \
         CECS_COMPONENTS_GROUP(cecs_component_access_inmmutable, cecs_component_group_search_all, __VA_ARGS__) \
     )
 #define CECS_COMPONENT_ITERATOR_CREATE_MUT(world_components_reference, iterator_temporary_arena_reference, ...) \
-    CECS_COMPONENT_ITERATOR_CREATE_GROUPPED( \
+    CECS_COMPONENT_ITERATOR_CREATE_GROUPED( \
         world_components_reference, iterator_temporary_arena_reference, \
         CECS_COMPONENTS_GROUP(cecs_component_access_mutable, cecs_component_group_search_all, __VA_ARGS__) \
     )
