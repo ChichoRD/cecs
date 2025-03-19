@@ -55,7 +55,6 @@ inline uint_fast8_t cecs_log2_u16(const uint16_t n) {
     assert(n != 0 && "error: log2 of 0 is undefined");
     return (uint_fast8_t)(CECS_UINT16_BITS - CECS_LZCNT_U16(n) - 1);
 }
-
 inline uint_fast8_t cecs_log2(const size_t n) {
 #if (SIZE_MAX == UINT16_MAX)
     return cecs_log2_u16((uint32_t)n);
@@ -76,18 +75,136 @@ inline uint_fast8_t cecs_log2(const size_t n) {
 inline bool cecs_is_pow2_u64(const uint64_t n) {
     return n && !(n & (n - 1));
 }
-
 inline bool cecs_is_pow2_u32(const uint32_t n) {
     return n && !(n & (n - 1));
 }
-
 inline bool cecs_is_pow2_u16(const uint16_t n) {
     return n && !(n & (n - 1));
 }
-
 inline bool cecs_is_pow2(const size_t n) {
     return n && !(n & (n - 1));
 }
 
+inline uint64_t cecs_align_to_pow2_u64(const uint64_t size, const uint64_t alignment) {
+    assert(cecs_is_pow2_u64(alignment) && "error: alignment must be a power of two");
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+inline uint32_t cecs_align_to_pow2_u32(const uint32_t size, const uint32_t alignment) {
+    assert(cecs_is_pow2_u32(alignment) && "error: alignment must be a power of two");
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+inline uint16_t cecs_align_to_pow2_u16(const uint16_t size, const uint16_t alignment) {
+    assert(cecs_is_pow2_u16(alignment) && "error: alignment must be a power of two");
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+
+inline size_t cecs_align_to_pow2(const size_t size, const size_t alignment) {
+#if (SIZE_MAX == UINT16_MAX)
+    return cecs_align_to_pow2_u16((uint16_t)size, (uint16_t)alignment);
+#elif (SIZE_MAX == UINT32_MAX)
+    return cecs_align_to_pow2_u32((uint32_t)size, (uint32_t)alignment);
+#elif (SIZE_MAX == UINT64_MAX)
+    return cecs_align_to_pow2_u64((uint64_t)size, (uint64_t)alignment);
+#else
+    #error TBD code CECS_SIZE_T_BITS
+    return 0;
+#endif
+}
+
+
+inline bool cecs_is_aligned_to_pow2_u64(const uint64_t size, const uint64_t alignment) {
+    assert(cecs_is_pow2_u64(alignment) && "error: alignment must be a power of two");
+    return (size & (alignment - 1)) == 0;
+}
+inline bool cecs_is_aligned_to_pow2_u32(const uint32_t size, const uint32_t alignment) {
+    assert(cecs_is_pow2_u32(alignment) && "error: alignment must be a power of two");
+    return (size & (alignment - 1)) == 0;
+}
+inline bool cecs_is_aligned_to_pow2_u16(const uint16_t size, const uint16_t alignment) {
+    assert(cecs_is_pow2_u16(alignment) && "error: alignment must be a power of two");
+    return (size & (alignment - 1)) == 0;
+}
+inline bool cecs_is_aligned_to_pow2(const size_t size, const size_t alignment) {
+#if (SIZE_MAX == UINT16_MAX)
+    return cecs_is_aligned_to_pow2_u16((uint16_t)size, (uint16_t)alignment);
+#elif (SIZE_MAX == UINT32_MAX)
+    return cecs_is_aligned_to_pow2_u32((uint32_t)size, (uint32_t)alignment);
+#elif (SIZE_MAX == UINT64_MAX)
+    return cecs_is_aligned_to_pow2_u64((uint64_t)size, (uint64_t)alignment);
+#else
+    #error TBD code CECS_SIZE_T_BITS
+    return 0;
+#endif
+}
+
+
+inline uint64_t cecs_mark_2bit_runs_u64(uint64_t n) {
+    n &= n >> 1;
+    return n;
+}
+inline uint32_t cecs_mark_2bit_runs_u32(uint32_t n) {
+    n &= n >> 1;
+    return n;
+}
+
+inline uint64_t cecs_mark_4bit_runs_u64(uint64_t n) {
+    n &= n >> 2;
+    n &= n >> 1;
+    return n;
+}
+inline uint32_t cecs_mark_4bit_runs_u32(uint32_t n) {
+    n &= n >> 2;
+    n &= n >> 1;
+    return n;
+}
+
+inline uint64_t cecs_mark_8bit_runs_u64(uint64_t n) {
+    n &= n >> 4;
+    n &= n >> 2;
+    n &= n >> 1;
+    return n;
+}
+inline uint32_t cecs_mark_8bit_runs_u32(uint32_t n) {
+    n &= n >> 4;
+    n &= n >> 2;
+    n &= n >> 1;
+    return n;
+}
+
+uint64_t cecs_mark_dynamic_bit_runs_u64(uint64_t n, uint_fast8_t run_length);
+uint32_t cecs_mark_dynamic_bit_runs_u32(uint32_t n, uint_fast8_t run_length);
+
+inline uint64_t cecs_mark_bit_runs_u64(const uint64_t n, const uint_fast8_t run_length) {
+    switch (run_length) {
+    case 0:
+        return n;
+    case 1:
+        return n;
+    case 2:
+        return cecs_mark_2bit_runs_u64(n);
+    case 4:
+        return cecs_mark_4bit_runs_u64(n);
+    case 8:
+        return cecs_mark_8bit_runs_u64(n);
+    default:
+        return cecs_mark_dynamic_bit_runs_u64(n, run_length);
+    }
+}
+inline uint32_t cecs_mark_bit_runs_u32(const uint32_t n, const uint_fast8_t run_length) {
+    switch (run_length) {
+    case 0:
+        return n;
+    case 1:
+        return n;
+    case 2:
+        return cecs_mark_2bit_runs_u32(n);
+    case 4:
+        return cecs_mark_4bit_runs_u32(n);
+    case 8:
+        return cecs_mark_8bit_runs_u32(n);
+    default:
+        return cecs_mark_dynamic_bit_runs_u32(n, run_length);
+    }
+}
 
 #endif
