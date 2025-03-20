@@ -71,7 +71,7 @@ void *cecs_bump_allocator_realloc_expect(
 }
 
 extern inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *block, const size_t block_size);
-
+extern inline void cecs_allocator_reset(cecs_bump_allocator *allocator);
 void cecs_bump_allocator_destroy(cecs_bump_allocator *allocator) {
     cecs_free_expect(allocator->block_start, cecs_bump_allocator_capacity(allocator));
     allocator->next = NULL;

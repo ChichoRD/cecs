@@ -44,6 +44,10 @@ inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *block
     (void)block;
     (void)block_size;
 }
+inline void cecs_allocator_reset(cecs_bump_allocator *allocator) {
+    assert(allocator->next != NULL && "fatal error: allocator is empty");
+    allocator->next = allocator->block_start;
+}
 void cecs_bump_allocator_destroy(cecs_bump_allocator *allocator);
 
 
