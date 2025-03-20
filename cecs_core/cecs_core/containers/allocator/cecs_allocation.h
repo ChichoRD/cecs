@@ -28,8 +28,8 @@ inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation) {
 }
 
 
-cecs_raw_alloction *cecs_alloc_raw(const size_t size);
-cecs_raw_alloction *cecs_realloc_raw(const cecs_raw_alloction block, const size_t block_size, const size_t new_size);
+cecs_raw_alloction cecs_alloc_raw(const size_t size);
+cecs_raw_alloction cecs_realloc_raw(const cecs_raw_alloction block, const size_t block_size, const size_t new_size);
 void cecs_free_raw(const cecs_raw_alloction block, const size_t block_size);
 
 
