@@ -17,8 +17,6 @@ cecs_block cecs_block_create(size_t capacity);
 
 cecs_block cecs_block_create_from_existing(size_t capacity, size_t size, uint8_t *data);
 
-size_t cecs_block_alignment_padding_from_size(uint8_t *ptr, size_t structure_size);
-
 bool cecs_block_can_alloc(const cecs_block *b, size_t structure_size);
 
 void *cecs_block_alloc(cecs_block *b, size_t size);
