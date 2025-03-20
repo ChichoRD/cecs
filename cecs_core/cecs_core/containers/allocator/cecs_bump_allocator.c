@@ -1,7 +1,6 @@
 #include "cecs_bump_allocator.h"
 #include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
-extern inline cecs_bump_allocator cecs_bump_allocator_create_empty(void);
 cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size) {
     uint8_t *block = cecs_alloc_expect(block_size);
     return (cecs_bump_allocator){

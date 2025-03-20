@@ -10,13 +10,7 @@ typedef struct cecs_bump_allocator {
     uint8_t *const block_end;
 } cecs_bump_allocator;
 
-inline cecs_bump_allocator cecs_bump_allocator_create_empty(void) {
-    return (cecs_bump_allocator){
-        .next = NULL,
-        .block_start = NULL,
-        .block_end = NULL
-    };
-}
+
 cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size);
 inline cecs_bump_allocator cecs_bump_allocator_create_from(void *block_start, void *block_end) {
     assert(block_start != NULL && "fatal error: block_start is NULL");
