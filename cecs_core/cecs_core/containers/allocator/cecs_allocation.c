@@ -1,4 +1,5 @@
 #include "cecs_allocation.h"
+#include <stdint.h>
 
 extern inline bool cecs_raw_alloction_check(const cecs_raw_alloction allocation);
 extern inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation);
@@ -6,9 +7,15 @@ extern inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocatio
 
 
 #ifndef CECS_ALLOC_FUNC
-#define CECS_ALLOC_FUNC_DEFAULT malloc
+#define CECS_ALLOC_FUNC_DEFAULT calloc
+
+#undef CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE
+#define CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE true
 
 #define CECS_ALLOC_FUNC CECS_ALLOC_FUNC_DEFAULT
+
+#elif !defined(CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE)
+static_assert(false, "static error: CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE must be defined if CECS_ALLOC_FUNC is defined");
 #endif
 
 #ifndef CECS_REALLOC_FUNC
@@ -26,7 +33,11 @@ extern inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocatio
 
 cecs_raw_alloction cecs_alloc_raw(const size_t size) {
     return (cecs_raw_alloction){
+#if CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE
+        .block = CECS_ALLOC_FUNC(size, sizeof(uint8_t))
+#else
         .block = CECS_ALLOC_FUNC(size)
+#endif
     };
 }
 cecs_raw_alloction cecs_realloc_raw(const cecs_raw_alloction block, const size_t block_size, const size_t new_size) {

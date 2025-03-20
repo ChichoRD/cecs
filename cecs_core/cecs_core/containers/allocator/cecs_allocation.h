@@ -6,9 +6,9 @@
 #include <stdbool.h>
 #include <assert.h>
 
-typedef void *cecs_alloc(void *allocator, const size_t size);
-typedef void *cecs_realloc(void *allocator, void *block, const size_t block_size, const size_t new_size);
-typedef void cecs_free(void *allocator, void *block, const size_t block_size);
+typedef void *cecs_alloc(const size_t size);
+typedef void *cecs_realloc(void *block, const size_t block_size, const size_t new_size);
+typedef void cecs_free(void *block, const size_t block_size);
 
 typedef struct cecs_raw_alloction {
     void *block;
@@ -36,5 +36,10 @@ void cecs_free_raw(const cecs_raw_alloction block, const size_t block_size);
 void *cecs_alloc_expect(const size_t size);
 void *cecs_realloc_expect(void *block, const size_t block_size, const size_t new_size);
 void cecs_free_expect(void *block, const size_t block_size);
+
+
+typedef void *cecs_allocator_alloc(void *allocator, const size_t size);
+typedef void *cecs_allocator_realloc(void *allocator, void *block, const size_t block_size, const size_t new_size);
+typedef void cecs_allocator_free(void *allocator, void *block, const size_t block_size);
 
 #endif
