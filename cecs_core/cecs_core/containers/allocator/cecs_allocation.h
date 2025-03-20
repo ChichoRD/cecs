@@ -39,7 +39,14 @@ void cecs_free_expect(void *block, const size_t block_size);
 
 
 typedef void *cecs_allocator_alloc(void *allocator, const size_t size);
+typedef void *cecs_allocator_alloc_aligned(void *allocator, const size_t size, const size_t alignment);
 typedef void *cecs_allocator_realloc(void *allocator, void *block, const size_t block_size, const size_t new_size);
+typedef void *cecs_allocator_realloc_aligned(
+    void *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
+);
 typedef void cecs_allocator_free(void *allocator, void *block, const size_t block_size);
+
+
+size_t cecs_max_alignment_from_size(const size_t size);
 
 #endif

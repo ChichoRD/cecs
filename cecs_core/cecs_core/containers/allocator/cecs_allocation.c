@@ -1,5 +1,7 @@
 #include "cecs_allocation.h"
 #include <stdint.h>
+#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
+#include <cecs_math/relations/cecs_ordering.h>
 
 extern inline bool cecs_raw_alloction_check(const cecs_raw_alloction allocation);
 extern inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation);
@@ -60,4 +62,10 @@ void *cecs_realloc_expect(void *block, const size_t block_size, const size_t new
 }
 void cecs_free_expect(void *block, const size_t block_size) {
     cecs_free_raw((cecs_raw_alloction){ .block = block }, block_size);
+}
+
+
+size_t cecs_max_alignment_from_size(const size_t size) {
+    const size_t alignment = 1 << cecs_log2(size);
+    return cecs_min(alignment, sizeof(uintmax_t));
 }
