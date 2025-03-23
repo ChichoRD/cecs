@@ -11,7 +11,7 @@ cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size) {
 }
 extern inline cecs_bump_allocator cecs_bump_allocator_create_from(void *block_start, void *block_end);
 
-void *cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment) {
+void *restrict cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment) {
     assert(allocator->next != NULL && "fatal error: allocator is empty");
     assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
 
@@ -28,7 +28,7 @@ void *cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, c
     return aligned;
 }
 
-void *cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size) {
+void *restrict cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size) {
     return cecs_bump_allocator_alloc_aligned_expect(
         allocator,
         size,
@@ -36,7 +36,7 @@ void *cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const siz
     );
 }
 
-void *cecs_bump_allocator_realloc_aligned_expect(
+void *restrict cecs_bump_allocator_realloc_aligned_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
     assert(allocator->next != NULL && "fatal error: allocator is empty");
@@ -57,7 +57,7 @@ void *cecs_bump_allocator_realloc_aligned_expect(
     }
 }
 
-void *cecs_bump_allocator_realloc_expect(
+void *restrict cecs_bump_allocator_realloc_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size
 ) {
     return cecs_bump_allocator_realloc_aligned_expect(

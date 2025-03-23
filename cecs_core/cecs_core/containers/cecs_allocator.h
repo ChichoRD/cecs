@@ -23,11 +23,11 @@ inline cecs_allocator cecs_allocator_create_from(const cecs_internal_allocator a
     };
 }
 
-void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment);
-void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size);
+void *restrict cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment);
+void *restrict cecs_allocator_alloc(cecs_allocator *allocator, const size_t size);
 
-void *cecs_allocator_realloc_aligned(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment);
-void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size);
+void *restrict cecs_allocator_realloc_aligned(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment);
+void *restrict cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size);
 
 void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t block_size);
 void cecs_allocator_reset(cecs_allocator *allocator);

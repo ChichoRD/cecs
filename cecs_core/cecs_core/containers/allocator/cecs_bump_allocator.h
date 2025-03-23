@@ -6,8 +6,8 @@
 
 typedef struct cecs_bump_allocator {
     uint8_t *next;
-    uint8_t *const block_start;
-    uint8_t *const block_end;
+    uint8_t *block_start;
+    uint8_t *block_end;
 } cecs_bump_allocator;
 
 
@@ -23,13 +23,13 @@ inline cecs_bump_allocator cecs_bump_allocator_create_from(void *block_start, vo
     };
 }
 
-void *cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment);
-void *cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size);
+void *restrict cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment);
+void *restrict cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size);
 
-void *cecs_bump_allocator_realloc_aligned_expect(
+void *restrict cecs_bump_allocator_realloc_aligned_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 );
-void *cecs_bump_allocator_realloc_expect(
+void *restrict cecs_bump_allocator_realloc_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size
 );
 
