@@ -21,7 +21,8 @@ if (MSVC)
         /wd\"4668\"
 
         /Zc:wchar_t
-        /Zi
+        # /Zi
+        /MT
 
         # /EHsc
         /nologo
@@ -185,4 +186,21 @@ if(CECS_GRAPHICS)
         if (MSVC)
             target_compile_options(${PROJECT_NAME} PUBLIC /wd4244)
         endif()
+
+        target_compile_options(
+            ${PROJECT_NAME}
+            PUBLIC
+            -fsanitize=address
+        )
+        target_link_options(
+            ${PROJECT_NAME}
+            PUBLIC
+            /LIBPATH:"D:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib/clang/17/lib/windows"
+        )
+        target_link_libraries(
+            ${PROJECT_NAME}
+            PUBLIC
+            clang_rt.asan_dynamic-x86_64
+            clang_rt.asan_dynamic_runtime_thunk-x86_64
+        )
 endif()

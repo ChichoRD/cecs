@@ -96,6 +96,8 @@ fn fs_main(input: vertex_output) -> @location(0) vec4<f32> {
     let m = max(max(input.position_world.x, input.position_world.y), input.position_world.z);
     let extreme = step(vec3f(m), input.position_world);
     
-    let sample = textureSample(albedo_texture, texture_sampler, input.uv * input.uv_subrect, input.texture_range[0]);
+    let uv = input.uv * input.uv_subrect;
+    let sample = textureSample(albedo_texture, texture_sampler, uv, input.texture_range[0]);
+    
     return sample * sample;
 }
