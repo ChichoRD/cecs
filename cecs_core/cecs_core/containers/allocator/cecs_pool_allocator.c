@@ -73,34 +73,43 @@ static cecs_pool_allocator_mask_proxy cecs_pool_allocator_find_free(
     return (cecs_pool_allocator_mask_proxy){0};
 }
 
+static void cecs_pool_allocator_grow_mask(cecs_pool_allocator *allocator, const size_t new_arena_bump_index) {
+
+}
+
 void *restrict cecs_pool_allocator_alloc_aligned(cecs_pool_allocator *allocator, const size_t size, const size_t alignment) {
-    if (cecs_arena_allocator_current_bump_available_aligned(&allocator->arena, alignment) < (ptrdiff_t)size) {
-        cecs_pool_allocator_mask_proxy mask_proxy = cecs_pool_allocator_find_free(allocator, size);
-        if (mask_proxy.mask_length == 0){
-            void *const restrict block = cecs_arena_allocator_alloc_aligned(&allocator->arena, size, alignment);
-        } else {
-            allocator->free_mask[mask_proxy.mask_index] &= ~cecs_bitmask(mask_proxy.mask_start_bit, mask_proxy.mask_length);
-            if (allocator->free_mask[mask_proxy.mask_index] == 0) {
-                allocator->first_free_mask_index = mask_proxy.mask_index + 1;
-            }
+    // if (cecs_arena_allocator_current_bump_available_aligned(&allocator->arena, alignment) < (ptrdiff_t)size) {
+    //     cecs_pool_allocator_mask_proxy mask_proxy = cecs_pool_allocator_find_free(allocator, size);
+    //     if (mask_proxy.mask_length == 0){
+    //         const size_t previous_bump_capacity = allocator->arena.bump_capacity;
+    //         void *const restrict block = cecs_arena_allocator_alloc_aligned(&allocator->arena, size, alignment);
+    //         if (allocator->arena.bump_capacity > previous_bump_capacity) {
+    //             // const size_t new_masks_capacity = allocator->arena.bump_capacity * (block_size >> allocator->granularity_log2) / (CHAR_BIT * sizeof(cecs_pool_allocator_mask));
+    //             const size_t new_total_mask_size = new_masks_capacity * sizeof(cecs_pool_allocator_mask);
+    //             cecs_pool_allocator_mask *const new_free_mask = cecs_alloc_expect(new_total_mask_size);
+    //     } else {
+    //         allocator->free_mask[mask_proxy.mask_index] &= ~cecs_bitmask(mask_proxy.mask_start_bit, mask_proxy.mask_length);
+    //         if (allocator->free_mask[mask_proxy.mask_index] == 0) {
+    //             allocator->first_free_mask_index = mask_proxy.mask_index + 1;
+    //         }
 
-            size_t bytes_to_skip = mask_proxy.mask_index << allocator->granularity_log2;
-            cecs_bump_allocator *current_bump = &allocator->arena.bumps[0];
-            size_t current_bump_capacity = cecs_bump_allocator_capacity(current_bump);
-            while (bytes_to_skip >= current_bump_capacity) {
-                bytes_to_skip -= current_bump_capacity;
+    //         size_t bytes_to_skip = mask_proxy.mask_index << allocator->granularity_log2;
+    //         cecs_bump_allocator *current_bump = &allocator->arena.bumps[0];
+    //         size_t current_bump_capacity = cecs_bump_allocator_capacity(current_bump);
+    //         while (bytes_to_skip >= current_bump_capacity) {
+    //             bytes_to_skip -= current_bump_capacity;
 
-                ++current_bump;
-                current_bump_capacity = cecs_bump_allocator_capacity(current_bump);
-            }
+    //             ++current_bump;
+    //             current_bump_capacity = cecs_bump_allocator_capacity(current_bump);
+    //         }
 
-            void *const restrict block = current_bump->block_start + bytes_to_skip;
-            assert(cecs_is_aligned_to_pow2((size_t)block, alignment) && "fatal error: block is not aligned to alignment");
-            return block;
-        }
-    } else {
-        return cecs_arena_allocator_alloc_aligned(&allocator->arena, size, alignment);
-    }
+    //         void *const restrict block = current_bump->block_start + bytes_to_skip;
+    //         assert(cecs_is_aligned_to_pow2((size_t)block, alignment) && "fatal error: block is not aligned to alignment");
+    //         return block;
+    //     }
+    // } else {
+    //     return cecs_arena_allocator_alloc_aligned(&allocator->arena, size, alignment);
+    // }
 }
 
 void *restrict cecs_pool_allocator_alloc(cecs_pool_allocator *allocator, const size_t size) {

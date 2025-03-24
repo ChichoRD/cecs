@@ -746,6 +746,10 @@ bool finalize(cecs_world *w) {
 }
 
 #include "cecs_core/containers/cecs_flatmap.h"
+#include "cecs_core/containers/allocator/cecs_pool_allocator.h"
+static void cecs_pool_allocator_fuzz_test(void) {
+    //cecs_pool_allocator allocator = cecs_pool_allocator_create(1024, 4
+}
 
 int main(void) {
     cecs_world w = cecs_world_create(1024, 32, 4);

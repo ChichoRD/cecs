@@ -10,7 +10,7 @@ typedef struct cecs_bump_view_allocator {
     uint8_t *block_end;
 } cecs_bump_view_allocator;
 
-inline cecs_bump_view_allocator cecs_bump_view_allocator_create_from(void *block_start, void *block_end) {
+inline cecs_bump_view_allocator cecs_bump_view_allocator_create(void *block_start, void *block_end) {
     assert(block_start != NULL && "fatal error: block_start is NULL");
     assert(block_end != NULL && "fatal error: block_end is NULL");
     assert(block_start < block_end && "fatal error: block_end must be strictly greater than block_start");

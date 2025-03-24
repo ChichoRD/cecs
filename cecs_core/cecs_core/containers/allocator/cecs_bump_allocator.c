@@ -1,6 +1,7 @@
 #include "cecs_bump_allocator.h"
 #include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
+extern inline cecs_bump_view_allocator cecs_bump_view_allocator_create(void *block_start, void *block_end);
 void *restrict cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment) {
     assert(allocator->next != NULL && "fatal error: allocator is empty");
     assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
