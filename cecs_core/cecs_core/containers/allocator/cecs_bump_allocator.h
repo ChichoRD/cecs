@@ -4,58 +4,109 @@
 #include "cecs_allocation.h"
 #include <stdint.h>
 
-typedef struct cecs_bump_allocator {
+typedef struct cecs_bump_view_allocator {
     uint8_t *next;
     uint8_t *block_start;
     uint8_t *block_end;
-} cecs_bump_allocator;
+} cecs_bump_view_allocator;
 
-
-cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size);
-inline cecs_bump_allocator cecs_bump_allocator_create_from(void *block_start, void *block_end) {
+inline cecs_bump_view_allocator cecs_bump_view_allocator_create_from(void *block_start, void *block_end) {
     assert(block_start != NULL && "fatal error: block_start is NULL");
     assert(block_end != NULL && "fatal error: block_end is NULL");
     assert(block_start < block_end && "fatal error: block_end must be strictly greater than block_start");
-    return (cecs_bump_allocator){
+    return (cecs_bump_view_allocator){
         .next = block_start,
         .block_start = block_start,
         .block_end = block_end
     };
 }
 
-void *restrict cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment);
-void *restrict cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size);
+void *restrict cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment);
+void *restrict cecs_bump_view_allocator_alloc_expect(cecs_bump_view_allocator *allocator, const size_t size);
 
-void *restrict cecs_bump_allocator_realloc_aligned_expect(
+void *restrict cecs_bump_view_allocator_realloc_aligned_expect(
+    cecs_bump_view_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
+);
+void *restrict cecs_bump_view_allocator_realloc_expect(
+    cecs_bump_view_allocator *allocator, void *block, const size_t block_size, const size_t new_size
+);
+
+inline void cecs_bump_view_allocator_free(cecs_bump_view_allocator *allocator, void *block, const size_t block_size) {
+    (void)allocator;
+    (void)block;
+    (void)block_size;
+}
+inline void cecs_bump_view_allocator_reset(cecs_bump_view_allocator *allocator) {
+    assert(allocator->next != NULL && "fatal error: allocator is empty");
+    allocator->next = allocator->block_start;
+}
+inline void cecs_bump_view_allocator_destroy(cecs_bump_view_allocator *allocator) {
+    allocator->next = NULL;
+}
+
+inline size_t cecs_bump_view_allocator_capacity(const cecs_bump_view_allocator *allocator) {
+    assert(allocator->next != NULL && "fatal error: allocator is empty");
+    return (size_t)(allocator->block_end - allocator->block_start);
+}
+inline size_t cecs_bump_view_allocator_used(const cecs_bump_view_allocator *allocator) {
+    assert(allocator->next != NULL && "fatal error: allocator is empty");
+    return (size_t)(allocator->next - allocator->block_start);
+}
+inline ptrdiff_t cecs_bump_view_allocator_available(const cecs_bump_view_allocator *allocator) {
+    assert(allocator->next != NULL && "fatal error: allocator is empty");
+    return (ptrdiff_t)(allocator->block_end - allocator->next);
+}	
+ptrdiff_t cecs_bump_view_allocator_available_aligned(const cecs_bump_view_allocator *allocator, const size_t alignment);
+
+
+typedef struct cecs_bump_allocator {
+    cecs_bump_view_allocator view;
+} cecs_bump_allocator;
+
+
+cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size);
+
+inline void *restrict cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment) {
+    return cecs_bump_view_allocator_alloc_aligned_expect(&allocator->view, size, alignment);
+}
+inline void *restrict cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size) {
+    return cecs_bump_view_allocator_alloc_expect(&allocator->view, size);
+}
+
+inline void *restrict cecs_bump_allocator_realloc_aligned_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
-);
-void *restrict cecs_bump_allocator_realloc_expect(
+) {
+    return cecs_bump_view_allocator_realloc_aligned_expect(&allocator->view, block, block_size, new_size, alignment);
+}
+inline void *restrict cecs_bump_allocator_realloc_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size
-);
+) {
+    return cecs_bump_view_allocator_realloc_expect(&allocator->view, block, block_size, new_size);
+}
 
 inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *block, const size_t block_size) {
     (void)allocator;
     (void)block;
     (void)block_size;
 }
-inline void cecs_allocator_reset(cecs_bump_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    allocator->next = allocator->block_start;
+inline void cecs_bump_allocator_reset(cecs_bump_allocator *allocator) {
+    cecs_bump_view_allocator_reset(&allocator->view);
 }
-void cecs_bump_allocator_destroy(cecs_bump_allocator *allocator);
+inline void cecs_bump_allocator_destroy(cecs_bump_allocator *allocator) {
+    cecs_bump_view_allocator_destroy(&allocator->view);
+}
 
 
 inline size_t cecs_bump_allocator_capacity(const cecs_bump_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    return (size_t)(allocator->block_end - allocator->block_start);
+    return cecs_bump_view_allocator_capacity(&allocator->view);
 }
 inline size_t cecs_bump_allocator_used(const cecs_bump_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    return (size_t)(allocator->next - allocator->block_start);
+    return cecs_bump_view_allocator_used(&allocator->view);
 }
 inline ptrdiff_t cecs_bump_allocator_available(const cecs_bump_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    return (ptrdiff_t)(allocator->block_end - allocator->next);
+    return cecs_bump_view_allocator_available(&allocator->view);
 }	
-ptrdiff_t cecs_bump_allocator_available_aligned(const cecs_bump_allocator *allocator, const size_t alignment);
+inline ptrdiff_t cecs_bump_allocator_available_aligned(const cecs_bump_allocator *allocator, const size_t alignment) {
+    return cecs_bump_view_allocator_available_aligned(&allocator->view, alignment);
+}
 #endif

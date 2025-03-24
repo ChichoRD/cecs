@@ -25,7 +25,9 @@ cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const 
 
 static inline cecs_bump_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator) {
     assert(allocator->current_bump < allocator->bump_capacity && "fatal error: allocator's current bump is out of bounds");
-    return &allocator->bumps[allocator->current_bump];
+    cecs_bump_allocator *const current = &allocator->bumps[allocator->current_bump];
+    assert(current->next != NULL && "fatal error: allocator's current bump is empty");
+    return current;
 }
 
 static void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
@@ -114,4 +116,17 @@ void cecs_arena_allocator_destroy(cecs_arena_allocator *allocator) {
     allocator->bumps = NULL;
     allocator->current_bump = 0;
     allocator->bump_capacity = 0;
+}
+
+size_t cecs_arena_allocator_current_bump_capacity(const cecs_arena_allocator *allocator) {
+    return cecs_bump_allocator_capacity(cecs_arena_allocator_current_bump(allocator));
+}
+size_t cecs_arena_allocator_current_bump_used(const cecs_arena_allocator *allocator) {
+    return cecs_bump_allocator_used(cecs_arena_allocator_current_bump(allocator));
+}
+ptrdiff_t cecs_arena_allocator_current_bump_available(const cecs_arena_allocator *allocator) {
+    return cecs_bump_allocator_available(cecs_arena_allocator_current_bump(allocator));
+}
+ptrdiff_t cecs_arena_allocator_current_bump_available_aligned(const cecs_arena_allocator *allocator, const size_t alignment) {
+    return cecs_bump_allocator_available_aligned(cecs_arena_allocator_current_bump(allocator), alignment);
 }

@@ -18,8 +18,13 @@ extern inline void *restrict cecs_raw_alloction_expect(const cecs_raw_alloction 
 #endif
 
 #if !defined(CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE)
-static_assert(false, "static error: CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE must be defined if CECS_ALLOC_FUNC is defined");
+static_assert(false, "static error: CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE must be defined");
 #endif
+
+static_assert(
+    !CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE || CECS_ALLOC_FUNC_IS_ZERO_INIT,
+    "static error: CECS_ALLOC_FUNC must be zero initialized if CECS_ALLOC_FUNC_HAS_CALLOC_SIGNATURE is true"
+)
 
 
 #ifndef CECS_REALLOC_FUNC

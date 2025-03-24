@@ -67,3 +67,10 @@ uint32_t cecs_mark_dynamic_bit_runs_u32(uint32_t n, uint_fast8_t run_length) {
 
 extern inline uint64_t cecs_mark_bit_runs_u64(const uint64_t n, const uint_fast8_t run_length);
 extern inline uint32_t cecs_mark_bit_runs_u32(const uint32_t n, const uint_fast8_t run_length);
+extern inline size_t cecs_mark_bit_runs(const size_t n, const uint_fast8_t run_length);
+
+
+extern inline uint16_t cecs_bitmask_u16(const uint_fast8_t start_bit, const uint_fast8_t length);
+extern inline uint32_t cecs_bitmask_u32(const uint_fast8_t start_bit, const uint_fast8_t length);
+extern inline uint64_t cecs_bitmask_u64(const uint_fast8_t start_bit, const uint_fast8_t length);
+extern inline size_t cecs_bitmask(const uint_fast8_t start_bit, const uint_fast8_t length);

@@ -28,6 +28,13 @@ inline void *restrict cecs_raw_alloction_expect(const cecs_raw_alloction allocat
 }
 
 
+#ifndef CECS_ALLOC_FUNC_IS_ZERO_INIT
+#define CECS_ALLOC_FUNC_IS_ZERO_INIT_DEFAULT true
+
+#define CECS_ALLOC_FUNC_IS_ZERO_INIT CECS_ALLOC_FUNC_IS_ZERO_INIT_DEFAULT
+#endif
+
+
 cecs_raw_alloction cecs_alloc_raw(const size_t size);
 cecs_raw_alloction cecs_realloc_raw(const cecs_raw_alloction block, const size_t block_size, const size_t new_size);
 void cecs_free_raw(const cecs_raw_alloction block, const size_t block_size);

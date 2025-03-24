@@ -36,4 +36,10 @@ void cecs_arena_allocator_reset(cecs_arena_allocator *allocator);
 
 void cecs_arena_allocator_destroy(cecs_arena_allocator *allocator);
 
+
+size_t cecs_arena_allocator_current_bump_capacity(const cecs_arena_allocator *allocator);
+size_t cecs_arena_allocator_current_bump_used(const cecs_arena_allocator *allocator);
+ptrdiff_t cecs_arena_allocator_current_bump_available(const cecs_arena_allocator *allocator);
+ptrdiff_t cecs_arena_allocator_current_bump_available_aligned(const cecs_arena_allocator *allocator, const size_t alignment);
+
 #endif
