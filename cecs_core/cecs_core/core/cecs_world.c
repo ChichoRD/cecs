@@ -386,12 +386,16 @@ size_t cecs_world_clear_entity_range(cecs_world *w, cecs_entity_id_range range, 
         cecs_world_components_entity_iterator_next(&it)
     ) {
         cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
+
+        const size_t component_count = cecs_exclusive_range_length(range);
+        // BUG: we did notgrow the discard allocation enough
+        // think about what to do with the discard
         cecs_component_storage_remove_array(
             &storage.storage->storage,
             &w->components.components_arena,
             range.start,
-            cecs_world_use_component_discard(w, storage.storage->component_size),
-            cecs_exclusive_range_length(range),
+            cecs_world_use_component_discard(w, component_count * storage.storage->component_size),
+            component_count,
             storage.storage->component_size
         );
         ++count;

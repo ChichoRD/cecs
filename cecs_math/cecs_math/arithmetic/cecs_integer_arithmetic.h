@@ -206,42 +206,5 @@ inline uint32_t cecs_mark_bit_runs_u32(const uint32_t n, const uint_fast8_t run_
         return cecs_mark_dynamic_bit_runs_u32(n, run_length);
     }
 }
-inline size_t cecs_mark_bit_runs(const size_t n, const uint_fast8_t run_length) {
-#if (SIZE_MAX == UINT32_MAX)
-    return cecs_mark_bit_runs_u32((uint32_t)n, run_length);
-#elif (SIZE_MAX == UINT64_MAX)
-    return cecs_mark_bit_runs_u64((uint64_t)n, run_length);
-#else
-    #error TBD code CECS_SIZE_T_BITS
-    return 0;
-#endif
-}
-
-
-
-inline uint16_t cecs_bitmask_u16(const uint_fast8_t start_bit, const uint_fast8_t length) {
-    assert(start_bit + length <= CECS_UINT16_BITS && "error: start_bit + length must be less than or equal to 16");
-    return (UINT16_MAX >> (CECS_UINT16_BITS - length)) << start_bit;
-}
-inline uint32_t cecs_bitmask_u32(const uint_fast8_t start_bit, const uint_fast8_t length) {
-    assert(start_bit + length <= CECS_UINT32_BITS && "error: start_bit + length must be less than or equal to 32");
-    return (UINT32_MAX >> (CECS_UINT32_BITS - length)) << start_bit;
-}
-inline uint64_t cecs_bitmask_u64(const uint_fast8_t start_bit, const uint_fast8_t length) {
-    assert(start_bit + length <= CECS_UINT64_BITS && "error: start_bit + length must be less than or equal to 64");
-    return (UINT64_MAX >> (CECS_UINT64_BITS - length)) << start_bit;
-}
-inline size_t cecs_bitmask(const uint_fast8_t start_bit, const uint_fast8_t length) {
-#if (SIZE_MAX == UINT16_MAX)
-    return cecs_bitmask_u16(start_bit, length);
-#elif (SIZE_MAX == UINT32_MAX)
-    return cecs_bitmask_u32(start_bit, length);
-#elif (SIZE_MAX == UINT64_MAX)
-    return cecs_bitmask_u64(start_bit, length);
-#else
-    #error TBD code CECS_SIZE_T_BITS
-    return 0;
-#endif
-}
 
 #endif

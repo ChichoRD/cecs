@@ -21,6 +21,7 @@ static size_t cecs_max_alignment_from_size(const size_t size) {
     return min(alignment, sizeof(uintmax_t));
 }
 
+extern inline size_t cecs_align_to_pow2(const size_t size, const size_t alignment);
 void* cecs_block_alloc(cecs_block* b, size_t size) {
     assert(cecs_block_can_alloc(b, size) && "error: requested size exceeds block capacity");
 
