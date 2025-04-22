@@ -2,12 +2,12 @@
 
 #include <cecs_math/relations/cecs_ordering.h>
 
-cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_index blocks_capacity) {
+cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity) {
     assert(block_size > 0 && "fatal error: block_size must be greater than 0");
     assert(blocks_capacity > 0 && "fatal error: blocks_capacity must be greater than 0");
     assert(
-        blocks_capacity <= CECS_ARENA_ALLOCATOR_BUMP_INDEX_TYPE_MAX
-        && "fatal error: blocks_capacity must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_INDEX_TYPE_MAX"
+        blocks_capacity <= CECS_ARENA_ALLOCATOR_BUMP_OWNING_MAX_COUNT
+        && "fatal error: blocks_capacity must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_OWNING_MAX_COUNT"
     );
 
     cecs_arena_allocator_bump *bumps = cecs_alloc_expect(blocks_capacity * sizeof(cecs_arena_allocator_bump));
@@ -55,6 +55,10 @@ static void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allo
         cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);
         const size_t new_blocks_size = cecs_max(cecs_bump_view_allocator_capacity(current_bump), size);
         const size_t new_blocks_capacity = allocator->bump_capacity << 1;
+        assert(
+            new_blocks_capacity <= CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX
+            && "fatal error: new_blocks_capacity must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
+        );
 
         cecs_arena_allocator_bump *const new_bumps = cecs_realloc_expect(
             allocator->bumps,
@@ -71,12 +75,12 @@ static void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allo
             .allocator = cecs_bump_view_allocator_create(new_bump, new_bump_end),
             .status.owning = (cecs_arena_allocator_bump_owning){
                 .owning = true,
-                .owned_count = new_blocks_capacity
+                .owned_count = allocator->bump_capacity
             }
         };
 
         new_bump = new_bump_end;
-        for (cecs_arena_allocator_bump_index i = allocator->current_bump + 1; i < new_blocks_capacity; ++i) {
+        for (cecs_arena_allocator_bump_usize i = allocator->current_bump + 1; i < new_blocks_capacity; ++i) {
             uint8_t *const next_bump = new_bump + new_blocks_size;
             new_bumps[i] = (cecs_arena_allocator_bump){
                 .allocator = cecs_bump_view_allocator_create(new_bump, next_bump),
@@ -131,13 +135,13 @@ void cecs_arena_allocator_free(cecs_arena_allocator *allocator, void *block, con
 
 void cecs_arena_allocator_reset(cecs_arena_allocator *allocator) {
     allocator->current_bump = 0;
-    for (cecs_arena_allocator_bump_index i = 0; i < allocator->bump_capacity; ++i) {
+    for (cecs_arena_allocator_bump_usize i = 0; i < allocator->bump_capacity; ++i) {
         cecs_bump_view_allocator_reset(&allocator->bumps[i].allocator);
     }
 }
 
 void cecs_arena_allocator_destroy(cecs_arena_allocator *allocator) {
-    for (cecs_arena_allocator_bump_index i = 0; i < allocator->bump_capacity; ++i) {
+    for (cecs_arena_allocator_bump_usize i = 0; i < allocator->bump_capacity; ++i) {
         cecs_arena_allocator_bump *const bump = &allocator->bumps[i];
         if (bump->status.any.owning) {
             cecs_bump_view_allocator_destroy(&bump->allocator);
