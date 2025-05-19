@@ -321,8 +321,8 @@ int main(void) {
 
     cecs_arena builder_arena = cecs_arena_create();
     cecs_index_stream index_stream;
-    cecs_mesh mesh = create_duck_mesh(&world, &system, &builder_arena, "../../examples/graphics_app/assets/Duck.gltf", &index_stream);
-    cecs_texture_in_bank_bundle bank_image = create_duck_file_texture(&system, &builder_arena, "../../examples/graphics_app/assets/DuckCM.png");
+    cecs_mesh mesh = create_duck_mesh(&world, &system, &builder_arena, "../../../../examples/graphics_app/assets/Duck.gltf", &index_stream);
+    cecs_texture_in_bank_bundle bank_image = create_duck_file_texture(&system, &builder_arena, "../../../../examples/graphics_app/assets/DuckCM.png");
     cecs_texture_in_bank_bundle bank_pattern = create_duck_pattern_texture(&system, &builder_arena);
     assert(bank_image.reference.texture_id == bank_pattern.reference.texture_id);
 
@@ -498,6 +498,7 @@ int main(void) {
         fprintf(stderr, "Error rendering to surface\n");
         return EXIT_FAILURE;
     } else {
+        // fprintf(stdout, "Render finished successfully\n");
         return EXIT_SUCCESS;
     }
 }

@@ -1,50 +1,52 @@
 cmake_minimum_required(VERSION 3.15...3.30)
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
-
-
-enable_language(C)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-
-if (MSVC)
-    add_compile_options(
-        /Zc:preprocessor
-        /we\"4022\"
-
-        /W4
-        /wd\"5045\"
-        /wd\"4115\"
-        /wd\"4255\"
-        /wd\"4668\"
-
-        /Zc:wchar_t
-        # /Zi
-        /MT
-
-        # /EHsc
-        /nologo
-    )
-else()
-    add_compile_options(
-        -Wall
-        -Wextra
-        -Wpedantic
-
-        -Wno-gnu-zero-variadic-macro-arguments
-        -Wno-newline-eof
-        -Wno-unused-function
-        -Wno-extra-semi
-        #-Werror
-
-        -mlzcnt
-    )
-endif()
+set(
+    CECS_EXE_DIRECTORY
+    "${CMAKE_BINARY_DIR}/bin"
+)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CECS_EXE_DIRECTORY}/$<0:>)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CECS_EXE_DIRECTORY}/$<0:>)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CECS_EXE_DIRECTORY}/$<0:>)
 
 
 project(cecs_math C)
+    set(CMAKE_C_STANDARD 11)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+
+    if (MSVC)
+        add_compile_options(
+            /Zc:preprocessor
+            /we\"4022\"
+
+            /W4
+            /wd\"5045\"
+            /wd\"4115\"
+            /wd\"4255\"
+            /wd\"4668\"
+
+            /Zc:wchar_t
+            # /Zi
+            /MT
+
+            # /EHsc
+            /nologo
+        )
+    else()
+        add_compile_options(
+            -Wall
+            -Wextra
+            -Wpedantic
+
+            -Wno-gnu-zero-variadic-macro-arguments
+            -Wno-newline-eof
+            -Wno-unused-function
+            -Wno-extra-semi
+            #-Werror
+
+            -mlzcnt
+        )
+    endif()
+
     set(
         CECS_MATH_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/cecs_math/"
@@ -183,24 +185,24 @@ if(CECS_GRAPHICS)
         )
         target_copy_webgpu_binaries(${PROJECT_NAME})
 
-        if (MSVC)
-            target_compile_options(${PROJECT_NAME} PUBLIC /wd4244)
-        endif()
+        # if (MSVC)
+        #     target_compile_options(${PROJECT_NAME} PUBLIC /wd4244)
+        # endif()
 
-        target_compile_options(
-            ${PROJECT_NAME}
-            PUBLIC
-            -fsanitize=address
-        )
-        target_link_options(
-            ${PROJECT_NAME}
-            PUBLIC
-            /LIBPATH:"D:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib/clang/17/lib/windows"
-        )
-        target_link_libraries(
-            ${PROJECT_NAME}
-            PUBLIC
-            clang_rt.asan_dynamic-x86_64
-            clang_rt.asan_dynamic_runtime_thunk-x86_64
-        )
+        # target_compile_options(
+        #     ${PROJECT_NAME}
+        #     PUBLIC
+        #     -fsanitize=address
+        # )
+        # target_link_options(
+        #     ${PROJECT_NAME}
+        #     PUBLIC
+        #     /LIBPATH:"D:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib/clang/17/lib/windows"
+        # )
+        # target_link_libraries(
+        #     ${PROJECT_NAME}
+        #     PUBLIC
+        #     clang_rt.asan_dynamic-x86_64
+        #     clang_rt.asan_dynamic_runtime_thunk-x86_64
+        # )
 endif()

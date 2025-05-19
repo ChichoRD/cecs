@@ -6,7 +6,7 @@
 test_pass test_pass_create(cecs_graphics_context *context, cecs_render_target_info target_info, cecs_arena *arena, const cecs_texture * depth_texture) {
     FILE *shader_file = NULL;
     assert(
-        fopen_s(&shader_file, "../../examples/graphics_app/src/test_pass.wgsl", "r") == 0
+        fopen_s(&shader_file, "../../../../examples/graphics_app/src/test_pass.wgsl", "r") == 0
         && "fatal error: failed to open shader file"
     );
 
