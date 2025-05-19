@@ -5,6 +5,7 @@
 # cmake
 build/
 out/
+CMakeUserPresets.json
 
 # visual studio
 x64/
