@@ -35,7 +35,7 @@ void *restrict cecs_bump_view_allocator_realloc_aligned_expect(
 
     uint8_t *const old_block = (uint8_t *)block;
     if (old_block + block_size == allocator->next) {
-        assert(cecs_is_aligned_to_pow2(old_block, alignment) && "fatal error: block is not aligned to alignment");
+        assert(cecs_is_aligned_to_pow2((size_t)old_block, alignment) && "fatal error: block is not aligned to alignment");
         uint8_t *const next = old_block + new_size;
         if (next > allocator->block_end) {
             assert(false && "fatal error: allocator is out of memory");

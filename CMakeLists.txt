@@ -4,46 +4,45 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 
-
-enable_language(C)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-
-if (MSVC)
-    add_compile_options(
-        /Zc:preprocessor
-        /we\"4022\"
-
-        /W4
-        /wd\"5045\"
-        /wd\"4115\"
-        /wd\"4255\"
-        /wd\"4668\"
-
-        /Zc:wchar_t
-        /Zi
-
-        # /EHsc
-        /nologo
-    )
-else()
-    add_compile_options(
-        -Wall
-        -Wextra
-        -Wpedantic
-
-        -Wno-gnu-zero-variadic-macro-arguments
-        -Wno-newline-eof
-        -Wno-unused-function
-        -Wno-extra-semi
-        #-Werror
-
-        -mlzcnt
-    )
-endif()
-
-
 project(cecs_math C)
+    set(CMAKE_C_STANDARD 11)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+
+    if (MSVC)
+        message(STATUS "MSVC detected")
+        add_compile_options(
+            /Zc:preprocessor
+            /we\"4022\"
+
+            /W4
+            /wd\"5045\"
+            /wd\"4115\"
+            /wd\"4255\"
+            /wd\"4668\"
+
+            /Zc:wchar_t
+            /Zi
+
+            # /EHsc
+            /nologo
+        )
+    else()
+        message(STATUS "GCC/Clang detected")
+        add_compile_options(
+            -Wall
+            -Wextra
+            -Wpedantic
+
+            -Wno-gnu-zero-variadic-macro-arguments
+            -Wno-newline-eof
+            -Wno-unused-function
+            -Wno-extra-semi
+            #-Werror
+
+            -mlzcnt
+        )
+    endif()
+
     set(
         CECS_MATH_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/cecs_math/"
