@@ -76,3 +76,5 @@ size_t cecs_max_alignment_from_size(const size_t size) {
     const size_t alignment = 1 << cecs_log2(size);
     return cecs_min(alignment, sizeof(uintmax_t));
 }
+extern inline const uint8_t *cecs_aligned_ptr(const uint8_t *const address, const size_t alignment);
+extern inline uint8_t *cecs_aligned_ptr_mut(uint8_t *const address, const size_t alignment);

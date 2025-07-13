@@ -49,7 +49,7 @@ static inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_a
     return current;
 }
 
-static void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
+void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
     ++allocator->current_bump;
     if (allocator->current_bump == allocator->bump_capacity) {
         cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);

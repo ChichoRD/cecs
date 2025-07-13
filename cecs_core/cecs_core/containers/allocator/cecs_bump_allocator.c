@@ -69,10 +69,7 @@ extern inline size_t cecs_bump_view_allocator_used(const cecs_bump_view_allocato
 extern inline ptrdiff_t cecs_bump_view_allocator_available(const cecs_bump_view_allocator *allocator);
 ptrdiff_t cecs_bump_view_allocator_available_aligned(const cecs_bump_view_allocator *allocator, const size_t alignment) {
     assert(allocator->next != NULL && "fatal error: allocator is empty");
-    assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
-
-    static_assert(sizeof(size_t) == sizeof(uintptr_t), "fatal error: size_t is not the same size as uintptr_t");
-    uint8_t *const aligned = (uint8_t *)cecs_align_to_pow2((size_t)allocator->next, alignment);
+    const uint8_t *const aligned = cecs_aligned_ptr(allocator->next, alignment);
     return (ptrdiff_t)(allocator->block_end - aligned);
 }
 
