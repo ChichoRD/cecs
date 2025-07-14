@@ -30,11 +30,13 @@ static inline void cecs_implicit_arena_allocator_node_network_sort_6(
     cecs_implicit_arena_allocator_node_swap_ge(&nodes[1], &nodes[2]);
     cecs_implicit_arena_allocator_node_swap_ge(&nodes[3], &nodes[4]);
 }
+
+static const size_t cecs_implicit_arena_allocator_free_lists_count = CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT;
 static inline void cecs_implicit_arena_allocator_network_sort(
     cecs_implicit_arena_allocator *allocator
 ) {
     static_assert(
-        CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT == 6,
+        cecs_implicit_arena_allocator_free_lists_count == 6,
         "fatal static error: cecs_implicit_arena_allocator_network_sort supports exactly 6 free lists"
     );
     cecs_implicit_arena_allocator_node_network_sort_6(allocator->largest_free_blocks);
@@ -46,38 +48,57 @@ static inline const uint8_t *cecs_implicit_arena_allocator_node_start(const cecs
 static inline const uint8_t *cecs_implicit_arena_allocator_node_end(const cecs_implicit_arena_allocator_node node) {
     return (uint8_t *)node.next + sizeof(node);
 }
-cecs_implicit_arena_allocator_node cecs_implicit_arena_allocator_alloc_from_free_node(
-    const cecs_implicit_arena_allocator_node *previous_node, uint8_t *const block_start, const size_t size
-) {
-    assert(
-        size <= previous_node->next_size && "fatal error: size is greater than the next_size of the node"
-    );
-    assert(
-        block_start + previous_node->next_size <= cecs_implicit_arena_allocator_node_end(*previous_node)
-        && "fatal error: block_start is out of bounds. Not enough space in the node"
-    );
-    const uint8_t *const allocation_end = block_start + size;
-    const uint8_t *const node_end = cecs_implicit_arena_allocator_node_end(*previous_node);
-    assert(
-        allocation_end <= node_end
-        && "fatal error: allocation_end is out of bounds. Not enough space in the node"
-    );
-    const size_t remaining_size = node_end - allocation_end;
-    if (remaining_size >= sizeof(cecs_implicit_arena_allocator_node)) {
-        return (cecs_implicit_arena_allocator_node){
-            .next = previous_node->next,
-            .next_size = remaining_size
-        };
-        static_assert(false, "TODO: case where remaining size is less than next size");
-    } else {
-        return (cecs_implicit_arena_allocator_node){
-            .next = previous_node->next->next,
-            .next_size = previous_node->next->next_size
-        };
-    }
-}
+
 
 extern void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment);
+extern inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator);
+
+static inline cecs_implicit_arena_allocator_node *cecs_implicit_arena_allocator_append_smallest(
+    cecs_implicit_arena_allocator *allocator, void *const new_free_block, size_t block_size
+) {
+    *(cecs_implicit_arena_allocator_node *)new_free_block = (cecs_implicit_arena_allocator_node){
+        .next = allocator->smallest_free_block.next,
+        .next_size = allocator->smallest_free_block.next_size
+    };
+
+    allocator->smallest_free_block.next = new_free_block;
+    allocator->smallest_free_block.next_size = block_size;
+    return &allocator->smallest_free_block;
+}
+static inline cecs_implicit_arena_allocator_node *cecs_implicit_arena_allocator_prepend_larger(
+    cecs_implicit_arena_allocator *const allocator, void *const new_free_block, const size_t block_size, const size_t largest_index
+) {
+    if (largest_index >= cecs_implicit_arena_allocator_free_lists_count) {
+        assert(false && "fatal error: largest_index is out of bounds");
+        exit(EXIT_FAILURE);
+    }
+    if (block_size < allocator->largest_free_blocks[largest_index].next_size) {
+        assert(false && "fatal error: block_size is less than the next_size of the largest free block");
+        exit(EXIT_FAILURE);
+    }
+    
+    *(cecs_implicit_arena_allocator_node *)new_free_block = (cecs_implicit_arena_allocator_node){
+        .next = allocator->largest_free_blocks[largest_index].next,
+        .next_size = allocator->largest_free_blocks[largest_index].next_size,
+    };
+    allocator->largest_free_blocks[largest_index].next = new_free_block;
+    allocator->largest_free_blocks[largest_index].next_size = block_size;
+
+    cecs_implicit_arena_allocator_network_sort(allocator);
+    return &allocator->largest_free_blocks[largest_index];
+}
+static inline size_t cecs_implicit_arena_allocator_find_maximum_index(
+    const cecs_implicit_arena_allocator *allocator, const size_t block_size, const size_t start_index
+) {
+    size_t i = start_index;
+    while (
+        (i < CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT)
+        && (block_size < allocator->largest_free_blocks[i].next_size)
+    ) {
+        ++i;
+    }
+    return i;
+}
 
 void *cecs_implicit_arena_allocator_alloc_aligned(cecs_implicit_arena_allocator *allocator, const size_t size, const size_t alignment) {
     cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
@@ -86,12 +107,32 @@ void *cecs_implicit_arena_allocator_alloc_aligned(cecs_implicit_arena_allocator 
         const uint8_t *const block_start = cecs_implicit_arena_allocator_node_start(*largest_free_block);
         const uint8_t *const aligned_block_start = cecs_aligned_ptr(block_start, alignment);
         if (aligned_block_start + size <= cecs_implicit_arena_allocator_node_end(*largest_free_block)) {
-            *largest_free_block = cecs_implicit_arena_allocator_alloc_from_free_node(
-                largest_free_block, (uint8_t *)aligned_block_start, size
-            );
+            assert(largest_free_block->next_size >= size && "fatal error: largest free block size is less than requested size");
+
+            const uint8_t *const allocation_end = aligned_block_start + size;
+            const size_t remaining_size = cecs_implicit_arena_allocator_node_end(*largest_free_block) - allocation_end;
+            if (remaining_size < sizeof(cecs_implicit_arena_allocator_node)) {
+                *largest_free_block = *largest_free_block->next;
+            } else if (remaining_size < largest_free_block->next->next_size) {
+                const size_t next_maximum = cecs_implicit_arena_allocator_find_maximum_index(allocator, remaining_size, 1);
+                if (next_maximum < cecs_implicit_arena_allocator_free_lists_count) {
+                    cecs_implicit_arena_allocator_prepend_larger(
+                        allocator, (cecs_implicit_arena_allocator_node *)allocation_end, remaining_size, next_maximum
+                    );
+                } else {
+                    cecs_implicit_arena_allocator_append_smallest(
+                        allocator, (cecs_implicit_arena_allocator_node *)allocation_end, remaining_size
+                    );
+                }
+            } else {
+                largest_free_block->next_size = remaining_size;
+            }
+
             cecs_implicit_arena_allocator_network_sort(allocator);
             return aligned_block_start;
         } else {
+            cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
+            cecs_implicit_arena_allocator_free(allocator, current_bump->next, cecs_bump_view_allocator_available(current_bump));
             return cecs_arena_allocator_alloc_aligned_advance(allocator, size, alignment);
         }
     } else {
@@ -111,38 +152,22 @@ void cecs_implicit_arena_allocator_free(cecs_implicit_arena_allocator *allocator
     if (block_size <= allocator->smallest_free_block.next_size) {
         cecs_implicit_arena_allocator_node *const new_smallest_free_block =
             (uint8_t *)block + block_size - sizeof(cecs_implicit_arena_allocator_node);
-        new_smallest_free_block->next = allocator->smallest_free_block.next->next;
-        new_smallest_free_block->next_size = allocator->smallest_free_block.next->next_size;
-
-        allocator->smallest_free_block.next->next = new_smallest_free_block;
-        allocator->smallest_free_block.next->next_size = block_size;
-
-        allocator->smallest_free_block = *new_smallest_free_block;
-        static_assert(false, "TODO: think correct smallest replacement and filling the largests and replacing the heads");
+        cecs_implicit_arena_allocator_append_smallest(
+            allocator, new_smallest_free_block, block_size
+        );
     } else {
-        size_t i = 0;
-        while (
-            (i < CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT)
-            && (block_size < allocator->largest_free_blocks[i].next_size)
-        ) {
-            ++i;
-        }
         cecs_implicit_arena_allocator_node *const new_free_block =
             (uint8_t *)block + block_size - sizeof(cecs_implicit_arena_allocator_node);
-        if (i < CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT) {
-            new_free_block->next = allocator->largest_free_blocks[i].next;
-            new_free_block->next_size = allocator->largest_free_blocks[i].next_size;
-
-            allocator->largest_free_blocks[i].next = new_free_block;
-            allocator->largest_free_blocks[i].next_size = block_size;
-
-            cecs_implicit_arena_allocator_network_sort(allocator);
+        const size_t largest_index = cecs_implicit_arena_allocator_find_maximum_index(allocator, block_size, 0);
+        if (largest_index < cecs_implicit_arena_allocator_free_lists_count) {
+            cecs_implicit_arena_allocator_prepend_larger(
+                allocator, new_free_block, block_size, largest_index
+            );
         } else {
-            new_free_block->next = allocator->smallest_free_block.next->next;
-            new_free_block->next_size = allocator->smallest_free_block.next->next_size;
-
-            allocator->smallest_free_block.next->next = new_free_block;
-            allocator->smallest_free_block.next->next_size = block_size;
+            // If no suitable free list is found, we can just append to the smallest free block
+            cecs_implicit_arena_allocator_append_smallest(
+                allocator, new_free_block, block_size
+            );
         }
     }
 }

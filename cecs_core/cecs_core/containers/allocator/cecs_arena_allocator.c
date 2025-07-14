@@ -42,7 +42,7 @@ cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const 
     };
 }
 
-static inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator) {
+inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator) {
     assert(allocator->current_bump < allocator->bump_capacity && "fatal error: allocator's current bump is out of bounds");
     cecs_bump_view_allocator *const current = &allocator->bumps[allocator->current_bump].allocator;
     assert(current->next != NULL && "fatal error: allocator's current bump is empty");
