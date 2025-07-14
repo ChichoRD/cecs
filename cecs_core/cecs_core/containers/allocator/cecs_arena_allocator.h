@@ -12,37 +12,8 @@
 
 typedef CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE cecs_arena_allocator_bump_usize;
 
-
-#define CECS_ARENA_ALLOCATOR_BUMP_OWNING_MAX_COUNT (CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX >> 1)
-typedef struct cecs_arena_allocator_bump_owning {
-    bool owning : 1;
-    cecs_arena_allocator_bump_usize owned_count : 7;
-} cecs_arena_allocator_bump_owning;
-typedef struct cecs_arena_allocator_bump_view {
-    bool owning : 1;
-    uint8_t unused : 7;
-} cecs_arena_allocator_bump_view;
-typedef struct cecs_arena_allocator_bump_any {
-    bool owning : 1;
-    uint8_t uninitialized : 7;
-} cecs_arena_allocator_bump_any;
-static_assert(
-    sizeof(cecs_arena_allocator_bump_owning) == sizeof(cecs_arena_allocator_bump_view)
-    && sizeof(cecs_arena_allocator_bump_owning) == sizeof(cecs_arena_allocator_bump_any),
-    "fatal error: arena allocator bump status size mismatch"
-);
-
-typedef struct cecs_arena_allocator_bump {
-    cecs_bump_view_allocator allocator;
-    union {
-        cecs_arena_allocator_bump_owning owning;
-        cecs_arena_allocator_bump_view view;
-        cecs_arena_allocator_bump_any any;
-    } status;
-} cecs_arena_allocator_bump;
-
 typedef struct cecs_arena_allocator {
-    cecs_arena_allocator_bump *bumps;
+    cecs_bump_view_allocator *bumps;
     cecs_arena_allocator_bump_usize current_bump;
     cecs_arena_allocator_bump_usize bump_capacity;
 } cecs_arena_allocator;

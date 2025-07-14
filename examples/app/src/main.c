@@ -749,27 +749,42 @@ bool finalize(cecs_world *w) {
 #include "cecs_core/containers/allocator/cecs_implicit_arena_allocator.h"
 #include <stdio.h>
 static void cecs_implicit_arena_allocator_buffer_fuzz_test(cecs_implicit_arena_allocator *a) {
-    size_t capacity = sizeof(ptrdiff_t) * 2;
+    size_t capacity = 2;
     size_t used = 0;
-    ptrdiff_t *buffer = cecs_implicit_arena_allocator_alloc_aligned(a, capacity, sizeof(ptrdiff_t));
+    ptrdiff_t *buffer = cecs_implicit_arena_allocator_alloc_aligned(a, capacity * sizeof(ptrdiff_t), sizeof(ptrdiff_t));
     printf("Start of buffer: %p\n", (void *)buffer);
     ptrdiff_t input = 0;
     while (scanf("%td", &input) == 1) {
-        if (used + sizeof(ptrdiff_t) > capacity) {
-            printf("Buffer full, reallocating...\n");
-            buffer = cecs_implicit_arena_allocator_realloc_aligned(a, buffer, capacity, capacity * 2, sizeof(ptrdiff_t));
+        if (input == 0) {
+            cecs_implicit_arena_allocator_alloc(a, sizeof(ptrdiff_t));
+        } else if (used == capacity) {
+            buffer = cecs_implicit_arena_allocator_realloc_aligned(
+                a,
+                buffer,
+                capacity * sizeof(ptrdiff_t),
+                capacity * 2 * sizeof(ptrdiff_t),
+                sizeof(ptrdiff_t)
+            );
             capacity *= 2;
+            printf("Buffer full, reallocated:\n\tstart: %p\n\tend: %p\n", (void *)buffer, (void *)(buffer + capacity));
         }
-        buffer[used / sizeof(ptrdiff_t)] = input;
-        used += sizeof(ptrdiff_t);
+        buffer[used] = input;
+        ++used;
     }
-    printf("End of buffer: %p\n", (void *)(buffer + used / sizeof(ptrdiff_t)));
-    buffer = cecs_implicit_arena_allocator_realloc_aligned(a, buffer, capacity, used, sizeof(ptrdiff_t));
-    printf("End of trimmed buffer: %p\n\n", (void *)(buffer + used / sizeof(ptrdiff_t)));
+    printf("End of buffer: %p\n", (void *)(buffer + capacity));
+    buffer = cecs_implicit_arena_allocator_realloc_aligned(
+        a,
+        buffer,
+        capacity * sizeof(ptrdiff_t),
+        used * sizeof(ptrdiff_t),
+        sizeof(ptrdiff_t)
+    );
+    capacity = used;
+    printf("End of trimmed buffer: %p\n\n", (void *)(buffer + used));
 }
 
 static void cecs_implicit_arena_allocator_fuzz_test(void) {
-    cecs_implicit_arena_allocator a = cecs_implicit_arena_allocator_create(1024, 4);
+    cecs_implicit_arena_allocator a = cecs_implicit_arena_allocator_create(64, 4);
     cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
     cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
 }

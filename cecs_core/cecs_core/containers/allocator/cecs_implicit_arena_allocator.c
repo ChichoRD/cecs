@@ -1,11 +1,11 @@
 #include "cecs_implicit_arena_allocator.h"
 #include <memory.h>
 
-static inline void cecs_implicit_arena_allocator_node_swap_ge(
+static inline void cecs_implicit_arena_allocator_node_swap_lt(
     cecs_implicit_arena_allocator_node *a,
     cecs_implicit_arena_allocator_node *b
 ) {
-    if (a->next_size > b->next_size) {
+    if (a->next_size < b->next_size) {
         cecs_implicit_arena_allocator_node temp = *a;
         *a = *b;
         *b = temp;
@@ -14,22 +14,22 @@ static inline void cecs_implicit_arena_allocator_node_swap_ge(
 static inline void cecs_implicit_arena_allocator_node_network_sort_6(
     cecs_implicit_arena_allocator_node nodes[6]
 ) {
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[0], &nodes[5]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[1], &nodes[3]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[2], &nodes[4]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[0], &nodes[5]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[1], &nodes[3]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[2], &nodes[4]);
 
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[0], &nodes[1]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[2], &nodes[3]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[0], &nodes[1]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[2], &nodes[3]);
 
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[0], &nodes[3]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[2], &nodes[5]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[0], &nodes[3]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[2], &nodes[5]);
 
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[0], &nodes[1]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[2], &nodes[3]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[4], &nodes[5]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[0], &nodes[1]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[2], &nodes[3]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[4], &nodes[5]);
 
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[1], &nodes[2]);
-    cecs_implicit_arena_allocator_node_swap_ge(&nodes[3], &nodes[4]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[1], &nodes[2]);
+    cecs_implicit_arena_allocator_node_swap_lt(&nodes[3], &nodes[4]);
 }
 
 static const size_t cecs_implicit_arena_allocator_free_lists_count = CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT;
@@ -134,14 +134,10 @@ void *cecs_implicit_arena_allocator_alloc_aligned(cecs_implicit_arena_allocator 
 
             cecs_implicit_arena_allocator_network_sort(allocator);
             return aligned_block_start;
-        } else {
-            cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
-            cecs_implicit_arena_allocator_free(allocator, current_bump->next, cecs_bump_view_allocator_available(current_bump));
-            return cecs_arena_allocator_alloc_aligned_advance(allocator, size, alignment);
         }
-    } else {
-        return cecs_bump_view_allocator_alloc_aligned_expect(current_bump, size, alignment);
     }
+    cecs_implicit_arena_allocator_free(allocator, current_bump->next, cecs_bump_view_allocator_available(current_bump));
+    return cecs_arena_allocator_alloc_aligned_advance(&allocator->arena, size, alignment);
 }
 
 void *cecs_implicit_arena_allocator_alloc(cecs_implicit_arena_allocator *allocator, const size_t size) {
@@ -165,7 +161,14 @@ void cecs_implicit_arena_allocator_free(cecs_implicit_arena_allocator *allocator
     const size_t largest_index = cecs_implicit_arena_allocator_find_maximum_index(allocator, block_size, 0);
     if (largest_index < cecs_implicit_arena_allocator_free_lists_count) {
         if (cecs_implicit_arena_allocator_node_next_end(allocator->largest_free_blocks[largest_index]) == (uint8_t *)block) {
-            allocator->largest_free_blocks[largest_index].next_size += block_size;
+            *(cecs_implicit_arena_allocator_node *)new_free_block = (cecs_implicit_arena_allocator_node){
+                .next = allocator->largest_free_blocks[largest_index].next->next,
+                .next_size = allocator->largest_free_blocks[largest_index].next->next_size
+            };
+            allocator->largest_free_blocks[largest_index] = (cecs_implicit_arena_allocator_node){
+                .next = (cecs_implicit_arena_allocator_node *)new_free_block,
+                .next_size = allocator->largest_free_blocks[largest_index].next_size + block_size
+            };
             cecs_implicit_arena_allocator_network_sort(allocator);
         } else {
             cecs_implicit_arena_allocator_prepend_larger(
@@ -205,14 +208,20 @@ void *cecs_implicit_arena_allocator_realloc(
 
 void cecs_implicit_arena_allocator_reset(cecs_implicit_arena_allocator *allocator){
     cecs_arena_allocator_reset(&allocator->arena);
-    allocator->smallest_free_block = (cecs_implicit_arena_allocator_node){0};
+    allocator->smallest_free_block = (cecs_implicit_arena_allocator_node){
+        .next = NULL,
+        .next_size = SIZE_MAX
+    };
     for (size_t i = 0; i < CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT; ++i) {
         allocator->largest_free_blocks[i] = (cecs_implicit_arena_allocator_node){0};
     }
 }
 void cecs_implicit_arena_allocator_destroy(cecs_implicit_arena_allocator *allocator) {
     cecs_arena_allocator_destroy(&allocator->arena);
-    allocator->smallest_free_block = (cecs_implicit_arena_allocator_node){0};
+    allocator->smallest_free_block = (cecs_implicit_arena_allocator_node){
+        .next = NULL,
+        .next_size = SIZE_MAX
+    };
     for (size_t i = 0; i < CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT; ++i) {
         allocator->largest_free_blocks[i] = (cecs_implicit_arena_allocator_node){0};
     }

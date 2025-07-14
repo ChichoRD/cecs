@@ -21,7 +21,10 @@ inline cecs_implicit_arena_allocator cecs_implicit_arena_allocator_create(const 
     return (cecs_implicit_arena_allocator){
         .arena = cecs_arena_allocator_create(block_size, blocks_capacity),
         .largest_free_blocks = {0},
-        .smallest_free_block = {0}
+        .smallest_free_block = {
+            .next = NULL,
+            .next_size = SIZE_MAX
+        }
     };
 }
 
