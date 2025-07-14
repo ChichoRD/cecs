@@ -51,7 +51,7 @@ static inline const uint8_t *cecs_implicit_arena_allocator_node_next_end(const c
 }
 
 
-extern void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment);
+extern void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment);
 extern inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator);
 
 static inline cecs_implicit_arena_allocator_node *cecs_implicit_arena_allocator_append_smallest(

@@ -50,15 +50,15 @@ typedef struct cecs_arena_allocator {
 
 cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity);
 
-void *restrict cecs_arena_allocator_alloc_aligned(
+void *cecs_arena_allocator_alloc_aligned(
     cecs_arena_allocator *allocator, const size_t size, const size_t alignment
 );
-void *restrict cecs_arena_allocator_alloc(cecs_arena_allocator *allocator, const size_t size);
+void *cecs_arena_allocator_alloc(cecs_arena_allocator *allocator, const size_t size);
 
-void *restrict cecs_arena_allocator_realloc_aligned(
+void *cecs_arena_allocator_realloc_aligned(
     cecs_arena_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 );
-void *restrict cecs_arena_allocator_realloc(
+void *cecs_arena_allocator_realloc(
     cecs_arena_allocator *allocator, void *block, const size_t block_size, const size_t new_size
 );
 

@@ -49,7 +49,7 @@ inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_arena_al
     return current;
 }
 
-void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
+void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
     ++allocator->current_bump;
     if (allocator->current_bump == allocator->bump_capacity) {
         cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);
@@ -101,7 +101,7 @@ void *restrict cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *
     }
 }
 
-void *restrict cecs_arena_allocator_alloc_aligned(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
+void *cecs_arena_allocator_alloc_aligned(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
     cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);
     if (cecs_bump_view_allocator_available_aligned(current_bump, alignment) < (ptrdiff_t)size) {
         return cecs_arena_allocator_alloc_aligned_advance(allocator, size, alignment);
@@ -110,11 +110,11 @@ void *restrict cecs_arena_allocator_alloc_aligned(cecs_arena_allocator *allocato
     }
 }
 
-void *restrict cecs_arena_allocator_alloc(cecs_arena_allocator *allocator, const size_t size)  {
+void *cecs_arena_allocator_alloc(cecs_arena_allocator *allocator, const size_t size)  {
     return cecs_arena_allocator_alloc_aligned(allocator, size, cecs_max_alignment_from_size(size));
 }
 
-void *restrict cecs_arena_allocator_realloc_aligned(
+void *cecs_arena_allocator_realloc_aligned(
     cecs_arena_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
     cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);
@@ -125,7 +125,7 @@ void *restrict cecs_arena_allocator_realloc_aligned(
     }
 }
 
-void *restrict cecs_arena_allocator_realloc(cecs_arena_allocator *allocator, void *block, const size_t block_size, const size_t new_size) {
+void *cecs_arena_allocator_realloc(cecs_arena_allocator *allocator, void *block, const size_t block_size, const size_t new_size) {
     return cecs_arena_allocator_realloc_aligned(allocator, block, block_size, new_size, cecs_max_alignment_from_size(new_size));
 }
 

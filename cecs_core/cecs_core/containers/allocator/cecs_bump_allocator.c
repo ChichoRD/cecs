@@ -2,7 +2,7 @@
 #include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
 extern inline cecs_bump_view_allocator cecs_bump_view_allocator_create(void *block_start, void *block_end);
-void *restrict cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment) {
+void *cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment) {
     assert(allocator->next != NULL && "fatal error: allocator is empty");
     assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
 
@@ -19,7 +19,7 @@ void *restrict cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allo
     return aligned;
 }
 
-void *restrict cecs_bump_view_allocator_alloc_expect(cecs_bump_view_allocator *allocator, const size_t size) {
+void *cecs_bump_view_allocator_alloc_expect(cecs_bump_view_allocator *allocator, const size_t size) {
     return cecs_bump_view_allocator_alloc_aligned_expect(
         allocator,
         size,
@@ -27,7 +27,7 @@ void *restrict cecs_bump_view_allocator_alloc_expect(cecs_bump_view_allocator *a
     );
 }
 
-void *restrict cecs_bump_view_allocator_realloc_aligned_expect(
+void *cecs_bump_view_allocator_realloc_aligned_expect(
     cecs_bump_view_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
     assert(allocator->next != NULL && "fatal error: allocator is empty");
@@ -48,7 +48,7 @@ void *restrict cecs_bump_view_allocator_realloc_aligned_expect(
     }
 }
 
-void *restrict cecs_bump_view_allocator_realloc_expect(
+void *cecs_bump_view_allocator_realloc_expect(
     cecs_bump_view_allocator *allocator, void *block, const size_t block_size, const size_t new_size
 ) {
     return cecs_bump_view_allocator_realloc_aligned_expect(
@@ -81,13 +81,13 @@ cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size) {
     };
 }
 
-extern inline void *restrict cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment);
-extern inline void *restrict cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size);
+extern inline void *cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment);
+extern inline void *cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size);
 
-extern inline void *restrict cecs_bump_allocator_realloc_aligned_expect(
+extern inline void *cecs_bump_allocator_realloc_aligned_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 );
-extern inline void *restrict cecs_bump_allocator_realloc_expect(
+extern inline void *cecs_bump_allocator_realloc_expect(
     cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size
 );
 

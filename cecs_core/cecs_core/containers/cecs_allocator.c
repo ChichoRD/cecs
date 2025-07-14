@@ -1,6 +1,6 @@
 #include "cecs_allocator.h"
 
-void *restrict cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment) {
+void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment) {
     switch (allocator->type) {
     case cecs_internal_allocator_bump:
         return cecs_bump_allocator_alloc_aligned_expect(&allocator->allocator.bump, size, alignment);
@@ -11,7 +11,7 @@ void *restrict cecs_allocator_alloc_aligned(cecs_allocator *allocator, const siz
     }
 }
 
-void *restrict cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
+void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
     switch (allocator->type) {
     case cecs_internal_allocator_bump:
         return cecs_bump_allocator_alloc_expect(&allocator->allocator.bump, size);
@@ -22,7 +22,7 @@ void *restrict cecs_allocator_alloc(cecs_allocator *allocator, const size_t size
     }
 }
 
-void *restrict cecs_allocator_realloc_aligned(
+void *cecs_allocator_realloc_aligned(
     cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
     switch (allocator->type) {
@@ -35,7 +35,7 @@ void *restrict cecs_allocator_realloc_aligned(
     }
 }
 
-void *restrict cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size) {
+void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size) {
     switch (allocator->type) {
     case cecs_internal_allocator_bump:
         return cecs_bump_allocator_realloc_expect(&allocator->allocator.bump, block, block_size, new_size);

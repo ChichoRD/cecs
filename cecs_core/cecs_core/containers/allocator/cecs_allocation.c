@@ -4,8 +4,8 @@
 #include <cecs_math/relations/cecs_ordering.h>
 
 extern inline bool cecs_raw_alloction_check(const cecs_raw_alloction allocation);
-extern inline void *restrict cecs_raw_alloction_look(const cecs_raw_alloction allocation);
-extern inline void *restrict cecs_raw_alloction_expect(const cecs_raw_alloction allocation);
+extern inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation);
+extern inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation);
 
 
 #ifndef CECS_ALLOC_FUNC
@@ -61,10 +61,10 @@ void cecs_free_raw(const cecs_raw_alloction block, const size_t block_size) {
 }
 
 
-void *restrict cecs_alloc_expect(const size_t size) {
+void *cecs_alloc_expect(const size_t size) {
     return cecs_raw_alloction_expect(cecs_alloc_raw(size));
 }
-void *restrict cecs_realloc_expect(void *block, const size_t block_size, const size_t new_size) {
+void *cecs_realloc_expect(void *block, const size_t block_size, const size_t new_size) {
     return cecs_raw_alloction_expect(cecs_realloc_raw((cecs_raw_alloction){ .block = block }, block_size, new_size));
 }
 void cecs_free_expect(void *block, const size_t block_size) {

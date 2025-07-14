@@ -746,12 +746,37 @@ bool finalize(cecs_world *w) {
 }
 
 #include "cecs_core/containers/cecs_flatmap.h"
-#include "cecs_core/containers/allocator/cecs_pool_allocator.h"
-static void cecs_pool_allocator_fuzz_test(void) {
-    //cecs_pool_allocator allocator = cecs_pool_allocator_create(1024, 4
+#include "cecs_core/containers/allocator/cecs_implicit_arena_allocator.h"
+#include <stdio.h>
+static void cecs_implicit_arena_allocator_buffer_fuzz_test(cecs_implicit_arena_allocator *a) {
+    size_t capacity = sizeof(ptrdiff_t) * 2;
+    size_t used = 0;
+    ptrdiff_t *buffer = cecs_implicit_arena_allocator_alloc_aligned(a, capacity, sizeof(ptrdiff_t));
+    printf("Start of buffer: %p\n", (void *)buffer);
+    ptrdiff_t input = 0;
+    while (scanf("%td", &input) == 1) {
+        if (used + sizeof(ptrdiff_t) > capacity) {
+            printf("Buffer full, reallocating...\n");
+            buffer = cecs_implicit_arena_allocator_realloc_aligned(a, buffer, capacity, capacity * 2, sizeof(ptrdiff_t));
+            capacity *= 2;
+        }
+        buffer[used / sizeof(ptrdiff_t)] = input;
+        used += sizeof(ptrdiff_t);
+    }
+    printf("End of buffer: %p\n", (void *)(buffer + used / sizeof(ptrdiff_t)));
+    buffer = cecs_implicit_arena_allocator_realloc_aligned(a, buffer, capacity, used, sizeof(ptrdiff_t));
+    printf("End of trimmed buffer: %p\n\n", (void *)(buffer + used / sizeof(ptrdiff_t)));
+}
+
+static void cecs_implicit_arena_allocator_fuzz_test(void) {
+    cecs_implicit_arena_allocator a = cecs_implicit_arena_allocator_create(1024, 4);
+    cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
+    cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
 }
 
 int main(void) {
+    cecs_implicit_arena_allocator_fuzz_test();
+    return EXIT_SUCCESS;
     cecs_world w = cecs_world_create(1024, 32, 4);
 
     bool quitting = false;
