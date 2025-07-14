@@ -13,7 +13,7 @@
 typedef CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE cecs_arena_allocator_bump_usize;
 
 typedef struct cecs_arena_allocator {
-    cecs_bump_view_allocator *bumps;
+    cecs_bump_allocator *bumps;
     cecs_arena_allocator_bump_usize current_bump;
     cecs_arena_allocator_bump_usize bump_capacity;
 } cecs_arena_allocator;
