@@ -43,9 +43,9 @@ void cecs_implicit_arena_allocator_reset(cecs_implicit_arena_allocator *allocato
 void cecs_implicit_arena_allocator_destroy(cecs_implicit_arena_allocator *allocator);
 
 
-size_t cecs_implicit_arena_allocator_current_bump_capacity(const cecs_implicit_arena_allocator *allocator);
-size_t cecs_implicit_arena_allocator_current_bump_used(const cecs_implicit_arena_allocator *allocator);
-ptrdiff_t cecs_implicit_arena_allocator_current_bump_available(const cecs_implicit_arena_allocator *allocator);
-ptrdiff_t cecs_implicit_arena_allocator_current_bump_available_aligned(const cecs_implicit_arena_allocator *allocator, const size_t alignment);
+// inline size_t cecs_implicit_arena_allocator_current_bump_capacity(const cecs_implicit_arena_allocator *allocator);
+// inline size_t cecs_implicit_arena_allocator_current_bump_used(const cecs_implicit_arena_allocator *allocator);
+// inline ptrdiff_t cecs_implicit_arena_allocator_current_bump_available(const cecs_implicit_arena_allocator *allocator);
+// inline ptrdiff_t cecs_implicit_arena_allocator_current_bump_available_aligned(const cecs_implicit_arena_allocator *allocator, const size_t alignment);
 
 #endif
