@@ -784,7 +784,7 @@ static void cecs_implicit_arena_allocator_buffer_fuzz_test(cecs_implicit_arena_a
 }
 
 static void cecs_implicit_arena_allocator_fuzz_test(void) {
-    cecs_implicit_arena_allocator a = cecs_implicit_arena_allocator_create(64, 4);
+    cecs_implicit_arena_allocator a = cecs_implicit_arena_allocator_create(4096, 4);
     // cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
     // cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
     #define SIZEOF_BUFFER 1024
@@ -794,13 +794,13 @@ static void cecs_implicit_arena_allocator_fuzz_test(void) {
     while (count < SIZEOF_BUFFER) {
         // alloc and dealloc at random at the end of the buffer
         if (rand() % 2 == 0) {
-            size_t size = rand() % 64 + 1;
+            size_t size = (rand() % 8 + 1) * sizeof(ptrdiff_t) * 8;
             buffer[count] = cecs_implicit_arena_allocator_alloc_aligned(&a, size, sizeof(ptrdiff_t));
-            printf("Allocated %zu bytes at 0x%p\n", size, (void *)buffer[count]);
+            // printf("Allocated %zu bytes at 0x%p\n", size, (void *)buffer[count]);
             ++count;
         } else if (count > 0 && rand() % 2 == 0) {
             --count;
-            printf("Deallocating 0x%p\n", (void *)buffer[count]);
+            // printf("Deallocating 0x%p\n", (void *)buffer[count]);
             cecs_implicit_arena_allocator_free(&a, buffer[count], sizeof(ptrdiff_t));
         }
         ++i;
