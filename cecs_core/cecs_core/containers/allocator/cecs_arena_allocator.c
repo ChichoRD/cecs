@@ -34,6 +34,7 @@ inline cecs_bump_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocat
 
 void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
     ++allocator->current_bump;
+    // TODO: maybe if we pick last block's size we can double it
     const size_t new_blocks_size = cecs_max(cecs_bump_allocator_capacity(&allocator->bumps[allocator->current_bump - 1]), size);
     if (allocator->current_bump == allocator->bump_capacity) {
         const size_t new_blocks_capacity = allocator->bump_capacity << 1;
@@ -49,14 +50,12 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
         );
         
         new_bumps[allocator->current_bump] = cecs_bump_allocator_create(new_blocks_size);
-        if (!CECS_ALLOC_FUNC_IS_ZERO_INIT) {
-            for (cecs_arena_allocator_bump_usize i = allocator->current_bump; i < new_blocks_capacity; ++i) {
-                new_bumps[i] = (cecs_bump_allocator){(cecs_bump_view_allocator){
-                    .next = NULL,
-                    .block_start = NULL,
-                    .block_end = NULL
-                }};
-            }
+        for (cecs_arena_allocator_bump_usize i = allocator->current_bump + 1; i < new_blocks_capacity; ++i) {
+            new_bumps[i] = (cecs_bump_allocator){(cecs_bump_view_allocator){
+                .next = NULL,
+                .block_start = NULL,
+                .block_end = NULL
+            }};
         }
 
         allocator->bumps = new_bumps;
