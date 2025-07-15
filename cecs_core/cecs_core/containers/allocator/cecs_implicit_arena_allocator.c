@@ -52,7 +52,7 @@ static inline const uint8_t *cecs_implicit_arena_allocator_node_next_end(const c
 
 
 extern void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment);
-extern inline cecs_bump_view_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator);
+extern inline cecs_bump_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator);
 
 static inline cecs_implicit_arena_allocator_node *cecs_implicit_arena_allocator_append_smallest(
     cecs_implicit_arena_allocator *allocator, void *const new_free_block, size_t block_size
@@ -105,8 +105,8 @@ static inline size_t cecs_implicit_arena_allocator_find_maximum_index(
 }
 
 void *cecs_implicit_arena_allocator_alloc_aligned(cecs_implicit_arena_allocator *allocator, const size_t size, const size_t alignment) {
-    cecs_bump_view_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
-    if (cecs_bump_view_allocator_available_aligned(current_bump, alignment) < (ptrdiff_t)size) {
+    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
+    if (cecs_bump_allocator_available_aligned(current_bump, alignment) < (ptrdiff_t)size) {
         cecs_implicit_arena_allocator_node *const largest_free_block = &allocator->largest_free_blocks[0];
         const uint8_t *const block_start = cecs_implicit_arena_allocator_node_next_start(*largest_free_block);
         const uint8_t *const aligned_block_start = cecs_aligned_ptr(block_start, alignment);
@@ -134,10 +134,13 @@ void *cecs_implicit_arena_allocator_alloc_aligned(cecs_implicit_arena_allocator 
 
             cecs_implicit_arena_allocator_network_sort(allocator);
             return aligned_block_start;
+        } else {
+            cecs_implicit_arena_allocator_free(allocator, current_bump->view.next, cecs_bump_allocator_available(current_bump));
+            return cecs_arena_allocator_alloc_aligned_advance(&allocator->arena, size, alignment);
         }
+    } else {
+        return cecs_bump_allocator_alloc_aligned_expect(current_bump, size, alignment);
     }
-    cecs_implicit_arena_allocator_free(allocator, current_bump->next, cecs_bump_view_allocator_available(current_bump));
-    return cecs_arena_allocator_alloc_aligned_advance(&allocator->arena, size, alignment);
 }
 
 void *cecs_implicit_arena_allocator_alloc(cecs_implicit_arena_allocator *allocator, const size_t size) {
