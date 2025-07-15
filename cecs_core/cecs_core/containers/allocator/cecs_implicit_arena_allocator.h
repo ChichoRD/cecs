@@ -12,7 +12,7 @@ typedef struct cecs_implicit_arena_allocator_node {
 
 typedef struct cecs_implicit_arena_allocator {
     cecs_arena_allocator arena;
-    cecs_implicit_arena_allocator_node smallest_free_block;
+    cecs_implicit_arena_allocator_node generic_free_block;
     cecs_implicit_arena_allocator_node largest_free_blocks[CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT];
 } cecs_implicit_arena_allocator;
 
@@ -21,16 +21,15 @@ inline cecs_implicit_arena_allocator cecs_implicit_arena_allocator_create(const 
     return (cecs_implicit_arena_allocator){
         .arena = cecs_arena_allocator_create(block_size, blocks_capacity),
         .largest_free_blocks = {0},
-        .smallest_free_block = {
+        .generic_free_block = {
             .next = NULL,
-            .next_size = SIZE_MAX
+            .next_size = 0
         }
     };
 }
 
 void *cecs_implicit_arena_allocator_alloc_aligned(
-    cecs_implicit_arena_allocator *allocator, const size_t size, const size_t alignment
-);
+    cecs_implicit_arena_allocator *allocator, const size_t size, const size_t alignment);
 void *cecs_implicit_arena_allocator_alloc(cecs_implicit_arena_allocator *allocator, const size_t size);
 
 void *cecs_implicit_arena_allocator_realloc_aligned(
