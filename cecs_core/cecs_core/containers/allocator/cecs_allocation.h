@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
-typedef void *cecs_alloc(const size_t size);
-typedef void *cecs_realloc(void *block, const size_t block_size, const size_t new_size);
-typedef void cecs_free(void *block, const size_t block_size);
+typedef void *cecs_alloc_fn(const size_t size);
+typedef void *cecs_realloc_fn(void *block, const size_t block_size, const size_t new_size);
+typedef void cecs_free_fn(void *block, const size_t block_size);
 
 typedef struct cecs_raw_alloction {
     void *block;

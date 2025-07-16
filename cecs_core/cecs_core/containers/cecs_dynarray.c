@@ -1,7 +1,7 @@
 #include <memory.h>
 #include <assert.h>
 
-#include "cecs_dynamic_array.h"
+#include "cecs_dynarray.h"
 #include <cecs_math/relations/cecs_ordering.h>
 
 cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator* a, const size_t values_capacity, const size_t value_size) {
@@ -61,12 +61,12 @@ void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const siz
     }
 }
 void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
-    cecs_dynarray_shink_exact(arr, a, cecs_max(values_new_capacity, arr->values_used), value_size);
+    cecs_dynarray_shrink_exact(arr, a, cecs_max(values_new_capacity, arr->values_used), value_size);
 }
 
 void *cecs_dynarray_push(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
     if (arr->values_used + 1 > arr->values_capacity) {
-        cecs_dynarray_reserve_exact(arr, a, value_size, arr->values_capacity << 1);
+        cecs_dynarray_reserve_exact(arr, a, arr->values_capacity << 1, value_size);
     }
     void *const element = arr->values + arr->values_used * value_size;
     ++arr->values_used;

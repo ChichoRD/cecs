@@ -70,7 +70,6 @@ project(cecs_math C)
         ${CECS_MATH_DIRECTORY}
     )
 
-
 project(cecs_app C)
     set(
         CECS_CORE_DIRECTORY
@@ -100,6 +99,23 @@ project(cecs_app C)
         PUBLIC ${CECS_MATH_DIRECTORY}
     )
 
+project(cecs_fiddle_test C)
+    add_executable(
+        ${PROJECT_NAME}
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/fiddle_test/src/main.c"
+        ${CECS_MATH_SOURCES}
+        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_allocation.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_bump_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_arena_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_implicit_arena_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_dynarray.c"
+    )
+    target_include_directories(
+        ${PROJECT_NAME}
+        PUBLIC ${CECS_CORE_DIRECTORY}
+        PUBLIC ${CECS_MATH_DIRECTORY}
+    )
 
 project(cecs_lib C)
     add_library(
