@@ -794,13 +794,13 @@ static void cecs_implicit_arena_allocator_fuzz_test(void) {
     while (count < SIZEOF_BUFFER) {
         // alloc and dealloc at random at the end of the buffer
         if (rand() % 2 == 0) {
-            size_t size = (rand() % 8 + 1) * sizeof(ptrdiff_t) * 8;
+            size_t size = rand() % 64 + 1;
             buffer[count] = cecs_implicit_arena_allocator_alloc_aligned(&a, size, sizeof(ptrdiff_t));
-            // printf("Allocated %zu bytes at 0x%p\n", size, (void *)buffer[count]);
+            printf("Allocated %zu bytes at 0x%p\n", size, (void *)buffer[count]);
             ++count;
         } else if (count > 0 && rand() % 2 == 0) {
             --count;
-            // printf("Deallocating 0x%p\n", (void *)buffer[count]);
+            printf("Deallocating 0x%p\n", (void *)buffer[count]);
             cecs_implicit_arena_allocator_free(&a, buffer[count], sizeof(ptrdiff_t));
         }
         ++i;
