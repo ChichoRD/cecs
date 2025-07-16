@@ -785,6 +785,11 @@ static void cecs_implicit_arena_allocator_buffer_fuzz_test(cecs_implicit_arena_a
 
 static void cecs_implicit_arena_allocator_fuzz_test(void) {
     cecs_implicit_arena_allocator a = cecs_implicit_arena_allocator_create(4096, 4);
+    // // HACK
+    // cecs_implicit_arena_allocator_alloc(&a, 4096);
+    // cecs_bump_allocator *bump = &a.arena.bumps[a.arena.current_bump];
+    // cecs_bump_allocator_reset(bump);
+
     // cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
     // cecs_implicit_arena_allocator_buffer_fuzz_test(&a);
     #define SIZEOF_BUFFER 1024
