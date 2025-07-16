@@ -149,3 +149,10 @@ void cecs_allocator_destroy(cecs_allocator *allocator) {
     }
     }
 }
+
+extern inline const cecs_bump_allocator *cecs_allocator_bump(const cecs_allocator *allocator);
+extern inline cecs_bump_allocator *cecs_allocator_bump_mut(cecs_allocator *allocator);
+extern inline const cecs_arena_allocator *cecs_allocator_arena(const cecs_allocator *allocator);
+extern inline cecs_arena_allocator *cecs_allocator_arena_mut(cecs_allocator *allocator);
+extern inline const cecs_implicit_arena_allocator *cecs_allocator_implicit_arena(const cecs_allocator *allocator);
+extern inline cecs_implicit_arena_allocator *cecs_allocator_implicit_arena_mut(cecs_allocator *allocator);
