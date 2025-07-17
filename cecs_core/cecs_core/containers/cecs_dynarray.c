@@ -88,7 +88,14 @@ void *cecs_dynarray_push_many_cpy(cecs_dynarray *arr, cecs_allocator *a, const v
 }
 
 void *cecs_dynarray_extend(cecs_dynarray *arr, cecs_allocator *a, const size_t start_index_inclusive, const size_t end_index_exclusive, const size_t value_size) {
-    if (start_index_inclusive >= arr->values_used) {
+    if (start_index_inclusive > end_index_exclusive) {
+        assert(
+            false
+            && "error: attempted to extend dynamic array with invalid range"
+            "start_index_inclusive must be less than or equal to end_index_exclusive"
+        );
+        exit(EXIT_FAILURE);
+    } else if (start_index_inclusive >= arr->values_used) {
         assert(false && "error: attempted to extend dynamic array with starting index out of bounds");
         exit(EXIT_FAILURE);
     } else if (end_index_exclusive > arr->values_used) {

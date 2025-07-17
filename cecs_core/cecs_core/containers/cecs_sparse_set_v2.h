@@ -78,4 +78,7 @@ inline cecs_dense_index *cecs_sparse_set_index_get_mut(cecs_sparse_set *set, con
     return cecs_dynarray_get_mut(&set->sparse_to_dense, key, sizeof(cecs_dense_index));
 }
 
+void *cecs_sparse_set_insert_within_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
+void *cecs_sparse_set_insert_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
+
 #endif
