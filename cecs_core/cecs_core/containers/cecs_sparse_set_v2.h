@@ -70,12 +70,12 @@ inline size_t cecs_sparse_set_value_count(const cecs_sparse_set *set) {
 inline size_t cecs_sparse_set_sparse_range_size(const cecs_sparse_set *set) {
     return cecs_dynarray_count(&set->sparse_to_dense);
 }
-inline cecs_dense_index cecs_sparse_set_get_index(const cecs_sparse_set *set, const size_t key) {
+inline const cecs_dense_index *cecs_sparse_set_get_index(const cecs_sparse_set *set, const size_t key) {
     if (key >= cecs_sparse_set_sparse_range_size(set)) {
         assert(false && "fatal error: cecs_sparse_set_index_get called with out of bounds key");
         exit(EXIT_FAILURE);
     }
-    return *(const cecs_dense_index *)cecs_dynarray_get(&set->sparse_to_dense, key, sizeof(cecs_dense_index));
+    return cecs_dynarray_get(&set->sparse_to_dense, key, sizeof(cecs_dense_index));
 }
 inline cecs_dense_index *cecs_sparse_set_get_index_mut(cecs_sparse_set *set, const size_t key) {
     if (key >= cecs_sparse_set_sparse_range_size(set)) {
@@ -84,8 +84,8 @@ inline cecs_dense_index *cecs_sparse_set_get_index_mut(cecs_sparse_set *set, con
     }
     return cecs_dynarray_get_mut(&set->sparse_to_dense, key, sizeof(cecs_dense_index));
 }
-inline void *cecs_sparse_set_get_value(const cecs_sparse_set *set, const size_t key, const size_t value_size) {
-    const cecs_dense_index index = cecs_sparse_set_get_index(set, key);
+inline const void *cecs_sparse_set_get_value(const cecs_sparse_set *set, const size_t key, const size_t value_size) {
+    const cecs_dense_index index = *(const cecs_dense_index *)cecs_sparse_set_get_index(set, key);
     if (!cecs_dense_index_is_valid(index)) {
         assert(false && "fatal error: cecs_sparse_set_get_value called with invalid index");
         exit(EXIT_FAILURE);
@@ -93,7 +93,7 @@ inline void *cecs_sparse_set_get_value(const cecs_sparse_set *set, const size_t 
     return cecs_dynarray_get(&set->values.values, index.value, value_size);
 }
 inline void *cecs_sparse_set_get_value_mut(cecs_sparse_set *set, const size_t key, const size_t value_size) {
-    const cecs_dense_index index = cecs_sparse_set_get_index(set, key);
+    const cecs_dense_index index = *(const cecs_dense_index *)cecs_sparse_set_get_index(set, key);
     if (!cecs_dense_index_is_valid(index)) {
         assert(false && "fatal error: cecs_sparse_set_get_value_mut called with invalid index");
         exit(EXIT_FAILURE);
@@ -101,12 +101,34 @@ inline void *cecs_sparse_set_get_value_mut(cecs_sparse_set *set, const size_t ke
     return cecs_dynarray_get_mut(&set->values.values, index.value, value_size);
 }
 inline size_t *cecs_sparse_set_get_sparse_key_mut(cecs_sparse_set *set, const size_t key) {
-    const cecs_dense_index index = cecs_sparse_set_get_index(set, key);
+    const cecs_dense_index index = *(const cecs_dense_index *)cecs_sparse_set_get_index(set, key);
     if (!cecs_dense_index_is_valid(index)) {
         assert(false && "fatal error: cecs_sparse_set_get_sparse_key_mut called with invalid index");
         exit(EXIT_FAILURE);
     }
     return cecs_dynarray_get_mut(&set->values.dense_to_sparse, index.value, sizeof(size_t));
+}
+
+inline const void *cecs_sparse_set_get_value_by_index(const cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size) {
+    if (!cecs_dense_index_is_valid(index)) {
+        assert(false && "fatal error: cecs_sparse_set_get_value_by_index called with invalid index");
+        exit(EXIT_FAILURE);
+    }
+    return cecs_dynarray_get(&set->values.values, index.value, value_size);
+}
+inline void *cecs_sparse_set_get_value_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size) {
+    if (!cecs_dense_index_is_valid(index)) {
+        assert(false && "fatal error: cecs_sparse_set_get_value_by_index_mut called with invalid index");
+        exit(EXIT_FAILURE);
+    }
+    return cecs_dynarray_get_mut(&set->values.values, index.value, value_size);
+}
+inline const size_t *cecs_sparse_set_get_sparse_key_by_index(const cecs_sparse_set *set, const cecs_dense_index index) {
+    if (!cecs_dense_index_is_valid(index)) {
+        assert(false && "fatal error: cecs_sparse_set_get_sparse_key_by_index called with invalid index");
+        exit(EXIT_FAILURE);
+    }
+    return cecs_dynarray_get(&set->values.dense_to_sparse, index.value, sizeof(size_t));
 }
 
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size);
