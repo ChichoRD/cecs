@@ -110,6 +110,7 @@ project(cecs_fiddle_test C)
         "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_implicit_arena_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_dynarray.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_sparse_set_v2.c"
     )
     target_include_directories(
         ${PROJECT_NAME}

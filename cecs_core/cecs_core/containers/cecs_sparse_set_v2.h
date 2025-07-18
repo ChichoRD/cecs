@@ -10,7 +10,7 @@
 #define CECS_SPARSE_SET_USIZE_TYPE_MAX UINT32_MAX
 #define CECS_SPARSE_SET_USIZE_TYPE CECS_SPARSE_SET_USIZE_TYPE_DEFAULT
 
-#else if !defined(CECS_SPARSE_SET_USIZE_TYPE_MAX)
+#elif !defined(CECS_SPARSE_SET_USIZE_TYPE_MAX)
 static_assert(
     false,
     "static error: CECS_SPARSE_SET_USIZE_TYPE_MAX must be defined when CECS_SPARSE_SET_USIZE_TYPE is defined"
@@ -138,6 +138,6 @@ void *cecs_sparse_set_insert_expect(cecs_sparse_set *set, cecs_allocator *alloca
 void *cecs_sparse_set_insert(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
 
 void cecs_sparse_set_remove_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
-void cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
+bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
 
 #endif

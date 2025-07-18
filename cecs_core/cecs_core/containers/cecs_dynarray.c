@@ -128,8 +128,9 @@ void *cecs_dynarray_insert_many_cpy(cecs_dynarray *arr, cecs_allocator *a, const
 void cecs_dynarray_pop(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size)
 {
     --arr->values_used;
-    if (arr->values_used < (arr->values_capacity >> 1)) {
-        cecs_dynarray_shrink_exact(arr, a, arr->values_capacity >> 1, value_size);
+    const size_t half_capacity = arr->values_capacity >> 1;
+    if (arr->values_used < half_capacity) {
+        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 void cecs_dynarray_truncate(cecs_dynarray *arr, cecs_allocator *a, const size_t new_count, const size_t value_size) {
@@ -146,13 +147,17 @@ void cecs_dynarray_swap_last_pop(cecs_dynarray* arr, cecs_allocator* a, const si
     }
     case 1: {
         --arr->values_used;
-        return;
     }
     default: {
         void *const swapped = cecs_dynarray_get_mut(arr, index, value_size);
         const void *const last = cecs_dynarray_last(arr, value_size);
         memcpy(swapped, last, value_size);
+        --arr->values_used;
     }
+    }
+    const size_t half_capacity = arr->values_capacity >> 1;
+    if (arr->values_used < half_capacity) {
+        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 

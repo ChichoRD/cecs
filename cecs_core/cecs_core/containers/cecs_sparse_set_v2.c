@@ -1,6 +1,6 @@
 #include "cecs_sparse_set_v2.h"
 #include <memory.h>
-const cecs_dense_index cecs_sparse_key_invalid = {.value = CECS_SPARSE_SET_USIZE_TYPE_MAX};
+const cecs_dense_index cecs_dense_index_invalid = {.value = CECS_SPARSE_SET_USIZE_TYPE_MAX};
 
 extern inline bool cecs_dense_index_is_valid(const cecs_dense_index index);
 extern inline cecs_dense_index cecs_dense_index_create_unchecked(const cecs_sparse_set_usize index);
@@ -60,18 +60,24 @@ cecs_sparse_set cecs_sparse_set_create_with_capacity(cecs_allocator *allocator, 
         .values = cecs_dense_set_create_with_capacity(allocator, capacity, value_size),
         .sparse_to_dense = cecs_dynarray_create_with_capacity(allocator, capacity, sizeof(cecs_dense_index)),
     };
-    memset(cecs_dynarray_first_mut(&set.sparse_to_dense), UINT8_MAX, capacity * sizeof(cecs_dense_index));
+
+    memset(
+        cecs_dynarray_push_many(&set.sparse_to_dense, allocator, capacity, sizeof(cecs_dense_index)),
+        UINT8_MAX,
+        capacity * sizeof(cecs_dense_index)
+    );
     return set;
 }
 
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
+        const size_t needed_capacity = range_size - current_size;
         cecs_dynarray_reserve(&set->sparse_to_dense, allocator, range_size, sizeof(cecs_dense_index));
         memset(
-            cecs_dynarray_first_mut(&set->sparse_to_dense) + current_size,
+            cecs_dynarray_push_many(&set->sparse_to_dense, allocator, needed_capacity, sizeof(cecs_dense_index)),
             UINT8_MAX,
-            (range_size - current_size) * sizeof(cecs_dense_index)
+            needed_capacity * sizeof(cecs_dense_index)
         );
     }
 }
@@ -117,9 +123,9 @@ bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, con
     cecs_dense_index *const swapped_index = cecs_sparse_set_get_index_mut(set, last_value_key);
     cecs_dense_index *const invalid_index = cecs_sparse_set_get_index_mut(set, key);
     if (cecs_dense_index_is_valid(*invalid_index)) {
+        cecs_dense_set_swap_last_pop(&set->values, allocator, invalid_index->value, value_size);
         *swapped_index = *invalid_index;
         *invalid_index = cecs_dense_index_create_invalid();
-        cecs_dense_set_swap_last_pop(&set->values, allocator, swapped_index->value, value_size);
         return true;
     } else {
         return false;
