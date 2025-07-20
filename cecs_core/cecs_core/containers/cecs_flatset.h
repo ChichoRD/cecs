@@ -1,6 +1,7 @@
 #ifndef CECS_FLATSET_H
 #define CECS_FLATSET_H
 
+#include "cecs_allocator.h"
 #include <stdint.h>
 #include <assert.h>
 
@@ -8,7 +9,7 @@
 #define CECS_FLATSET_HASH_TYPE_DEFAULT size_t
 #define CECS_FLATSET_HASH_TYPE CECS_FLATSET_HASH_TYPE_DEFAULT
 #endif
-typedef CECS_FLATSET_HASH_TYPE cecs_flatset_hash_type;
+typedef CECS_FLATSET_HASH_TYPE cecs_flatset_hash;
 
 typedef struct cecs_flatbucket16_count_psl {
     uint8_t count;
@@ -38,5 +39,23 @@ typedef struct cecs_flatbucket16 {
 } cecs_flatbucket16;
 
 
+typedef struct cecs_flatset {
+    cecs_flatbucket16 *buckets;
+    size_t bucket_count;
+    size_t values_count;
+} cecs_flatset;
+
+static inline size_t cecs_flatset_count(const cecs_flatset *set) {
+    return set->values_count;
+}
+static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
+    return set->bucket_count;
+}
+
+cecs_flatset cecs_flatset_create(void);
+cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const size_t bucket_count_log2, const size_t value_size);
+
+
+void *cecs_flatset_insert(cecs_flatset *set, cecs_allocator *allocator, const cecs_flatset_hash hash, const size_t value_size);
 
 #endif
