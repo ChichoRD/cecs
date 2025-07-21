@@ -9,7 +9,39 @@
 #define CECS_FLATSET_HASH_TYPE_DEFAULT size_t
 #define CECS_FLATSET_HASH_TYPE CECS_FLATSET_HASH_TYPE_DEFAULT
 #endif
+
 typedef CECS_FLATSET_HASH_TYPE cecs_flatset_hash;
+typedef uint8_t cecs_flatset_hash_low;
+static_assert(
+    sizeof(cecs_flatset_hash_low) <= sizeof(cecs_flatset_hash),
+    "static error: cecs_flatset_hash_low must be able to hold cecs_flatset_hash"
+);
+
+typedef struct cecs_flatbucket8_psl_pair {
+    uint8_t psl0 : 3;
+    uint8_t next_slots_full0 : 1;
+    uint8_t psl1 : 3;
+    uint8_t next_slots_full1 : 1;
+} cecs_flatbucket8_psl_pair;
+typedef union cecs_flatbucket8_psl_pair_u {
+    cecs_flatbucket8_psl_pair psl_pair;
+    uint8_t value;
+} cecs_flatbucket8_psl_pair_u;
+
+typedef struct cecs_flatbucket8 {
+    uint32_t indices_from_hash : 24;
+    uint32_t bucket_has_filled : 1;
+    uint32_t largest_bucket_chain : 3;
+    uint32_t value_count : 4;
+    cecs_flatbucket8_psl_pair_u psl[4];
+    cecs_flatset_hash_low hashes_low[8];
+    uint8_t values[];
+} cecs_flatbucket8;
+void foo() {
+    sizeof(cecs_flatbucket8);
+    (sizeof(cecs_flatbucket8) + sizeof(void *) * 8);
+}
+
 
 typedef struct cecs_flatbucket16_count_psl {
     uint8_t count;
@@ -34,7 +66,7 @@ typedef union cecs_flatbucket16_index_pair_u {
 
 typedef struct cecs_flatbucket16 {
     cecs_flatbucket16_count_psl count_psl;
-    cecs_flatbucket16_index_pair_u hash_to_indices[8];
+    cecs_flatbucket16_index_pair_u index_from_hash[8];
     uint8_t values[];
 } cecs_flatbucket16;
 

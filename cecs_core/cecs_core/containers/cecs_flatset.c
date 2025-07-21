@@ -51,22 +51,22 @@ static inline bool cecs_flatbucket16_pair_is_index_valid(
 
 static void cecs_flatbucket16_reset(cecs_flatbucket16 *bucket) {
     memset(&bucket->count_psl, 0, sizeof(bucket->count_psl));
-    memset(bucket->hash_to_indices, cecs_flatbucket16_index_invalid, sizeof(bucket->hash_to_indices));
+    memset(bucket->index_from_hash, cecs_flatbucket16_index_invalid, sizeof(bucket->index_from_hash));
 }
 
-static inline cecs_flatbucket16_index_pair_u cecs_flatbucket16_get_index_pair(const cecs_flatbucket16 *bucket, const uint_fast8_t hash_low) {
+static inline cecs_flatbucket16_index_pair_u cecs_flatbucket16_get_index_pair(const cecs_flatbucket16 bucket, const uint_fast8_t hash_low) {
     if (hash_low >= cecs_flatbucket16_max_count) {
         assert(false && "error: cecs_flatbucket16_get_index_pair called with out of bounds hash");
         exit(EXIT_FAILURE);
     }
-    return bucket->hash_to_indices[hash_low >> 1];
+    return bucket.index_from_hash[hash_low >> 1];
 }
 static inline cecs_flatbucket16_index_pair_u *cecs_flatbucket16_get_index_pair_mut(cecs_flatbucket16 *bucket, const uint_fast8_t hash_low) {
     if (hash_low >= cecs_flatbucket16_max_count) {
         assert(false && "error: cecs_flatbucket16_get_index_pair called with out of bounds hash");
         exit(EXIT_FAILURE);
     }
-    return &bucket->hash_to_indices[hash_low >> 1];
+    return &bucket->index_from_hash[hash_low >> 1];
 }
 
 static inline void *cecs_flatbucket16_get_value_mut(cecs_flatbucket16 *bucket, const uint_fast8_t index, const size_t value_size) {
@@ -120,16 +120,17 @@ static inline void cecs_flatbucket16_set_psl(cecs_flatbucket16 *bucket, const ui
 
 static uint_fast8_t cecs_flatbucket16_find_lower_psl(
     const cecs_flatbucket16 *bucket,
-    const uint_fast8_t hash_low,
+    const uint_fast8_t index,
     const uint_fast8_t psl
 ) {
-    if (hash_low >= cecs_flatbucket16_max_count) {
-        assert(false && "error: cecs_flatbucket16_find_lower_psl called with out of bounds hash");
+    if (index >= cecs_flatbucket16_max_count) {
+        assert(false && "error: cecs_flatbucket16_find_lower_psl called with out of bounds index");
         exit(EXIT_FAILURE);
     }
-    for (uint_fast8_t i = 0; i < bucket->count_psl.count; ++i) {
-        if (cecs_flatbucket16_get_psl(*bucket, i) < psl) {
-            return i;
+    const uint8_t remaining_count = bucket->count_psl.count - index;
+    for (uint_fast8_t i = 0; i < remaining_count; ++i) {
+        if (cecs_flatbucket16_get_psl(*bucket, i + index) < (psl + i)) {
+            return i + index;
         }
     }
     return bucket->count_psl.count;
@@ -169,15 +170,18 @@ static void cecs_flatbucket16_swap(
     memcpy(cecs_flatbucket16_get_value_mut(bucket, index0, value_size), value1, value_size);
     memcpy(cecs_flatbucket16_get_value_mut(bucket, index1, value_size), temporary, value_size);
 
-    const uint_fast8_t psl0 = cecs_flatbucket16_get_psl(*bucket, index0);
-    const uint_fast8_t psl1 = cecs_flatbucket16_get_psl(*bucket, index1);
-    cecs_flatbucket16_set_psl(bucket, index0, psl1);
-    cecs_flatbucket16_set_psl(bucket, index1, psl0);
+    const int_fast8_t psl0 = (int_fast8_t)cecs_flatbucket16_get_psl(*bucket, index0);
+    const int_fast8_t psl1 = (int_fast8_t)cecs_flatbucket16_get_psl(*bucket, index1);
+
+    const int_fast8_t psl_difference01 = psl0 - psl1;
+    const int_fast8_t psl_difference10 = psl1 - psl0;
+    cecs_flatbucket16_set_psl(bucket, index0, psl1 + psl_difference01);
+    cecs_flatbucket16_set_psl(bucket, index1, psl0 + psl_difference10);
 }
 
 
 
-static inline void *cecs_flatbucket_push(cecs_flatbucket16 *bucket, const size_t value_size) {
+static inline void *cecs_flatbucket16_push(cecs_flatbucket16 *bucket, const size_t value_size) {
     if (bucket->count_psl.count >= cecs_flatbucket16_max_count) {
         assert(false && "error: cecs_flatbucket_push called with full bucket");
         exit(EXIT_FAILURE);
@@ -273,6 +277,19 @@ cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const 
     return set;
 }
 
+typedef struct cecs_flatbucket16_hash_pair_table {
+    uint_fast8_t hash_from_index[16];
+} cecs_flatbucket16_hash_pair_table;
+static cecs_flatbucket16_hash_pair_table cecs_flatbucket16_hash_low_from_index(const cecs_flatbucket16 bucket) {
+    cecs_flatbucket16_hash_pair_table table = {0};
+    for (uint_fast8_t hash_low = 0; hash_low < CECS_FLATBUCKET16_MAX_COUNT; hash_low += 2) {
+        const cecs_flatbucket16_index_pair_u index = cecs_flatbucket16_get_index_pair(bucket, hash_low);
+        table.hash_from_index[index.pair.index0] = hash_low;
+        table.hash_from_index[index.pair.index1] = hash_low + 1;
+    }
+    return table;
+}
+
 void *cecs_flatset_insert_expect(cecs_flatset *set, cecs_allocator *allocator, const cecs_flatset_hash hash, const size_t value_size) {
     const uint_fast8_t hash_low = cecs_flatset16_hash_low(hash);
     const cecs_flatset_hash hash_high = cecs_flatset16_hash_high(hash);
@@ -299,48 +316,51 @@ void *cecs_flatset_insert_expect(cecs_flatset *set, cecs_allocator *allocator, c
     }
 
     cecs_flatbucket16 *const bucket = &set->buckets[bucket_index];
-    const cecs_flatbucket16_index_pair_u pair = cecs_flatbucket16_get_index_pair(bucket, hash_low);
+    const cecs_flatbucket16_index_pair_u pair = cecs_flatbucket16_get_index_pair(*bucket, hash_low);
     if (!cecs_flatbucket16_pair_is_index_valid(bucket->count_psl, pair, hash_low)) {
         return cecs_flatbucket16_insert_expect(bucket, hash_low, value_size);
     } else {
+        const uint_fast8_t index = cecs_flatbucket16_pair_read(pair, hash_low);
         typedef struct from_to_indices {
             uint8_t from : 4;
             uint8_t to : 4;
         } from_to_indices;
-        from_to_indices movements[16];
-        uint_fast8_t movement_count = 0;
+        from_to_indices swaps[16];
+        uint_fast8_t swaps_count = 0;
         
-        uint_fast8_t previous_movement_index = hash_low;
-        uint_fast8_t i = hash_low;
-        cecs_flatbucket16_index_pair_u current_pair = pair;
-        while ((i < bucket->count_psl.count) && cecs_flatbucket16_pair_is_index_valid(bucket->count_psl, current_pair, i)) {
-            while ((i < bucket->count_psl.count) && (cecs_flatbucket16_get_psl(*bucket, i) >= i)) {
-                ++i;
-            }
-            if (i < bucket->count_psl.count) {
-                movements[movement_count] = (from_to_indices){
-                    .from = previous_movement_index,
-                    .to = i
-                };
-                ++movement_count;
-                previous_movement_index = i;
-                current_pair = cecs_flatbucket16_get_index_pair(bucket, i);
-            }
-        }
-        movements[movement_count] = (from_to_indices){
-            .from = previous_movement_index,
-            .to = i
-        };
-        ++movement_count;
+        uint_fast8_t i = index;
+        while (i < bucket->count_psl.count) {
+            const uint_fast8_t psl = cecs_flatbucket16_get_psl(*bucket, i);
+            const uint_fast8_t lower_psl_index = cecs_flatbucket16_find_lower_psl(bucket, i + 1, psl);
 
-        for (int_fast8_t j = movement_count - 1; j >= 0; --j) {
-            const from_to_indices *const movement = &movements[j];
-            cecs_flatbucket16_index_pair_u *const pair_mut = cecs_flatbucket16_get_index_pair_mut(bucket, movement->to);
-            if (cecs_flatbucket16_pair_is_index_valid(bucket->count_psl, *pair_mut, movement->from)) {
-                cecs_flatbucket16_pair_write(pair_mut, movement->to, cecs_flatbucket16_pair_read(*pair_mut, movement->from));
-            } else {
-                cecs_flatbucket16_pair_write(pair_mut, movement->to, cecs_flatbucket16_index_invalid);
-            }
+            swaps[swaps_count] = (from_to_indices){
+                .from = i,
+                .to = lower_psl_index
+            };
+            ++swaps_count;
+
+            i = lower_psl_index;
         }
+        if (i >= cecs_flatbucket16_max_count) {
+            assert(false && "fatal error: cecs_flatset_insert_expect found invalid index");
+            exit(EXIT_FAILURE);
+        }
+
+        void *result = cecs_flatbucket16_push(bucket, value_size);
+        const cecs_flatbucket16_hash_pair_table hash_pair_table = cecs_flatbucket16_hash_low_from_index(*bucket);
+        for (int_fast8_t j = swaps_count - 1; j >= 0; --j) {
+            const from_to_indices swap = swaps[j];
+            const uint_fast8_t hash_from = hash_pair_table.hash_from_index[swap.from];
+            const uint_fast8_t hash_to = hash_pair_table.hash_from_index[swap.to];
+            cecs_flatbucket16_swap(
+                bucket,
+                hash_from,
+                hash_to,
+                value_size,
+                result
+            );
+            result = cecs_flatbucket16_get_value_mut(bucket, swap.from, value_size);
+        }
+        cecs_flatbucket16_set_psl(bucket, swaps[0].to, swaps[0].to - swaps[0].from);
     }
 }
