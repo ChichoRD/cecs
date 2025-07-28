@@ -36,6 +36,9 @@ typedef struct cecs_flatbucket8 {
     uint8_t values[];
 } cecs_flatbucket8;
 
+#define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3
+#define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
+extern const uint_fast8_t cecs_flatbucket8_max_count;
 
 typedef struct cecs_flatset {
     cecs_flatbucket8 *buckets;
@@ -50,10 +53,25 @@ static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
     return set->bucket_count;
 }
 
-// cecs_flatset cecs_flatset_create(void);
-// cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const size_t bucket_count_log2, const size_t value_size);
+static inline const cecs_flatbucket8 *cecs_flatset_get_bucket(const cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
+    if (bucket_index >= set->bucket_count) {
+        assert(false && "error: cecs_flatset_get_bucket called with out of bounds bucket index");
+        exit(EXIT_FAILURE);
+    }
+    return ((uint8_t *)&set->buckets[bucket_index]) + (value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT);
+}
+static inline cecs_flatbucket8 *cecs_flatset_get_bucket_mut(cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
+    if (bucket_index >= set->bucket_count) {
+        assert(false && "error: cecs_flatset_get_bucket_mut called with out of bounds bucket index");
+        exit(EXIT_FAILURE);
+    }
+    return ((uint8_t *)&set->buckets[bucket_index]) + (value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT);
+}
+
+cecs_flatset cecs_flatset_create(void);
+cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const size_t bucket_count_log2, const size_t value_size);
 
 
-// void *cecs_flatset_insert(cecs_flatset *set, cecs_allocator *allocator, const cecs_flatset_hash hash, const size_t value_size);
+void *cecs_flatset_insert(cecs_flatset *set, cecs_allocator *allocator, const cecs_flatset_hash hash, const size_t value_size);
 
 #endif

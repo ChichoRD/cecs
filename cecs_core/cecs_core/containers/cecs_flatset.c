@@ -5,9 +5,7 @@
 #include <stdbool.h>
 #include <memory.h>
 
-#define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3
-#define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
-static const uint_fast8_t cecs_flatbucket8_max_count = CECS_FLATBUCKET8_MAX_COUNT;
+const uint_fast8_t cecs_flatbucket8_max_count = CECS_FLATBUCKET8_MAX_COUNT;
 
 #define CECS_FLATBUCKET8_POSITION_MAX CECS_FLATBUCKET8_MAX_COUNT
 #define CECS_FLATBUCKET8_POSITION_MASK (CECS_FLATBUCKET8_POSITION_MAX - 1)
@@ -215,6 +213,7 @@ void *cecs_flatbucket8_insert_expect(
     } else {
         cecs_flatbucket8_set_index(bucket, position, bucket->value_count);
         cecs_flatbucket8_meta_set_at_index(bucket, bucket->value_count, 0, hash4, position);
+        bucket->bucket_has_filled |= (bucket->value_count == (CECS_FLATBUCKET8_MAX_COUNT - 1));
         return cecs_flatbucket8_push(bucket, value_size);
     }
 }
@@ -267,4 +266,54 @@ static void cecs_flatbucket8_remove_expect(
     const uint32_t shifted_indices = cecs_wraparound_lsr_u32(bucket->indices_from_position8_b3, 3);
     bucket->indices_from_position8_b3 &= ~shift_mask;
     bucket->indices_from_position8_b3 |= shifted_indices & shift_mask;
+}
+
+
+static void cecs_flatbucket8_reset(cecs_flatbucket8 *bucket, const size_t value_size) {
+    static const uint32_t indices_from_position_default = (1 << (CECS_FLATBUCKET8_POSITION_MAX * 3)) - 1;
+    static const uint32_t psl_from_index_default = (uint32_t)((1ull << (uint64_t)(CECS_FLATBUCKET8_POSITION_MAX * 4)) - 1ull);
+    *bucket = (cecs_flatbucket8) {
+        .position_from_index8_b3 = 0,
+        .hashes_from_index8_b5 = 0,
+        .indices_from_position8_b3 = indices_from_position_default,
+        .bucket_has_filled = 0,
+        .largest_bucket_chain = 0,
+        .value_count = 0,
+        .psl_from_index8_b4 = psl_from_index_default
+    };
+
+    if (!CECS_ALLOC_FUNC_IS_ZERO_INIT) {
+        memset(bucket->values, 0, cecs_flatbucket8_max_count * value_size);
+    }
+}
+
+cecs_flatset cecs_flatset_create(void) {
+    cecs_flatset set = {
+        .buckets = NULL,
+        .bucket_count = 0,
+        .values_count = 0
+    };
+    return set;
+}
+cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const size_t bucket_count_log2, const size_t value_size) {
+    const size_t bucket_count = 1 << bucket_count_log2;
+    const size_t values_count = bucket_count * CECS_FLATBUCKET8_MAX_COUNT;
+    cecs_flatbucket8 *const buckets = cecs_allocator_alloc(
+        allocator,
+        bucket_count * sizeof(cecs_flatbucket8)
+    );
+    cecs_flatset set = {
+        .buckets = buckets,
+        .bucket_count = bucket_count,
+        .values_count = values_count
+    };
+    for (size_t i = 0; i < bucket_count; i++) {
+        cecs_flatbucket8 *bucket = cecs_flatset_get_bucket_mut(&set, i, value_size);
+        cecs_flatbucket8_reset(bucket, value_size);
+    }
+    return set;
+}
+
+void *cecs_flatset_insert(cecs_flatset *set, cecs_allocator *allocator, const cecs_flatset_hash hash, const size_t value_size) {
+    static_assert(false, "TODO: find func, both for empty spot for hash and for existing coinciding hash");
 }
