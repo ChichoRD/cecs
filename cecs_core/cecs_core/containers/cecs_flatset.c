@@ -201,10 +201,10 @@ static inline void *cecs_flatbucket8_push(cecs_flatbucket8 *bucket, const size_t
 }
 void *cecs_flatbucket8_insert_expect(
     cecs_flatbucket8 *bucket,
-    const cecs_flatset_hash_low hash_low4,
+    const uint_fast8_t position,
+    const cecs_flatset_hash_low hash4,
     const size_t value_size
 ) {
-    const uint_fast8_t position = hash_low4 & CECS_FLATBUCKET8_POSITION_MASK;
     const uint_fast8_t index = cecs_flatbucket8_get_index(*bucket, position);
     if (bucket->value_count >= cecs_flatbucket8_max_count) {
         assert(false && "error: cecs_flatbucket8_insert_expect called with full bucket");
@@ -214,7 +214,7 @@ void *cecs_flatbucket8_insert_expect(
         exit(EXIT_FAILURE);
     } else {
         cecs_flatbucket8_set_index(bucket, position, bucket->value_count);
-        cecs_flatbucket8_meta_set_at_index(bucket, bucket->value_count, 0, hash_low4, position);
+        cecs_flatbucket8_meta_set_at_index(bucket, bucket->value_count, 0, hash4, position);
         return cecs_flatbucket8_push(bucket, value_size);
     }
 }
@@ -245,10 +245,9 @@ static inline void cecs_flatbucket8_swap_last_pop(cecs_flatbucket8 *bucket, uint
 }
 static void cecs_flatbucket8_remove_expect(
     cecs_flatbucket8 *bucket,
-    const cecs_flatset_hash_low_fast hash_low4,
+    const uint_fast8_t position,
     const size_t value_size
 ) {
-    const uint_fast8_t position = hash_low4 & CECS_FLATBUCKET8_POSITION_MASK;
     if (cecs_flatbucket8_get_index(*bucket, position) >= bucket->value_count) {
         assert(false && "error: cecs_flatbucket8_remove_expect called with out of bounds index");
         exit(EXIT_FAILURE);
