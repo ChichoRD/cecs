@@ -207,4 +207,62 @@ inline uint32_t cecs_mark_bit_runs_u32(const uint32_t n, const uint_fast8_t run_
     }
 }
 
+inline uint8_t cecs_wraparound_lsl_u8(const uint8_t value, const uint_fast8_t shift) {
+    assert(shift < 8 && "error: shift must be less than 8");
+    return (value << shift) | (value >> (8 - shift));
+}
+inline uint16_t cecs_wraparound_lsl_u16(const uint16_t value, const uint_fast8_t shift) {
+    assert(shift < 16 && "error: shift must be less than 16");
+    return (value << shift) | (value >> (16 - shift));
+}
+inline uint32_t cecs_wraparound_lsl_u32(const uint32_t value, const uint_fast8_t shift) {
+    assert(shift < 32 && "error: shift must be less than 32");
+    return (value << shift) | (value >> (32 - shift));
+}
+inline uint64_t cecs_wraparound_lsl_u64(const uint64_t value, const uint_fast8_t shift) {
+    assert(shift < 64 && "error: shift must be less than 64");
+    return (value << shift) | (value >> (64 - shift));
+}
+inline size_t cecs_wraparound_lsl(const size_t value, const uint_fast8_t shift) {
+#if (SIZE_MAX == UINT16_MAX)
+    return cecs_wraparound_lsl_u16((uint16_t)value, shift);
+#elif (SIZE_MAX == UINT32_MAX)
+    return cecs_wraparound_lsl_u32((uint32_t)value, shift);
+#elif (SIZE_MAX == UINT64_MAX)
+    return cecs_wraparound_lsl_u64((uint64_t)value, shift);
+#else
+    #error TBD code CECS_SIZE_T_BITS
+    return 0;
+#endif
+}
+
+inline uint8_t cecs_wraparound_lsr_u8(const uint8_t value, const uint_fast8_t shift) {
+    assert(shift < 8 && "error: shift must be less than 8");
+    return (value >> shift) | (value << (8 - shift));
+}
+inline uint16_t cecs_wraparound_lsr_u16(const uint16_t value, const uint_fast8_t shift) {
+    assert(shift < 16 && "error: shift must be less than 16");
+    return (value >> shift) | (value << (16 - shift));
+}
+inline uint32_t cecs_wraparound_lsr_u32(const uint32_t value, const uint_fast8_t shift) {
+    assert(shift < 32 && "error: shift must be less than 32");
+    return (value >> shift) | (value << (32 - shift));
+}
+inline uint64_t cecs_wraparound_lsr_u64(const uint64_t value, const uint_fast8_t shift) {
+    assert(shift < 64 && "error: shift must be less than 64");
+    return (value >> shift) | (value << (64 - shift));
+}
+inline size_t cecs_wraparound_lsr(const size_t value, const uint_fast8_t shift) {
+#if (SIZE_MAX == UINT16_MAX)
+    return cecs_wraparound_lsr_u16((uint16_t)value, shift);
+#elif (SIZE_MAX == UINT32_MAX)
+    return cecs_wraparound_lsr_u32((uint32_t)value, shift);
+#elif (SIZE_MAX == UINT64_MAX)
+    return cecs_wraparound_lsr_u64((uint64_t)value, shift);
+#else
+    #error TBD code CECS_SIZE_T_BITS
+    return 0;
+#endif
+}
+
 #endif

@@ -67,3 +67,15 @@ uint32_t cecs_mark_dynamic_bit_runs_u32(uint32_t n, uint_fast8_t run_length) {
 
 extern inline uint64_t cecs_mark_bit_runs_u64(const uint64_t n, const uint_fast8_t run_length);
 extern inline uint32_t cecs_mark_bit_runs_u32(const uint32_t n, const uint_fast8_t run_length);
+
+extern inline uint8_t cecs_wraparound_lsl_u8(const uint8_t value, const uint_fast8_t shift);
+extern inline uint16_t cecs_wraparound_lsl_u16(const uint16_t value, const uint_fast8_t shift);
+extern inline uint32_t cecs_wraparound_lsl_u32(const uint32_t value, const uint_fast8_t shift);
+extern inline uint64_t cecs_wraparound_lsl_u64(const uint64_t value, const uint_fast8_t shift);
+extern inline size_t cecs_wraparound_lsl(const size_t value, const uint_fast8_t shift);
+
+extern inline uint_fast8_t cecs_wraparound_lsr_u8(const uint8_t value, const uint_fast8_t shift);
+extern inline uint_fast8_t cecs_wraparound_lsr_u16(const uint16_t value, const uint_fast8_t shift);
+extern inline uint_fast8_t cecs_wraparound_lsr_u32(const uint32_t value, const uint_fast8_t shift);
+extern inline uint_fast8_t cecs_wraparound_lsr_u64(const uint64_t value, const uint_fast8_t shift);
+extern inline size_t cecs_wraparound_lsr(const size_t value, const uint_fast8_t shift);
