@@ -308,6 +308,47 @@ inline uint8_t cecs_gather_lsb8_u8(const uint64_t vec) {
     );
 }
 
+inline uint8_t cecs_gather_zeroed_msb8_u4(const uint32_t vec) {
+    return (uint8_t)((vec * 0x249000) >> (32 - 8));
+}
+inline uint8_t cecs_gather_msb8_u4(const uint32_t vec) {
+    return cecs_gather_zeroed_msb8_u4(
+        vec & 0x88888888
+    );
+}
+inline uint8_t cecs_gather_zeroed_lsb8_u4(const uint32_t vec) {
+    (
+        ((1 << 0)
+        + (1 << 3)
+        + (1 << 6)
+        + (1 << 9))
+        
+        + (1 << 12)
+        + (1 << 15)
+        + (1 << 18)
+        + (1 << 21)
+        // + (1 << 24)
+    );
+
+    // ---a---b---c---d---e---f---g---h
+    
+    // a---b---c---d---e---f---g---h
+    // -b---c---d---e---f---g---h
+    // --c---d---e---f---g---h
+    // ---d---e---f---g---h
+    // ----e---f---g---h
+    // -----f---g---h
+    // ------g---h
+    // -------h
+
+    return (uint8_t)((vec * (0x01249248 - 0x1248)) >> (32 - 8));
+}
+inline uint8_t cecs_gather_lsb8_u4(const uint32_t vec) {
+    return cecs_gather_zeroed_lsb8_u4(
+        vec & 0x11111111
+    );
+}
+
 inline uint64_t cecs_scatter_msb8_u1(const uint8_t vec) {
     return (
         ((vec & 0x55) * 0x0102040810204080ull)
@@ -320,14 +361,12 @@ inline uint64_t cecs_scatter_lsb8_u1(const uint8_t vec) {
         | ((vec & 0xAA) * 0x0002040810204081ull)
     ) & 0x0101010101010101ull;
 }
-static_assert(false, "TODO: extern inline definitions");
+
 
 inline uint8_t cecs_mark_zero_bytes8_u8(const uint64_t vec) {
-    #define CECS_MARK_ZERO_BYTES8_U8 0x7f7f7f7f'7f7f7f7full
-    const uint64_t raised = (vec & CECS_MARK_ZERO_BYTES8_U8) + CECS_MARK_ZERO_BYTES8_U8;
-    const uint64_t marked_scatter = ~(raised | vec | CECS_MARK_ZERO_BYTES8_U8) >> 0x7;
-    return (uint8_t)((marked_scatter * 0x102040810204080ull) >> (64 - 8));
-    #undef CECS_MARK_ZERO_BYTES8_U8
+    const uint64_t raised = (vec & 0x7f7f7f7f7f7f7f7full) + 0x7f7f7f7f7f7f7f7full;
+    const uint64_t marked_scatter = ~(raised | vec | 0x7f7f7f7f7f7f7f7full);
+    return cecs_gather_zeroed_msb8_u8(marked_scatter);
 }
 inline uint_fast8_t cecs_first_zero_byte8_u8(const uint64_t vec) {
     const uint8_t marked = cecs_mark_zero_bytes8_u8(vec);

@@ -32,7 +32,7 @@ typedef struct cecs_flatbucket8 {
 #define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
 extern const uint_fast8_t cecs_flatbucket8_max_count;
 
-uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket8 bucket);
+uint_fast8_t cecs_flatbucket8_get_count(const cecs_flatbucket8 bucket);
 
 typedef struct cecs_flatset {
     cecs_flatbucket8 *buckets;

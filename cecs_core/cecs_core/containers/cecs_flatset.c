@@ -55,6 +55,31 @@ static inline void cecs_flatbucket8_set_hash_low(cecs_flatbucket8 *bucket, const
     bucket->hash_from_position8_b4 &= ~(0b11111 << (position << 2));
     bucket->hash_from_position8_b4 |= (hash4 & 0b11111) << (position << 2);
 }
+
+typedef struct cecs_flatbucket8_count_chain_length {
+    uint_fast8_t count_chain_length;
+} cecs_flatbucket8_count_chain_length;
+
+static inline cecs_flatbucket8_count_chain_length cecs_flatbucket8_get_count_chain_length(const cecs_flatbucket8 bucket) {
+    return (cecs_flatbucket8_count_chain_length) {
+        .count_chain_length = cecs_gather_msb8_u8(bucket.index_from_position8_b4)
+    };
+}
+static inline void cecs_flatbucket8_set_count_chain_length(
+    cecs_flatbucket8 *bucket,
+    const cecs_flatbucket8_count_chain_length count_chain_length
+) {
+    if (count >= CECS_FLATBUCKET8_MAX_COUNT || chain_length >= CECS_FLATBUCKET8_MAX_COUNT) {
+        assert(false && "error: cecs_flatbucket8_set_count_chain_length called with out of bounds count or chain_length");
+        exit(EXIT_FAILURE);
+    }
+    bucket->index_from_position8_b4 &= 0b1111000000000000;
+    bucket->index_from_position8_b4 |= (count & 0b00001111) | ((chain_length & 0b00001111) << 4);
+}
+uint_fast8_t cecs_flatbucket8_get_count(const cecs_flatbucket8 bucket) {
+    return cecs_flatbucket8_get_count_chain_length(bucket).count;
+}
+
 static const void *cecs_flatbucket8_get_value(const cecs_flatbucket8 *bucket, const uint_fast8_t position, const size_t value_size) {
     if (position >= cecs_flatbucket8_position_max) {
         assert(false && "error: cecs_flatbucket8_get_value called with out of bounds position");
@@ -271,9 +296,6 @@ static void cecs_flatbucket8_reset(cecs_flatbucket8 *bucket, const size_t value_
     }
 }
 
-uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket8 bucket) {
-    
-}
 
 cecs_flatset cecs_flatset_create(void)
 {
