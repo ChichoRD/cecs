@@ -336,6 +336,35 @@ inline uint64_t cecs_scatter_lsb8_u1(const uint8_t vec) {
     ) & 0x0101010101010101ull;
 }
 
+inline uint32_t cecs_scatter_msn8_u1(const uint8_t vec) {
+    ((1 << 3) + (1 << 9) + (1 << 15) + (1 << 21));
+    ((1 << 0) + (1 << 6) + (1 << 12) + (1 << 18));
+    // ---------------------abcdefgh---
+    // ---------------------a-c-e-g----
+
+    // ------------------a-c-e-g-------
+    // ------------a-c-e-g-------------
+    // ------a-c-e-g-------------------
+    // a-c-e-g-------------------------
+    // a---b---c---d---e---f---g---h---
+
+    // ----------------------b-d-f-h
+    // ----------------b-d-f-h------
+    // ----------b-d-f-h------------
+    // ----b-d-f-h------------------
+    // a---b---c---d---e---f---g---h
+
+    return (
+        (((vec & 0xAA) * 0x01041040) & 0x80808080)
+        | (((vec & 0x55) * 0x208208) & 0x08080808)
+    );
+}
+inline uint32_t cecs_scatter_lsn8_u1(const uint8_t vec) {
+    return (
+        (((vec & 0xAA) * 0x208208) & 0x10101010)
+        | (((vec & 0x55) * 0x041041) & 0x01010101)
+    );
+}
 
 inline uint8_t cecs_mark_zero_bytes8_u8(const uint64_t vec) {
     const uint64_t raised = (vec & 0x7f7f7f7f7f7f7f7full) + 0x7f7f7f7f7f7f7f7full;
