@@ -9,7 +9,8 @@ const uint_fast8_t cecs_flatbucket8_max_count = CECS_FLATBUCKET8_MAX_COUNT;
 
 #define CECS_FLATBUCKET8_POSITION_MAX CECS_FLATBUCKET8_MAX_COUNT
 #define CECS_FLATBUCKET8_POSITION_MASK (CECS_FLATBUCKET8_POSITION_MAX - 1)
-#define CECS_FLATBUCKET8_HASH4_MAX 0b10000
+#define CECS_FLATBUCKET8_HASH4_MAX_LOG2 4
+#define CECS_FLATBUCKET8_HASH4_MAX (1 << CECS_FLATBUCKET8_HASH4_MAX_LOG2)
 #define CECS_FLATBUCKET8_HASH4_MASK (CECS_FLATBUCKET8_HASH4_MAX - 1)
 
 static const cecs_flatset_hash_low_fast cecs_flatbucket8_position_max = CECS_FLATBUCKET8_POSITION_MAX;
@@ -20,35 +21,19 @@ static inline uint_fast8_t cecs_flatbucket8_get_index(const cecs_flatbucket8 buc
         assert(false && "error: cecs_flatbucket8_get_index called with out of bounds position");
         exit(EXIT_FAILURE);
     }
-    return (bucket.indices_from_position8_b3 >> (position * 3)) & 0b0111;
+    return (bucket.index_from_position8_b4 >> (position << 2)) & 0b0111;
 }
 static inline void cecs_flatbucket8_set_index(cecs_flatbucket8 *bucket, const uint_fast8_t position, const uint_fast8_t index) {
     if (position >= cecs_flatbucket8_position_max) {
         assert(false && "error: cecs_flatbucket8_set_index called with out of bounds position");
         exit(EXIT_FAILURE);
     }
-    bucket->indices_from_position8_b3 &= ~(0b0111 << (position * 3));
-    bucket->indices_from_position8_b3 |= (index & 0b0111) << (position * 3);
-}
-
-static inline uint_fast8_t cecs_flatbucket8_get_position(const cecs_flatbucket8 bucket, const uint_fast8_t index) {
     if (index >= cecs_flatbucket8_max_count) {
-        assert(false && "error: cecs_flatbucket8_get_hash_position called with out of bounds index");
+        assert(false && "error: cecs_flatbucket8_set_index called with out of bounds index");
         exit(EXIT_FAILURE);
     }
-    return bucket.position_from_index8_b3 >> (index * 3) & 0b0111;
-}
-static inline void cecs_flatbucket8_set_position(cecs_flatbucket8 *bucket, const uint_fast8_t index, const uint_fast8_t position) {
-    if (index >= cecs_flatbucket8_max_count) {
-        assert(false && "error: cecs_flatbucket8_set_hash_position called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    if (position >= cecs_flatbucket8_position_max) {
-        assert(false && "error: cecs_flatbucket8_set_hash_position called with out of bounds position");
-        exit(EXIT_FAILURE);
-    }
-    bucket->position_from_index8_b3 &= ~(0b0111 << (index * 3));
-    bucket->position_from_index8_b3 |= (position & 0b0111) << (index * 3);
+    bucket->index_from_position8_b4 &= ~(0b0111 << (position << 2));
+    bucket->index_from_position8_b4 |= (index & 0b0111) << (position << 2);
 }
 
 static inline cecs_flatset_hash_low_fast cecs_flatbucket8_get_hash_low(const cecs_flatbucket8 bucket, const uint_fast8_t position) {
@@ -56,41 +41,20 @@ static inline cecs_flatset_hash_low_fast cecs_flatbucket8_get_hash_low(const cec
         assert(false && "error: cecs_flatbucket8_get_hash_low called with out of bounds position");
         exit(EXIT_FAILURE);
     }
-    return bucket.hashes_from_index8_b5 >> (position * 5) & 0b11111;
+    return (bucket.hash_from_position8_b4 >> (position << 2)) & 0b11111;
 }
-static inline void cecs_flatbucket8_set_hash_low(cecs_flatbucket8 *bucket, const uint_fast8_t index, const cecs_flatset_hash_low_fast hash4) {
-    if (index >= cecs_flatbucket8_max_count) {
-        assert(false && "error: cecs_flatbucket8_set_hash_low called with out of bounds index");
+static inline void cecs_flatbucket8_set_hash_low(cecs_flatbucket8 *bucket, const uint_fast8_t position, const cecs_flatset_hash_low_fast hash4) {
+    if (position >= cecs_flatbucket8_position_max) {
+        assert(false && "error: cecs_flatbucket8_set_hash_low called with out of bounds position");
         exit(EXIT_FAILURE);
     }
     if (hash4 >= cecs_flatbucket8_hash4_max) {
         assert(false && "error: cecs_flatbucket8_set_hash_low called with out of bounds hash_low4");
         exit(EXIT_FAILURE);
     }
-    bucket->hashes_from_index8_b5 &= ~(0b11111 << (index * 5));
-    bucket->hashes_from_index8_b5 |= (hash4 & 0b11111) << (index * 5);
+    bucket->hash_from_position8_b4 &= ~(0b11111 << (position << 2));
+    bucket->hash_from_position8_b4 |= (hash4 & 0b11111) << (position << 2);
 }
-
-static inline uint_fast8_t cecs_flatbucket8_get_psl(const cecs_flatbucket8 bucket, const uint_fast8_t index) {
-    if (index >= cecs_flatbucket8_max_count) {
-        assert(false && "error: cecs_flatbucket8_get_psl called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    return (bucket.psl_from_index8_b4 >> (index * 4)) & 0b1111;
-}
-static inline void cecs_flatbucket8_set_psl(cecs_flatbucket8 *bucket, const uint_fast8_t index, const uint_fast8_t psl3) {
-    if (index >= cecs_flatbucket8_max_count) {
-        assert(false && "error: cecs_flatbucket8_set_psl called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    if (psl3 >= cecs_flatbucket8_max_count) {
-        assert(false && "error: cecs_flatbucket8_set_psl called with out of bounds psl3");
-        exit(EXIT_FAILURE);
-    }
-    bucket->psl_from_index8_b4 &= ~(0b1111 << (index * 4));
-    bucket->psl_from_index8_b4 |= (psl3 & 0b1111) << (index * 4);
-}
-
 static const void *cecs_flatbucket8_get_value(const cecs_flatbucket8 *bucket, const uint_fast8_t position, const size_t value_size) {
     if (position >= cecs_flatbucket8_position_max) {
         assert(false && "error: cecs_flatbucket8_get_value called with out of bounds position");
@@ -144,6 +108,26 @@ static uint_fast8_t cecs_flatbucket8_find_zero_psl_position(
         }
     }
     return CECS_FLATBUCKET8_POSITION_MAX;
+}
+static uint64_t cecs_flatbucket_indices8_u8(uint64_t indices8_u3) {
+    return
+        (indices8_u3 & 0b000000000000000000000111) |
+        (indices8_u3 & 0b000000000000000000111000) << 5 |
+        (indices8_u3 & 0b000000000000000111000000) << 10 |
+        (indices8_u3 & 0b000000000000111000000000) << 15 |
+
+        (indices8_u3 & 0b000000000111000000000000) << 20 |
+        (indices8_u3 & 0b000000111000000000000000) << 25 |
+        (indices8_u3 & 0b000111000000000000000000) << 30 |
+        (indices8_u3 & 0b111000000000000000000000) << 35;
+}
+static uint_fast8_t cecs_flatbucket8_find_insert_position_expect(
+    const cecs_flatbucket8 *bucket,
+    const cecs_flatset_hash hash,
+    const size_t value_hash_offset,
+    const size_t value_size
+) {
+    const 
 }
 
 
@@ -287,7 +271,12 @@ static void cecs_flatbucket8_reset(cecs_flatbucket8 *bucket, const size_t value_
     }
 }
 
-cecs_flatset cecs_flatset_create(void) {
+uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket8 bucket) {
+    
+}
+
+cecs_flatset cecs_flatset_create(void)
+{
     cecs_flatset set = {
         .buckets = NULL,
         .bucket_count = 0,

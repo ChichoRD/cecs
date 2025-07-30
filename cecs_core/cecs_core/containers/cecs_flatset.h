@@ -22,23 +22,17 @@ static_assert(
     "static error: cecs_flatset_hash_low_fast must be able to hold cecs_flatset_hash_low"
 );
 
-
 typedef struct cecs_flatbucket8 {
-    uint64_t position_from_index8_b3 : 24;
-    uint64_t hashes_from_index8_b5 : 40;
-
-    uint32_t indices_from_position8_b3 : 24;
-    uint32_t bucket_has_filled : 1;
-    uint32_t largest_bucket_chain : 3;
-    uint32_t value_count : 4;
-
-    uint32_t psl_from_index8_b4;
+    uint32_t hash_from_position8_b4;
+    uint32_t index_from_position8_b4;
     uint8_t values[];
 } cecs_flatbucket8;
 
 #define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3
 #define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
 extern const uint_fast8_t cecs_flatbucket8_max_count;
+
+uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket8 bucket);
 
 typedef struct cecs_flatset {
     cecs_flatbucket8 *buckets;
