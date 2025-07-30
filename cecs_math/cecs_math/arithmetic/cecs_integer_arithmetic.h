@@ -318,16 +318,16 @@ inline uint8_t cecs_gather_msb8_u4(const uint32_t vec) {
 }
 inline uint8_t cecs_gather_zeroed_lsb8_u4(const uint32_t vec) {
     (
-        ((1 << 0)
+        // (1 << 0)
         + (1 << 3)
         + (1 << 6)
-        + (1 << 9))
-        
+        + (1 << 9)
         + (1 << 12)
+        
         + (1 << 15)
         + (1 << 18)
         + (1 << 21)
-        // + (1 << 24)
+        + (1 << 24)
     );
 
     // ---a---b---c---d---e---f---g---h
@@ -336,10 +336,10 @@ inline uint8_t cecs_gather_zeroed_lsb8_u4(const uint32_t vec) {
     // -b---c---d---e---f---g---h
     // --c---d---e---f---g---h
     // ---d---e---f---g---h
-    // ----e---f---g---h
-    // -----f---g---h
-    // ------g---h
-    // -------h
+    // d---e---f---g---h
+    // -e---f---g---h
+    // --f---g---h
+    // ---g---h
 
     return (uint8_t)((vec * (0x01249248 - 0x1248)) >> (32 - 8));
 }
