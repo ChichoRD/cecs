@@ -308,44 +308,18 @@ inline uint8_t cecs_gather_lsb8_u8(const uint64_t vec) {
     );
 }
 
-inline uint8_t cecs_gather_zeroed_msb8_u4(const uint32_t vec) {
-    return (uint8_t)((vec * 0x249000) >> (32 - 8));
-}
 inline uint8_t cecs_gather_msb8_u4(const uint32_t vec) {
-    return cecs_gather_zeroed_msb8_u4(
-        vec & 0x88888888
+    return (uint8_t)((
+            ((vec & 0x80808080) * 0x249249)
+            | ((vec & 0x08080808) * 0x249249)
+        ) >> (32 - 8)
     );
-}
-inline uint8_t cecs_gather_zeroed_lsb8_u4(const uint32_t vec) {
-    (
-        // (1 << 0)
-        + (1 << 3)
-        + (1 << 6)
-        + (1 << 9)
-        + (1 << 12)
-        
-        + (1 << 15)
-        + (1 << 18)
-        + (1 << 21)
-        + (1 << 24)
-    );
-
-    // ---a---b---c---d---e---f---g---h
-    
-    // a---b---c---d---e---f---g---h
-    // -b---c---d---e---f---g---h
-    // --c---d---e---f---g---h
-    // ---d---e---f---g---h
-    // d---e---f---g---h
-    // -e---f---g---h
-    // --f---g---h
-    // ---g---h
-
-    return (uint8_t)((vec * (0x01249248 - 0x1248)) >> (32 - 8));
 }
 inline uint8_t cecs_gather_lsb8_u4(const uint32_t vec) {
-    return cecs_gather_zeroed_lsb8_u4(
-        vec & 0x11111111
+    return (uint8_t)((
+            ((vec & 0x10101010) * 0x01249248)
+            | ((vec & 0x01010101) * 0x01249248)
+        ) >> (32 - 8)
     );
 }
 
