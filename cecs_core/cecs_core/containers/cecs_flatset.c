@@ -70,39 +70,40 @@ static inline void cecs_flatbucket8_set_hash_low(cecs_flatbucket8 *bucket, const
     bucket->hash_from_position8_b4 |= (hash4 & 0b11111) << (position << 2);
 }
 
-typedef struct cecs_flatbucket8_count_chain_length {
-    uint_fast8_t count_chain_length;
-} cecs_flatbucket8_count_chain_length;
-static inline cecs_flatbucket8_count_chain_length cecs_flatbucket8_count_chain_length_create(const uint_fast8_t count, const uint_fast8_t chain_length) {
-    if (count >= 16 || chain_length >= 16) {
-        assert(false && "error: cecs_flatbucket8_count_chain_length_create called with out of bounds count or chain_length");
+typedef struct cecs_flatbucket8_count_chain_length_full {
+    uint_fast8_t count_chain_length_full;
+} cecs_flatbucket8_count_chain_length_full;
+static inline cecs_flatbucket8_count_chain_length_full cecs_flatbucket8_count_chain_length_create(
+    const uint_fast8_t count,
+    const uint_fast8_t chain_length,
+    const uint_fast8_t full
+) {
+    if (count >= 16 || chain_length >= 8 || full >= 2) {
+        assert(false && "error: cecs_flatbucket8_count_chain_length_create called with out of bounds count, chain_length or full");
         exit(EXIT_FAILURE);
     }
-    
-    return (cecs_flatbucket8_count_chain_length) {
-        .count_chain_length = ((chain_length & 0b00001111) << 4) | (count & 0b00001111)
+    return (cecs_flatbucket8_count_chain_length_full) {
+        .count_chain_length_full = 
+            (full << 7)
+            | ((chain_length & 0b00000111) << 4)
+            | (count & 0b00001111)
     };
 }
-static inline uint_fast8_t cecs_flatbucket8_count_chain_length_get_count(const cecs_flatbucket8_count_chain_length count_chain_length) {
-    return count_chain_length.count_chain_length & 0b00001111;
+static inline uint_fast8_t cecs_flatbucket8_count_chain_length_get_count(const cecs_flatbucket8_count_chain_length_full count_chain_length) {
+    return count_chain_length.count_chain_length_full & 0b00001111;
 }
-static inline uint_fast8_t cecs_flatbucket8_count_chain_length_get_length(const cecs_flatbucket8_count_chain_length count_chain_length) {
-    return (count_chain_length.count_chain_length >> 4) & 0b00001111;
+static inline uint_fast8_t cecs_flatbucket8_count_chain_length_get_length(const cecs_flatbucket8_count_chain_length_full count_chain_length) {
+    return (count_chain_length.count_chain_length_full >> 4) & 0b00001111;
+}
+static inline bool cecs_flatbucket8_count_chain_length_has_been_full(const cecs_flatbucket8_count_chain_length_full count_chain_length) {
+    return count_chain_length.count_chain_length_full & 0b10000000;
 }
 
-static inline cecs_flatbucket8_count_chain_length cecs_flatbucket8_get_count_chain_length(const cecs_flatbucket8 bucket) {
-    return (cecs_flatbucket8_count_chain_length) {
-        .count_chain_length = cecs_gather_msn8_u4(bucket.index_from_position8_b4)
+static inline cecs_flatbucket8_count_chain_length_full cecs_flatbucket8_get_count_chain_length_full(const cecs_flatbucket8 bucket) {
+    return (cecs_flatbucket8_count_chain_length_full) {
+        .count_chain_length_full = cecs_gather_msn8_u4(bucket.index_from_position8_b4)
     };
 }
-static inline void cecs_flatbucket8_set_count_chain_length(
-    cecs_flatbucket8 *bucket,
-    const cecs_flatbucket8_count_chain_length count_chain
-) {
-    bucket->index_from_position8_b4 &= 0x77777777;
-    bucket->index_from_position8_b4 |= cecs_scatter_msn8_u1(count_chain.count_chain_length);
-}
-
 static inline void cecs_flatbucket8_set_count(cecs_flatbucket8 *bucket, const uint_fast8_t count) {
     if (count >= 16) {
         assert(false && "error: cecs_flatbucket8_set_count called with out of bounds count");
@@ -112,19 +113,28 @@ static inline void cecs_flatbucket8_set_count(cecs_flatbucket8 *bucket, const ui
     bucket->index_from_position8_b4 |= cecs_scatter_msn8_u1(count);
 }
 static inline void cecs_flatbucket8_set_chain_length(cecs_flatbucket8 *bucket, const uint_fast8_t chain_length) {
-    if (chain_length >= 16) {
+    if (chain_length >= 8) {
         assert(false && "error: cecs_flatbucket8_set_chain_length called with out of bounds chain_length");
         exit(EXIT_FAILURE);
     }
-    bucket->index_from_position8_b4 &= 0x7777FFFF;
+    bucket->index_from_position8_b4 &= 0xF777FFFF;
     bucket->index_from_position8_b4 |= cecs_scatter_msn8_u1(chain_length << 4);
+}
+static inline void cecs_flatbucket8_set_been_full(cecs_flatbucket8 *bucket) {
+    bucket->index_from_position8_b4 |= 0x80000000;
+}
+static inline void cecs_flatbucket8_unset_been_full(cecs_flatbucket8 *bucket) {
+    bucket->index_from_position8_b4 &= ~0x80000000;
 }
 
 uint_fast8_t cecs_flatbucket8_get_count(const cecs_flatbucket8 bucket) {
-    const cecs_flatbucket8_count_chain_length count_chain_length = cecs_flatbucket8_get_count_chain_length(bucket);
+    const cecs_flatbucket8_count_chain_length_full count_chain_length = cecs_flatbucket8_get_count_chain_length_full(bucket);
     return cecs_flatbucket8_count_chain_length_get_count(count_chain_length);
 }
 extern inline bool cecs_flatbucket8_is_full(const cecs_flatbucket8 bucket);
+static inline bool cecs_flatbucket8_has_been_full(const cecs_flatbucket8 bucket) {
+    return bucket.index_from_position8_b4 & 0x80000000;
+}
 
 static const void *cecs_flatbucket8_get_value(const cecs_flatbucket8 *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
     if (position >= cecs_flatbucket8_position_max) {
@@ -179,7 +189,11 @@ void *cecs_flatbucket8_insert_expect(
     } else {
         cecs_flatbucket8_set_index(bucket, position, bucket_value_count);
         cecs_flatbucket8_set_hash_low(bucket, position, hash4);
-        return cecs_flatbucket8_push(bucket, bucket_value_count, value_size);
+        void *const value = cecs_flatbucket8_push(bucket, bucket_value_count, value_size);
+        if (cecs_flatbucket8_is_full(*bucket)) {
+            cecs_flatbucket8_set_been_full(bucket);
+        }
+        return value;
     }
 }
 
@@ -308,6 +322,112 @@ cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const 
     return set;
 }
 
+bool cecs_flatset_find(
+    const cecs_flatset *set,
+    const cecs_flatset_hash hash,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride,
+    const void **out_value
+) {
+    const cecs_flatset_hash_low_fast hash4 = hash & CECS_FLATBUCKET8_HASH4_MASK;
+    const size_t bucket_count_mask = cecs_flatset_bucket_count(set) - 1; 
+    const size_t initial_bucket_index =
+        (hash >> CECS_FLATBUCKET8_HASH4_MAX_LOG2) & (bucket_count_mask);
+    size_t next_bucket_index = initial_bucket_index;
+    const cecs_flatbucket8 *bucket;
+    do {
+        bucket = cecs_flatset_get_bucket(set, next_bucket_index, value_size);
+        const uint_fast8_t position = cecs_flatbucket8_find_hash_position(bucket, hash, hash4, hash_offset, hash_stride);
+        if (position < CECS_FLATBUCKET8_POSITION_MAX) {
+            *out_value = cecs_flatbucket8_get_value(bucket, position, cecs_flatbucket8_get_count(*bucket), value_size);
+            return true;
+        }
+
+        next_bucket_index = (next_bucket_index + 1) & bucket_count_mask;
+    } while ((next_bucket_index != initial_bucket_index) && cecs_flatbucket8_has_been_full(*bucket));
+    
+    *out_value = NULL;
+    return false;
+}
+bool cecs_flatset_find_mut(
+    cecs_flatset *set,
+    const cecs_flatset_hash hash,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride,
+    void **out_value
+) {
+    const cecs_flatset_hash_low_fast hash4 = hash & CECS_FLATBUCKET8_HASH4_MASK;
+    const size_t bucket_count_mask = cecs_flatset_bucket_count(set) - 1; 
+    const size_t initial_bucket_index =
+        (hash >> CECS_FLATBUCKET8_HASH4_MAX_LOG2) & (bucket_count_mask);
+    size_t next_bucket_index = initial_bucket_index;
+    cecs_flatbucket8 *bucket;
+    do {
+        bucket = cecs_flatset_get_bucket_mut(set, next_bucket_index, value_size);
+        const uint_fast8_t position = cecs_flatbucket8_find_hash_position(bucket, hash, hash4, hash_offset, hash_stride);
+        if (position < CECS_FLATBUCKET8_POSITION_MAX) {
+            *out_value = cecs_flatbucket8_get_value_mut(bucket, position, cecs_flatbucket8_get_count(*bucket), value_size);
+            return true;
+        }
+
+        next_bucket_index = (next_bucket_index + 1) & bucket_count_mask;
+    } while ((next_bucket_index != initial_bucket_index) && cecs_flatbucket8_has_been_full(*bucket));
+    
+    *out_value = NULL;
+    return false;
+}
+const void *cecs_flatset_find_expect(
+    const cecs_flatset *set,
+    const cecs_flatset_hash hash,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride
+) {
+    const void *out_value;
+    if (cecs_flatset_find(set, hash, value_size, hash_offset, hash_stride, &out_value)) {
+        return out_value;
+    }
+    assert(false && "error: cecs_flatset_find_expect called with non-existing hash");
+    exit(EXIT_FAILURE);
+}
+const void *cecs_flatset_find_expect_mut(
+    cecs_flatset *set,
+    const cecs_flatset_hash hash,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride
+) {
+    void *out_value;
+    if (cecs_flatset_find_mut(set, hash, value_size, hash_offset, hash_stride, &out_value)) {
+        return out_value;
+    }
+    assert(false && "error: cecs_flatset_find_expect_mut called with non-existing hash");
+    exit(EXIT_FAILURE);
+}
+
+void *cecs_flatset_insert_expect(
+    cecs_flatset *set,
+    cecs_allocator *allocator,
+    const cecs_flatset_hash hash,
+    const size_t value_size
+) {
+    if (cecs_flatset_count(set) >= cecs_flatset_capacity(set)) {
+        assert(false && "error: cecs_flatset_insert_expect called on full set");
+        exit(EXIT_FAILURE);
+    }
+    const cecs_flatset_hash_low_fast hash4 = hash & CECS_FLATBUCKET8_HASH4_MASK;
+    const size_t bucket_count_mask = cecs_flatset_bucket_count(set) - 1; 
+    const size_t initial_bucket_index =
+        (hash >> CECS_FLATBUCKET8_HASH4_MAX_LOG2) & (bucket_count_mask);
+    size_t bucket_index = initial_bucket_index;
+    do {
+        cecs_flatbucket8 *bucket = cecs_flatset_get_bucket_mut(set, bucket_index, value_size);
+        if (buc)
+        bucket_index = (bucket_index + 1) & bucket_count_mask;
+    } while (bucket_index != initial_bucket_index);
+}
 void *cecs_flatset_insert(cecs_flatset *set, cecs_allocator *allocator, const cecs_flatset_hash hash, const size_t value_size) {
     static_assert(false, "TODO: find func, both for empty spot for hash and for existing coinciding hash");
 }
