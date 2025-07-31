@@ -73,30 +73,42 @@ static inline uint_fast8_t cecs_flatbucket8_count_chain_length_get_length(const 
 }
 static inline void cecs_flatbucket8_set_count_chain_length(
     cecs_flatbucket8 *bucket,
-    const cecs_flatbucket8_count_chain_length count_chain_length
+    const uint_fast8_t count,
+    const uint_fast8_t chain_length
 ) {
-    bucket->index_from_position8_b4 &= ~
+    const cecs_flatbucket8_count_chain_length count_chain = {
+        .count_chain_length = ((chain_length & 0b00001111) << 4) | (count & 0b00001111)
+    };
+    static const uint32_t mask = 0x88888888;
+    bucket->index_from_position8_b4 &= ~mask;
+    bucket->index_from_position8_b4 |= cecs_scatter_msn8_u1(count_chain.count_chain_length);
 }
+uint_fast8_t cecs_flatbucket8_get_count(const cecs_flatbucket8 bucket) {
+    const cecs_flatbucket8_count_chain_length count_chain_length = cecs_flatbucket8_get_count_chain_length(bucket);
+    return cecs_flatbucket8_count_chain_length_get_count(count_chain_length);
+}
+static_assert(false, "TODO: decide");
 
-static const void *cecs_flatbucket8_get_value(const cecs_flatbucket8 *bucket, const uint_fast8_t position, const size_t value_size) {
+
+static const void *cecs_flatbucket8_get_value(const cecs_flatbucket8 *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
     if (position >= cecs_flatbucket8_position_max) {
         assert(false && "error: cecs_flatbucket8_get_value called with out of bounds position");
         exit(EXIT_FAILURE);
     }
     const uint_fast8_t index = cecs_flatbucket8_get_index(*bucket, position);
-    if (index >= bucket->value_count) {
+    if (index >= bucket_value_count) {
         assert(false && "error: cecs_flatbucket8_get_value called with out of bounds index");
         exit(EXIT_FAILURE);
     }
     return &bucket->values[index * value_size];
 }
-static void *cecs_flatbucket8_get_value_mut(cecs_flatbucket8 *bucket, const uint_fast8_t position, const size_t value_size) {
+static void *cecs_flatbucket8_get_value_mut(cecs_flatbucket8 *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
     if (position >= cecs_flatbucket8_position_max) {
         assert(false && "error: cecs_flatbucket8_get_value_mut called with out of bounds position");
         exit(EXIT_FAILURE);
     }
     const uint_fast8_t index = cecs_flatbucket8_get_index(*bucket, position);
-    if (index >= bucket->value_count) {
+    if (index >= bucket_value_count) {
         assert(false && "error: cecs_flatbucket8_get_value_mut called with out of bounds index");
         exit(EXIT_FAILURE);
     }
@@ -104,46 +116,6 @@ static void *cecs_flatbucket8_get_value_mut(cecs_flatbucket8 *bucket, const uint
 }
 
 
-static uint_fast8_t cecs_flatbucket8_find_lower_psl_position(
-    const cecs_flatbucket8 bucket,
-    const uint_fast8_t position,
-    const uint_fast8_t psl3
-) {
-    for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_POSITION_MAX; ++i) {
-        const uint_fast8_t compare_psl = psl3 + i;
-        const uint_fast8_t compare_position = (position + i) & CECS_FLATBUCKET8_POSITION_MASK;
-        const uint_fast8_t compare_index = cecs_flatbucket8_get_index(bucket, compare_position);
-        if (cecs_flatbucket8_get_psl(bucket, compare_index) < compare_psl) {
-            return compare_position;
-        }
-    }
-    return CECS_FLATBUCKET8_POSITION_MAX;
-}
-static uint_fast8_t cecs_flatbucket8_find_zero_psl_position(
-    const cecs_flatbucket8 bucket,
-    const uint_fast8_t position
-) {
-    for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_POSITION_MAX; ++i) {
-        const uint_fast8_t compare_position = (position + i) & CECS_FLATBUCKET8_POSITION_MASK;
-        const uint_fast8_t compare_index = cecs_flatbucket8_get_index(bucket, compare_position);
-        if (cecs_flatbucket8_get_psl(bucket, compare_index) == 0) {
-            return compare_position;
-        }
-    }
-    return CECS_FLATBUCKET8_POSITION_MAX;
-}
-static uint64_t cecs_flatbucket_indices8_u8(uint64_t indices8_u3) {
-    return
-        (indices8_u3 & 0b000000000000000000000111) |
-        (indices8_u3 & 0b000000000000000000111000) << 5 |
-        (indices8_u3 & 0b000000000000000111000000) << 10 |
-        (indices8_u3 & 0b000000000000111000000000) << 15 |
-
-        (indices8_u3 & 0b000000000111000000000000) << 20 |
-        (indices8_u3 & 0b000000111000000000000000) << 25 |
-        (indices8_u3 & 0b000111000000000000000000) << 30 |
-        (indices8_u3 & 0b111000000000000000000000) << 35;
-}
 static uint_fast8_t cecs_flatbucket8_find_insert_position_expect(
     const cecs_flatbucket8 *bucket,
     const cecs_flatset_hash hash,
@@ -195,13 +167,13 @@ static inline void cecs_flatbucket8_meta_move(cecs_flatbucket8 *bucket, const ui
 }
 
 
-static inline void *cecs_flatbucket8_push(cecs_flatbucket8 *bucket, const size_t value_size) {
-    if (bucket->value_count >= cecs_flatbucket8_max_count) {
+static inline void *cecs_flatbucket8_push(cecs_flatbucket8 *bucket, const uint_fast8_t bucket_value_count, const size_t value_size) {
+    if (bucket_value_count >= cecs_flatbucket8_max_count) {
         assert(false && "error: cecs_flatbucket8_push called with full bucket");
         exit(EXIT_FAILURE);
     }
-    void *const value = &bucket->values[bucket->value_count * value_size];
-    ++bucket->value_count;
+    void *const value = &bucket->values[bucket_value_count * value_size];
+    cecs_flatbucket8_set
     return value;
 }
 void *cecs_flatbucket8_insert_expect(
