@@ -463,7 +463,7 @@ void *cecs_flatset_insert_expect(
     }
     return cecs_flatset_insert_within_expect(set, allocator, hash, value_size, hash_offset, hash_stride);
 }
-void *cecs_flatset_insert(
+void *cecs_flatset_find_or_insert(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const cecs_flatset_hash hash,
@@ -519,7 +519,21 @@ const size_t cecs_flatset_bucket_index_of(const cecs_flatset *set, const void *c
     }
     return bucket_index;
 }
-bool cecs_flatset_remove(
+void cecs_flatset_bucket_remove_expect(
+    cecs_flatset *set,
+    const size_t bucket_index,
+    const size_t value_size,
+    const cecs_flatset_hash hash,
+    const size_t hash_offset,
+    const size_t hash_stride
+) {
+    cecs_flatbucket8 *bucket = cecs_flatset_get_bucket_mut(set, bucket_index, value_size);
+    const uint_fast8_t position =
+        cecs_flatbucket8_find_hash_position(bucket, hash, hash & CECS_FLATBUCKET8_HASH4_MASK, hash_offset, hash_stride);
+    cecs_flatbucket8_remove_expect(bucket, position, value_size);
+}
+
+bool cecs_flatset_find_remove(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
@@ -547,7 +561,7 @@ bool cecs_flatset_remove(
     
     return false;
 }
-void cecs_flatset_remove_expect(
+void cecs_flatset_find_remove_expect(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
