@@ -107,6 +107,9 @@ inline bool cecs_is_pow2_u32(const uint32_t n) {
 inline bool cecs_is_pow2_u16(const uint16_t n) {
     return n && !(n & (n - 1));
 }
+inline bool cecs_is_pow2_u8(const uint8_t n) {
+    return n && !(n & (n - 1));
+}
 inline bool cecs_is_pow2(const size_t n) {
     return n && !(n & (n - 1));
 }
@@ -365,6 +368,26 @@ inline uint8_t cecs_mark_pattern_bytes8_u8(const uint64_t vec, const uint8_t pat
 }
 inline uint_fast8_t cecs_first_pattern_byte8_u8(const uint64_t vec, const uint8_t pattern) {
     const uint8_t marked = cecs_mark_pattern_bytes8_u8(vec, pattern);
+    return cecs_lzcnt_u8(marked);
+}
+
+inline uint8_t cecs_mark_zero_nibbles8_u4(const uint32_t vec) {
+    const uint32_t raised = (vec & 0x77777777) + 0x77777777;
+    const uint32_t marked_scatter = ~(raised | vec | 0x77777777);
+    return cecs_gather_msn8_u4(marked_scatter);
+}
+inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec) {
+    const uint8_t marked = cecs_mark_zero_nibbles8_u4(vec);
+    return cecs_lzcnt_u8(marked);
+}
+
+inline uint8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, const uint8_t nibble_pattern) {
+    assert(nibble_pattern < 16 && "error: nibble_pattern must be less than 16");
+    const uint32_t pattern_mask = ((uint32_t)nibble_pattern) * 0x11111111;
+    return cecs_mark_zero_nibbles8_u4(vec ^ pattern_mask);
+}
+inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t nibble_pattern) {
+    const uint8_t marked = cecs_mark_pattern_nibbles8_u4(vec, nibble_pattern);
     return cecs_lzcnt_u8(marked);
 }
 

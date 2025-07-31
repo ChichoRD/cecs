@@ -33,6 +33,9 @@ typedef struct cecs_flatbucket8 {
 extern const uint_fast8_t cecs_flatbucket8_max_count;
 
 uint_fast8_t cecs_flatbucket8_get_count(const cecs_flatbucket8 bucket);
+extern inline bool cecs_flatbucket8_is_full(const cecs_flatbucket8 bucket) {
+    return bucket.index_from_position8_b4 & 0x00008000;
+}
 
 typedef struct cecs_flatset {
     cecs_flatbucket8 *buckets;
