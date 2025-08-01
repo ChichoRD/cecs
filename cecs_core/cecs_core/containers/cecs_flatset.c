@@ -409,7 +409,7 @@ void cecs_flatset_shrink(
     const size_t hash_offset,
     const size_t hash_stride
 ) {
-    const size_t clamped_bucket_count = cecs_max(cecs_flatset_count(set) >> 3, new_bucket_count);
+    const size_t clamped_bucket_count = cecs_max((cecs_flatset_count(set) + 7) >> 3, new_bucket_count);
     cecs_flatset_resize(
         set,
         allocator,
