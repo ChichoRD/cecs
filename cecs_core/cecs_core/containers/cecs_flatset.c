@@ -777,11 +777,10 @@ void cecs_flatset_remove_from_bucket_expect(
         hash_stride
     );
     if ((set->values_count * CECS_FLATSET_FULL_LOAD_FACTOR_TENTH) < (cecs_flatset_capacity(set) * CECS_FLATSET_MIN_LOAD_FACTOR_TENTH)) {
-        const size_t new_bucket_count = cecs_max(cecs_flatset_bucket_count(set) >> 1, 1);
         cecs_flatset_shrink(
             set,
             allocator,
-            new_bucket_count,
+            cecs_flatset_bucket_count(set) >> 1,
             value_size,
             hash_offset,
             hash_stride
