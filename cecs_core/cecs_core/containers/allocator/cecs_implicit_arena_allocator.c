@@ -292,9 +292,19 @@ void *cecs_implicit_arena_allocator_realloc_aligned(
         new_block = block;
         cecs_implicit_arena_allocator_free(allocator, (uint8_t *)block + new_size, block_size - new_size);
     } else if (new_size > block_size) {
-        new_block = cecs_implicit_arena_allocator_alloc_aligned(allocator, new_size, alignment);
-        memcpy(new_block, block, block_size);
-        cecs_implicit_arena_allocator_free(allocator, block, block_size);
+        cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
+        if (
+            ((uint8_t *)block + block_size == current_bump->view.next)
+            && (cecs_bump_allocator_available_aligned(current_bump, alignment) >= (ptrdiff_t)(new_size - block_size))
+        ) {
+            new_block = cecs_bump_allocator_realloc_aligned_expect(
+                current_bump, block, block_size, new_size, alignment
+            );
+        } else {
+            new_block = cecs_implicit_arena_allocator_alloc_aligned(allocator, new_size, alignment);
+            memcpy(new_block, block, block_size);
+            cecs_implicit_arena_allocator_free(allocator, block, block_size);
+        }
     } else {
         new_block = block;
     }

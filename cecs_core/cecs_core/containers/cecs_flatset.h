@@ -56,6 +56,30 @@ inline void *cecs_flatbucket_get_value_by_index_mut(cecs_flatbucket *bucket, con
     }
     return &bucket->values[index * value_size];
 }
+inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
+    if (position >= cecs_flatbucket_position_max) {
+        assert(false && "error: cecs_flatbucket_get_value called with out of bounds position");
+        exit(EXIT_FAILURE);
+    }
+    const uint_fast8_t index = cecs_flatbucket_get_index(*bucket, position);
+    return cecs_flatbucket_get_value_by_index(bucket, index, value_size);
+}
+inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
+    if (position >= cecs_flatbucket_position_max) {
+        assert(false && "error: cecs_flatbucket_get_value_mut called with out of bounds position");
+        exit(EXIT_FAILURE);
+    }
+    const uint_fast8_t index = cecs_flatbucket_get_index(*bucket, position);
+    return cecs_flatbucket_get_value_by_index_mut(bucket, index, value_size);
+}
+
+uint_fast8_t cecs_flatbucket_find_hash_position(
+    const cecs_flatbucket *bucket,
+    const cecs_flatset_hash hash,
+    const cecs_flatset_hash_low_fast hash4,
+    const size_t hash_offset,
+    const size_t hash_stride
+);
 
 typedef struct cecs_flatset {
     cecs_flatbucket *buckets;
@@ -196,7 +220,7 @@ cecs_flatbucket *cecs_flatset_find_insert_bucket(
 // Set insertion functions
 void *cecs_flatset_insert_into_bucket_expect(
     cecs_flatset *set,
-    cecs_flatbucket8 *bucket,
+    cecs_flatbucket *bucket,
     const cecs_flatset_hash hash,
     const size_t value_size
 );
