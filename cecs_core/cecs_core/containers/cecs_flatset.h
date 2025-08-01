@@ -37,6 +37,21 @@ extern inline bool cecs_flatbucket8_is_full(const cecs_flatbucket8 bucket) {
     return bucket.index_from_position8_b4 & 0x00008000;
 }
 
+inline const void *cecs_flatbucket8_get_value_by_index(const cecs_flatbucket8 *bucket, const uint_fast8_t index, const size_t value_size) {
+    if (index >= cecs_flatbucket8_max_count) {
+        assert(false && "error: cecs_flatbucket8_get_value_by_index called with out of bounds index");
+        exit(EXIT_FAILURE);
+    }
+    return &bucket->values[index * value_size];
+}
+inline void *cecs_flatbucket8_get_value_by_index_mut(cecs_flatbucket8 *bucket, const uint_fast8_t index, const size_t value_size) {
+    if (index >= cecs_flatbucket8_max_count) {
+        assert(false && "error: cecs_flatbucket8_get_value_by_index_mut called with out of bounds index");
+        exit(EXIT_FAILURE);
+    }
+    return &bucket->values[index * value_size];
+}
+
 typedef struct cecs_flatset {
     cecs_flatbucket8 *buckets;
     size_t bucket_count;
