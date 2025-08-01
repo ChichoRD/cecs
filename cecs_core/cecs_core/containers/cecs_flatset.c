@@ -742,11 +742,14 @@ void *cecs_flatset_find_or_insert(
         return value;
     }
 }
-void cecs_flatset_remove_from_bucket_expect(
+void cecs_flatset_remove_from_bucket_stable_expect(
     cecs_flatset *set,
+    cecs_allocator *allocator,
     cecs_flatbucket8 *bucket,
     const uint_fast8_t position,
-    const size_t value_size
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride
 ) {
     if (position >= CECS_FLATBUCKET8_POSITION_MAX) {
         assert(false && "error: cecs_flatset_remove_from_bucket_expect called with out of bounds position");
@@ -755,8 +758,39 @@ void cecs_flatset_remove_from_bucket_expect(
     cecs_flatbucket8_remove_expect(bucket, position, value_size);
     --set->values_count;
 }
+void cecs_flatset_remove_from_bucket_expect(
+    cecs_flatset *set,
+    cecs_allocator *allocator,
+    cecs_flatbucket8 *bucket,
+    const uint_fast8_t position,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride
+) {
+    cecs_flatset_remove_from_bucket_stable_expect(
+        set,
+        allocator,
+        bucket,
+        position,
+        value_size,
+        hash_offset,
+        hash_stride
+    );
+    if ((set->values_count * CECS_FLATSET_FULL_LOAD_FACTOR_TENTH) < (cecs_flatset_capacity(set) * CECS_FLATSET_MIN_LOAD_FACTOR_TENTH)) {
+        const size_t new_bucket_count = cecs_max(cecs_flatset_bucket_count(set) >> 1, 1);
+        cecs_flatset_shrink(
+            set,
+            allocator,
+            new_bucket_count,
+            value_size,
+            hash_offset,
+            hash_stride
+        );
+    }
+}
 bool cecs_flatset_find_remove(
     cecs_flatset *set,
+    cecs_allocator *allocator,
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
@@ -779,9 +813,12 @@ bool cecs_flatset_find_remove(
         }
         cecs_flatset_remove_from_bucket_expect(
             set,
+            allocator,
             bucket,
             position,
-            value_size
+            value_size,
+            hash_offset,
+            hash_stride
         );
         return true;
     }    
@@ -789,12 +826,13 @@ bool cecs_flatset_find_remove(
 }
 void cecs_flatset_find_remove_expect(
     cecs_flatset *set,
+    cecs_allocator *allocator,
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
     const size_t hash_stride
 ) {
-    if (!cecs_flatset_remove(set, hash, value_size, hash_offset, hash_stride)) {
+    if (!cecs_flatset_find_remove(set, allocator, hash, value_size, hash_offset, hash_stride)) {
         assert(false && "error: cecs_flatset_remove_expect called with non-existing hash");
         exit(EXIT_FAILURE);
     }
