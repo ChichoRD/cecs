@@ -42,36 +42,22 @@ inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
 }
 
 // Bucket value access functions
-inline const void *cecs_flatbucket_get_value_by_index(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    if (index >= cecs_flatbucket8_max_count) {
+inline const void *cecs_flatbucket_get_value_by_index(const cecs_flatbucket *bucket, const uint_fast8_t index, const uint_fast8_t bucket_value_count, const size_t value_size) {
+    if (index >= bucket_value_count) {
         assert(false && "error: cecs_flatbucket_get_value_by_index called with out of bounds index");
         exit(EXIT_FAILURE);
     }
     return &bucket->values[index * value_size];
 }
-inline void *cecs_flatbucket_get_value_by_index_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    if (index >= cecs_flatbucket8_max_count) {
+inline void *cecs_flatbucket_get_value_by_index_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const uint_fast8_t bucket_value_count, const size_t value_size) {
+    if (index >= bucket_value_count) {
         assert(false && "error: cecs_flatbucket_get_value_by_index_mut called with out of bounds index");
         exit(EXIT_FAILURE);
     }
     return &bucket->values[index * value_size];
 }
-inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
-    if (position >= cecs_flatbucket_position_max) {
-        assert(false && "error: cecs_flatbucket_get_value called with out of bounds position");
-        exit(EXIT_FAILURE);
-    }
-    const uint_fast8_t index = cecs_flatbucket_get_index(*bucket, position);
-    return cecs_flatbucket_get_value_by_index(bucket, index, value_size);
-}
-inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size) {
-    if (position >= cecs_flatbucket_position_max) {
-        assert(false && "error: cecs_flatbucket_get_value_mut called with out of bounds position");
-        exit(EXIT_FAILURE);
-    }
-    const uint_fast8_t index = cecs_flatbucket_get_index(*bucket, position);
-    return cecs_flatbucket_get_value_by_index_mut(bucket, index, value_size);
-}
+const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size);
+void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size);
 
 uint_fast8_t cecs_flatbucket_find_hash_position(
     const cecs_flatbucket *bucket,
@@ -108,14 +94,14 @@ static inline const cecs_flatbucket *cecs_flatset_get_bucket(const cecs_flatset 
         assert(false && "error: cecs_flatset_get_bucket called with out of bounds bucket index");
         exit(EXIT_FAILURE);
     }
-    return ((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index;
+    return (const cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index);
 }
 static inline cecs_flatbucket *cecs_flatset_get_bucket_mut(cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
     if (bucket_index >= set->bucket_count) {
         assert(false && "error: cecs_flatset_get_bucket_mut called with out of bounds bucket index");
         exit(EXIT_FAILURE);
     }
-    return ((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index;
+    return (cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index);
 }
 
 // Set creation and destruction functions
@@ -251,12 +237,9 @@ void *cecs_flatset_find_or_insert(
 // Set removal functions
 void cecs_flatset_remove_from_bucket_stable_expect(
     cecs_flatset *set,
-    cecs_allocator *allocator,
     cecs_flatbucket *bucket,
     const uint_fast8_t position,
-    const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t value_size
 );
 void cecs_flatset_remove_from_bucket_expect(
     cecs_flatset *set,

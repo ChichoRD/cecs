@@ -1,6 +1,7 @@
 #include "cecs_arena_allocator.h"
 
 #include <cecs_math/relations/cecs_ordering.h>
+#include <stdlib.h>
 
 cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity) {
     assert(block_size > 0 && "fatal error: block_size must be greater than 0");
@@ -25,12 +26,8 @@ cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const 
     };
 }
 
-inline cecs_bump_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator) {
-    assert(allocator->current_bump < allocator->bump_capacity && "fatal error: allocator's current bump is out of bounds");
-    cecs_bump_allocator *const current = &allocator->bumps[allocator->current_bump];
-    assert(current->view.next != NULL && "fatal error: allocator's current bump is empty");
-    return current;
-}
+extern inline cecs_bump_allocator *cecs_arena_allocator_current_bump_mut(cecs_arena_allocator *allocator);
+extern inline const cecs_bump_allocator *cecs_arena_allocator_current_bump(const cecs_arena_allocator *allocator);
 
 void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
     ++allocator->current_bump;
@@ -60,7 +57,7 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
 
         allocator->bumps = new_bumps;
         allocator->bump_capacity = new_blocks_capacity;
-        return cecs_bump_allocator_alloc_aligned_expect(cecs_arena_allocator_current_bump(allocator), size, alignment);
+        return cecs_bump_allocator_alloc_aligned_expect(cecs_arena_allocator_current_bump_mut(allocator), size, alignment);
     } else if (allocator->current_bump < allocator->bump_capacity) {
         cecs_bump_allocator *const current_bump = &allocator->bumps[allocator->current_bump];
         if (current_bump->view.next != NULL) {
@@ -71,11 +68,12 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
         return cecs_bump_allocator_alloc_aligned_expect(current_bump, size, alignment);
     } else {
         assert(false && "fatal error: allocator's current bump is out of bounds");
+        exit(EXIT_FAILURE);
     }
 }
 
 void *cecs_arena_allocator_alloc_aligned(cecs_arena_allocator *allocator, const size_t size, const size_t alignment) {
-    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);
+    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump_mut(allocator);
     if (cecs_bump_allocator_available_aligned(current_bump, alignment) < (ptrdiff_t)size) {
         return cecs_arena_allocator_alloc_aligned_advance(allocator, size, alignment);
     } else {
@@ -90,7 +88,7 @@ void *cecs_arena_allocator_alloc(cecs_arena_allocator *allocator, const size_t s
 void *cecs_arena_allocator_realloc_aligned(
     cecs_arena_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
-    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump(allocator);
+    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump_mut(allocator);
     if (cecs_bump_allocator_available_aligned(current_bump, alignment) < (ptrdiff_t)new_size) {
         return cecs_arena_allocator_alloc_aligned_advance(allocator, new_size, alignment);
     } else {
@@ -103,7 +101,7 @@ void *cecs_arena_allocator_realloc(cecs_arena_allocator *allocator, void *block,
 }
 
 void cecs_arena_allocator_free(cecs_arena_allocator *allocator, void *block, const size_t block_size) {
-    cecs_bump_allocator_free(cecs_arena_allocator_current_bump(allocator), block, block_size);
+    cecs_bump_allocator_free(cecs_arena_allocator_current_bump_mut(allocator), block, block_size);
 }
 
 void cecs_arena_allocator_reset(cecs_arena_allocator *allocator) {

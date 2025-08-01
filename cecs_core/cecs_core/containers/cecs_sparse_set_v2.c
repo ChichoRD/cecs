@@ -3,11 +3,10 @@
 const cecs_dense_index cecs_dense_index_invalid = {.value = CECS_SPARSE_SET_USIZE_TYPE_MAX};
 
 extern inline bool cecs_dense_index_is_valid(const cecs_dense_index index);
+extern inline cecs_sparse_set_usize cecs_dense_set_count(const cecs_dense_set *set);
 extern inline cecs_dense_index cecs_dense_index_create_unchecked(const cecs_sparse_set_usize index);
 extern inline cecs_dense_index cecs_dense_index_create_valid(const cecs_sparse_set_usize index);
 extern inline cecs_dense_index cecs_dense_index_create_invalid(void);
-
-extern inline cecs_sparse_set_usize cecs_dense_set_count(const cecs_dense_set *set);
 
 extern inline size_t cecs_sparse_set_value_count(const cecs_sparse_set *set);
 extern inline size_t cecs_sparse_set_sparse_range_size(const cecs_sparse_set *set);
@@ -21,7 +20,6 @@ extern inline size_t *cecs_sparse_set_get_sparse_key_mut(cecs_sparse_set *set, c
 extern inline const void *cecs_sparse_set_get_value_by_index(const cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size);
 extern inline void *cecs_sparse_set_get_value_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size);
 extern inline const size_t *cecs_sparse_set_get_sparse_key_by_index(const cecs_sparse_set *set, const cecs_dense_index index);
-
 
 cecs_dense_set cecs_dense_set_create(void) {
     return (cecs_dense_set){

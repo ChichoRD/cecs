@@ -74,10 +74,10 @@ extern inline uint32_t cecs_wraparound_lsl_u32(const uint32_t value, const uint_
 extern inline uint64_t cecs_wraparound_lsl_u64(const uint64_t value, const uint_fast8_t shift);
 extern inline size_t cecs_wraparound_lsl(const size_t value, const uint_fast8_t shift);
 
-extern inline uint_fast8_t cecs_wraparound_lsr_u8(const uint8_t value, const uint_fast8_t shift);
-extern inline uint_fast8_t cecs_wraparound_lsr_u16(const uint16_t value, const uint_fast8_t shift);
-extern inline uint_fast8_t cecs_wraparound_lsr_u32(const uint32_t value, const uint_fast8_t shift);
-extern inline uint_fast8_t cecs_wraparound_lsr_u64(const uint64_t value, const uint_fast8_t shift);
+extern inline uint8_t cecs_wraparound_lsr_u8(const uint8_t value, const uint_fast8_t shift);
+extern inline uint16_t cecs_wraparound_lsr_u16(const uint16_t value, const uint_fast8_t shift);
+extern inline uint32_t cecs_wraparound_lsr_u32(const uint32_t value, const uint_fast8_t shift);
+extern inline uint64_t cecs_wraparound_lsr_u64(const uint64_t value, const uint_fast8_t shift);
 extern inline size_t cecs_wraparound_lsr(const size_t value, const uint_fast8_t shift);
 
 extern inline uint8_t cecs_gather_zeroed_msb8_u8(const uint64_t vec);
@@ -85,10 +85,21 @@ extern inline uint8_t cecs_gather_zeroed_lsb8_u8(const uint64_t vec);
 extern inline uint8_t cecs_gather_msb8_u8(const uint64_t vec);
 extern inline uint8_t cecs_gather_lsb8_u8(const uint64_t vec);
 
+extern inline uint8_t cecs_gather_msn8_u4(const uint32_t vec);
+extern inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec);
+
 extern inline uint64_t cecs_scatter_msb8_u1(const uint8_t vec);
 extern inline uint64_t cecs_scatter_lsb8_u1(const uint8_t vec);
+
+extern inline uint32_t cecs_scatter_msn8_u1(const uint8_t vec);
+extern inline uint32_t cecs_scatter_lsn8_u1(const uint8_t vec);
 
 extern inline uint8_t cecs_mark_zero_bytes8_u8(const uint64_t vec);
 extern inline uint_fast8_t cecs_first_zero_byte8_u8(const uint64_t vec);
 extern inline uint8_t cecs_mark_pattern_bytes8_u8(const uint64_t vec, const uint8_t pattern);
 extern inline uint_fast8_t cecs_first_pattern_byte8_u8(const uint64_t vec, const uint8_t pattern);
+
+extern inline uint8_t cecs_mark_zero_nibbles8_u4(const uint32_t vec);
+extern inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec);
+extern inline uint_fast8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, const uint8_t pattern);
+extern inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t pattern);

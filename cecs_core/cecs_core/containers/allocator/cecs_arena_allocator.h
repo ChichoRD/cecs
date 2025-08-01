@@ -19,6 +19,18 @@ typedef struct cecs_arena_allocator {
     cecs_arena_allocator_bump_usize bump_capacity;
 } cecs_arena_allocator;
 
+inline cecs_bump_allocator *cecs_arena_allocator_current_bump_mut(cecs_arena_allocator *allocator) {
+    assert(allocator->current_bump < allocator->bump_capacity && "fatal error: allocator's current bump is out of bounds");
+    cecs_bump_allocator *const current = &allocator->bumps[allocator->current_bump];
+    assert(current->view.next != NULL && "fatal error: allocator's current bump is empty");
+    return current;
+}
+inline const cecs_bump_allocator *cecs_arena_allocator_current_bump(const cecs_arena_allocator *allocator) {
+    assert(allocator->current_bump < allocator->bump_capacity && "fatal error: allocator's current bump is out of bounds");
+    cecs_bump_allocator *const current = &allocator->bumps[allocator->current_bump];
+    assert(current->view.next != NULL && "fatal error: allocator's current bump is empty");
+    return current;
+}
 
 cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity);
 

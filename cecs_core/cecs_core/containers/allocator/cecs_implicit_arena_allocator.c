@@ -37,7 +37,7 @@ static inline void cecs_implicit_arena_allocator_network_sort(
     cecs_implicit_arena_allocator *allocator
 ) {
     static_assert(
-        cecs_implicit_arena_allocator_free_lists_count == 6,
+        CECS_IMPLICIT_ARENA_ALLOCATOR_FREE_LISTS_COUNT == 6,
         "fatal static error: cecs_implicit_arena_allocator_network_sort supports exactly 6 free lists"
     );
     cecs_implicit_arena_allocator_node_network_sort_6(allocator->largest_free_blocks);
@@ -52,7 +52,6 @@ static inline uint8_t *cecs_implicit_arena_allocator_node_next_end(const cecs_im
 
 
 extern void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator, const size_t size, const size_t alignment);
-extern inline cecs_bump_allocator *cecs_arena_allocator_current_bump(cecs_arena_allocator *allocator);
 
 static inline cecs_implicit_arena_allocator_node *cecs_implicit_arena_allocator_append_generic(
     cecs_implicit_arena_allocator *allocator, void *const new_free_block, size_t block_size
@@ -202,7 +201,7 @@ static void *cecs_implicit_arena_allocator_alloc_aligned_from_generic(
         };
     } else if (remaining_size < allocator->generic_free_block.next->next_size) {
         // traverse the the list to find the first node that points to a smaller block than the remaining size
-        cecs_implicit_arena_allocator_node *current = &allocator->generic_free_block.next;
+        cecs_implicit_arena_allocator_node *current = allocator->generic_free_block.next;
         do {
             current = current->next;
             assert(current != NULL && "fatal error: reached end of generic free block list without finding a suitable node");
@@ -223,7 +222,7 @@ static void *cecs_implicit_arena_allocator_alloc_aligned_from_generic(
     return aligned_block_start;
 }
 void *cecs_implicit_arena_allocator_alloc_aligned(cecs_implicit_arena_allocator *allocator, const size_t size, const size_t alignment) {
-    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
+    cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump_mut(&allocator->arena);
     cecs_implicit_arena_allocator_node *const largest_free_block = &allocator->largest_free_blocks[0];
 
     uint8_t *const largest_block_start = cecs_implicit_arena_allocator_node_next_start(*largest_free_block);
@@ -292,7 +291,7 @@ void *cecs_implicit_arena_allocator_realloc_aligned(
         new_block = block;
         cecs_implicit_arena_allocator_free(allocator, (uint8_t *)block + new_size, block_size - new_size);
     } else if (new_size > block_size) {
-        cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump(&allocator->arena);
+        cecs_bump_allocator *const current_bump = cecs_arena_allocator_current_bump_mut(&allocator->arena);
         if (
             ((uint8_t *)block + block_size == current_bump->view.next)
             && (cecs_bump_allocator_available_aligned(current_bump, alignment) >= (ptrdiff_t)(new_size - block_size))

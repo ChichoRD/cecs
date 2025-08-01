@@ -11,14 +11,14 @@ typedef struct cecs_dynarray {
     size_t values_capacity;
 } cecs_dynarray;
 
-static inline size_t cecs_dynarray_count(const cecs_dynarray *arr) {
+inline size_t cecs_dynarray_count(const cecs_dynarray *arr) {
     return arr->values_used;
 }
-static inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr) {
+inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr) {
     return arr->values_capacity;
 }
 
-static inline cecs_dynarray cecs_dynarray_create(void) {
+inline cecs_dynarray cecs_dynarray_create(void) {
     return (cecs_dynarray) {
         .values = NULL,
         .values_used = 0,

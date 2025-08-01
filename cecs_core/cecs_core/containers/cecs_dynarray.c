@@ -4,6 +4,10 @@
 #include "cecs_dynarray.h"
 #include <cecs_math/relations/cecs_ordering.h>
 
+extern inline size_t cecs_dynarray_count(const cecs_dynarray *arr);
+extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);
+extern inline cecs_dynarray cecs_dynarray_create(void);
+
 cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator* a, const size_t values_capacity, const size_t value_size) {
     if (value_size == 0) {
         assert(false && "error: attempted to create dynamic array with zero size elements");
