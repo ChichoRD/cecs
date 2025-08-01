@@ -313,15 +313,15 @@ inline uint8_t cecs_gather_lsb8_u8(const uint64_t vec) {
 
 inline uint8_t cecs_gather_msn8_u4(const uint32_t vec) {
     return (uint8_t)((
-            ((vec & 0x80808080) * 0x208208)
-            | ((vec & 0x08080808) * 0x041041)
+            ((vec & 0x80808080) * 0x041041)
+            | ((vec & 0x08080808) * 0x208208)
         ) >> (32 - 8)
     );
 }
 inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec) {
     return (uint8_t)((
-            ((vec & 0x10101010) * 0x01041040)
-            | ((vec & 0x01010101) * 0x208208)
+            ((vec & 0x10101010) * 0x208208)
+            | ((vec & 0x01010101) * 0x01041040)
         ) >> (32 - 8)
     );
 }
