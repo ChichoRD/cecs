@@ -37,7 +37,7 @@ extern const uint_fast8_t cecs_flatbucket8_max_count;
 
 // Bucket capacity and count functions
 uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket);
-extern inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
+inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
     return bucket.index_from_position8_b4 & 0x00008000;
 }
 
