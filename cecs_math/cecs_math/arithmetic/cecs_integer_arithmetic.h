@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <intrin.h>
+#include <lzcntintrin.h>
 #include <bmiintrin.h>
 #include <memory.h>
 
@@ -41,8 +42,8 @@ static_assert(
 );
 extern const uint8_t cecs_size_t_bits;
 
-#define CECS_LZCNT_U64 __lzcnt64
-#define CECS_LZCNT_U32 __lzcnt
+#define CECS_LZCNT_U64 _lzcnt_u64
+#define CECS_LZCNT_U32 _lzcnt_u32
 #define CECS_LZCNT_U16 __lzcnt16
 inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n) {
     return (uint_fast8_t)CECS_LZCNT_U64(n);
@@ -69,9 +70,9 @@ inline uint_fast8_t cecs_lzcnt(const size_t n) {
 #endif
 }
 
-#define CECS_TZCNT_U64 __tzcnt64
-#define CECS_TZCNT_U32 __tzcnt
-#define CECS_TZCNT_U16 __tzcnt16
+#define CECS_TZCNT_U64 __tzcnt_u64
+#define CECS_TZCNT_U32 __tzcnt_u32
+#define CECS_TZCNT_U16 __tzcnt_u16
 inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n) {
     return (uint_fast8_t)CECS_TZCNT_U64(n);
 }

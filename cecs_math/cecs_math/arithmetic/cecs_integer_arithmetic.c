@@ -14,7 +14,6 @@ extern inline uint_fast8_t cecs_tzcnt_u8(const uint8_t n);
 extern inline uint_fast8_t cecs_tzcnt(const size_t n);
 
 
-
 extern inline uint_fast8_t cecs_log2_u64(const uint64_t n);
 extern inline uint_fast8_t cecs_log2_u32(const uint32_t n);
 extern inline uint_fast8_t cecs_log2_u16(const uint16_t n);

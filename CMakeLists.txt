@@ -37,6 +37,7 @@ project(cecs_math C)
             -Wno-newline-eof
             -Wno-unused-function
             -Wno-extra-semi
+            -Wno-static-in-inline
             -Werror
 
             -mlzcnt
