@@ -51,7 +51,7 @@ static inline uint_fast8_t cecs_flatbucket_find_position(const cecs_flatbucket b
         assert(false && "error: cecs_flatbucket_get_position detected that two positions exist that map to the same index");
         exit(EXIT_FAILURE);
     }
-    const uint_fast8_t position = CHAR_BIT - cecs_lzcnt_u8(index_mark);
+    const uint_fast8_t position = cecs_tzcnt_u8(index_mark);
     return position;
 }
 
@@ -253,7 +253,7 @@ static uint_fast8_t cecs_flatbucket_find_empty_position(const cecs_flatbucket bu
         exit(EXIT_FAILURE);
     }
     const uint8_t empty_positions_mark = cecs_flatbucket_mark_positions(bucket, cecs_flatbucket_max_count - 1);
-    const uint_fast8_t empty_position = cecs_lzcnt_u8(empty_positions_mark);
+    const uint_fast8_t empty_position = cecs_tzcnt_u8(empty_positions_mark);
     if (empty_position >= cecs_flatbucket_position_max) {
         assert(false && "error: cecs_flatbucket_find_empty found out of bounds position");
         exit(EXIT_FAILURE);

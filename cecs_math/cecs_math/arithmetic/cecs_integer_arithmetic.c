@@ -2,6 +2,19 @@
 
 const uint8_t cecs_size_t_bits = CECS_SIZE_T_BITS;
 
+extern inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n);
+extern inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n);
+extern inline uint_fast8_t cecs_lzcnt_u16(const uint16_t n);
+extern inline uint_fast8_t cecs_lzcnt_u8(const uint8_t n);
+
+extern inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n);
+extern inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n);
+extern inline uint_fast8_t cecs_tzcnt_u16(const uint16_t n);
+extern inline uint_fast8_t cecs_tzcnt_u8(const uint8_t n);
+extern inline uint_fast8_t cecs_tzcnt(const size_t n);
+
+
+
 extern inline uint_fast8_t cecs_log2_u64(const uint64_t n);
 extern inline uint_fast8_t cecs_log2_u32(const uint32_t n);
 extern inline uint_fast8_t cecs_log2_u16(const uint16_t n);
