@@ -37,12 +37,16 @@ static inline void cecs_flatbucket_set_index(cecs_flatbucket *bucket, const uint
     bucket->index_from_position8_b4 |= (index & 0x07) << (position << 2);
 }
 
-static inline uint_fast8_t cecs_flatbucket_find_position(const cecs_flatbucket bucket, const uint_fast8_t index) {
+static inline uint8_t cecs_flatbucket_mark_positions(const cecs_flatbucket bucket, const uint_fast8_t index) {
     if (index >= cecs_flatbucket_max_count) {
         assert(false && "error: cecs_flatbucket_get_position called with out of bounds index");
         exit(EXIT_FAILURE);
     }
     const uint8_t index_mark = cecs_mark_pattern_nibbles8_u4(bucket.index_from_position8_b4 & 0x77777777, index);
+    return index_mark;
+}
+static inline uint_fast8_t cecs_flatbucket_find_position(const cecs_flatbucket bucket, const uint_fast8_t index) {
+    const uint8_t index_mark = cecs_flatbucket_mark_positions(bucket, index);
     if (!cecs_is_pow2_u8(index_mark)) {
         assert(false && "error: cecs_flatbucket_get_position detected that two positions exist that map to the same index");
         exit(EXIT_FAILURE);
@@ -248,7 +252,8 @@ static uint_fast8_t cecs_flatbucket_find_empty_position(const cecs_flatbucket bu
         assert(false && "error: cecs_flatbucket_find_empty called on full bucket");
         exit(EXIT_FAILURE);
     }
-    const uint_fast8_t empty_position = cecs_flatbucket_find_position(bucket, cecs_flatbucket_max_count - 1);
+    const uint8_t empty_positions_mark = cecs_flatbucket_mark_positions(bucket, cecs_flatbucket_max_count - 1);
+    const uint_fast8_t empty_position = cecs_lzcnt_u8(empty_positions_mark);
     if (empty_position >= cecs_flatbucket_position_max) {
         assert(false && "error: cecs_flatbucket_find_empty found out of bounds position");
         exit(EXIT_FAILURE);
@@ -314,7 +319,6 @@ cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const 
         exit(EXIT_FAILURE);
     }
 
-    const size_t values_count = bucket_count * CECS_FLATBUCKET8_MAX_COUNT;
     cecs_flatbucket *const buckets = cecs_allocator_alloc(
         allocator,
         bucket_count * cecs_flatset_bucket_size(value_size)
@@ -322,7 +326,7 @@ cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const 
     cecs_flatset set = {
         .buckets = buckets,
         .bucket_count = bucket_count,
-        .values_count = values_count
+        .values_count = 0
     };
     for (size_t i = 0; i < bucket_count; i++) {
         cecs_flatbucket *bucket = cecs_flatset_get_bucket_mut(&set, i, value_size);
