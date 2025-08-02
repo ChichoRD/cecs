@@ -39,6 +39,10 @@ cecs_dense_set cecs_dense_set_create_with_capacity(cecs_allocator *allocator, co
         .sparse_from_dense = cecs_dynarray_create_with_capacity(allocator, capacity, sizeof(size_t)),
     };
 }
+void cecs_dense_set_destroy(cecs_dense_set *set, cecs_allocator *allocator, const size_t value_size) {
+    cecs_dynarray_destroy(&set->values, allocator, value_size);
+    cecs_dynarray_destroy(&set->sparse_from_dense, allocator, sizeof(size_t));
+}
 
 
 void *cecs_dense_set_push_key(cecs_dense_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
@@ -50,6 +54,10 @@ void *cecs_dense_set_push_key(cecs_dense_set *set, cecs_allocator *allocator, co
 void cecs_dense_set_swap_last_pop(cecs_dense_set *set, cecs_allocator *allocator, const size_t index, const size_t value_size) {
     cecs_dynarray_swap_last_pop(&set->values, allocator, index, value_size);
     cecs_dynarray_swap_last_pop(&set->sparse_from_dense, allocator, index, sizeof(size_t));
+}
+void cecs_dense_set_clear(cecs_dense_set *set) {
+    cecs_dynarray_clear(&set->values);
+    cecs_dynarray_clear(&set->sparse_from_dense);
 }
 
 
@@ -71,6 +79,11 @@ cecs_sparse_set cecs_sparse_set_create_with_capacity(cecs_allocator *allocator, 
         capacity * sizeof(cecs_dense_index)
     );
     return set;
+}
+
+void cecs_sparse_set_destroy(cecs_sparse_set *set, cecs_allocator *allocator, const size_t value_size) {
+    cecs_dense_set_destroy(&set->values, allocator, value_size);
+    cecs_dynarray_destroy(&set->dense_from_sparse, allocator, sizeof(cecs_dense_index));
 }
 
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
@@ -134,4 +147,13 @@ bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, con
     } else {
         return false;
     }
+}
+
+void cecs_sparse_set_clear(cecs_sparse_set *set) {
+    cecs_dense_set_clear(&set->values);
+    memset(
+        cecs_dynarray_first_mut(&set->dense_from_sparse),
+        UINT8_MAX,
+        cecs_sparse_set_sparse_range_size(set) * sizeof(cecs_dense_index)
+    );
 }

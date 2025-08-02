@@ -26,6 +26,7 @@ inline cecs_dynarray cecs_dynarray_create(void) {
     };
 }
 cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator *a, const size_t values_capacity, const size_t value_size);
+void cecs_dynarray_destroy(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size);
 
 void cecs_dynarray_reserve_exact(cecs_dynarray *arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size);
 void cecs_dynarray_reserve(cecs_dynarray *arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size);

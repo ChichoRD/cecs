@@ -66,6 +66,7 @@ typedef struct cecs_sparse_set {
 
 cecs_sparse_set cecs_sparse_set_create(void);
 cecs_sparse_set cecs_sparse_set_create_with_capacity(cecs_allocator *allocator, const size_t capacity, const size_t value_size);
+void cecs_sparse_set_destroy(cecs_sparse_set *set, cecs_allocator *allocator, const size_t value_size);
 
 inline cecs_sparse_set_usize cecs_sparse_set_value_capacity(const cecs_sparse_set *set) {
     return cecs_dense_set_capacity(&set->values);
@@ -154,5 +155,6 @@ void *cecs_sparse_set_get_or_insert(cecs_sparse_set *set, cecs_allocator *alloca
 
 void cecs_sparse_set_remove_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
 bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
+void cecs_sparse_set_clear(cecs_sparse_set *set);
 
 #endif
