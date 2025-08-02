@@ -150,7 +150,7 @@ const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_
         assert(false && "error: cecs_flatbucket_get_value called with out of bounds position");
         exit(EXIT_FAILURE);
     }
-    if (bucket_value_count >= cecs_flatbucket_max_count) {
+    if (bucket_value_count > cecs_flatbucket_max_count) {
         assert(false && "error: cecs_flatbucket_get_value called with out of bounds bucket_value_count");
         exit(EXIT_FAILURE);
     }
@@ -161,7 +161,7 @@ void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t 
         assert(false && "error: cecs_flatbucket_get_value_mut called with out of bounds position");
         exit(EXIT_FAILURE);
     }
-    if (bucket_value_count >= cecs_flatbucket_max_count) {
+    if (bucket_value_count > cecs_flatbucket_max_count) {
         assert(false && "error: cecs_flatbucket_get_value_mut called with out of bounds bucket_value_count");
         exit(EXIT_FAILURE);
     }
@@ -169,7 +169,7 @@ void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t 
 }
 
 static inline void *cecs_flatbucket_push(cecs_flatbucket *bucket, const uint_fast8_t bucket_value_count, const size_t value_size) {
-    if (bucket_value_count >= cecs_flatbucket_max_count) {
+    if (bucket_value_count > cecs_flatbucket_max_count) {
         assert(false && "error: cecs_flatbucket_push called with full bucket");
         exit(EXIT_FAILURE);
     }
