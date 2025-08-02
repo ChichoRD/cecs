@@ -351,6 +351,16 @@ void cecs_flatset_destroy(cecs_flatset *set, cecs_allocator *allocator, const si
     set->values_count = 0;
 }
 
+// void cecs_flatset_copy_same_size(
+//     cecs_flatset *destination,
+//     const cecs_flatset *source
+// ) {
+//     if (cecs_flatset_capacity(destination) != cecs_flatset_capacity(source)) {
+//         assert(false && "error: cecs_flatset_copy_same_size called with different capacities");
+//         exit(EXIT_FAILURE);
+//     }
+
+// }
 void cecs_flatset_copy(
     cecs_flatset *destination,
     const cecs_flatset *source,
