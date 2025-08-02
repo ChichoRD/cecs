@@ -2,22 +2,22 @@
 
 const uint8_t cecs_size_t_bits = CECS_SIZE_T_BITS;
 
-extern inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n);
-extern inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n);
-extern inline uint_fast8_t cecs_lzcnt_u16(const uint16_t n);
-extern inline uint_fast8_t cecs_lzcnt_u8(const uint8_t n);
+// extern inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n);
+// extern inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n);
+// extern inline uint_fast8_t cecs_lzcnt_u16(const uint16_t n);
+// extern inline uint_fast8_t cecs_lzcnt_u8(const uint8_t n);
 
-extern inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n);
-extern inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n);
-extern inline uint_fast8_t cecs_tzcnt_u16(const uint16_t n);
-extern inline uint_fast8_t cecs_tzcnt_u8(const uint8_t n);
-extern inline uint_fast8_t cecs_tzcnt(const size_t n);
+// extern inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n);
+// extern inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n);
+// extern inline uint_fast8_t cecs_tzcnt_u16(const uint16_t n);
+// extern inline uint_fast8_t cecs_tzcnt_u8(const uint8_t n);
+// extern inline uint_fast8_t cecs_tzcnt(const size_t n);
 
 
-extern inline uint_fast8_t cecs_log2_u64(const uint64_t n);
-extern inline uint_fast8_t cecs_log2_u32(const uint32_t n);
-extern inline uint_fast8_t cecs_log2_u16(const uint16_t n);
-extern inline uint_fast8_t cecs_log2(const size_t n);
+// extern inline uint_fast8_t cecs_log2_u64(const uint64_t n);
+// extern inline uint_fast8_t cecs_log2_u32(const uint32_t n);
+// extern inline uint_fast8_t cecs_log2_u16(const uint16_t n);
+// extern inline uint_fast8_t cecs_log2(const size_t n);
 
 extern inline bool cecs_is_pow2_u64(const uint64_t n);
 extern inline bool cecs_is_pow2_u32(const uint32_t n);
@@ -107,11 +107,11 @@ extern inline uint32_t cecs_scatter_msn8_u1(const uint8_t vec);
 extern inline uint32_t cecs_scatter_lsn8_u1(const uint8_t vec);
 
 extern inline uint8_t cecs_mark_zero_bytes8_u8(const uint64_t vec);
-extern inline uint_fast8_t cecs_first_zero_byte8_u8(const uint64_t vec);
+// extern inline uint_fast8_t cecs_first_zero_byte8_u8(const uint64_t vec);
 extern inline uint8_t cecs_mark_pattern_bytes8_u8(const uint64_t vec, const uint8_t pattern);
-extern inline uint_fast8_t cecs_first_pattern_byte8_u8(const uint64_t vec, const uint8_t pattern);
+// extern inline uint_fast8_t cecs_first_pattern_byte8_u8(const uint64_t vec, const uint8_t pattern);
 
 extern inline uint8_t cecs_mark_zero_nibbles8_u4(const uint32_t vec);
-extern inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec);
+// extern inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec);
 extern inline uint_fast8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, const uint8_t pattern);
-extern inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t pattern);
+// extern inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t pattern);

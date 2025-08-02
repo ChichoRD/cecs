@@ -45,19 +45,19 @@ extern const uint8_t cecs_size_t_bits;
 #define CECS_LZCNT_U64 _lzcnt_u64
 #define CECS_LZCNT_U32 _lzcnt_u32
 #define CECS_LZCNT_U16 __lzcnt16
-inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n) {
+static inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n) {
     return (uint_fast8_t)CECS_LZCNT_U64(n);
 }
-inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n) {
+static inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n) {
     return (uint_fast8_t)CECS_LZCNT_U32(n);
 }
-inline uint_fast8_t cecs_lzcnt_u16(const uint16_t n) {
+static inline uint_fast8_t cecs_lzcnt_u16(const uint16_t n) {
     return (uint_fast8_t)CECS_LZCNT_U16(n);
 }
-inline uint_fast8_t cecs_lzcnt_u8(const uint8_t n) {
+static inline uint_fast8_t cecs_lzcnt_u8(const uint8_t n) {
     return cecs_lzcnt_u16((uint16_t)n) - 8;
 }
-inline uint_fast8_t cecs_lzcnt(const size_t n) {
+static inline uint_fast8_t cecs_lzcnt(const size_t n) {
 #if (SIZE_MAX == UINT16_MAX)
     return cecs_lzcnt_u16((uint16_t)n);
 #elif (SIZE_MAX == UINT32_MAX)
@@ -73,19 +73,19 @@ inline uint_fast8_t cecs_lzcnt(const size_t n) {
 #define CECS_TZCNT_U64 __tzcnt_u64
 #define CECS_TZCNT_U32 __tzcnt_u32
 #define CECS_TZCNT_U16 __tzcnt_u16
-inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n) {
+static inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n) {
     return (uint_fast8_t)CECS_TZCNT_U64(n);
 }
-inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n) {
+static inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n) {
     return (uint_fast8_t)CECS_TZCNT_U32(n);
 }
-inline uint_fast8_t cecs_tzcnt_u16(const uint16_t n) {
+static inline uint_fast8_t cecs_tzcnt_u16(const uint16_t n) {
     return (uint_fast8_t)CECS_TZCNT_U16(n);
 }
-inline uint_fast8_t cecs_tzcnt_u8(const uint8_t n) {
+static inline uint_fast8_t cecs_tzcnt_u8(const uint8_t n) {
     return cecs_tzcnt_u16(((uint16_t)n) << 8) - 8;
 }
-inline uint_fast8_t cecs_tzcnt(const size_t n) {
+static inline uint_fast8_t cecs_tzcnt(const size_t n) {
 #if (SIZE_MAX == UINT16_MAX)
     return cecs_tzcnt_u16((uint16_t)n);
 #elif (SIZE_MAX == UINT32_MAX)
@@ -98,19 +98,19 @@ inline uint_fast8_t cecs_tzcnt(const size_t n) {
 #endif
 }
 
-inline uint_fast8_t cecs_log2_u64(const uint64_t n) {
+static inline uint_fast8_t cecs_log2_u64(const uint64_t n) {
     assert(n != 0 && "error: log2 of 0 is undefined");
     return (uint_fast8_t)(CECS_UINT64_BITS - cecs_lzcnt_u64(n) - 1);
 }
-inline uint_fast8_t cecs_log2_u32(const uint32_t n) {
+static inline uint_fast8_t cecs_log2_u32(const uint32_t n) {
     assert(n != 0 && "error: log2 of 0 is undefined");
     return (uint_fast8_t)(CECS_UINT32_BITS - cecs_lzcnt_u32(n) - 1);
 }
-inline uint_fast8_t cecs_log2_u16(const uint16_t n) {
+static inline uint_fast8_t cecs_log2_u16(const uint16_t n) {
     assert(n != 0 && "error: log2 of 0 is undefined");
     return (uint_fast8_t)(CECS_UINT16_BITS - cecs_lzcnt_u16(n) - 1);
 }
-inline uint_fast8_t cecs_log2(const size_t n) {
+static inline uint_fast8_t cecs_log2(const size_t n) {
 #if (SIZE_MAX == UINT16_MAX)
     return cecs_log2_u16((uint32_t)n);
 
@@ -386,7 +386,7 @@ inline uint8_t cecs_mark_zero_bytes8_u8(const uint64_t vec) {
     const uint64_t marked_scatter = ~(raised | vec | 0x7f7f7f7f7f7f7f7full);
     return cecs_gather_zeroed_msb8_u8(marked_scatter);
 }
-inline uint_fast8_t cecs_first_zero_byte8_u8(const uint64_t vec) {
+static inline uint_fast8_t cecs_first_zero_byte8_u8(const uint64_t vec) {
     const uint8_t marked = cecs_mark_zero_bytes8_u8(vec);
     return cecs_tzcnt_u8(marked);
 }
@@ -395,7 +395,7 @@ inline uint8_t cecs_mark_pattern_bytes8_u8(const uint64_t vec, const uint8_t pat
     const uint64_t pattern_mask = ((uint64_t)pattern) * 0x0101010101010101ull;
     return cecs_mark_zero_bytes8_u8(vec ^ pattern_mask);
 }
-inline uint_fast8_t cecs_first_pattern_byte8_u8(const uint64_t vec, const uint8_t pattern) {
+static inline uint_fast8_t cecs_first_pattern_byte8_u8(const uint64_t vec, const uint8_t pattern) {
     const uint8_t marked = cecs_mark_pattern_bytes8_u8(vec, pattern);
     return cecs_tzcnt_u8(marked);
 }
@@ -405,7 +405,7 @@ inline uint8_t cecs_mark_zero_nibbles8_u4(const uint32_t vec) {
     const uint32_t marked_scatter = ~(raised | vec | 0x77777777);
     return cecs_gather_msn8_u4(marked_scatter);
 }
-inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec) {
+static inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec) {
     const uint8_t marked = cecs_mark_zero_nibbles8_u4(vec);
     return cecs_tzcnt_u8(marked);
 }
@@ -415,7 +415,7 @@ inline uint8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, const uint8_t n
     const uint32_t pattern_mask = ((uint32_t)nibble_pattern) * 0x11111111;
     return cecs_mark_zero_nibbles8_u4(vec ^ pattern_mask);
 }
-inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t nibble_pattern) {
+static inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t nibble_pattern) {
     const uint8_t marked = cecs_mark_pattern_nibbles8_u4(vec, nibble_pattern);
     return cecs_tzcnt_u8(marked);
 }
