@@ -94,7 +94,7 @@ void *cecs_dynarray_push_many(cecs_dynarray *arr, cecs_allocator *a, const size_
     return elements;
 }
 
-void *cecs_dynarray_push_many_cpy(cecs_dynarray *arr, cecs_allocator *a, const void *values, const size_t count, const size_t value_size) {
+void *cecs_dynarray_push_many_copy(cecs_dynarray *arr, cecs_allocator *a, const void *values, const size_t count, const size_t value_size) {
     void *const elements = cecs_dynarray_push_many(arr, a, count, value_size);
     return memcpy(elements, values, count * value_size);
 }
@@ -132,7 +132,7 @@ void *cecs_dynarray_extend(cecs_dynarray *arr, cecs_allocator *a, const size_t s
     arr->values_used = new_count;
     return elements;
 }
-void *cecs_dynarray_insert_many_cpy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size) {
+void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size) {
     void *const elements = cecs_dynarray_insert_many(arr, a, index, count, value_size);
     return memcpy(elements, values, count * value_size);
 }

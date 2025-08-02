@@ -46,7 +46,7 @@ void test_dynarray(cecs_allocator *allocator) {
     printf("Inserted 9999 at index 5, new count: %zu\n", cecs_dynarray_count(&arr));
 
     int new_values[] = {-1, -2, -3};
-    cecs_dynarray_insert_many_cpy(&arr, allocator, 0, new_values, 3, sizeof(int));
+    cecs_dynarray_insert_many_copy(&arr, allocator, 0, new_values, 3, sizeof(int));
     printf("Inserted 3 values at beginning, new count: %zu\n", cecs_dynarray_count(&arr));
 
     // Test 5: Push many operations

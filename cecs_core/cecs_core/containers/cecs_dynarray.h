@@ -35,7 +35,7 @@ void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator* a, const size_t va
 
 void *cecs_dynarray_push(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size);
 void *cecs_dynarray_push_many(cecs_dynarray *arr, cecs_allocator *a, const size_t count, const size_t value_size);
-void *cecs_dynarray_push_many_cpy(cecs_dynarray *arr, cecs_allocator *a, const void *values, const size_t count, const size_t value_size);
+void *cecs_dynarray_push_many_copy(cecs_dynarray *arr, cecs_allocator *a, const void *values, const size_t count, const size_t value_size);
 
 void *cecs_dynarray_extend(cecs_dynarray *arr, cecs_allocator *a, const size_t start_index_inclusive, const size_t end_index_exclusive, const size_t value_size);
 inline void *cecs_dynarray_insert(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t value_size) {
@@ -44,7 +44,7 @@ inline void *cecs_dynarray_insert(cecs_dynarray *arr, cecs_allocator *a, const s
 inline void *cecs_dynarray_insert_many(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t count, const size_t value_size) {
     return cecs_dynarray_extend(arr, a, index, index + count, value_size);
 }
-void *cecs_dynarray_insert_many_cpy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size);
+void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size);
 
 void cecs_dynarray_pop(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size);
 void cecs_dynarray_truncate(cecs_dynarray *arr, cecs_allocator *a, const size_t new_count, const size_t value_size);
