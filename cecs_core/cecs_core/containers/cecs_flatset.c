@@ -351,27 +351,19 @@ void cecs_flatset_destroy(cecs_flatset *set, cecs_allocator *allocator, const si
     set->values_count = 0;
 }
 
-// void cecs_flatset_copy_same_size(
-//     cecs_flatset *destination,
-//     const cecs_flatset *source
-// ) {
-//     if (cecs_flatset_capacity(destination) != cecs_flatset_capacity(source)) {
-//         assert(false && "error: cecs_flatset_copy_same_size called with different capacities");
-//         exit(EXIT_FAILURE);
-//     }
-
-// }
-void cecs_flatset_copy(
+void cecs_flatset_extend_exclusive(
     cecs_flatset *destination,
     const cecs_flatset *source,
-    cecs_allocator *allocator,
     const size_t value_size,
     const size_t hash_offset,
     const size_t hash_stride
 ) {
-    if (cecs_flatset_capacity(destination) < cecs_flatset_count(source)) {
-        cecs_flatset_destroy(destination, allocator, value_size);
-        *destination = cecs_flatset_create_with_capacity(allocator, cecs_flatset_bucket_count(source), value_size);
+    const size_t destination_initial_count = cecs_flatset_count(destination);
+    const size_t source_count = cecs_flatset_count(source);
+    const size_t destination_remaining_capacity = cecs_flatset_capacity(destination) - destination_initial_count;
+    if (destination_remaining_capacity < source_count) {
+        assert(false && "error: cecs_flatset_extend_exclusive called with insufficient capacity in destination");
+        exit(EXIT_FAILURE);
     }
 
     for (size_t i = 0; i < source->bucket_count; ++i) {
@@ -389,11 +381,45 @@ void cecs_flatset_copy(
             memcpy(destination_value, source_value, value_size);
         }
     }
-    if (cecs_flatset_count(destination) != cecs_flatset_count(source)) {
-        assert(false && "error: cecs_flatset_copy did not copy the expected number of values");
+    if (cecs_flatset_count(destination) != (destination_initial_count + source_count)) {
+        assert(false && "error: cecs_flatset_extend_exclusive did not extend the destination set correctly with the expected number of values");
         exit(EXIT_FAILURE);
     }
 }
+void cecs_flatset_extend(
+    cecs_flatset *destination,
+    const cecs_flatset *source,
+    cecs_allocator *allocator,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride
+) {
+    const size_t destination_initial_count = cecs_flatset_count(destination);
+    const size_t source_count = cecs_flatset_count(source);
+    const size_t destination_remaining_capacity = cecs_flatset_capacity(destination) - destination_initial_count;
+    if (destination_remaining_capacity < source_count) {
+        assert(false && "error: cecs_flatset_extend called with insufficient capacity in destination");
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t i = 0; i < source->bucket_count; ++i) {
+        const cecs_flatbucket *source_bucket = cecs_flatset_get_bucket(source, i, value_size);
+        const size_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
+        for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
+            const uint8_t *const source_value = cecs_flatbucket_get_value_by_index(source_bucket, j, bucket_value_count, value_size);
+            void *const destination_value = cecs_flatset_find_or_insert(
+                destination,
+                allocator,
+                *(const cecs_flatset_hash *)(source_value + hash_offset),
+                value_size,
+                hash_offset,
+                hash_stride
+            );
+            memcpy(destination_value, source_value, value_size);
+        }
+    }
+}
+
 void cecs_flatset_resize(
     cecs_flatset *set,
     cecs_allocator *allocator,
@@ -407,7 +433,7 @@ void cecs_flatset_resize(
         new_bucket_count,
         value_size
     );
-    cecs_flatset_copy(&new_set, set, allocator, value_size, hash_offset, hash_stride);
+    cecs_flatset_extend_exclusive(&new_set, set, value_size, hash_offset, hash_stride);
     cecs_flatset_destroy(set, allocator, value_size);
     *set = new_set;
 }

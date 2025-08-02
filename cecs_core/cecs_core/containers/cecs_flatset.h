@@ -111,7 +111,14 @@ void cecs_flatset_clear(cecs_flatset *set, const size_t value_size);
 void cecs_flatset_destroy(cecs_flatset *set, cecs_allocator *allocator, const size_t value_size);
 
 // Set memory management functions
-void cecs_flatset_copy(
+void cecs_flatset_extend_exclusive(
+    cecs_flatset *destination,
+    const cecs_flatset *source,
+    const size_t value_size,
+    const size_t hash_offset,
+    const size_t hash_stride
+);
+void cecs_flatset_extend(
     cecs_flatset *destination,
     const cecs_flatset *source,
     cecs_allocator *allocator,
