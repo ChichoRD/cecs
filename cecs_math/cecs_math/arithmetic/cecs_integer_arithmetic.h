@@ -355,11 +355,12 @@ inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec) {
     );
 }
 
-inline uint16_t cecs_gather_msn16_u4(const uint64_t vec) {
+inline uint16_t cecs_gather_msnh15_u4(const uint64_t vec) {
     return (uint16_t)((
-            ((vec & 0x8080808080808080ull) * 0x0410410410410410ull)
-            | ((vec & 0x0808080808080808ull) * 0x2082082082082082ull)
-        ) >> (64 - 16)
+              ((vec & 0x8808008000800000ull) * (0x200201048ull >> 3ull))
+            | ((vec & 0x0080080808008000ull) * (0x8041040200ull >> 3ull))
+            | ((vec & 0x0000800080080880ull) * (0x241008008000ull >> 3ull))
+        ) >> (64 - 15)
     );
 }
 inline uint16_t cecs_gather_lsnh15_u4(const uint64_t vec) {
