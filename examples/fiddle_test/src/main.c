@@ -83,6 +83,7 @@ void test_dynarray(cecs_allocator *allocator) {
     cecs_dynarray_clear(&arr);
     printf("After clear: count=%zu, capacity=%zu\n", cecs_dynarray_count(&arr), cecs_dynarray_capacity(&arr));
     
+    cecs_dynarray_destroy(&arr, allocator, sizeof(int));
     printf("=== Dynamic Array tests completed ===\n");
 }
 
@@ -183,6 +184,7 @@ void test_sparse_set(cecs_allocator *allocator) {
     *reinserted = 77777;
     printf("Re-inserted key=%zu with value=%d (count: %u)\n", test_keys[0], *reinserted, cecs_sparse_set_value_count(&set));
 
+    cecs_sparse_set_destroy(&set, allocator, sizeof(int));
     printf("=== Sparse Set tests completed ===\n");
 }
 

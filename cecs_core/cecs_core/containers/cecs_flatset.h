@@ -22,43 +22,40 @@ static_assert(
     "static error: cecs_flatset_hash_low_fast must be able to hold cecs_flatset_hash_low"
 );
 
-typedef struct cecs_flatbucket8 {
-    uint32_t hash_from_position8_b4;
-    uint32_t index_from_position8_b4;
+typedef struct cecs_flatbucket15 {
+    uint64_t hash_from_index15_u4;
     uint8_t values[];
-} cecs_flatbucket8;
+} cecs_flatbucket15;
 
 // Type alias for cleaner API
-typedef cecs_flatbucket8 cecs_flatbucket;
+typedef cecs_flatbucket15 cecs_flatbucket;
 
-#define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3
-#define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
-extern const uint_fast8_t cecs_flatbucket8_max_count;
+#define CECS_FLATBUCKET15_MAX_COUNT 15
+extern const uint_fast8_t cecs_flatbucket15_max_count;
 
 // Bucket capacity and count functions
-uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket);
+inline uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket) {
+    return bucket.hash_from_index15_u4 & 0x0F;
+}
 inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
-    return bucket.index_from_position8_b4 & 0x00008000;
+    return cecs_flatbucket_get_count(bucket) >= CECS_FLATBUCKET15_MAX_COUNT;
 }
 
 // Bucket value access functions
-inline const void *cecs_flatbucket_get_value_by_index(const cecs_flatbucket *bucket, const uint_fast8_t index, const uint_fast8_t bucket_value_count, const size_t value_size) {
-    if (index >= bucket_value_count) {
-        assert(false && "error: cecs_flatbucket_get_value_by_index called with out of bounds index");
+inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    if (index >= cecs_flatbucket_get_count(*bucket)) {
+        assert(false && "error: cecs_flatbucket_get_value called with out of bounds index");
         exit(EXIT_FAILURE);
     }
     return &bucket->values[index * value_size];
 }
-inline void *cecs_flatbucket_get_value_by_index_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const uint_fast8_t bucket_value_count, const size_t value_size) {
-    if (index >= bucket_value_count) {
-        assert(false && "error: cecs_flatbucket_get_value_by_index_mut called with out of bounds index");
+inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    if (index >= cecs_flatbucket_get_count(*bucket)) {
+        assert(false && "error: cecs_flatbucket_get_value_mut called with out of bounds index");
         exit(EXIT_FAILURE);
     }
     return &bucket->values[index * value_size];
 }
-const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size);
-void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t position, const uint_fast8_t bucket_value_count, const size_t value_size);
-
 uint_fast8_t cecs_flatbucket_find_hash_position(
     const cecs_flatbucket *bucket,
     const cecs_flatset_hash hash,
@@ -75,7 +72,7 @@ typedef struct cecs_flatset {
 
 // Set capacity and count functions
 static inline size_t cecs_flatset_capacity(const cecs_flatset *set) {
-    return set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT;
+    return set->bucket_count * CECS_FLATBUCKET15_MAX_COUNT;
 }
 static inline size_t cecs_flatset_count(const cecs_flatset *set) {
     return set->values_count;
@@ -85,7 +82,7 @@ static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
 }
 
 static inline size_t cecs_flatset_bucket_size(const size_t value_size) {
-    return sizeof(cecs_flatbucket) + (value_size * CECS_FLATBUCKET8_MAX_COUNT);
+    return sizeof(cecs_flatbucket) + (value_size * CECS_FLATBUCKET15_MAX_COUNT);
 }
 
 // Set bucket access functions

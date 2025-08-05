@@ -355,6 +355,47 @@ inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec) {
     );
 }
 
+inline uint16_t cecs_gather_msn16_u4(const uint64_t vec) {
+    return (uint16_t)((
+            ((vec & 0x8080808080808080ull) * 0x0410410410410410ull)
+            | ((vec & 0x0808080808080808ull) * 0x2082082082082082ull)
+        ) >> (64 - 16)
+    );
+}
+inline uint16_t cecs_gather_lsnh15_u4(const uint64_t vec) {
+    // ---a---b---c---d---e---f---g---h---i---j---k---l---m---n---o---p
+    // ---a---b-------d-----------g---------------k-------------------0
+    // a---b-------d-----------g---------------k-------------------0
+    // -b-------d-----------g---------------k-------------------0
+    // ---d-----------g---------------k-------------------0
+    // ------g---------------k-------------------0
+    // ----------k-------------------0
+    
+    // ---a---b---c---d---e---f---g---h---i---j---k---l---m---n---o---p
+    // -----------c-----------f-------h-------j-----------m-----------0
+    // --c-----------f-------h-------j-----------m-----------0
+    // -----f-------h-------j-----------m-----------0
+    // -------h-------j-----------m-----------0
+    // -h-------j-----------m-----------0
+    // j-----------m-----------0
+    
+    // ---a---b---c---d---e---f---g---h---i---j---k---l---m---n---o---p
+    // -------------------e---------------i-----------l-------n---o---0
+    // ----e---------------i-----------l-------n---o---0
+    // --------i-----------l-------n---o---0
+    // -----------l-------n---o---0
+    // -----l-------n---o---0
+    // --l-------n---o---0
+    
+    return (uint16_t)((
+              ((vec & 0x1101001000100000ull) * 0x200201048ull)
+            | ((vec & 0x0010010101001000ull) * 0x8041040200ull)
+            | ((vec & 0x0000100010010110ull) * 0x241008008000ull)
+        ) >> (64 - 15)
+    );
+}
+
+
 inline uint64_t cecs_scatter_msb8_u1(const uint8_t vec) {
     return (
         ((vec & 0x55) * 0x0102040810204080ull)
@@ -418,6 +459,12 @@ inline uint8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, const uint8_t n
 static inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t nibble_pattern) {
     const uint8_t marked = cecs_mark_pattern_nibbles8_u4(vec, nibble_pattern);
     return cecs_tzcnt_u8(marked);
+}
+
+inline uint16_t cecs_mark_zero_nibbles16_u4(const uint64_t vec) {
+    const uint64_t raised = (vec & 0x7777777777777777ull) + 0x7777777777777777ull;
+    const uint64_t marked_scatter = ~(raised | vec | 0x7777777777777777ull);
+    return cecs_gather_msn8_u4(marked_scatter);
 }
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef CECS_DYNAMIC_ARRAY_H
-#define CECS_DYNAMIC_ARRAY_H
+#ifndef CECS_DYNARRAY_H
+#define CECS_DYNARRAY_H
 
 #include "cecs_allocator.h"
 #include <stddef.h>
