@@ -100,6 +100,9 @@ extern inline uint8_t cecs_gather_lsb8_u8(const uint64_t vec);
 extern inline uint8_t cecs_gather_msn8_u4(const uint32_t vec);
 extern inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec);
 
+extern inline uint8_t cecs_gather_msnh15_u4(const uint64_t vec);
+extern inline uint8_t cecs_gather_lsnh15_u4(const uint64_t vec);
+
 extern inline uint64_t cecs_scatter_msb8_u1(const uint8_t vec);
 extern inline uint64_t cecs_scatter_lsb8_u1(const uint8_t vec);
 
@@ -115,3 +118,6 @@ extern inline uint8_t cecs_mark_zero_nibbles8_u4(const uint32_t vec);
 // extern inline uint_fast8_t cecs_first_zero_nibble8_u4(const uint32_t vec);
 extern inline uint_fast8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, const uint8_t pattern);
 // extern inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, const uint8_t pattern);
+
+extern inline uint16_t cecs_mark_zero_nibblesh15_u4(const uint64_t vec);
+extern inline uint_fast8_t cecs_first_zero_nibblesh15_u4(const uint64_t vec);

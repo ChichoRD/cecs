@@ -56,7 +56,7 @@ inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_f
     }
     return &bucket->values[index * value_size];
 }
-uint_fast8_t cecs_flatbucket_find_hash_position(
+uint_fast8_t cecs_flatbucket_find_hash_index(
     const cecs_flatbucket *bucket,
     const cecs_flatset_hash hash,
     const cecs_flatset_hash_low_fast hash4,
@@ -180,7 +180,7 @@ bool cecs_flatset_find_bucket(
     const size_t hash_offset,
     const size_t hash_stride,
     const cecs_flatbucket **out_bucket,
-    uint_fast8_t *out_position
+    uint_fast8_t *out_index
 );
 bool cecs_flatset_find_bucket_mut(
     cecs_flatset *set,
@@ -189,7 +189,7 @@ bool cecs_flatset_find_bucket_mut(
     const size_t hash_offset,
     const size_t hash_stride,
     cecs_flatbucket **out_bucket,
-    uint_fast8_t *out_position
+    uint_fast8_t *out_index
 );
 cecs_flatbucket *cecs_flatset_find_insert_bucket_expect(
     cecs_flatset *set,
@@ -204,7 +204,7 @@ cecs_flatbucket *cecs_flatset_find_insert_bucket(
     const size_t value_size,
     const size_t hash_offset,
     const size_t hash_stride,
-    uint_fast8_t *out_position
+    uint_fast8_t *out_index
 );
 
 // Set insertion functions
@@ -242,14 +242,14 @@ void *cecs_flatset_find_or_insert(
 void cecs_flatset_remove_from_bucket_stable_expect(
     cecs_flatset *set,
     cecs_flatbucket *bucket,
-    const uint_fast8_t position,
+    const uint_fast8_t index,
     const size_t value_size
 );
 void cecs_flatset_remove_from_bucket_expect(
     cecs_flatset *set,
     cecs_allocator *allocator,
     cecs_flatbucket *bucket,
-    const uint_fast8_t position,
+    const uint_fast8_t index,
     const size_t value_size,
     const size_t hash_offset,
     const size_t hash_stride

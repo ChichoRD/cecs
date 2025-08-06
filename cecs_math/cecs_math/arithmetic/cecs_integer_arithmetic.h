@@ -462,10 +462,23 @@ static inline uint_fast8_t cecs_first_pattern_nibble8_u4(const uint32_t vec, con
     return cecs_tzcnt_u8(marked);
 }
 
-inline uint16_t cecs_mark_zero_nibbles16_u4(const uint64_t vec) {
-    const uint64_t raised = (vec & 0x7777777777777777ull) + 0x7777777777777777ull;
-    const uint64_t marked_scatter = ~(raised | vec | 0x7777777777777777ull);
-    return cecs_gather_msn8_u4(marked_scatter);
+inline uint16_t cecs_mark_zero_nibblesh15_u4(const uint64_t vec) {
+    const uint64_t raised = (vec & 0x7777777777777770ull) + 0x777777777777777Full;
+    const uint64_t marked_scatter = ~(raised | vec | 0x777777777777777Full);
+    return cecs_gather_msnh15_u4(marked_scatter);
+}
+static inline uint_fast8_t cecs_first_zero_nibblesh15_u4(const uint64_t vec) {
+    const uint16_t marked = cecs_mark_zero_nibblesh15_u4(vec);
+    return cecs_tzcnt_u16(marked);
+}
+inline uint16_t cecs_mark_pattern_nibblesh15_u4(const uint64_t vec, const uint8_t nibble_pattern) {
+    assert(nibble_pattern < 16 && "error: nibble_pattern must be less than 16");
+    const uint64_t pattern_mask = ((uint64_t)nibble_pattern) * 0x1111111111111111ull;
+    return cecs_mark_zero_nibblesh15_u4(vec ^ pattern_mask);
+}
+static inline uint_fast8_t cecs_first_pattern_nibblesh15_u4(const uint64_t vec, const uint8_t nibble_pattern) {
+    const uint16_t marked = cecs_mark_pattern_nibblesh15_u4(vec, nibble_pattern);
+    return cecs_tzcnt_u16(marked);
 }
 
 #endif
