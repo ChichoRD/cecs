@@ -47,8 +47,8 @@ static inline void cecs_flatbucket_set_hash_low(cecs_flatbucket *bucket, const u
         assert(false && "error: cecs_flatbucket_set_hash_low called with out of bounds hash4");
         exit(EXIT_FAILURE);
     }
-    bucket->hash_from_index15_u4 &= ~(0x0F << ((index + 1) << 2));
-    bucket->hash_from_index15_u4 |= (hash4 & 0x0F) << ((index + 1) << 2);
+    bucket->hash_from_index15_u4 &= ~(0x0Full << ((index + 1) << 2));
+    bucket->hash_from_index15_u4 |= (hash4 & 0x0Full) << ((index + 1) << 2);
 }
 
 static inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket *bucket, const size_t value_size) {
@@ -140,7 +140,8 @@ static void cecs_flatbucket_remove_expect(
     const size_t value_size
 ) {
     cecs_flatbucket_swap_last_pop(bucket, index, value_size);
-    const cecs_flatset_hash_low_fast last_hash = cecs_flatbucket_get_hash_low(*bucket, cecs_flatbucket_get_count(*bucket));
+    const uint_fast8_t last_index = cecs_flatbucket_get_count(*bucket);
+    const cecs_flatset_hash_low_fast last_hash = cecs_flatbucket_get_hash_low(*bucket, last_index);
     cecs_flatbucket_set_hash_low(bucket, index, last_hash);
 }
 
@@ -163,7 +164,8 @@ uint_fast8_t cecs_flatbucket_find_hash_index(
     const size_t hash_stride
 ) {
     const uint8_t index_mark = cecs_flatbucket_mark_hash_low_index(*bucket, hash4);
-    for (uint_fast8_t i = 0; i < CECS_FLATBUCKET15_MAX_COUNT; i++) {
+    const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*bucket);
+    for (uint_fast8_t i = 0; i < bucket_value_count; i++) {
         const cecs_flatset_hash *stored_hash = (const cecs_flatset_hash *)(bucket->values + (i * hash_stride) + hash_offset);
         if (
             (index_mark & (1 << i))
@@ -246,7 +248,7 @@ void cecs_flatset_extend_exclusive(
 
     for (size_t i = 0; i < source->bucket_count; ++i) {
         const cecs_flatbucket *source_bucket = cecs_flatset_get_bucket(source, i, value_size);
-        const size_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
+        const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
         for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
             const uint8_t *const source_value = cecs_flatbucket_get_value(source_bucket, j, value_size);
             void *const destination_value = cecs_flatset_insert_within_expect(
@@ -282,7 +284,7 @@ void cecs_flatset_extend(
 
     for (size_t i = 0; i < source->bucket_count; ++i) {
         const cecs_flatbucket *source_bucket = cecs_flatset_get_bucket(source, i, value_size);
-        const size_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
+        const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
         for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
             const uint8_t *const source_value = cecs_flatbucket_get_value(source_bucket, j, value_size);
             void *const destination_value = cecs_flatset_find_or_insert(
