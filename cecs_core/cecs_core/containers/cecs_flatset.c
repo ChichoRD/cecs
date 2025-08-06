@@ -145,7 +145,7 @@ static void cecs_flatbucket_remove_expect(
     cecs_flatbucket_set_hash_low(bucket, index, last_hash);
 }
 
-static uint8_t cecs_flatbucket_mark_hash_low_index(
+static uint16_t cecs_flatbucket_mark_hash_low_index(
     const cecs_flatbucket bucket,
     const cecs_flatset_hash_low_fast hash4
 ) {
@@ -153,8 +153,8 @@ static uint8_t cecs_flatbucket_mark_hash_low_index(
         assert(false && "error: cecs_flatbucket_mark_hash_low_index called with out of bounds hash_low");
         exit(EXIT_FAILURE);
     }
-    const uint8_t index_mark = cecs_mark_pattern_nibblesh15_u4(bucket.hash_from_index15_u4, hash4);
-    return index_mark;
+    const uint16_t index_mark = cecs_mark_pattern_nibblesh15_u4(bucket.hash_from_index15_u4, hash4);
+    return index_mark | 0x8000;
 }
 uint_fast8_t cecs_flatbucket_find_hash_index(
     const cecs_flatbucket *bucket,
@@ -163,8 +163,13 @@ uint_fast8_t cecs_flatbucket_find_hash_index(
     const size_t hash_offset,
     const size_t hash_stride
 ) {
-    const uint8_t index_mark = cecs_flatbucket_mark_hash_low_index(*bucket, hash4);
+    const uint16_t index_mark = cecs_flatbucket_mark_hash_low_index(*bucket, hash4);
+    const uint_fast8_t first_index = cecs_tzcnt_u16(index_mark);
     const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*bucket);
+    if (first_index >= bucket_value_count) {
+        return CECS_FLATBUCKET15_MAX_COUNT;
+    }
+    
     for (uint_fast8_t i = 0; i < bucket_value_count; i++) {
         const cecs_flatset_hash *stored_hash = (const cecs_flatset_hash *)(bucket->values + (i * hash_stride) + hash_offset);
         if (
@@ -445,8 +450,7 @@ bool cecs_flatset_find_bucket(
     do {
         bucket = cecs_flatset_get_bucket(set, next_bucket_index, value_size);
         const uint_fast8_t index = cecs_flatbucket_find_hash_index(bucket, hash, hash4, hash_offset, hash_stride);
-        const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*bucket);
-        if (index < bucket_value_count) {
+        if (index < CECS_FLATBUCKET15_MAX_COUNT) {
             *out_bucket = bucket;
             *out_index = index;
             return true;
