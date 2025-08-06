@@ -15,6 +15,7 @@ void test_dynarray(cecs_allocator *allocator) {
     cecs_dynarray arr = cecs_dynarray_create_with_capacity(allocator, 4, sizeof(int));
     if (cecs_dynarray_count(&arr) != 0 || cecs_dynarray_capacity(&arr) != 4) {
         fprintf(stderr, "ERROR: Initial dynarray state incorrect\n");
+        assert(false && "Initial dynarray state incorrect");
         exit(EXIT_FAILURE);
     }
     printf("Initial count: %zu, capacity: %zu\n", cecs_dynarray_count(&arr), cecs_dynarray_capacity(&arr));
@@ -25,6 +26,7 @@ void test_dynarray(cecs_allocator *allocator) {
         *value = i * 10;
         if (cecs_dynarray_count(&arr) != (size_t)(i + 1)) {
             fprintf(stderr, "ERROR: Count mismatch after push %d\n", i);
+            assert(false && "Count mismatch after push");
             exit(EXIT_FAILURE);
         }
         printf("Pushed %d: count=%zu, capacity=%zu\n", *value, cecs_dynarray_count(&arr), cecs_dynarray_capacity(&arr));
@@ -34,10 +36,12 @@ void test_dynarray(cecs_allocator *allocator) {
     printf("\n--- Test 2: Access operations ---\n");
     if (*(const int*)cecs_dynarray_first(&arr) != 0) {
         fprintf(stderr, "ERROR: First element incorrect\n");
+        assert(false && "First element incorrect");
         exit(EXIT_FAILURE);
     }
     if (*(const int*)cecs_dynarray_last(&arr, sizeof(int)) != 150) {
         fprintf(stderr, "ERROR: Last element incorrect\n");
+        assert(false && "Last element incorrect");
         exit(EXIT_FAILURE);
     }
     printf("First element: %d\n", *(const int*)cecs_dynarray_first(&arr));
@@ -47,6 +51,7 @@ void test_dynarray(cecs_allocator *allocator) {
         const int *value = cecs_dynarray_get(&arr, i, sizeof(int));
         if (*value != (int)(i * 10)) {
             fprintf(stderr, "ERROR: Element at index %zu incorrect: expected %d, got %d\n", i, (int)(i * 10), *value);
+            assert(false && "Element value incorrect");
             exit(EXIT_FAILURE);
         }
         printf("Element at index %zu: %d\n", i, *value);
@@ -116,6 +121,7 @@ void test_sparse_set(cecs_allocator *allocator) {
     cecs_sparse_set set = cecs_sparse_set_create_with_capacity(allocator, 8, sizeof(int));
     if (cecs_sparse_set_value_count(&set) != 0) {
         fprintf(stderr, "ERROR: Initial sparse set count should be 0\n");
+        assert(false && "Initial sparse set count should be 0");
         exit(EXIT_FAILURE);
     }
     printf("Initial capacity: %u, count: %u\n", cecs_sparse_set_value_capacity(&set), cecs_sparse_set_value_count(&set));
@@ -127,6 +133,7 @@ void test_sparse_set(cecs_allocator *allocator) {
         *value = (int)test_keys[i] * 100;
         if (cecs_sparse_set_value_count(&set) != i + 1) {
             fprintf(stderr, "ERROR: Sparse set count mismatch after insertion %zu\n", i);
+            assert(false && "Sparse set count mismatch");
             exit(EXIT_FAILURE);
         }
         printf("Inserted key=%zu, value=%d (count: %u)\n", test_keys[i], *value, cecs_sparse_set_value_count(&set));
@@ -137,11 +144,13 @@ void test_sparse_set(cecs_allocator *allocator) {
     for (size_t i = 0; i < 5; ++i) {
         if (!cecs_sparse_set_contains(&set, test_keys[i])) {
             fprintf(stderr, "ERROR: Expected key %zu to be found\n", test_keys[i]);
+            assert(false && "Expected key to be found");
             exit(EXIT_FAILURE);
         }
         const int *value = cecs_sparse_set_get_value(&set, test_keys[i], sizeof(int));
         if (*value != (int)test_keys[i] * 100) {
             fprintf(stderr, "ERROR: Value mismatch for key %zu\n", test_keys[i]);
+            assert(false && "Value mismatch");
             exit(EXIT_FAILURE);
         }
         printf("Found key=%zu, value=%d\n", test_keys[i], *value);
@@ -235,6 +244,7 @@ void test_flatset(cecs_allocator *allocator) {
     if (cecs_flatset_capacity(&set) != 15 || cecs_flatset_count(&set) != 0 || cecs_flatset_bucket_count(&set) != 1) {
         fprintf(stderr, "ERROR: Initial flatset state incorrect: capacity=%zu, count=%zu, buckets=%zu\n",
                 cecs_flatset_capacity(&set), cecs_flatset_count(&set), cecs_flatset_bucket_count(&set));
+        assert(false && "Initial flatset state incorrect");
         exit(EXIT_FAILURE);
     }
     printf("Initial capacity: %zu, count: %zu, buckets: %zu\n", 
@@ -254,6 +264,7 @@ void test_flatset(cecs_allocator *allocator) {
         }
         if (cecs_flatset_count(&set) != i) {
             fprintf(stderr, "ERROR: Count mismatch after insert %zu: expected %zu, got %zu\n", i, i, cecs_flatset_count(&set));
+            assert(false && "Count mismatch after insert");
             exit(EXIT_FAILURE);
         }
         if (i % 3 == 0) { // Print every 3rd element to reduce output
@@ -276,6 +287,7 @@ void test_flatset(cecs_allocator *allocator) {
     if (cecs_flatset_bucket_count(&set) != 2 || cecs_flatset_capacity(&set) != 30) {
         fprintf(stderr, "ERROR: Expected reallocation to double buckets to 2 (capacity 30), got buckets=%zu, capacity=%zu\n",
                 cecs_flatset_bucket_count(&set), cecs_flatset_capacity(&set));
+        assert(false && "Expected reallocation to double buckets");
         exit(EXIT_FAILURE);
     }
     printf("After inserting element 13: count=%zu, capacity=%zu, buckets=%zu (should have doubled)\n",
@@ -290,6 +302,7 @@ void test_flatset(cecs_allocator *allocator) {
     }
     if (cecs_flatset_count(&set) != 20) {
         fprintf(stderr, "ERROR: Expected count 20 after additional insertions, got %zu\n", cecs_flatset_count(&set));
+        assert(false && "Expected count 20 after additional insertions");
         exit(EXIT_FAILURE);
     }
     printf("After inserting 7 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
@@ -302,11 +315,13 @@ void test_flatset(cecs_allocator *allocator) {
         const void *found_value;
         if (!cecs_flatset_find(&set, i, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
             fprintf(stderr, "ERROR: Expected to find hash %zu\n", i);
+            assert(false && "Expected to find hash");
             exit(EXIT_FAILURE);
         }
         const pair *found_pair = (const pair *)found_value;
         if (found_pair->hash != i || found_pair->value != (int)i * 100) {
             fprintf(stderr, "ERROR: Found incorrect value for hash %zu\n", i);
+            assert(false && "Found incorrect value for hash");
             exit(EXIT_FAILURE);
         }
         printf("Found hash=%zu: value=%d\n", found_pair->hash, found_pair->value);
@@ -318,6 +333,7 @@ void test_flatset(cecs_allocator *allocator) {
         const void *found_value;
         if (cecs_flatset_find(&set, missing_hashes[i], sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
             fprintf(stderr, "ERROR: Unexpectedly found hash %zu\n", missing_hashes[i]);
+            assert(false && "Unexpectedly found hash");
             exit(EXIT_FAILURE);
         }
         printf("Hash=%zu not found (expected)\n", missing_hashes[i]);
@@ -330,6 +346,7 @@ void test_flatset(cecs_allocator *allocator) {
         pair *found = cecs_flatset_find_or_insert(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
         if (found->hash != i || found->value != (int)i * 100) {
             fprintf(stderr, "ERROR: Find or insert returned incorrect existing value for hash %zu\n", i);
+            assert(false && "Find or insert returned incorrect existing value");
             exit(EXIT_FAILURE);
         }
         printf("Find or insert hash=%zu: found value=%d\n", i, found->value);
@@ -343,12 +360,13 @@ void test_flatset(cecs_allocator *allocator) {
         *inserted = new_pairs[i];
         if (cecs_flatset_count(&set) != count_before_new + i + 1) {
             fprintf(stderr, "ERROR: Count mismatch after find_or_insert new value %zu\n", i);
+            assert(false && "Count mismatch after find_or_insert");
             exit(EXIT_FAILURE);
         }
         printf("Find or insert hash=%zu: inserted value=%d (count: %zu)\n", 
                new_pairs[i].hash, new_pairs[i].value, cecs_flatset_count(&set));
     }
-
+    
     // Test 6: Remove elements to trigger downward reallocation
     printf("\n--- Test 6: Remove elements to trigger downward reallocation ---\n");
     printf("Current state before mass removal: count=%zu, capacity=%zu, buckets=%zu\n",
@@ -367,6 +385,17 @@ void test_flatset(cecs_allocator *allocator) {
     // Remove elements systematically
     size_t removed_count = 0;
     for (size_t i = 1; i <= 20 && removed_count < elements_to_remove; ++i) {
+        // // find the value, print it and then do find expect remove
+        // const void *found_value;
+        // if (cecs_flatset_find(&set, i, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
+        //     const pair *found_pair = (const pair *)found_value;
+        //     printf("Found hash=%zu: value=%d (removing)\n", found_pair->hash, found_pair->value);
+        //     cecs_flatset_find_remove_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+        //     removed_count++;
+        // } else {
+        //     printf("Hash %zu not found (skipping removal)\n", i);
+        //     continue; // Skip if not found
+        // }
         if (cecs_flatset_find_remove(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair))) {
             removed_count++;
             if (removed_count % 3 == 0) { // Print every 3rd removal to reduce output
@@ -393,6 +422,7 @@ void test_flatset(cecs_allocator *allocator) {
         const void *found_value;
         if (!cecs_flatset_find(&set, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
             fprintf(stderr, "ERROR: Expected to find remaining new pair hash %zu\n", new_pairs[i].hash);
+            assert(false && "Expected to find remaining new pair hash");
             exit(EXIT_FAILURE);
         }
         const pair *found_pair = (const pair *)found_value;
@@ -404,6 +434,7 @@ void test_flatset(cecs_allocator *allocator) {
     for (size_t i = 0; i < 3; ++i) {
         if (cecs_flatset_find_remove(&set, allocator, missing_hashes[i], sizeof(pair), offsetof(pair, hash), sizeof(pair))) {
             fprintf(stderr, "ERROR: Unexpectedly removed non-existent hash %zu\n", missing_hashes[i]);
+            assert(false && "Unexpectedly removed non-existent hash");
             exit(EXIT_FAILURE);
         }
         printf("Failed to remove hash=%zu (expected)\n", missing_hashes[i]);
@@ -420,6 +451,7 @@ void test_flatset(cecs_allocator *allocator) {
     }
     if (cecs_flatset_count(&set) != count_before_growth + 11) {
         fprintf(stderr, "ERROR: Count mismatch after growth test\n");
+        assert(false && "Count mismatch after growth test");
         exit(EXIT_FAILURE);
     }
     printf("After adding 11 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
@@ -437,9 +469,45 @@ void test_flatset(cecs_allocator *allocator) {
     printf("=== Flatset tests completed ===\n");
 }
 
+uint16_t msnh15_u4_dbg(uint64_t vec) {
+    uint16_t result = 0;
+    result |= (vec & 0x80ull) >> 7;
+    result |= (vec & 0x800ull) >> 10;
+    result |= (vec & 0x8000ull) >> 13;
+    result |= (vec & 0x80000ull) >> 16;
+
+    result |= (vec & 0x800000ull) >> 19;
+    result |= (vec & 0x8000000ull) >> 22;
+    result |= (vec & 0x80000000ull) >> 25;
+    result |= (vec & 0x800000000ull) >> 28;
+
+    result |= (vec & 0x8000000000ull) >> 31;
+    result |= (vec & 0x80000000000ull) >> 34;
+    result |= (vec & 0x800000000000ull) >> 37;
+    result |= (vec & 0x8000000000000ull) >> 40;
+
+    result |= (vec & 0x80000000000000ull) >> 43;
+    result |= (vec & 0x800000000000000ull) >> 46;
+    result |= (vec & 0x8000000000000000ull) >> 49;
+    return result;
+}
+// void test_msn(void) {
+//     for (uint64_t i = 0; i < UINT64_MAX; ++i) {
+//         const uint16_t expected = msnh15_u4_dbg(i);
+//         const uint16_t actual = cecs_gather_msnh15_u4(i);
+//         if (expected != actual) {
+//             fprintf(stderr, "ERROR: msnh15_u4_dbg failed for input 0x%016llX: expected %u, got %u\n", 
+//                     i, expected, actual);
+//             assert(false && "msnh15_u4_dbg failed");
+//             exit(EXIT_FAILURE);
+//         }
+//     }
+// }
+
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_implicit_arena(8192, 8); // Increased size for comprehensive tests
 
+    // test_msn(); // Test the msnh15_u4_dbg function
     test_dynarray(&allocator);
     test_sparse_set(&allocator);
     test_flatset(&allocator);

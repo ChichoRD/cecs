@@ -357,9 +357,9 @@ inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec) {
 
 inline uint16_t cecs_gather_msnh15_u4(const uint64_t vec) {
     return (uint16_t)((
-              ((vec & 0x8808008000800000ull) * (0x200201048ull >> 3ull))
-            | ((vec & 0x0080080808008000ull) * (0x8041040200ull >> 3ull))
-            | ((vec & 0x0000800080080880ull) * (0x241008008000ull >> 3ull))
+              (((vec & 0x8808008000800000ull) * (0x200201048ull >> 3ull))    & 0xD220000000000000ull)
+            | (((vec & 0x0080080808008000ull) * (0x8041040200ull >> 3ull))   & 0x2548000000000000ull)
+            | (((vec & 0x0000800080080880ull) * (0x241008008000ull >> 3ull)) & 0x0896000000000000ull)
         ) >> (64 - 15)
     );
 }
@@ -389,9 +389,9 @@ inline uint16_t cecs_gather_lsnh15_u4(const uint64_t vec) {
     // --l-------n---o---0
     
     return (uint16_t)((
-              ((vec & 0x1101001000100000ull) * 0x200201048ull)
-            | ((vec & 0x0010010101001000ull) * 0x8041040200ull)
-            | ((vec & 0x0000100010010110ull) * 0x241008008000ull)
+              (((vec & 0x1101001000100000ull) * 0x200201048ull)     & 0xD220000000000000ull)
+            | (((vec & 0x0010010101001000ull) * 0x8041040200ull)    & 0x2548000000000000ull)
+            | (((vec & 0x0000100010010110ull) * 0x241008008000ull)  & 0x0896000000000000ull)
         ) >> (64 - 15)
     );
 }

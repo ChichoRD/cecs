@@ -95,7 +95,7 @@ static void *cecs_flatbucket_insert_expect(
     }
     
     const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*bucket);
-    if (index < bucket_value_count) {
+    if (index != bucket_value_count) {
         assert(false && "error: cecs_flatbucket_insert_expect called with already occupied hash_low");
         exit(EXIT_FAILURE);
     } else {
