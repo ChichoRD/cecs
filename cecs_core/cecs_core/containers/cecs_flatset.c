@@ -53,14 +53,14 @@ static inline void cecs_flatbucket_set_hash_low(cecs_flatbucket *bucket, const u
 
 static inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket *bucket, const size_t value_size) {
     return cecs_flatbucket_is_full(*bucket)
-        || *(const bool *)cecs_flatbucket_get_value(bucket, cecs_flatbucket_max_count - 1, value_size);
+        || *(const bool *)&bucket->values[(cecs_flatbucket_max_count - 1) * value_size];
 }
 static inline void cecs_flatbucket_set_been_full(cecs_flatbucket *bucket, const size_t value_size) {
     if (cecs_flatbucket_is_full(*bucket)) {
         assert(false && "error: cecs_flatbucket_set_been_full called on a full bucket. This would overwrite inserted values.");
         exit(EXIT_FAILURE);
     }
-    bool *const been_full = cecs_flatbucket_get_value_mut(bucket, cecs_flatbucket_max_count - 1, value_size);
+    bool *const been_full = (bool *)&bucket->values[(cecs_flatbucket_max_count - 1) * value_size];
     *been_full = true;
 }
 static inline void cecs_flatbucket_unset_been_full(cecs_flatbucket *bucket, const size_t value_size) {
@@ -68,7 +68,7 @@ static inline void cecs_flatbucket_unset_been_full(cecs_flatbucket *bucket, cons
         assert(false && "error: cecs_flatbucket_unset_been_full called on a full bucket. This would overwrite inserted values.");
         exit(EXIT_FAILURE);
     }
-    bool *const been_full = cecs_flatbucket_get_value_mut(bucket, cecs_flatbucket_max_count - 1, value_size);
+    bool *const been_full = (bool *)&bucket->values[(cecs_flatbucket_max_count - 1) * value_size];
     *been_full = false;
 }
 
