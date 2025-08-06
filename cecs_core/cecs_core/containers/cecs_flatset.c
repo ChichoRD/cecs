@@ -248,7 +248,7 @@ void cecs_flatset_extend_exclusive(
         const cecs_flatbucket *source_bucket = cecs_flatset_get_bucket(source, i, value_size);
         const size_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
         for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
-            const uint8_t *const source_value = cecs_flatbucket_get_value_by_index(source_bucket, j, bucket_value_count, value_size);
+            const uint8_t *const source_value = cecs_flatbucket_get_value(source_bucket, j, value_size);
             void *const destination_value = cecs_flatset_insert_within_expect(
                 destination,
                 *(const cecs_flatset_hash *)(source_value + hash_offset),
@@ -284,7 +284,7 @@ void cecs_flatset_extend(
         const cecs_flatbucket *source_bucket = cecs_flatset_get_bucket(source, i, value_size);
         const size_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
         for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
-            const uint8_t *const source_value = cecs_flatbucket_get_value_by_index(source_bucket, j, bucket_value_count, value_size);
+            const uint8_t *const source_value = cecs_flatbucket_get_value(source_bucket, j, value_size);
             void *const destination_value = cecs_flatset_find_or_insert(
                 destination,
                 allocator,
