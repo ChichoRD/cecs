@@ -122,7 +122,7 @@ static inline void cecs_flatbucket_swap_last_pop(cecs_flatbucket *bucket, const 
     }
     default: {
         const uint_fast8_t last_index = bucket_value_count - 1;
-        const void *last_value = cecs_flatbucket_get_value(bucket, index, value_size);
+        const void *last_value = cecs_flatbucket_get_value(bucket, last_index, value_size);
         void *const value = cecs_flatbucket_get_value_mut(bucket, index, value_size);
         memcpy(value, last_value, value_size);
 
