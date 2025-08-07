@@ -22,23 +22,22 @@ static_assert(
     "static error: cecs_flatset_hash_low_fast must be able to hold cecs_flatset_hash_low"
 );
 
-typedef struct cecs_flatbucket15 {
-    uint64_t hash_from_index15_u4;
+typedef struct cecs_flatbucket8 {
+    uint64_t hash_from_index8_u7;
     uint8_t values[];
-} cecs_flatbucket15;
+} cecs_flatbucket8;
 
 // Type alias for cleaner API
-typedef cecs_flatbucket15 cecs_flatbucket;
-
-#define CECS_FLATBUCKET15_MAX_COUNT 15
-extern const uint_fast8_t cecs_flatbucket15_max_count;
+typedef cecs_flatbucket8 cecs_flatbucket;
+#define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3
+#define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
 
 // Bucket capacity and count functions
 inline uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket) {
-    return bucket.hash_from_index15_u4 & 0x0F;
+    return bucket.hash_from_index8_u7 & 0x0F;
 }
 inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
-    return cecs_flatbucket_get_count(bucket) >= CECS_FLATBUCKET15_MAX_COUNT;
+    return bucket.hash_from_index8_u7 & 0x08;
 }
 
 // Bucket value access functions
@@ -72,7 +71,7 @@ typedef struct cecs_flatset {
 
 // Set capacity and count functions
 static inline size_t cecs_flatset_capacity(const cecs_flatset *set) {
-    return set->bucket_count * CECS_FLATBUCKET15_MAX_COUNT;
+    return set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT;
 }
 static inline size_t cecs_flatset_count(const cecs_flatset *set) {
     return set->values_count;
@@ -82,7 +81,7 @@ static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
 }
 
 static inline size_t cecs_flatset_bucket_size(const size_t value_size) {
-    return sizeof(cecs_flatbucket) + (value_size * CECS_FLATBUCKET15_MAX_COUNT);
+    return sizeof(cecs_flatbucket) + (value_size * CECS_FLATBUCKET8_MAX_COUNT);
 }
 
 // Set bucket access functions
@@ -92,6 +91,7 @@ static inline const cecs_flatbucket *cecs_flatset_get_bucket(const cecs_flatset 
         exit(EXIT_FAILURE);
     }
     return (const cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index);
+    static_assert(false, "FIXME: alignment");
 }
 static inline cecs_flatbucket *cecs_flatset_get_bucket_mut(cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
     if (bucket_index >= set->bucket_count) {
