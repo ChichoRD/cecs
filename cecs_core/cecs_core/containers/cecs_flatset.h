@@ -58,7 +58,7 @@ inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_f
 uint_fast8_t cecs_flatbucket_find_hash_index(
     const cecs_flatbucket *bucket,
     const cecs_flatset_hash hash,
-    const cecs_flatset_hash_low_fast hash4,
+    const cecs_flatset_hash_low_fast hash7,
     const size_t hash_offset,
     const size_t hash_stride
 );

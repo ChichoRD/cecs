@@ -240,8 +240,8 @@ void test_flatset(cecs_allocator *allocator) {
     
     // Test 1: Creation and initial insertions
     printf("\n--- Test 1: Creation and initial insertions ---\n");
-    cecs_flatset set = cecs_flatset_create_with_capacity(allocator, 1, sizeof(pair)); // 1 bucket * 15 = 15 capacity
-    if (cecs_flatset_capacity(&set) != 15 || cecs_flatset_count(&set) != 0 || cecs_flatset_bucket_count(&set) != 1) {
+    cecs_flatset set = cecs_flatset_create_with_capacity(allocator, 1, sizeof(pair)); // 1 bucket * 8 = 8 capacity
+    if (cecs_flatset_capacity(&set) != 8 || cecs_flatset_count(&set) != 0 || cecs_flatset_bucket_count(&set) != 1) {
         fprintf(stderr, "ERROR: Initial flatset state incorrect: capacity=%zu, count=%zu, buckets=%zu\n",
                 cecs_flatset_capacity(&set), cecs_flatset_count(&set), cecs_flatset_bucket_count(&set));
         assert(false && "Initial flatset state incorrect");
@@ -250,9 +250,9 @@ void test_flatset(cecs_allocator *allocator) {
     printf("Initial capacity: %zu, count: %zu, buckets: %zu\n", 
            cecs_flatset_capacity(&set), cecs_flatset_count(&set), cecs_flatset_bucket_count(&set));
     
-    // Insert values to test basic functionality (12 elements = 80% load factor, exactly at threshold)
-    printf("Inserting elements up to 80%% load factor threshold...\n");
-    for (size_t i = 1; i <= 12; ++i) {
+    // Insert values to test basic functionality (6 elements = 75% load factor, approaching 80% threshold)
+    printf("Inserting elements approaching 80%% load factor threshold...\n");
+    for (size_t i = 1; i <= 6; ++i) {
         pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
         inserted->hash = i;
         inserted->value = (int)i * 100;
@@ -267,13 +267,13 @@ void test_flatset(cecs_allocator *allocator) {
             assert(false && "Count mismatch after insert");
             exit(EXIT_FAILURE);
         }
-        if (i % 3 == 0) { // Print every 3rd element to reduce output
+        if (i % 2 == 0) { // Print every 2nd element to reduce output
             printf("Inserted hash=%zu, value=%d (count: %zu, capacity: %zu, load: %.1f%%)\n", 
                    i, inserted->value, cecs_flatset_count(&set), cecs_flatset_capacity(&set),
                    (double)cecs_flatset_count(&set) / cecs_flatset_capacity(&set) * 100.0);
         }
     }
-    printf("Reached 80%% load factor: count=%zu, capacity=%zu\n", 
+    printf("Reached 75%% load factor: count=%zu, capacity=%zu\n", 
            cecs_flatset_count(&set), cecs_flatset_capacity(&set));
     
     // Test 2: Trigger upward reallocation (insert one more to exceed 80%)
@@ -281,31 +281,31 @@ void test_flatset(cecs_allocator *allocator) {
     printf("Current state before triggering reallocation: count=%zu, capacity=%zu, buckets=%zu\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set), cecs_flatset_bucket_count(&set));
     
-    pair *trigger_resize = cecs_flatset_insert_expect(&set, allocator, 13, sizeof(pair), offsetof(pair, hash), sizeof(pair));
-    trigger_resize->hash = 13;
-    trigger_resize->value = 1300;
-    if (cecs_flatset_bucket_count(&set) != 2 || cecs_flatset_capacity(&set) != 30) {
-        fprintf(stderr, "ERROR: Expected reallocation to double buckets to 2 (capacity 30), got buckets=%zu, capacity=%zu\n",
+    pair *trigger_resize = cecs_flatset_insert_expect(&set, allocator, 7, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+    trigger_resize->hash = 7;
+    trigger_resize->value = 700;
+    if (cecs_flatset_bucket_count(&set) != 2 || cecs_flatset_capacity(&set) != 16) {
+        fprintf(stderr, "ERROR: Expected reallocation to double buckets to 2 (capacity 16), got buckets=%zu, capacity=%zu\n",
                 cecs_flatset_bucket_count(&set), cecs_flatset_capacity(&set));
         assert(false && "Expected reallocation to double buckets");
         exit(EXIT_FAILURE);
     }
-    printf("After inserting element 13: count=%zu, capacity=%zu, buckets=%zu (should have doubled)\n",
+    printf("After inserting element 7: count=%zu, capacity=%zu, buckets=%zu (should have doubled)\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set), cecs_flatset_bucket_count(&set));
 
     // Test 3: Insert more elements to utilize some of the new space
     printf("\n--- Test 3: Insert additional elements ---\n");
-    for (size_t i = 14; i <= 20; ++i) {
+    for (size_t i = 8; i <= 12; ++i) {
         pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
         inserted->hash = i;
         inserted->value = (int)i * 100;
     }
-    if (cecs_flatset_count(&set) != 20) {
-        fprintf(stderr, "ERROR: Expected count 20 after additional insertions, got %zu\n", cecs_flatset_count(&set));
-        assert(false && "Expected count 20 after additional insertions");
+    if (cecs_flatset_count(&set) != 12) {
+        fprintf(stderr, "ERROR: Expected count 12 after additional insertions, got %zu\n", cecs_flatset_count(&set));
+        assert(false && "Expected count 12 after additional insertions");
         exit(EXIT_FAILURE);
     }
-    printf("After inserting 7 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
+    printf("After inserting 5 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set),
            (double)cecs_flatset_count(&set) / cecs_flatset_capacity(&set) * 100.0);
 
@@ -342,7 +342,7 @@ void test_flatset(cecs_allocator *allocator) {
     // Test 5: Find or insert operations
     printf("\n--- Test 5: Find or insert operations ---\n");
     // Test with existing values
-    for (size_t i = 18; i <= 20; ++i) {
+    for (size_t i = 10; i <= 12; ++i) {
         pair *found = cecs_flatset_find_or_insert(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
         if (found->hash != i || found->value != (int)i * 100) {
             fprintf(stderr, "ERROR: Find or insert returned incorrect existing value for hash %zu\n", i);
@@ -353,9 +353,9 @@ void test_flatset(cecs_allocator *allocator) {
     }
     
     // Test with new values
-    pair new_pairs[] = {{100, 10000}, {200, 20000}, {300, 30000}};
+    pair new_pairs[] = {{100, 10000}, {200, 20000}};
     size_t count_before_new = cecs_flatset_count(&set);
-    for (size_t i = 0; i < 3; ++i) {
+    for (size_t i = 0; i < 2; ++i) {
         pair *inserted = cecs_flatset_find_or_insert(&set, allocator, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash), sizeof(pair));
         *inserted = new_pairs[i];
         if (cecs_flatset_count(&set) != count_before_new + i + 1) {
@@ -366,13 +366,13 @@ void test_flatset(cecs_allocator *allocator) {
         printf("Find or insert hash=%zu: inserted value=%d (count: %zu)\n", 
                new_pairs[i].hash, new_pairs[i].value, cecs_flatset_count(&set));
     }
-    
+
     // Test 6: Remove elements to trigger downward reallocation
     printf("\n--- Test 6: Remove elements to trigger downward reallocation ---\n");
     printf("Current state before mass removal: count=%zu, capacity=%zu, buckets=%zu\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set), cecs_flatset_bucket_count(&set));
     
-    // Calculate 20% threshold for current capacity
+    // Calculate 20% threshold for current capacity (16 * 0.2 = 3.2, so 3)
     size_t capacity = cecs_flatset_capacity(&set);
     size_t threshold_20_percent = capacity / 5; // 20% of capacity
     size_t current_count = cecs_flatset_count(&set);
@@ -384,10 +384,10 @@ void test_flatset(cecs_allocator *allocator) {
     
     // Remove elements systematically
     size_t removed_count = 0;
-    for (size_t i = 1; i <= 20 && removed_count < elements_to_remove; ++i) {
+    for (size_t i = 1; i <= 12 && removed_count < elements_to_remove; ++i) {
         if (cecs_flatset_find_remove(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair))) {
             removed_count++;
-            if (removed_count % 3 == 0) { // Print every 3rd removal to reduce output
+            if (removed_count % 2 == 0) { // Print every 2nd removal to reduce output
                 printf("Removed hash=%zu (count: %zu, capacity: %zu, load: %.1f%%)\n", 
                        i, cecs_flatset_count(&set), cecs_flatset_capacity(&set),
                        (double)cecs_flatset_count(&set) / cecs_flatset_capacity(&set) * 100.0);
@@ -395,19 +395,15 @@ void test_flatset(cecs_allocator *allocator) {
         }
     }
     
-    if (cecs_flatset_bucket_count(&set) >= 2 && cecs_flatset_count(&set) <= threshold_20_percent) {
-        // Should have shrunk if we went below 20%
-        // Note: Actual shrinking behavior depends on implementation
-    }
     printf("After mass removal: count=%zu, capacity=%zu, buckets=%zu\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set), cecs_flatset_bucket_count(&set));
 
     // Test 7: Verify remaining elements
     printf("\n--- Test 7: Verify remaining elements ---\n");
-    printf("Checking some remaining elements...\n");
+    printf("Checking remaining new pairs...\n");
     
     // Check the new pairs we added (should still be there)
-    for (size_t i = 0; i < 3; ++i) {
+    for (size_t i = 0; i < 2; ++i) {
         const void *found_value;
         if (!cecs_flatset_find(&set, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
             fprintf(stderr, "ERROR: Expected to find remaining new pair hash %zu\n", new_pairs[i].hash);
@@ -433,17 +429,17 @@ void test_flatset(cecs_allocator *allocator) {
     printf("\n--- Test 9: Test growing again ---\n");
     printf("Adding more elements to test growth...\n");
     size_t count_before_growth = cecs_flatset_count(&set);
-    for (size_t i = 500; i <= 510; ++i) {
+    for (size_t i = 500; i <= 506; ++i) {
         pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
         inserted->hash = i;
         inserted->value = (int)i * 100;
     }
-    if (cecs_flatset_count(&set) != count_before_growth + 11) {
+    if (cecs_flatset_count(&set) != count_before_growth + 7) {
         fprintf(stderr, "ERROR: Count mismatch after growth test\n");
         assert(false && "Count mismatch after growth test");
         exit(EXIT_FAILURE);
     }
-    printf("After adding 11 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
+    printf("After adding 7 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set),
            (double)cecs_flatset_count(&set) / cecs_flatset_capacity(&set) * 100.0);
 

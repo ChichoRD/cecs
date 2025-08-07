@@ -28,7 +28,7 @@ static inline cecs_flatset_hash_low_fast cecs_flatbucket_get_hash_low(const cecs
         assert(false && "error: cecs_flatbucket_get_hash_low called with out of bounds index");
         exit(EXIT_FAILURE);
     }
-    return (bucket.hash_from_index8_u7 >> (index * 7 + 8)) & 0x7F;
+    return (bucket.hash_from_index8_u7 >> (index * 7 + 8)) & 0x7Full;
 }
 static inline void cecs_flatbucket_set_hash_low(cecs_flatbucket *bucket, const uint_fast8_t index, const cecs_flatset_hash_low_fast hash7) {
     if (index >= cecs_flatbucket_max_count) {
@@ -39,18 +39,19 @@ static inline void cecs_flatbucket_set_hash_low(cecs_flatbucket *bucket, const u
         assert(false && "error: cecs_flatbucket_set_hash_low called with out of bounds hash7");
         exit(EXIT_FAILURE);
     }
-    bucket->hash_from_index8_u7 &= ~(0x7F << (index * 7 + 8));
-    bucket->hash_from_index8_u7 |= (hash7 & 0x7F) << (index * 7 + 8);
+    // FIXME here we overwrite other values for some reason (seen with index 4 and hash 5)!
+    bucket->hash_from_index8_u7 &= ~(0x7Full << (index * 7 + 8));
+    bucket->hash_from_index8_u7 |= (hash7 & 0x7Full) << (index * 7 + 8);
 }
 
 static inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket bucket) {
-    return bucket.hash_from_index8_u7 & 0x80;
+    return bucket.hash_from_index8_u7 & 0x80ull;
 }
 static inline void cecs_flatbucket_set_been_full(cecs_flatbucket *bucket) {
-    bucket->hash_from_index8_u7 |= 0x80;
+    bucket->hash_from_index8_u7 |= 0x80ull;
 }
 static inline void cecs_flatbucket_unset_been_full(cecs_flatbucket *bucket) {
-    bucket->hash_from_index8_u7 &= ~0x80;
+    bucket->hash_from_index8_u7 &= ~0x80ull;
 }
 static inline void cecs_flatbucket_set_been_full_if_full(cecs_flatbucket *bucket) {
     bucket->hash_from_index8_u7 |= cecs_flatbucket_get_count(*bucket) << 4;
