@@ -47,16 +47,16 @@ static inline void cecs_flatbucket_set_hash_low(cecs_flatbucket *bucket, const u
 static inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket bucket) {
     return bucket.hash_from_index8_u7 & 0x80ull;
 }
-static inline void cecs_flatbucket_set_been_full(cecs_flatbucket *bucket) {
+inline void cecs_flatbucket_set_been_full(cecs_flatbucket *bucket) {
     bucket->hash_from_index8_u7 |= 0x80ull;
 }
-static inline void cecs_flatbucket_unset_been_full(cecs_flatbucket *bucket) {
+inline void cecs_flatbucket_unset_been_full(cecs_flatbucket *bucket) {
     bucket->hash_from_index8_u7 &= ~0x80ull;
 }
 static inline void cecs_flatbucket_set_been_full_if_full(cecs_flatbucket *bucket) {
     bucket->hash_from_index8_u7 |= cecs_flatbucket_get_count(*bucket) << 4;
 }
-static inline void cecs_flatbucket_unset_been_full_if_not_full(cecs_flatbucket *bucket) {
+inline void cecs_flatbucket_unset_been_full_if_not_full(cecs_flatbucket *bucket) {
     bucket->hash_from_index8_u7 &= cecs_flatbucket_get_count(*bucket) << 4;
 }
 

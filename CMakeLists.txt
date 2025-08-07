@@ -33,10 +33,10 @@ project(cecs_math C)
             -Wextra
             -Wpedantic
 
-            -Wno-gnu-zero-variadic-macro-arguments
-            -Wno-newline-eof
-            -Wno-unused-function
-            -Wno-extra-semi
+            # -Wno-gnu-zero-variadic-macro-arguments
+            # -Wno-newline-eof
+            # -Wno-unused-function
+            # -Wno-extra-semi
             # -Wno-static-in-inline
             -Werror
 
