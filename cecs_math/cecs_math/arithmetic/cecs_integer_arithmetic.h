@@ -488,4 +488,23 @@ static inline uint_fast8_t cecs_first_pattern_nibblesh15_u4(const uint64_t vec, 
     return cecs_tzcnt_u16(marked);
 }
 
+inline uint8_t cecs_mark_zero_byteshp8_u7(const uint64_t vec) {
+    const uint64_t raised = (vec & 0x7EFDFBF7EFDFBF00ull) + 0x7EFDFBF7EFDFBFFFull;
+    const uint64_t marked_scatter = ~(raised | vec | 0x7EFDFBF7EFDFBFFFull);
+    return cecs_gather_msbhp8_u7(marked_scatter);
+}
+static inline uint_fast8_t cecs_first_zero_byteshp8_u7(const uint64_t vec) {
+    const uint8_t marked = cecs_mark_zero_byteshp8_u7(vec);
+    return cecs_tzcnt_u8(marked);
+}
+inline uint8_t cecs_mark_pattern_byteshp8_u7(const uint64_t vec, const uint8_t pattern) {
+    assert(pattern < 128 && "error: pattern must be less than 128");
+    const uint64_t pattern_mask = ((uint64_t)pattern) * 0x0204081020408100ull;
+    return cecs_mark_zero_byteshp8_u7(vec ^ pattern_mask);
+}
+static inline uint_fast8_t cecs_first_pattern_byteshp8_u7(const uint64_t vec, const uint8_t pattern) {
+    const uint8_t marked = cecs_mark_pattern_byteshp8_u7(vec, pattern);
+    return cecs_tzcnt_u8(marked);
+}
+
 #endif
