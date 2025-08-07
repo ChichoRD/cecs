@@ -175,6 +175,13 @@ static void cecs_flatbucket_reset(cecs_flatbucket *bucket, const size_t value_si
     }
 }
 
+static inline cecs_flatbucket *cecs_flatbucket_start_from_allocation(uint8_t *const bucket_allocation, const size_t value_size) {
+    return (cecs_flatbucket *)(bucket_allocation + (cecs_max(sizeof(cecs_flatbucket), value_size) - sizeof(cecs_flatbucket)));
+}
+static inline uint8_t *cecs_flatbucket_allocation_start_from_bucket(cecs_flatbucket *const bucket, const size_t value_size) {
+    return (uint8_t *)bucket - (cecs_max(sizeof(cecs_flatbucket), value_size) - sizeof(cecs_flatbucket));
+}
+
 cecs_flatset cecs_flatset_create(void) {
     cecs_flatset set = {
         .buckets = NULL,
@@ -189,12 +196,13 @@ cecs_flatset cecs_flatset_create_with_capacity(cecs_allocator *allocator, const 
         exit(EXIT_FAILURE);
     }
 
-    cecs_flatbucket *const buckets = cecs_allocator_alloc(
+    uint8_t *const bucket_allocation = (uint8_t *)cecs_allocator_alloc_aligned(
         allocator,
-        bucket_count * cecs_flatset_bucket_size(value_size)
+        bucket_count * cecs_flatset_bucket_size(value_size),
+        16
     );
     cecs_flatset set = {
-        .buckets = buckets,
+        .buckets = cecs_flatbucket_start_from_allocation(bucket_allocation, value_size),
         .bucket_count = bucket_count,
         .values_count = 0
     };
@@ -214,7 +222,8 @@ void cecs_flatset_clear(cecs_flatset *set, const size_t value_size) {
 }
 void cecs_flatset_destroy(cecs_flatset *set, cecs_allocator *allocator, const size_t value_size) {
     if (set->buckets) {
-        cecs_allocator_free(allocator, set->buckets, set->bucket_count * cecs_flatset_bucket_size(value_size));
+        uint8_t *const allocation = cecs_flatbucket_allocation_start_from_bucket(set->buckets, value_size);
+        cecs_allocator_free(allocator, allocation, set->bucket_count * cecs_flatset_bucket_size(value_size));
         set->buckets = NULL;
     }
     set->bucket_count = 0;

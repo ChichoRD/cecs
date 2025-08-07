@@ -2,6 +2,7 @@
 #define CECS_FLATSET_H
 
 #include "cecs_allocator.h"
+#include <cecs_math/relations/cecs_ordering.h>
 #include <stdint.h>
 #include <assert.h>
 
@@ -81,7 +82,7 @@ static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
 }
 
 static inline size_t cecs_flatset_bucket_size(const size_t value_size) {
-    return sizeof(cecs_flatbucket) + (value_size * CECS_FLATBUCKET8_MAX_COUNT);
+    return cecs_max(sizeof(cecs_flatbucket), value_size) + (value_size * CECS_FLATBUCKET8_MAX_COUNT);
 }
 
 // Set bucket access functions
@@ -91,7 +92,7 @@ static inline const cecs_flatbucket *cecs_flatset_get_bucket(const cecs_flatset 
         exit(EXIT_FAILURE);
     }
     return (const cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index);
-    static_assert(false, "FIXME: alignment");
+    // static_assert(false, "FIXME: alignment");
 }
 static inline cecs_flatbucket *cecs_flatset_get_bucket_mut(cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
     if (bucket_index >= set->bucket_count) {

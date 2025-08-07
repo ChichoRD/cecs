@@ -3,18 +3,17 @@
 
 #include <stdint.h>
 
-inline uint32_t cecs_max_u32(const uint32_t a, const uint32_t b) {
+static inline uint32_t cecs_max_u32(const uint32_t a, const uint32_t b) {
     return a > b ? a : b;
 }
-inline uint32_t cecs_min_u32(const uint32_t a, const uint32_t b) {
+static inline uint32_t cecs_min_u32(const uint32_t a, const uint32_t b) {
     return a < b ? a : b;
 }
 
-
-inline size_t cecs_max(const size_t a, const size_t b) {
+static inline size_t cecs_max(const size_t a, const size_t b) {
     return a > b ? a : b;
 }
-inline size_t cecs_min(const size_t a, const size_t b) {
+static inline size_t cecs_min(const size_t a, const size_t b) {
     return a < b ? a : b;
 }
 
