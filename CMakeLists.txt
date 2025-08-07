@@ -41,6 +41,8 @@ project(cecs_math C)
             -Werror
 
             -mlzcnt
+            -mavx
+            -mavx2
         )
     endif()
 

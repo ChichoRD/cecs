@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <immintrin.h>  // For SIMD intrinsics
+#include <float.h>
+#include <math.h>
+
 
 void test_dynarray(cecs_allocator *allocator) {
     printf("=== Testing Dynamic Array ===\n");
@@ -454,6 +458,369 @@ void test_flatset(cecs_allocator *allocator) {
     printf("=== Flatset tests completed ===\n");
 }
 
+void test_flatset_simd(cecs_allocator *allocator) {
+    printf("\n=== Testing Flatset SIMD Operations ===\n");
+    
+    typedef struct test_value {
+        size_t hash;
+        int data;
+        float weight;
+        uint32_t flags;
+    } test_value;
+    
+    // Test 1: Setup flatset with multiple buckets for SIMD testing
+    printf("\n--- Test 1: Setup flatset with test data ---\n");
+    cecs_flatset set = cecs_flatset_create_with_capacity(allocator, 4, sizeof(test_value)); // 4 buckets * 8 = 32 capacity
+    printf("Initial capacity: %zu, count: %zu, buckets: %zu\n", 
+           cecs_flatset_capacity(&set), cecs_flatset_count(&set), cecs_flatset_bucket_count(&set));
+    
+    // Insert test data across multiple buckets
+    for (size_t i = 1; i <= 20; ++i) {
+        test_value *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(test_value), offsetof(test_value, hash), sizeof(test_value));
+        inserted->hash = i;
+        inserted->data = (int)(i * 10);
+        inserted->weight = (float)(i * 0.5f);
+        inserted->flags = (uint32_t)(i % 8); // 0-7 pattern
+        
+        if (i % 5 == 0) {
+            printf("Inserted hash=%zu, data=%d, weight=%.1f, flags=%u\n", 
+                   inserted->hash, inserted->data, inserted->weight, inserted->flags);
+        }
+    }
+    printf("Setup complete: count=%zu, capacity=%zu, buckets=%zu\n",
+           cecs_flatset_count(&set), cecs_flatset_capacity(&set), cecs_flatset_bucket_count(&set));
+    
+    // Test 2: Full SIMD traversal using unchecked access - process all 8 elements per bucket
+    printf("\n--- Test 2: Full SIMD traversal using unchecked access ---\n");
+    int total_data_sum_simd = 0;
+    float total_weight_sum_simd = 0.0f;
+    uint32_t total_flags_or_simd = 0;
+    
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        
+        // SIMD-style processing: always process all 8 elements using unchecked access
+        int bucket_data_sum = 0;
+        float bucket_weight_sum = 0.0f;
+        uint32_t bucket_flags_or = 0;
+        
+        for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_MAX_COUNT; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            // Process all 8 elements - memory is always valid and initialized
+            bucket_data_sum += value->data;
+            bucket_weight_sum += value->weight;
+            bucket_flags_or |= value->flags;
+        }
+        
+        total_data_sum_simd += bucket_data_sum;
+        total_weight_sum_simd += bucket_weight_sum;
+        total_flags_or_simd |= bucket_flags_or;
+        
+        printf("Bucket %zu SIMD (unchecked): data_sum=%d, weight_sum=%.1f, flags_or=%u (processed all 8 elements)\n",
+               bucket_idx, bucket_data_sum, bucket_weight_sum, bucket_flags_or);
+    }
+    
+    printf("Total SIMD results: data_sum=%d, weight_sum=%.1f, flags_or=%u\n",
+           total_data_sum_simd, total_weight_sum_simd, total_flags_or_simd);
+    
+    // Test 3: Selective traversal using checked access - only process actual contained elements
+    printf("\n--- Test 3: Selective traversal using checked access ---\n");
+    int total_data_sum_selective = 0;
+    float total_weight_sum_selective = 0.0f;
+    uint32_t total_flags_or_selective = 0;
+    
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        
+        int bucket_data_sum = 0;
+        float bucket_weight_sum = 0.0f;
+        uint32_t bucket_flags_or = 0;
+        
+        // Only process contained elements using checked access
+        for (uint_fast8_t i = 0; i < bucket_count; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value(bucket, i, sizeof(test_value));
+            bucket_data_sum += value->data;
+            bucket_weight_sum += value->weight;
+            bucket_flags_or |= value->flags;
+        }
+        
+        total_data_sum_selective += bucket_data_sum;
+        total_weight_sum_selective += bucket_weight_sum;
+        total_flags_or_selective |= bucket_flags_or;
+        
+        printf("Bucket %zu selective (checked): data_sum=%d, weight_sum=%.1f, flags_or=%u (processed %u elements)\n",
+               bucket_idx, bucket_data_sum, bucket_weight_sum, bucket_flags_or, bucket_count);
+    }
+    
+    printf("Total selective results: data_sum=%d, weight_sum=%.1f, flags_or=%u\n",
+           total_data_sum_selective, total_weight_sum_selective, total_flags_or_selective);
+    
+    // Test 4: SIMD intrinsics test for integer data
+    printf("\n--- Test 4: SIMD intrinsics for integer operations ---\n");
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        
+        // Load 8 integer values using unchecked access
+        int data_array[8];
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            data_array[i] = value->data;
+        }
+        
+        // Use AVX2 to process 8 integers at once
+        __m256i data_vec = _mm256_loadu_si256((const __m256i*)data_array);
+        
+        // Horizontal sum using SIMD
+        __m256i sum_low = _mm256_unpacklo_epi32(data_vec, _mm256_setzero_si256());
+        __m256i sum_high = _mm256_unpackhi_epi32(data_vec, _mm256_setzero_si256());
+        __m256i sum_64 = _mm256_add_epi64(sum_low, sum_high);
+        
+        // Extract and sum the 4 64-bit values
+        int64_t sum_parts[4];
+        _mm256_storeu_si256((__m256i*)sum_parts, sum_64);
+        int simd_sum = (int)(sum_parts[0] + sum_parts[1] + sum_parts[2] + sum_parts[3]);
+        
+        // Compare with scalar sum
+        int scalar_sum = 0;
+        for (int i = 0; i < 8; ++i) {
+            scalar_sum += data_array[i];
+        }
+        
+        if (simd_sum != scalar_sum) {
+            fprintf(stderr, "ERROR: SIMD sum (%d) != scalar sum (%d) for bucket %zu\n", 
+                    simd_sum, scalar_sum, bucket_idx);
+            assert(false && "SIMD sum mismatch");
+            exit(EXIT_FAILURE);
+        }
+        
+        printf("Bucket %zu SIMD intrinsics: sum=%d (verified)\n", bucket_idx, simd_sum);
+    }
+    
+    // Test 5: SIMD intrinsics test for float data
+    printf("\n--- Test 5: SIMD intrinsics for float operations ---\n");
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        
+        // Load 8 float values using unchecked access
+        float weight_array[8];
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            weight_array[i] = value->weight;
+        }
+        
+        // Use AVX to process 8 floats at once
+        __m256 weight_vec = _mm256_loadu_ps(weight_array);
+        
+        // Horizontal sum using SIMD
+        __m128 sum_low = _mm256_castps256_ps128(weight_vec);
+        __m128 sum_high = _mm256_extractf128_ps(weight_vec, 1);
+        __m128 sum = _mm_add_ps(sum_low, sum_high);
+        
+        // Further reduce to single value
+        sum = _mm_hadd_ps(sum, sum);
+        sum = _mm_hadd_ps(sum, sum);
+        float simd_sum = _mm_cvtss_f32(sum);
+        
+        // Compare with scalar sum
+        float scalar_sum = 0.0f;
+        for (int i = 0; i < 8; ++i) {
+            scalar_sum += weight_array[i];
+        }
+        
+        if (fabsf(simd_sum - scalar_sum) > 0.001f) {
+            fprintf(stderr, "ERROR: SIMD float sum (%.3f) != scalar sum (%.3f) for bucket %zu\n", 
+                    simd_sum, scalar_sum, bucket_idx);
+            assert(false && "SIMD float sum mismatch");
+            exit(EXIT_FAILURE);
+        }
+        
+        printf("Bucket %zu SIMD float intrinsics: sum=%.3f (verified)\n", bucket_idx, simd_sum);
+    }
+    
+    // Test 6: Emulated SIMD operations using masks
+    printf("\n--- Test 6: Emulated SIMD operations with validity masks ---\n");
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        
+        // Create validity mask for contained elements
+        uint8_t valid_mask = (1 << bucket_count) - 1;
+        
+        // Load all 8 values using unchecked access
+        int data_values[8];
+        uint32_t flag_values[8];
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            data_values[i] = value->data;
+            flag_values[i] = value->flags;
+        }
+        
+        // Emulated SIMD: conditional operations based on mask
+        int masked_sum = 0;
+        uint32_t masked_or = 0;
+        int min_value = INT_MAX;
+        int max_value = INT_MIN;
+        
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            if (valid_mask & (1 << i)) {
+                masked_sum += data_values[i];
+                masked_or |= flag_values[i];
+                if (data_values[i] < min_value) min_value = data_values[i];
+                if (data_values[i] > max_value) max_value = data_values[i];
+            }
+        }
+        
+        // Verify against checked iteration
+        int checked_sum = 0;
+        uint32_t checked_or = 0;
+        int checked_min = INT_MAX;
+        int checked_max = INT_MIN;
+        
+        for (uint_fast8_t i = 0; i < bucket_count; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value(bucket, i, sizeof(test_value));
+            checked_sum += value->data;
+            checked_or |= value->flags;
+            if (value->data < checked_min) checked_min = value->data;
+            if (value->data > checked_max) checked_max = value->data;
+        }
+        
+        if (masked_sum != checked_sum || masked_or != checked_or || 
+            min_value != checked_min || max_value != checked_max) {
+            fprintf(stderr, "ERROR: Emulated SIMD results don't match checked results for bucket %zu\n", bucket_idx);
+            assert(false && "Emulated SIMD mismatch");
+            exit(EXIT_FAILURE);
+        }
+        
+        printf("Bucket %zu emulated SIMD: sum=%d, or=%u, min=%d, max=%d (mask=0x%02X, verified)\n",
+               bucket_idx, masked_sum, masked_or, min_value, max_value, valid_mask);
+    }
+    
+    // Test 7: Vectorized search using SIMD intrinsics
+    printf("\n--- Test 7: Vectorized search using SIMD intrinsics ---\n");
+    const int search_threshold = 100;
+    size_t total_matches_simd = 0;
+    
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        
+        // Load 8 data values using unchecked access
+        int data_array[8];
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            data_array[i] = value->data;
+        }
+        
+        // Use SIMD to compare all 8 values at once
+        __m256i data_vec = _mm256_loadu_si256((const __m256i*)data_array);
+        __m256i threshold_vec = _mm256_set1_epi32(search_threshold);
+        __m256i cmp_result = _mm256_cmpgt_epi32(data_vec, threshold_vec);
+        
+        // Extract comparison mask
+        int mask = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_result));
+        
+        // Apply validity mask for only contained elements
+        uint8_t valid_mask = (1 << bucket_count) - 1;
+        int valid_matches = mask & valid_mask;
+        
+        // Count matches
+        size_t bucket_matches = 0;
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            if (valid_matches & (1 << i)) {
+                bucket_matches++;
+            }
+        }
+        
+        total_matches_simd += bucket_matches;
+        
+        if (bucket_matches > 0) {
+            printf("Bucket %zu SIMD search: %zu matches > %d (mask=0x%02X, valid=0x%02X)\n",
+                   bucket_idx, bucket_matches, search_threshold, mask, valid_mask);
+        }
+    }
+    
+    // Verify against scalar search
+    size_t total_matches_scalar = 0;
+    for (size_t i = 1; i <= 20; ++i) {
+        const void *found_value;
+        if (cecs_flatset_find(&set, i, sizeof(test_value), offsetof(test_value, hash), sizeof(test_value), &found_value)) {
+            const test_value *value = (const test_value *)found_value;
+            if (value->data > search_threshold) {
+                total_matches_scalar++;
+            }
+        }
+    }
+    
+    if (total_matches_simd != total_matches_scalar) {
+        fprintf(stderr, "ERROR: SIMD search found %zu matches, scalar found %zu\n", 
+                total_matches_simd, total_matches_scalar);
+        assert(false && "SIMD search result mismatch");
+        exit(EXIT_FAILURE);
+    }
+    
+    printf("✓ SIMD search verification passed: %zu matches found\n", total_matches_simd);
+    
+    // Test 8: Bucket-wise SIMD aggregations with intrinsics
+    printf("\n--- Test 8: Bucket-wise SIMD aggregations with intrinsics ---\n");
+    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        
+        if (bucket_count == 0) continue;
+        
+        // Load all 8 values using unchecked access
+        int data_array[8];
+        for (uint_fast8_t i = 0; i < 8; ++i) {
+            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            data_array[i] = value->data;
+        }
+        
+        // Use SIMD for min/max operations
+        __m256i data_vec = _mm256_loadu_si256((const __m256i*)data_array);
+        
+        // Find min and max using SIMD (AVX2)
+        __m256i perm_mask = _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5, 4);
+        __m256i data_swapped = _mm256_permutevar8x32_epi32(data_vec, perm_mask);
+        
+        __m256i min_vec = _mm256_min_epi32(data_vec, data_swapped);
+        __m256i max_vec = _mm256_max_epi32(data_vec, data_swapped);
+        
+        // Continue reduction
+        __m128i min_low = _mm256_castsi256_si128(min_vec);
+        __m128i min_high = _mm256_extracti128_si256(min_vec, 1);
+        __m128i max_low = _mm256_castsi256_si128(max_vec);
+        __m128i max_high = _mm256_extracti128_si256(max_vec, 1);
+        
+        min_low = _mm_min_epi32(min_low, min_high);
+        max_low = _mm_max_epi32(max_low, max_high);
+        
+        // Final reduction
+        min_low = _mm_min_epi32(min_low, _mm_srli_si128(min_low, 8));
+        max_low = _mm_max_epi32(max_low, _mm_srli_si128(max_low, 8));
+        min_low = _mm_min_epi32(min_low, _mm_srli_si128(min_low, 4));
+        max_low = _mm_max_epi32(max_low, _mm_srli_si128(max_low, 4));
+        
+        int simd_min = _mm_extract_epi32(min_low, 0);
+        int simd_max = _mm_extract_epi32(max_low, 0);
+        
+        // Apply validity mask and recalculate for valid elements only
+        int valid_min = INT_MAX, valid_max = INT_MIN;
+        for (uint_fast8_t i = 0; i < bucket_count; ++i) {
+            if (data_array[i] < valid_min) valid_min = data_array[i];
+            if (data_array[i] > valid_max) valid_max = data_array[i];
+        }
+        
+        printf("Bucket %zu SIMD aggregation:\n", bucket_idx);
+        printf("  All 8 elements: min=%d, max=%d\n", simd_min, simd_max);
+        printf("  Valid %u elements: min=%d, max=%d\n", bucket_count, valid_min, valid_max);
+    }
+    
+    // Clean up
+    cecs_flatset_destroy(&set, allocator, sizeof(test_value));
+    printf("=== Flatset SIMD tests completed ===\n");
+}
+
 uint16_t msnh15_u4_dbg(uint64_t vec) {
     uint16_t result = 0;
     result |= (vec & 0x80ull) >> 7;
@@ -496,6 +863,7 @@ int main(void) {
     test_dynarray(&allocator);
     test_sparse_set(&allocator);
     test_flatset(&allocator);
+    test_flatset_simd(&allocator);
 
     printf("\n=== All tests completed successfully ===\n");
 

@@ -42,6 +42,20 @@ inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
 }
 
 // Bucket value access functions
+inline const void *cecs_flatbucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    if (index >= CECS_FLATBUCKET8_MAX_COUNT) {
+        assert(false && "error: cecs_flatbucket_get_value_unchecked called with out of bounds index");
+        exit(EXIT_FAILURE);
+    }
+    return &bucket->values[index * value_size];
+}
+inline void *cecs_flatbucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    if (index >= CECS_FLATBUCKET8_MAX_COUNT) {
+        assert(false && "error: cecs_flatbucket_get_value_mut_unchecked called with out of bounds index");
+        exit(EXIT_FAILURE);
+    }
+    return &bucket->values[index * value_size];
+}
 inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
     if (index >= cecs_flatbucket_get_count(*bucket)) {
         assert(false && "error: cecs_flatbucket_get_value called with out of bounds index");

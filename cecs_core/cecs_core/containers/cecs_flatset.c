@@ -17,6 +17,8 @@ static inline cecs_flatset_hash_low_fast cecs_flatset_hash_low_get(const cecs_fl
     return (cecs_flatset_hash_low_fast)(hash & CECS_FLATBUCKET8_HASH7_MASK);
 }
 
+extern inline const void *cecs_flatbucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
+extern inline void *cecs_flatbucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
 extern inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
 extern inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
 
