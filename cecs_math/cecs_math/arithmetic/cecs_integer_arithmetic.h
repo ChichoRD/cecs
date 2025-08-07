@@ -396,6 +396,13 @@ inline uint16_t cecs_gather_lsnh15_u4(const uint64_t vec) {
     );
 }
 
+inline uint8_t cecs_gather_msbhp8_u7(const uint64_t vec) {
+    return (uint8_t)((((
+        (vec & 0x8102040810204000ull) * 0x041041041040ull
+        ) & (~0x8000000000000000)) | (vec & 0x8000000000000000) ) >> (64 - 8)
+    );
+}
+
 
 inline uint64_t cecs_scatter_msb8_u1(const uint8_t vec) {
     return (

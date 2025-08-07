@@ -385,17 +385,6 @@ void test_flatset(cecs_allocator *allocator) {
     // Remove elements systematically
     size_t removed_count = 0;
     for (size_t i = 1; i <= 20 && removed_count < elements_to_remove; ++i) {
-        // // find the value, print it and then do find expect remove
-        // const void *found_value;
-        // if (cecs_flatset_find(&set, i, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
-        //     const pair *found_pair = (const pair *)found_value;
-        //     printf("Found hash=%zu: value=%d (removing)\n", found_pair->hash, found_pair->value);
-        //     cecs_flatset_find_remove_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
-        //     removed_count++;
-        // } else {
-        //     printf("Hash %zu not found (skipping removal)\n", i);
-        //     continue; // Skip if not found
-        // }
         if (cecs_flatset_find_remove(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair))) {
             removed_count++;
             if (removed_count % 3 == 0) { // Print every 3rd removal to reduce output
