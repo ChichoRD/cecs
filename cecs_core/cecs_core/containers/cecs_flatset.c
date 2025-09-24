@@ -345,7 +345,7 @@ static inline size_t cecs_flatset_bucket_index_from_hash(const cecs_flatset_hash
         cecs_is_pow2(bucket_count_mask + 1)
         && "error: cecs_flatset_bucket_index_from_hash called with non power of two bucket count mask"
     );
-    return (hash >> CECS_FLATBUCKET8_HASH7_MAX_LOG2) & bucket_count_mask;
+    return (hash >> CECS_FLATBUCKET8_MAX_COUNT_LOG2) & bucket_count_mask;
 }
 cecs_flatbucket *cecs_flatset_find_insert_bucket_expect(
     cecs_flatset *set,
