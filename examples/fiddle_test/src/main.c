@@ -841,7 +841,7 @@ uint16_t msnh15_u4_dbg(uint64_t vec) {
 // }
 
 int main(void) {
-    cecs_allocator allocator = cecs_allocator_create_implicit_arena(8192, 8); // Increased size for comprehensive tests
+    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
 
     // test_msn(); // Test the msnh15_u4_dbg function
     test_dynarray(&allocator);

@@ -21,7 +21,8 @@ typedef struct cecs_allocator {
     cecs_internal_allocator_type type;
 } cecs_allocator;
 
-cecs_allocator cecs_allocator_create_bump(const size_t size);
+cecs_allocator cecs_allocator_create_bump_alloc(const size_t size);
+cecs_allocator cecs_allocator_create_bump_virtual(const size_t page_count);
 cecs_allocator cecs_allocator_create_arena(const size_t bump_size, const size_t bump_capacity);
 cecs_allocator cecs_allocator_create_implicit_arena(const size_t bump_size, const size_t bump_capacity);
 

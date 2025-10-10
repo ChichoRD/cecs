@@ -1,9 +1,10 @@
 #include "cecs_memory.h"
 
-#include <cstdlib>
-#include <cassert>
+#include <stdlib.h>
+#include <assert.h>
 
 #include <cecs_core/cecs_error.h>
+#include <cecs_math/relations/cecs_ordering.h>
 
 #define CECS_MEMORY_OS_NONE 0
 #define CECS_MEMORY_OS_WINDOWS 1
@@ -12,8 +13,8 @@
 
 #ifdef _WIN32
 #define CECS_MEMORY_OS CECS_MEMORY_OS_WINDOWS
-#include <memoryapi.h>
-#include <sysinfoapi.h>
+#include <Windows.h>
+
 const cecs_raw_memory_block cecs_raw_memory_block_invalid = {0};
 const cecs_memory_block cecs_memory_block_invalid = {0};
 
@@ -21,6 +22,7 @@ const cecs_memory_block cecs_memory_block_invalid = {0};
 #define CECS_MEMORY_OS CECS_MEMORY_OS_UNIX
 #include <sys/mman.h>
 #include <unistd.h>
+
 const cecs_raw_memory_block cecs_raw_memory_block_invalid = {
     .memory_start = MAP_FAILED,
     .committed = 0,
@@ -126,7 +128,7 @@ bool cecs_memory_block_decommit(cecs_memory_block *block, const size_t size, uin
     );
     uint8_t *const decommit_start = decommit_end - size;
 #if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
-    const bool success = VirtualFree(decommit_start, size, MEM_DECOMMIT) != NULL;
+    const bool success = VirtualFree(decommit_start, size, MEM_DECOMMIT) != 0;
 #elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
     const bool success = mprotect(decommit_start, size, PROT_NONE) == 0;
 #endif

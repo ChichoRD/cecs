@@ -1,7 +1,7 @@
 #include "cecs_bump_allocator.h"
 #include <cecs_core/cecs_error.h>
 
-#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
+#include <cecs_math/relations/cecs_ordering.h>
 
 extern inline cecs_bump_view_allocator cecs_bump_view_allocator_create(const cecs_memory_block block);
 void *cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment) {
@@ -114,7 +114,7 @@ cecs_bump_allocator cecs_bump_allocator_create_alloc(const size_t block_size) {
 cecs_bump_allocator cecs_bump_allocator_create_virtual(const size_t page_count) {
     const size_t size = page_count * cecs_system_page_size();
     return (cecs_bump_allocator){
-        .view = cecs_memory_block_reserve_expect(size)
+        .view = cecs_bump_view_allocator_create(cecs_memory_block_reserve_expect(size))
     };
 }
 

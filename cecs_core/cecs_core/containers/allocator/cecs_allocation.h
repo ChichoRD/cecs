@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "cecs_memory.h"
 
+
 typedef void *cecs_alloc_fn(const size_t size);
 typedef void *cecs_realloc_fn(void *block, const size_t block_size, const size_t new_size);
 typedef void cecs_free_fn(void *block, const size_t block_size);
@@ -21,14 +22,7 @@ inline bool cecs_raw_alloction_check(const cecs_raw_alloction allocation) {
 inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation) {
     return allocation.block;
 }
-inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation) {
-    cecs_assert_or_exit(
-        cecs_raw_alloction_check(allocation),
-        "fatal error: allocation failed"
-    );
-    return cecs_raw_alloction_look(allocation);
-}
-
+void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation);
 
 #ifndef CECS_ALLOC_FUNC_IS_ZERO_INIT
 #define CECS_ALLOC_FUNC_IS_ZERO_INIT_DEFAULT true
@@ -48,8 +42,8 @@ void cecs_free_expect(void *block, const size_t block_size);
 
 
 cecs_memory_block cecs_alloc_block_expect(const size_t size);
-cecs_memory_block cecs_realloc_block_expect(cecs_memory_block *block, const size_t block_size, const size_t new_size);
-void cecs_free_block_expect(cecs_memory_block block, const size_t block_size);
+cecs_memory_block cecs_realloc_block_expect(cecs_memory_block *block, const size_t new_size);
+void cecs_free_block_expect(cecs_memory_block *block, const size_t block_size);
 
 
 typedef void *cecs_allocator_alloc_fn(void *allocator, const size_t size);

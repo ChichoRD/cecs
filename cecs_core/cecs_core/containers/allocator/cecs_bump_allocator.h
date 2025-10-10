@@ -86,10 +86,10 @@ inline void *cecs_bump_allocator_realloc_expect(
 }
 
 inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *const block, const size_t block_size) {
-    return cecs_bump_view_allocator_free(allocator, block, block_size);
+    cecs_bump_view_allocator_free(&allocator->view, block, block_size);
 }
 inline uint8_t *cecs_bump_allocator_snapshot(cecs_bump_allocator *allocator) {
-    return cecs_bump_view_allocator_snapshot(allocator);
+    return cecs_bump_view_allocator_snapshot(&allocator->view);
 }
 inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot) {
     cecs_bump_view_allocator_reset_to(&allocator->view, snapshot);

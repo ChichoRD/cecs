@@ -107,7 +107,9 @@ project(cecs_fiddle_test C)
         ${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/examples/fiddle_test/src/main.c"
         ${CECS_MATH_SOURCES}
+        "${CECS_CORE_SRC_DIRECTORY}/cecs_error.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_allocation.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_memory.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_bump_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_arena_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_implicit_arena_allocator.c"

@@ -1,11 +1,19 @@
 #include "cecs_allocation.h"
+#include <cecs_core/cecs_error.h>
+
 #include <stdint.h>
 #include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 #include <cecs_math/relations/cecs_ordering.h>
 
 extern inline bool cecs_raw_alloction_check(const cecs_raw_alloction allocation);
 extern inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation);
-extern inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation);
+void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation) {
+    cecs_assert_or_exit(
+        cecs_raw_alloction_check(allocation),
+        "fatal error: allocation failed"
+    );
+    return cecs_raw_alloction_look(allocation);
+}
 
 
 #ifndef CECS_ALLOC_FUNC
@@ -88,6 +96,7 @@ cecs_memory_block cecs_realloc_block_expect(cecs_memory_block *block, const size
         .reserved = new_size
     };
 }
+
 void cecs_free_block_expect(cecs_memory_block *block, const size_t block_size) {
     cecs_free_expect(block->memory_start, block_size);
     *block = (cecs_memory_block){0};
