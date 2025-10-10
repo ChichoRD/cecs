@@ -127,32 +127,28 @@ void cecs_flatset_extend_exclusive(
     cecs_flatset *destination,
     const cecs_flatset *source,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 void cecs_flatset_extend(
     cecs_flatset *destination,
     const cecs_flatset *source,
     cecs_allocator *allocator,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 void cecs_flatset_resize(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const size_t new_bucket_count,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 void cecs_flatset_shrink(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const size_t new_bucket_count,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 
 // Set search functions
@@ -161,7 +157,6 @@ bool cecs_flatset_find(
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    const size_t hash_stride,
     const void **out_value
 );
 bool cecs_flatset_find_mut(
@@ -169,22 +164,19 @@ bool cecs_flatset_find_mut(
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    const size_t hash_stride,
     void **out_value
 );
 const void *cecs_flatset_find_expect(
     const cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 const void *cecs_flatset_find_expect_mut(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 
 // Set bucket search functions
@@ -193,7 +185,6 @@ bool cecs_flatset_find_bucket(
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    const size_t hash_stride,
     const cecs_flatbucket **out_bucket,
     uint_fast8_t *out_index
 );
@@ -202,7 +193,6 @@ bool cecs_flatset_find_bucket_mut(
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    const size_t hash_stride,
     cecs_flatbucket **out_bucket,
     uint_fast8_t *out_index
 );
@@ -210,15 +200,13 @@ cecs_flatbucket *cecs_flatset_find_insert_bucket_expect(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 cecs_flatbucket *cecs_flatset_find_insert_bucket(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    const size_t hash_stride,
     uint_fast8_t *out_index
 );
 
@@ -233,24 +221,21 @@ void *cecs_flatset_insert_within_expect(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 void *cecs_flatset_insert_expect(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 void *cecs_flatset_find_or_insert(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 
 // Set removal functions
@@ -266,24 +251,21 @@ void cecs_flatset_remove_from_bucket_expect(
     cecs_flatbucket *bucket,
     const uint_fast8_t index,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 bool cecs_flatset_find_remove(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 void cecs_flatset_find_remove_expect(
     cecs_flatset *set,
     cecs_allocator *allocator,
     const cecs_flatset_hash hash,
     const size_t value_size,
-    const size_t hash_offset,
-    const size_t hash_stride
+    const size_t hash_offset
 );
 
 #endif

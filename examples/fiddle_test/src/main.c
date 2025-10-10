@@ -257,7 +257,7 @@ void test_flatset(cecs_allocator *allocator) {
     // Insert values to test basic functionality (6 elements = 75% load factor, approaching 80% threshold)
     printf("Inserting elements approaching 80%% load factor threshold...\n");
     for (size_t i = 1; i <= 6; ++i) {
-        pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+        pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash));
         inserted->hash = i;
         inserted->value = (int)i * 100;
         if (cecs_flatbucket_get_count(*cecs_flatset_get_bucket(&set, 0, sizeof(pair))) != i) {
@@ -285,7 +285,7 @@ void test_flatset(cecs_allocator *allocator) {
     printf("Current state before triggering reallocation: count=%zu, capacity=%zu, buckets=%zu\n",
            cecs_flatset_count(&set), cecs_flatset_capacity(&set), cecs_flatset_bucket_count(&set));
     
-    pair *trigger_resize = cecs_flatset_insert_expect(&set, allocator, 7, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+    pair *trigger_resize = cecs_flatset_insert_expect(&set, allocator, 7, sizeof(pair), offsetof(pair, hash));
     trigger_resize->hash = 7;
     trigger_resize->value = 700;
     if (cecs_flatset_bucket_count(&set) != 2 || cecs_flatset_capacity(&set) != 16) {
@@ -300,7 +300,7 @@ void test_flatset(cecs_allocator *allocator) {
     // Test 3: Insert more elements to utilize some of the new space
     printf("\n--- Test 3: Insert additional elements ---\n");
     for (size_t i = 8; i <= 12; ++i) {
-        pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+        pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash));
         inserted->hash = i;
         inserted->value = (int)i * 100;
     }
@@ -317,7 +317,7 @@ void test_flatset(cecs_allocator *allocator) {
     printf("\n--- Test 4: Find operations ---\n");
     for (size_t i = 1; i <= 5; ++i) {
         const void *found_value;
-        if (!cecs_flatset_find(&set, i, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
+        if (!cecs_flatset_find(&set, i, sizeof(pair), offsetof(pair, hash), &found_value)) {
             fprintf(stderr, "ERROR: Expected to find hash %zu\n", i);
             assert(false && "Expected to find hash");
             exit(EXIT_FAILURE);
@@ -335,7 +335,7 @@ void test_flatset(cecs_allocator *allocator) {
     size_t missing_hashes[] = {99, 404, 777};
     for (size_t i = 0; i < 3; ++i) {
         const void *found_value;
-        if (cecs_flatset_find(&set, missing_hashes[i], sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
+        if (cecs_flatset_find(&set, missing_hashes[i], sizeof(pair), offsetof(pair, hash), &found_value)) {
             fprintf(stderr, "ERROR: Unexpectedly found hash %zu\n", missing_hashes[i]);
             assert(false && "Unexpectedly found hash");
             exit(EXIT_FAILURE);
@@ -347,7 +347,7 @@ void test_flatset(cecs_allocator *allocator) {
     printf("\n--- Test 5: Find or insert operations ---\n");
     // Test with existing values
     for (size_t i = 10; i <= 12; ++i) {
-        pair *found = cecs_flatset_find_or_insert(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+        pair *found = cecs_flatset_find_or_insert(&set, allocator, i, sizeof(pair), offsetof(pair, hash));
         if (found->hash != i || found->value != (int)i * 100) {
             fprintf(stderr, "ERROR: Find or insert returned incorrect existing value for hash %zu\n", i);
             assert(false && "Find or insert returned incorrect existing value");
@@ -360,7 +360,7 @@ void test_flatset(cecs_allocator *allocator) {
     pair new_pairs[] = {{100, 10000}, {200, 20000}};
     size_t count_before_new = cecs_flatset_count(&set);
     for (size_t i = 0; i < 2; ++i) {
-        pair *inserted = cecs_flatset_find_or_insert(&set, allocator, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+        pair *inserted = cecs_flatset_find_or_insert(&set, allocator, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash));
         *inserted = new_pairs[i];
         if (cecs_flatset_count(&set) != count_before_new + i + 1) {
             fprintf(stderr, "ERROR: Count mismatch after find_or_insert new value %zu\n", i);
@@ -389,7 +389,7 @@ void test_flatset(cecs_allocator *allocator) {
     // Remove elements systematically
     size_t removed_count = 0;
     for (size_t i = 1; i <= 12 && removed_count < elements_to_remove; ++i) {
-        if (cecs_flatset_find_remove(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair))) {
+        if (cecs_flatset_find_remove(&set, allocator, i, sizeof(pair), offsetof(pair, hash))) {
             removed_count++;
             if (removed_count % 2 == 0) { // Print every 2nd removal to reduce output
                 printf("Removed hash=%zu (count: %zu, capacity: %zu, load: %.1f%%)\n", 
@@ -409,7 +409,7 @@ void test_flatset(cecs_allocator *allocator) {
     // Check the new pairs we added (should still be there)
     for (size_t i = 0; i < 2; ++i) {
         const void *found_value;
-        if (!cecs_flatset_find(&set, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash), sizeof(pair), &found_value)) {
+        if (!cecs_flatset_find(&set, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash), &found_value)) {
             fprintf(stderr, "ERROR: Expected to find remaining new pair hash %zu\n", new_pairs[i].hash);
             assert(false && "Expected to find remaining new pair hash");
             exit(EXIT_FAILURE);
@@ -421,7 +421,7 @@ void test_flatset(cecs_allocator *allocator) {
     // Test 8: Test removal of non-existent elements
     printf("\n--- Test 8: Test removal of non-existent elements ---\n");
     for (size_t i = 0; i < 3; ++i) {
-        if (cecs_flatset_find_remove(&set, allocator, missing_hashes[i], sizeof(pair), offsetof(pair, hash), sizeof(pair))) {
+        if (cecs_flatset_find_remove(&set, allocator, missing_hashes[i], sizeof(pair), offsetof(pair, hash))) {
             fprintf(stderr, "ERROR: Unexpectedly removed non-existent hash %zu\n", missing_hashes[i]);
             assert(false && "Unexpectedly removed non-existent hash");
             exit(EXIT_FAILURE);
@@ -434,7 +434,7 @@ void test_flatset(cecs_allocator *allocator) {
     printf("Adding more elements to test growth...\n");
     size_t count_before_growth = cecs_flatset_count(&set);
     for (size_t i = 500; i <= 506; ++i) {
-        pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash), sizeof(pair));
+        pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash));
         inserted->hash = i;
         inserted->value = (int)i * 100;
     }
@@ -476,7 +476,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
     
     // Insert test data across multiple buckets
     for (size_t i = 1; i <= 20; ++i) {
-        test_value *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(test_value), offsetof(test_value, hash), sizeof(test_value));
+        test_value *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(test_value), offsetof(test_value, hash));
         inserted->hash = i;
         inserted->data = (int)(i * 10);
         inserted->weight = (float)(i * 0.5f);
@@ -724,7 +724,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
     size_t total_matches_scalar = 0;
     for (size_t i = 1; i <= 20; ++i) {
         const void *found_value;
-        if (cecs_flatset_find(&set, i, sizeof(test_value), offsetof(test_value, hash), sizeof(test_value), &found_value)) {
+        if (cecs_flatset_find(&set, i, sizeof(test_value), offsetof(test_value, hash), &found_value)) {
             const test_value *value = (const test_value *)found_value;
             if (value->data > search_threshold) {
                 total_matches_scalar++;
