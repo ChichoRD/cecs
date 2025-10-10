@@ -10,9 +10,15 @@ inline cecs_allocator cecs_allocator_create_from(
     };
 }
 
-cecs_allocator cecs_allocator_create_bump(const size_t size) {
+cecs_allocator cecs_allocator_create_bump_alloc(const size_t size) {
     return cecs_allocator_create_from(
-        (cecs_internal_allocator){ .bump = cecs_bump_allocator_create(size) },
+        (cecs_internal_allocator){ .bump = cecs_bump_allocator_create_alloc(size) },
+        cecs_internal_allocator_bump
+    );
+}
+cecs_allocator cecs_allocator_create_bump_virtual(const size_t page_count) {
+    return cecs_allocator_create_from(
+        (cecs_internal_allocator){ .bump = cecs_bump_allocator_create_virtual(page_count) },
         cecs_internal_allocator_bump
     );
 }

@@ -3,20 +3,17 @@
 #include <cecs_math/relations/cecs_ordering.h>
 #include <stdlib.h>
 
+// TODO: allow for arenas with different backed allocation types
 cecs_arena_allocator cecs_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity) {
     assert(block_size > 0 && "fatal error: block_size must be greater than 0");
     assert(blocks_capacity > 0 && "fatal error: blocks_capacity must be greater than 0");
 
     cecs_bump_allocator *bumps = cecs_alloc_expect(blocks_capacity * sizeof(cecs_bump_allocator));
-    bumps[0] = cecs_bump_allocator_create(block_size);
+    bumps[0] = cecs_bump_allocator_create_alloc(block_size);
 
     if (!CECS_ALLOC_FUNC_IS_ZERO_INIT) {
         for (cecs_arena_allocator_bump_usize i = 1; i < blocks_capacity; ++i) {
-            bumps[i] = (cecs_bump_allocator){(cecs_bump_view_allocator){
-                .next = NULL,
-                .block_start = NULL,
-                .block_end = NULL
-            }};
+            bumps[i] = (cecs_bump_allocator){0};
         }
     }
     return (cecs_arena_allocator){
@@ -46,13 +43,9 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
             new_blocks_capacity * sizeof(cecs_bump_allocator)
         );
         
-        new_bumps[allocator->current_bump] = cecs_bump_allocator_create(new_blocks_size);
+        new_bumps[allocator->current_bump] = cecs_bump_allocator_create_alloc(new_blocks_size);
         for (cecs_arena_allocator_bump_usize i = allocator->current_bump + 1; i < new_blocks_capacity; ++i) {
-            new_bumps[i] = (cecs_bump_allocator){(cecs_bump_view_allocator){
-                .next = NULL,
-                .block_start = NULL,
-                .block_end = NULL
-            }};
+            new_bumps[i] = (cecs_bump_allocator){0};
         }
 
         allocator->bumps = new_bumps;
@@ -64,7 +57,7 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
             assert(false && "fatal error: allocator's bump must be uninitialized after advancing");
             exit(EXIT_FAILURE);
         }
-        *current_bump = cecs_bump_allocator_create(new_blocks_size);
+        *current_bump = cecs_bump_allocator_create_alloc(new_blocks_size);
         return cecs_bump_allocator_alloc_aligned_expect(current_bump, size, alignment);
     } else {
         assert(false && "fatal error: allocator's current bump is out of bounds");

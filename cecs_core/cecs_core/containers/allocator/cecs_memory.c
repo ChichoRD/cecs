@@ -54,6 +54,8 @@ size_t cecs_system_page_size(void) {
     return (size_t)getpagesize();
 #endif
 }
+extern inline size_t cecs_system_page_count_for(const size_t bytes);
+extern inline size_t cecs_system_pages_size_for(const size_t bytes);
 
 
 bool cecs_memory_block_is_valid(const cecs_raw_memory_block *block) {
@@ -92,7 +94,7 @@ cecs_memory_block cecs_memory_block_reserve_expect(const size_t size) {
 bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size, uint8_t *const commit_start) {
     cecs_assert_or_exit(
         block->memory_start + block->reserved < commit_start + size,
-        "error: cecs_memory_block_commit called with out of bounds offset and size"
+        "error: cecs_memory_block_commit called with out of bounds commit_start and size"
     );
 #if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
     const bool success = VirtualAlloc(commit_start, size, MEM_COMMIT, PAGE_READWRITE) != NULL;
@@ -110,6 +112,35 @@ void cecs_memory_block_commit_expect(cecs_memory_block *block, const size_t size
     cecs_assert_or_exit(
         cecs_memory_block_commit(block, size, commit_start),
         "error: cecs_memory_block_commit_expect failed to commit memory"
+    );
+}
+
+bool cecs_memory_block_decommit(cecs_memory_block *block, const size_t size, uint8_t *const decommit_end) {
+    cecs_assert_or_exit(
+        decommit_end >= block->memory_end,
+        "error: cecs_memory_block_uncommit called with memory range less than the block's committed memory"
+    );
+    cecs_assert_or_exit(
+        decommit_end <= block->memory_start + block->reserved,
+        "error: cecs_memory_block_uncommit called with out of bounds decommit_start and size"
+    );
+    uint8_t *const decommit_start = decommit_end - size;
+#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+    const bool success = VirtualFree(decommit_start, size, MEM_DECOMMIT) != NULL;
+#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+    const bool success = mprotect(decommit_start, size, PROT_NONE) == 0;
+#endif
+    if (cecs_expect(success)) {
+        block->memory_end = decommit_start;
+        return true;
+    } else {
+        return false;
+    }
+}
+void cecs_memory_block_decommit_expect(cecs_memory_block *block, const size_t size, uint8_t *const decommit_end) {
+    cecs_assert_or_exit(
+        cecs_memory_block_decommit(block, size, decommit_end),
+        "error: cecs_memory_block_decommit_expect failed to decommit memory"
     );
 }
 

@@ -26,6 +26,14 @@ inline size_t cecs_memory_block_uncommited_size(const cecs_memory_block block) {
 }
 
 size_t cecs_system_page_size(void);
+inline size_t cecs_system_page_count_for(const size_t bytes) {
+    return ((bytes - 1) / cecs_system_page_size()) + 1;
+}
+inline size_t cecs_system_pages_size_for(const size_t bytes) {
+    const size_t page_size = cecs_system_page_size();
+    return (((bytes - 1) / page_size) + 1) * page_size;
+}
+
 
 bool cecs_memory_block_is_valid(const cecs_raw_memory_block *block);
 cecs_raw_memory_block cecs_memory_block_reserve(const size_t size);
@@ -33,6 +41,9 @@ cecs_memory_block cecs_memory_block_reserve_expect(const size_t size);
 
 bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size, uint8_t *const commit_start);
 void cecs_memory_block_commit_expect(cecs_memory_block *block, const size_t size, uint8_t *const commit_start);
+
+bool cecs_memory_block_decommit(cecs_memory_block *block, const size_t size, uint8_t *const decommit_end);
+void cecs_memory_block_decommit_expect(cecs_memory_block *block, const size_t size, uint8_t *const decommit_end);
 
 bool cecs_memory_block_unmap_raw(cecs_raw_memory_block *block);
 void cecs_memory_block_unmap_raw_expect(cecs_raw_memory_block *block);
