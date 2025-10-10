@@ -2,22 +2,19 @@
 #define CECS_BUMP_ALLOCATOR_H
 
 #include "cecs_allocation.h"
+#include "cecs_memory.h"
+#include <cecs_core/cecs_error.h>
 #include <stdint.h>
 
 typedef struct cecs_bump_view_allocator {
+    cecs_memory_block block;
     uint8_t *next;
-    uint8_t *block_start;
-    uint8_t *block_end;
 } cecs_bump_view_allocator;
 
-inline cecs_bump_view_allocator cecs_bump_view_allocator_create(void *block_start, void *block_end) {
-    assert(block_start != NULL && "fatal error: block_start is NULL");
-    assert(block_end != NULL && "fatal error: block_end is NULL");
-    assert(block_start < block_end && "fatal error: block_end must be strictly greater than block_start");
+inline cecs_bump_view_allocator cecs_bump_view_allocator_create(const cecs_memory_block block) {
     return (cecs_bump_view_allocator){
-        .next = block_start,
-        .block_start = block_start,
-        .block_end = block_end
+        .block = block,
+        .next = block.memory_start
     };
 }
 
@@ -25,46 +22,50 @@ void *cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *al
 void *cecs_bump_view_allocator_alloc_expect(cecs_bump_view_allocator *allocator, const size_t size);
 
 void *cecs_bump_view_allocator_realloc_aligned_expect(
-    cecs_bump_view_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
+    cecs_bump_view_allocator *allocator, void *const block, const size_t block_size, const size_t new_size, const size_t alignment
 );
 void *cecs_bump_view_allocator_realloc_expect(
-    cecs_bump_view_allocator *allocator, void *block, const size_t block_size, const size_t new_size
+    cecs_bump_view_allocator *allocator, void *const block, const size_t block_size, const size_t new_size
 );
 
-inline void cecs_bump_view_allocator_free(cecs_bump_view_allocator *allocator, void *block, const size_t block_size) {
-    (void)allocator;
-    (void)block;
-    (void)block_size;
+void cecs_bump_view_allocator_free(cecs_bump_view_allocator *allocator, void *const block, const size_t block_size);
+
+inline uint8_t *cecs_bump_view_allocator_snapshot(cecs_bump_view_allocator *allocator) {
+    return allocator->next;
+}
+inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocator, uint8_t *const snapshot) {
+    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_assert_or_exit(snapshot < allocator->block.memory_end, "fatal error: snapshot is out of bounds");
+    allocator->next = snapshot;
 }
 inline void cecs_bump_view_allocator_reset(cecs_bump_view_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    allocator->next = allocator->block_start;
+    cecs_bump_view_allocator_reset_to(allocator, allocator->block.memory_start);
 }
 inline void cecs_bump_view_allocator_destroy(cecs_bump_view_allocator *allocator) {
     allocator->next = NULL;
 }
 
 inline size_t cecs_bump_view_allocator_capacity(const cecs_bump_view_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    return (size_t)(allocator->block_end - allocator->block_start);
+    return allocator->block.reserved;
 }
 inline size_t cecs_bump_view_allocator_used(const cecs_bump_view_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    return (size_t)(allocator->next - allocator->block_start);
+    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
+    return (size_t)(allocator->next - allocator->block.memory_start);
 }
 inline ptrdiff_t cecs_bump_view_allocator_available(const cecs_bump_view_allocator *allocator) {
-    assert(allocator->next != NULL && "fatal error: allocator is empty");
-    return (ptrdiff_t)(allocator->block_end - allocator->next);
-}	
+    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
+    return (ptrdiff_t)((allocator->block.memory_start + allocator->block.reserved) - allocator->next);
+}
 ptrdiff_t cecs_bump_view_allocator_available_aligned(const cecs_bump_view_allocator *allocator, const size_t alignment);
+
 
 
 typedef struct cecs_bump_allocator {
     cecs_bump_view_allocator view;
 } cecs_bump_allocator;
 
-
-cecs_bump_allocator cecs_bump_allocator_create(const size_t block_size);
+cecs_bump_allocator cecs_bump_allocator_create_alloc(const size_t block_size);
+cecs_bump_allocator cecs_bump_allocator_create_virtual(const size_t page_count);
 
 inline void *cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment) {
     return cecs_bump_view_allocator_alloc_aligned_expect(&allocator->view, size, alignment);
@@ -74,25 +75,30 @@ inline void *cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, co
 }
 
 inline void *cecs_bump_allocator_realloc_aligned_expect(
-    cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
+    cecs_bump_allocator *allocator, void *const block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
     return cecs_bump_view_allocator_realloc_aligned_expect(&allocator->view, block, block_size, new_size, alignment);
 }
 inline void *cecs_bump_allocator_realloc_expect(
-    cecs_bump_allocator *allocator, void *block, const size_t block_size, const size_t new_size
+    cecs_bump_allocator *allocator, void *const block, const size_t block_size, const size_t new_size
 ) {
     return cecs_bump_view_allocator_realloc_expect(&allocator->view, block, block_size, new_size);
 }
 
-inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *block, const size_t block_size) {
-    (void)allocator;
-    (void)block;
-    (void)block_size;
+inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *const block, const size_t block_size) {
+    return cecs_bump_view_allocator_free(allocator, block, block_size);
+}
+inline uint8_t *cecs_bump_allocator_snapshot(cecs_bump_allocator *allocator) {
+    return cecs_bump_view_allocator_snapshot(allocator);
+}
+inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot) {
+    cecs_bump_view_allocator_reset_to(&allocator->view, snapshot);
 }
 inline void cecs_bump_allocator_reset(cecs_bump_allocator *allocator) {
     cecs_bump_view_allocator_reset(&allocator->view);
 }
 inline void cecs_bump_allocator_destroy(cecs_bump_allocator *allocator) {
+    cecs_memory_block_unmap_expect(&allocator->view.block);
     cecs_bump_view_allocator_destroy(&allocator->view);
 }
 

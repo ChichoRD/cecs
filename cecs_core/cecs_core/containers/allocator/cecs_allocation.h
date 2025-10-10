@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <stdint.h>
-#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
+#include "cecs_memory.h"
 
 typedef void *cecs_alloc_fn(const size_t size);
 typedef void *cecs_realloc_fn(void *block, const size_t block_size, const size_t new_size);
@@ -22,10 +22,10 @@ inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation) {
     return allocation.block;
 }
 inline void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation) {
-    if (!cecs_raw_alloction_check(allocation)) {
-        assert(false && "fatal error: allocation failed");
-        exit(EXIT_FAILURE);
-    }
+    cecs_assert_or_exit(
+        cecs_raw_alloction_check(allocation),
+        "fatal error: allocation failed"
+    );
     return cecs_raw_alloction_look(allocation);
 }
 
@@ -47,6 +47,11 @@ void *cecs_realloc_expect(void *block, const size_t block_size, const size_t new
 void cecs_free_expect(void *block, const size_t block_size);
 
 
+cecs_memory_block cecs_alloc_block_expect(const size_t size);
+cecs_memory_block cecs_realloc_block_expect(cecs_memory_block *block, const size_t block_size, const size_t new_size);
+void cecs_free_block_expect(cecs_memory_block block, const size_t block_size);
+
+
 typedef void *cecs_allocator_alloc_fn(void *allocator, const size_t size);
 typedef void *cecs_allocator_alloc_aligned_fn(void *allocator, const size_t size, const size_t alignment);
 typedef void *cecs_allocator_realloc_fn(void *allocator, void *block, const size_t block_size, const size_t new_size);
@@ -55,21 +60,5 @@ typedef void *cecs_allocator_realloc_aligned_fn(
 );
 typedef void cecs_allocator_free_fn(void *allocator, void *block, const size_t block_size);
 
-
-size_t cecs_max_alignment_from_size(const size_t size);
-inline const uint8_t *cecs_aligned_ptr(const uint8_t *const address, const size_t alignment) {
-    assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
-
-    static_assert(sizeof(size_t) == sizeof(uintptr_t), "fatal static error: size_t is not the same size as uintptr_t");
-    uint8_t *const aligned = (uint8_t *)cecs_align_to_pow2((size_t)address, alignment);
-    return aligned;
-}
-inline uint8_t *cecs_aligned_ptr_mut(uint8_t *const address, const size_t alignment) {
-    assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
-
-    static_assert(sizeof(size_t) == sizeof(uintptr_t), "fatal static error: size_t is not the same size as uintptr_t");
-    uint8_t *const aligned = (uint8_t *)cecs_align_to_pow2((size_t)address, alignment);
-    return aligned;
-}
 
 #endif

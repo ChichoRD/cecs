@@ -1,8 +1,9 @@
 #ifndef CECS_ERROR_H
 #define CECS_ERROR_H
 
-#include <cassert>
-#include <cstdlib>
+#include <assert.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #define CECS_COMPILER_NONE 0
 #define CECS_COMPILER_CLANG 1
@@ -96,31 +97,24 @@ inline void cecs_exit_success(void) {
 inline void cecs_exit_failure(void) {
     exit(EXIT_FAILURE);
 }
+inline void cecs_fail(void) {
+    assert(false && "fatal error: fail and exit called");
+    cecs_exit_failure();
+}
 
-inline void cecs_exit_assert_failure(const char *const message) {
+inline void cecs_assert_and_fail(const char *const message) {
     (void)message;
-    assert(false && "fatal error: assert failure and exit called");
-    exit(EXIT_FAILURE);
+    cecs_fail();
 }
 
-inline void cecs_exit_failure_if(const bool condition) {
+inline void cecs_fail_exit_if(const bool condition) {
     if (cecs_expect_not(condition)) {
-        cecs_exit_failure();
+        cecs_fail();
     }
 }
-inline void cecs_exit_failure_if_not(const bool condition) {
+inline void cecs_assert_or_exit(const bool condition, const char *const message) {
     if (cecs_expect_not(!condition)) {
-        cecs_exit_failure();
-    }
-}
-inline void cecs_exit_assert_failure_if(const bool condition, const char *const message) {
-    if (cecs_expect_not(condition)) {
-        cecs_exit_assert_failure(message);
-    }
-}
-inline void cecs_exit_assert_failure_if_not(const bool condition, const char *const message) {
-    if (cecs_expect_not(!condition)) {
-        cecs_exit_assert_failure(message);
+        cecs_assert_and_fail(message);
     }
 }
 

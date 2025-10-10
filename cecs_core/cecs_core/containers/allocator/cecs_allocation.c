@@ -71,10 +71,24 @@ void cecs_free_expect(void *block, const size_t block_size) {
     cecs_free_raw((cecs_raw_alloction){ .block = block }, block_size);
 }
 
-
-size_t cecs_max_alignment_from_size(const size_t size) {
-    const size_t alignment = 1 << cecs_log2(size);
-    return cecs_min(alignment, sizeof(uintmax_t));
+cecs_memory_block cecs_alloc_block_expect(const size_t size) {
+    uint8_t *const allocation = (uint8_t *)cecs_alloc_expect(size);
+    return (cecs_memory_block){
+        .memory_start = allocation,
+        .memory_end = allocation + size,
+        .reserved = size
+    };
 }
-extern inline const uint8_t *cecs_aligned_ptr(const uint8_t *const address, const size_t alignment);
-extern inline uint8_t *cecs_aligned_ptr_mut(uint8_t *const address, const size_t alignment);
+cecs_memory_block cecs_realloc_block_expect(cecs_memory_block *block, const size_t new_size) {
+    uint8_t *const allocation = (uint8_t *)cecs_realloc_expect(block->memory_start, block->memory_end - block->memory_start, new_size);
+    *block = (cecs_memory_block){0};
+    return (cecs_memory_block){
+        .memory_start = allocation,
+        .memory_end = allocation + new_size,
+        .reserved = new_size
+    };
+}
+void cecs_free_block_expect(cecs_memory_block *block, const size_t block_size) {
+    cecs_free_expect(block->memory_start, block_size);
+    *block = (cecs_memory_block){0};
+}
