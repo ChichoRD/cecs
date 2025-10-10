@@ -95,8 +95,12 @@ cecs_memory_block cecs_memory_block_reserve_expect(const size_t size) {
 
 bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size, uint8_t *const commit_start) {
     cecs_assert_or_exit(
-        block->memory_start + block->reserved < commit_start + size,
+        block->memory_start + block->reserved >= commit_start + size,
         "error: cecs_memory_block_commit called with out of bounds commit_start and size"
+    );
+    cecs_assert_or_exit(
+        commit_start <= block->memory_end,
+        "error: cecs_memory_block_commit called with memory range more than already committed memory"
     );
 #if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
     const bool success = VirtualAlloc(commit_start, size, MEM_COMMIT, PAGE_READWRITE) != NULL;

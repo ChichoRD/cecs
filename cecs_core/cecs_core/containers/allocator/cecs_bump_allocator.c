@@ -14,7 +14,7 @@ void *cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *al
 
     if (cecs_expect_not(next > allocator->block.memory_end)) {
         cecs_assert_or_exit(
-            next > allocator->block.memory_start + allocator->block.reserved,
+            next <= allocator->block.memory_start + allocator->block.reserved,
             "fatal error: allocator is out of memory"
         );
         const size_t needed = (size_t)(next - allocator->block.memory_end);
@@ -56,7 +56,7 @@ void *cecs_bump_view_allocator_realloc_aligned_expect(
             return old_block;
         } else {
             cecs_assert_or_exit(
-                next > allocator->block.memory_start + allocator->block.reserved,
+                next <= allocator->block.memory_start + allocator->block.reserved,
                 "fatal error: allocator is out of memory"
             );
     
