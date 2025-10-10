@@ -71,7 +71,9 @@ void *cecs_bump_view_allocator_realloc_aligned_expect(
             return old_block;
         }
     } else {
-        return cecs_bump_view_allocator_alloc_aligned_expect(allocator, new_size, alignment);
+        void *const new_block = cecs_bump_view_allocator_alloc_aligned_expect(allocator, new_size, alignment);
+        memcpy(new_block, old_block, block_size);
+        return new_block;
     }
 }
 
