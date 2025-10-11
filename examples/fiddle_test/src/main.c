@@ -3,6 +3,7 @@
 #include <cecs_core/containers/cecs_dynarray.h>
 #include <cecs_core/containers/cecs_sparse_set_v2.h>
 #include <cecs_core/containers/cecs_flatset.h>
+#include <cecs_core/containers/cecs_flatmap_v2.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -458,6 +459,230 @@ void test_flatset(cecs_allocator *allocator) {
     printf("=== Flatset tests completed ===\n");
 }
 
+void test_flatmap(cecs_allocator *allocator) {
+    printf("\n=== Testing Flatmap ===\n");
+    
+    typedef struct pair {
+        size_t hash;
+        int value;
+    } pair;
+    
+    // Test 1: Creation and initial insertions
+    printf("\n--- Test 1: Creation and initial insertions ---\n");
+    cecs_flatmap set = cecs_flatmap_create_with_capacity(allocator, 1, sizeof(pair)); // 1 bucket * 8 = 8 capacity
+    if (cecs_flatmap_capacity(&set) != 8 || cecs_flatmap_count(&set) != 0 || cecs_flatmap_bucket_count(&set) != 1) {
+        fprintf(stderr, "ERROR: Initial flatmap state incorrect: capacity=%zu, count=%zu, buckets=%zu\n",
+                cecs_flatmap_capacity(&set), cecs_flatmap_count(&set), cecs_flatmap_bucket_count(&set));
+        assert(false && "Initial flatmap state incorrect");
+        exit(EXIT_FAILURE);
+    }
+    printf("Initial capacity: %zu, count: %zu, buckets: %zu\n", 
+           cecs_flatmap_capacity(&set), cecs_flatmap_count(&set), cecs_flatmap_bucket_count(&set));
+    
+    // Insert values to test basic functionality (6 elements = 75% load factor, approaching 80% threshold)
+    printf("Inserting elements approaching 80%% load factor threshold...\n");
+    for (size_t i = 1; i <= 6; ++i) {
+        pair *inserted = cecs_flatmap_insert_expect(&set, allocator, i, sizeof(pair));
+        inserted->hash = i;
+        inserted->value = (int)i * 100;
+        if (cecs_flatbucket_get_count(*cecs_flatmap_get_bucket(&set, 0, sizeof(pair))) != i) {
+            fprintf(stderr, "ERROR: Bucket count mismatch after insert %zu: expected %zu, got %hu\n", 
+                    i, i, cecs_flatbucket_get_count(*cecs_flatmap_get_bucket(&set, 0, sizeof(pair))));
+            assert(false && "Bucket count mismatch");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_flatmap_count(&set) != i) {
+            fprintf(stderr, "ERROR: Count mismatch after insert %zu: expected %zu, got %zu\n", i, i, cecs_flatmap_count(&set));
+            assert(false && "Count mismatch after insert");
+            exit(EXIT_FAILURE);
+        }
+        if (i % 2 == 0) { // Print every 2nd element to reduce output
+            printf("Inserted hash=%zu, value=%d (count: %zu, capacity: %zu, load: %.1f%%)\n", 
+                   i, inserted->value, cecs_flatmap_count(&set), cecs_flatmap_capacity(&set),
+                   (double)cecs_flatmap_count(&set) / cecs_flatmap_capacity(&set) * 100.0);
+        }
+    }
+    printf("Reached 75%% load factor: count=%zu, capacity=%zu\n", 
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set));
+    
+    // Test 2: Trigger upward reallocation (insert one more to exceed 80%)
+    printf("\n--- Test 2: Trigger upward reallocation ---\n");
+    printf("Current state before triggering reallocation: count=%zu, capacity=%zu, buckets=%zu\n",
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set), cecs_flatmap_bucket_count(&set));
+    
+    pair *trigger_resize = cecs_flatmap_insert_expect(&set, allocator, 7, sizeof(pair));
+    trigger_resize->hash = 7;
+    trigger_resize->value = 700;
+    if (cecs_flatmap_bucket_count(&set) != 2 || cecs_flatmap_capacity(&set) != 16) {
+        fprintf(stderr, "ERROR: Expected reallocation to double buckets to 2 (capacity 16), got buckets=%zu, capacity=%zu\n",
+                cecs_flatmap_bucket_count(&set), cecs_flatmap_capacity(&set));
+        assert(false && "Expected reallocation to double buckets");
+        exit(EXIT_FAILURE);
+    }
+    printf("After inserting element 7: count=%zu, capacity=%zu, buckets=%zu (should have doubled)\n",
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set), cecs_flatmap_bucket_count(&set));
+
+    // Test 3: Insert more elements to utilize some of the new space
+    printf("\n--- Test 3: Insert additional elements ---\n");
+    for (size_t i = 8; i <= 12; ++i) {
+        pair *inserted = cecs_flatmap_insert_expect(&set, allocator, i, sizeof(pair));
+        inserted->hash = i;
+        inserted->value = (int)i * 100;
+    }
+    if (cecs_flatmap_count(&set) != 12) {
+        fprintf(stderr, "ERROR: Expected count 12 after additional insertions, got %zu\n", cecs_flatmap_count(&set));
+        assert(false && "Expected count 12 after additional insertions");
+        exit(EXIT_FAILURE);
+    }
+    printf("After inserting 5 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set),
+           (double)cecs_flatmap_count(&set) / cecs_flatmap_capacity(&set) * 100.0);
+
+    // Test 4: Find operations
+    printf("\n--- Test 4: Find operations ---\n");
+    for (size_t i = 1; i <= 5; ++i) {
+        const void *found_value;
+        if (!cecs_flatmap_find(&set, i, sizeof(pair), &found_value)) {
+            fprintf(stderr, "ERROR: Expected to find hash %zu\n", i);
+            assert(false && "Expected to find hash");
+            exit(EXIT_FAILURE);
+        }
+        const pair *found_pair = (const pair *)found_value;
+        if (found_pair->hash != i || found_pair->value != (int)i * 100) {
+            fprintf(stderr, "ERROR: Found incorrect value for hash %zu\n", i);
+            assert(false && "Found incorrect value for hash");
+            exit(EXIT_FAILURE);
+        }
+        printf("Found hash=%zu: value=%d\n", found_pair->hash, found_pair->value);
+    }
+
+    // Test unsuccessful finds
+    size_t missing_hashes[] = {99, 404, 777};
+    for (size_t i = 0; i < 3; ++i) {
+        const void *found_value;
+        if (cecs_flatmap_find(&set, missing_hashes[i], sizeof(pair), &found_value)) {
+            fprintf(stderr, "ERROR: Unexpectedly found hash %zu\n", missing_hashes[i]);
+            assert(false && "Unexpectedly found hash");
+            exit(EXIT_FAILURE);
+        }
+        printf("Hash=%zu not found (expected)\n", missing_hashes[i]);
+    }
+
+    // Test 5: Find or insert operations
+    printf("\n--- Test 5: Find or insert operations ---\n");
+    // Test with existing values
+    for (size_t i = 10; i <= 12; ++i) {
+        pair *found = cecs_flatmap_find_or_insert(&set, allocator, i, sizeof(pair));
+        if (found->hash != i || found->value != (int)i * 100) {
+            fprintf(stderr, "ERROR: Find or insert returned incorrect existing value for hash %zu\n", i);
+            assert(false && "Find or insert returned incorrect existing value");
+            exit(EXIT_FAILURE);
+        }
+        printf("Find or insert hash=%zu: found value=%d\n", i, found->value);
+    }
+    
+    // Test with new values
+    pair new_pairs[] = {{100, 10000}, {200, 20000}};
+    size_t count_before_new = cecs_flatmap_count(&set);
+    for (size_t i = 0; i < 2; ++i) {
+        pair *inserted = cecs_flatmap_find_or_insert(&set, allocator, new_pairs[i].hash, sizeof(pair));
+        *inserted = new_pairs[i];
+        if (cecs_flatmap_count(&set) != count_before_new + i + 1) {
+            fprintf(stderr, "ERROR: Count mismatch after find_or_insert new value %zu\n", i);
+            assert(false && "Count mismatch after find_or_insert");
+            exit(EXIT_FAILURE);
+        }
+        printf("Find or insert hash=%zu: inserted value=%d (count: %zu)\n", 
+               new_pairs[i].hash, new_pairs[i].value, cecs_flatmap_count(&set));
+    }
+
+    // Test 6: Remove elements to trigger downward reallocation
+    printf("\n--- Test 6: Remove elements to trigger downward reallocation ---\n");
+    printf("Current state before mass removal: count=%zu, capacity=%zu, buckets=%zu\n",
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set), cecs_flatmap_bucket_count(&set));
+    
+    // Calculate 20% threshold for current capacity (16 * 0.2 = 3.2, so 3)
+    size_t capacity = cecs_flatmap_capacity(&set);
+    size_t threshold_20_percent = capacity / 5; // 20% of capacity
+    size_t current_count = cecs_flatmap_count(&set);
+    size_t elements_to_remove = current_count - threshold_20_percent + 1; // Remove enough to go below 20%
+    
+    printf("Current count: %zu, capacity: %zu, 20%% threshold: %zu\n", 
+           current_count, capacity, threshold_20_percent);
+    printf("Need to remove %zu elements to go below 20%% threshold\n", elements_to_remove);
+    
+    // Remove elements systematically
+    size_t removed_count = 0;
+    for (size_t i = 1; i <= 12 && removed_count < elements_to_remove; ++i) {
+        if (cecs_flatmap_find_remove(&set, allocator, i, sizeof(pair))) {
+            removed_count++;
+            if (removed_count % 2 == 0) { // Print every 2nd removal to reduce output
+                printf("Removed hash=%zu (count: %zu, capacity: %zu, load: %.1f%%)\n", 
+                       i, cecs_flatmap_count(&set), cecs_flatmap_capacity(&set),
+                       (double)cecs_flatmap_count(&set) / cecs_flatmap_capacity(&set) * 100.0);
+            }
+        }
+    }
+    
+    printf("After mass removal: count=%zu, capacity=%zu, buckets=%zu\n",
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set), cecs_flatmap_bucket_count(&set));
+
+    // Test 7: Verify remaining elements
+    printf("\n--- Test 7: Verify remaining elements ---\n");
+    printf("Checking remaining new pairs...\n");
+    
+    // Check the new pairs we added (should still be there)
+    for (size_t i = 0; i < 2; ++i) {
+        const void *found_value;
+        if (!cecs_flatmap_find(&set, new_pairs[i].hash, sizeof(pair), &found_value)) {
+            fprintf(stderr, "ERROR: Expected to find remaining new pair hash %zu\n", new_pairs[i].hash);
+            assert(false && "Expected to find remaining new pair hash");
+            exit(EXIT_FAILURE);
+        }
+        const pair *found_pair = (const pair *)found_value;
+        printf("Remaining new pair: hash=%zu, value=%d\n", found_pair->hash, found_pair->value);
+    }
+
+    // Test 8: Test removal of non-existent elements
+    printf("\n--- Test 8: Test removal of non-existent elements ---\n");
+    for (size_t i = 0; i < 3; ++i) {
+        if (cecs_flatmap_find_remove(&set, allocator, missing_hashes[i], sizeof(pair))) {
+            fprintf(stderr, "ERROR: Unexpectedly removed non-existent hash %zu\n", missing_hashes[i]);
+            assert(false && "Unexpectedly removed non-existent hash");
+            exit(EXIT_FAILURE);
+        }
+        printf("Failed to remove hash=%zu (expected)\n", missing_hashes[i]);
+    }
+
+    // Test 9: Insert more elements to test growing again
+    printf("\n--- Test 9: Test growing again ---\n");
+    printf("Adding more elements to test growth...\n");
+    size_t count_before_growth = cecs_flatmap_count(&set);
+    for (size_t i = 500; i <= 506; ++i) {
+        pair *inserted = cecs_flatmap_insert_expect(&set, allocator, i, sizeof(pair));
+        inserted->hash = i;
+        inserted->value = (int)i * 100;
+    }
+    if (cecs_flatmap_count(&set) != count_before_growth + 7) {
+        fprintf(stderr, "ERROR: Count mismatch after growth test\n");
+        assert(false && "Count mismatch after growth test");
+        exit(EXIT_FAILURE);
+    }
+    printf("After adding 7 more elements: count=%zu, capacity=%zu, load=%.1f%%\n",
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set),
+           (double)cecs_flatmap_count(&set) / cecs_flatmap_capacity(&set) * 100.0);
+
+    // Test 10: Final state verification
+    printf("\n--- Test 10: Final state verification ---\n");
+    printf("Final flatmap state: count=%zu, capacity=%zu, buckets=%zu, load=%.1f%%\n", 
+           cecs_flatmap_count(&set), cecs_flatmap_capacity(&set), cecs_flatmap_bucket_count(&set),
+           (double)cecs_flatmap_count(&set) / cecs_flatmap_capacity(&set) * 100.0);
+
+    // Clean up
+    cecs_flatmap_destroy(&set, allocator, sizeof(pair));
+    printf("=== Flatmap tests completed ===\n");
+}
+
 void test_flatset_simd(cecs_allocator *allocator) {
     printf("\n=== Testing Flatset SIMD Operations ===\n");
     
@@ -501,7 +726,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         
         // SIMD-style processing: always process all 8 elements - memory is always valid and initialized
         for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_MAX_COUNT; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, i, sizeof(test_value));
             // Process all 8 elements - memory is always valid and initialized
             total_data_sum_simd += value->data;
             total_weight_sum_simd += value->weight;
@@ -527,7 +752,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         
         // Only process contained elements using checked access
         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value(bucket, i, sizeof(test_value));
             total_data_sum_selective += value->data;
             total_weight_sum_selective += value->weight;
             total_flags_or_selective |= value->flags;
@@ -548,7 +773,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Load 8 integer values using unchecked access
         int data_array[8];
         for (uint_fast8_t i = 0; i < 8; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, i, sizeof(test_value));
             data_array[i] = value->data;
         }
         
@@ -587,7 +812,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
         
         // Use SIMD gather to load 8 float values directly with stride
-        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
         const float *weight_base = &base_value->weight;
         
         // Create indices for strided access (0, 1, 2, 3, 4, 5, 6, 7) * stride_in_floats
@@ -613,7 +838,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Compare with scalar sum using unchecked access
         float scalar_sum = 0.0f;
         for (uint_fast8_t i = 0; i < 8; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, i, sizeof(test_value));
             scalar_sum += value->weight;
         }
         
@@ -633,7 +858,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
         
         // Use SIMD gather to load 8 integer values directly with stride
-        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
         const int *data_base = &base_value->data;
         
         // Create indices for strided access
@@ -659,7 +884,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Compare with scalar sum
         int scalar_sum = 0;
         for (uint_fast8_t i = 0; i < 8; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, i, sizeof(test_value));
             scalar_sum += value->data;
         }
         
@@ -683,7 +908,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
         
         // Use SIMD gather to load 8 data values directly
-        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
         const int *data_base = &base_value->data;
         
         const size_t stride_in_ints = sizeof(test_value) / sizeof(int);
@@ -750,7 +975,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         if (bucket_count == 0) continue;
         
         // Use SIMD gather to load all 8 values directly
-        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
         const int *data_base = &base_value->data;
         
         const size_t stride_in_ints = sizeof(test_value) / sizeof(int);
@@ -790,7 +1015,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Apply validity mask and recalculate for valid elements only using checked access
         int valid_min = INT_MAX, valid_max = INT_MIN;
         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value(bucket, i, sizeof(test_value));
             if (value->data < valid_min) valid_min = value->data;
             if (value->data > valid_max) valid_max = value->data;
         }
@@ -805,40 +1030,6 @@ void test_flatset_simd(cecs_allocator *allocator) {
     printf("=== Flatset SIMD tests completed ===\n");
 }
 
-uint16_t msnh15_u4_dbg(uint64_t vec) {
-    uint16_t result = 0;
-    result |= (vec & 0x80ull) >> 7;
-    result |= (vec & 0x800ull) >> 10;
-    result |= (vec & 0x8000ull) >> 13;
-    result |= (vec & 0x80000ull) >> 16;
-
-    result |= (vec & 0x800000ull) >> 19;
-    result |= (vec & 0x8000000ull) >> 22;
-    result |= (vec & 0x80000000ull) >> 25;
-    result |= (vec & 0x800000000ull) >> 28;
-
-    result |= (vec & 0x8000000000ull) >> 31;
-    result |= (vec & 0x80000000000ull) >> 34;
-    result |= (vec & 0x800000000000ull) >> 37;
-    result |= (vec & 0x8000000000000ull) >> 40;
-
-    result |= (vec & 0x80000000000000ull) >> 43;
-    result |= (vec & 0x800000000000000ull) >> 46;
-    result |= (vec & 0x8000000000000000ull) >> 49;
-    return result;
-}
-// void test_msn(void) {
-//     for (uint64_t i = 0; i < UINT64_MAX; ++i) {
-//         const uint16_t expected = msnh15_u4_dbg(i);
-//         const uint16_t actual = cecs_gather_msnh15_u4(i);
-//         if (expected != actual) {
-//             fprintf(stderr, "ERROR: msnh15_u4_dbg failed for input 0x%016llX: expected %u, got %u\n", 
-//                     i, expected, actual);
-//             assert(false && "msnh15_u4_dbg failed");
-//             exit(EXIT_FAILURE);
-//         }
-//     }
-// }
 
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
@@ -848,6 +1039,7 @@ int main(void) {
     test_sparse_set(&allocator);
     test_flatset(&allocator);
     test_flatset_simd(&allocator);
+    test_flatmap(&allocator);
 
     printf("\n=== All tests completed successfully ===\n");
 

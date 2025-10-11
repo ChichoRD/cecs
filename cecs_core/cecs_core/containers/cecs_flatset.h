@@ -12,16 +12,16 @@ typedef cecs_flatbucket_hash_low cecs_flatset_hash_low;
 typedef cecs_flatbucket_hash_low_fast cecs_flatset_hash_low_fast;
 
 // Bucket value access functions
-inline const void *cecs_flatset_get_bucket_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+inline const void *cecs_flatset_bucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
     return cecs_flatbucket_get_value_unchecked(bucket, index, value_size, 0);
 }
-inline void *cecs_flatset_get_bucket_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+inline void *cecs_flatset_bucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
     return cecs_flatbucket_get_value_mut_unchecked(bucket, index, value_size, 0);
 }
-inline const void *cecs_flatset_get_bucket_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+inline const void *cecs_flatset_bucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
     return cecs_flatbucket_get_value(bucket, index, value_size, 0);
 }
-inline void *cecs_flatset_get_bucket_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+inline void *cecs_flatset_bucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
     return cecs_flatbucket_get_value_mut(bucket, index, value_size, 0);
 }
 
