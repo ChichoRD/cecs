@@ -501,7 +501,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         
         // SIMD-style processing: always process all 8 elements - memory is always valid and initialized
         for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_MAX_COUNT; ++i) {
-            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
             // Process all 8 elements - memory is always valid and initialized
             total_data_sum_simd += value->data;
             total_weight_sum_simd += value->weight;
@@ -527,7 +527,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         
         // Only process contained elements using checked access
         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
-            const test_value *value = (const test_value *)cecs_flatbucket_get_value(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value(bucket, i, sizeof(test_value));
             total_data_sum_selective += value->data;
             total_weight_sum_selective += value->weight;
             total_flags_or_selective |= value->flags;
@@ -548,7 +548,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Load 8 integer values using unchecked access
         int data_array[8];
         for (uint_fast8_t i = 0; i < 8; ++i) {
-            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
             data_array[i] = value->data;
         }
         
@@ -587,7 +587,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
         
         // Use SIMD gather to load 8 float values directly with stride
-        const test_value *base_value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
         const float *weight_base = &base_value->weight;
         
         // Create indices for strided access (0, 1, 2, 3, 4, 5, 6, 7) * stride_in_floats
@@ -613,7 +613,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Compare with scalar sum using unchecked access
         float scalar_sum = 0.0f;
         for (uint_fast8_t i = 0; i < 8; ++i) {
-            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
             scalar_sum += value->weight;
         }
         
@@ -633,7 +633,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
         
         // Use SIMD gather to load 8 integer values directly with stride
-        const test_value *base_value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
         const int *data_base = &base_value->data;
         
         // Create indices for strided access
@@ -659,7 +659,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Compare with scalar sum
         int scalar_sum = 0;
         for (uint_fast8_t i = 0; i < 8; ++i) {
-            const test_value *value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, i, sizeof(test_value));
             scalar_sum += value->data;
         }
         
@@ -683,7 +683,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
         
         // Use SIMD gather to load 8 data values directly
-        const test_value *base_value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
         const int *data_base = &base_value->data;
         
         const size_t stride_in_ints = sizeof(test_value) / sizeof(int);
@@ -750,7 +750,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         if (bucket_count == 0) continue;
         
         // Use SIMD gather to load all 8 values directly
-        const test_value *base_value = (const test_value *)cecs_flatbucket_get_value_unchecked(bucket, 0, sizeof(test_value));
+        const test_value *base_value = (const test_value *)cecs_flatset_get_bucket_value_unchecked(bucket, 0, sizeof(test_value));
         const int *data_base = &base_value->data;
         
         const size_t stride_in_ints = sizeof(test_value) / sizeof(int);
@@ -790,7 +790,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
         // Apply validity mask and recalculate for valid elements only using checked access
         int valid_min = INT_MAX, valid_max = INT_MIN;
         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
-            const test_value *value = (const test_value *)cecs_flatbucket_get_value(bucket, i, sizeof(test_value));
+            const test_value *value = (const test_value *)cecs_flatset_get_bucket_value(bucket, i, sizeof(test_value));
             if (value->data < valid_min) valid_min = value->data;
             if (value->data > valid_max) valid_max = value->data;
         }

@@ -2,82 +2,28 @@
 #define CECS_FLATSET_H
 
 #include "cecs_allocator.h"
+#include "cecs_flatbucket.h"
 #include <cecs_math/relations/cecs_ordering.h>
 #include <stdint.h>
 #include <assert.h>
 
-#ifndef CECS_FLATSET_HASH_TYPE
-#define CECS_FLATSET_HASH_TYPE_DEFAULT size_t
-#define CECS_FLATSET_HASH_TYPE CECS_FLATSET_HASH_TYPE_DEFAULT
-#endif
-
-typedef CECS_FLATSET_HASH_TYPE cecs_flatset_hash;
-typedef uint8_t cecs_flatset_hash_low;
-typedef uint_fast8_t cecs_flatset_hash_low_fast;
-static_assert(
-    sizeof(cecs_flatset_hash_low) <= sizeof(cecs_flatset_hash),
-    "static error: cecs_flatset_hash_low must be able to hold cecs_flatset_hash"
-);
-static_assert(
-    sizeof(cecs_flatset_hash_low) <= sizeof(cecs_flatset_hash_low),
-    "static error: cecs_flatset_hash_low_fast must be able to hold cecs_flatset_hash_low"
-);
-
-// TODO: try storing the full hashes explicitly
-typedef struct cecs_flatbucket8 {
-    uint64_t hash_from_index8_u7;
-    uint8_t values[];
-} cecs_flatbucket8;
-
-// Type alias for cleaner API
-typedef cecs_flatbucket8 cecs_flatbucket;
-#define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3
-#define CECS_FLATBUCKET8_MAX_COUNT (1 << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
-
-// Bucket capacity and count functions
-inline uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket) {
-    return bucket.hash_from_index8_u7 & 0x0F;
-}
-inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket) {
-    return bucket.hash_from_index8_u7 & 0x08;
-}
+typedef cecs_flatbucket_hash cecs_flatset_hash;
+typedef cecs_flatbucket_hash_low cecs_flatset_hash_low;
+typedef cecs_flatbucket_hash_low_fast cecs_flatset_hash_low_fast;
 
 // Bucket value access functions
-inline const void *cecs_flatbucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    if (index >= CECS_FLATBUCKET8_MAX_COUNT) {
-        assert(false && "error: cecs_flatbucket_get_value_unchecked called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    return &bucket->values[index * value_size];
+inline const void *cecs_flatset_get_bucket_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_unchecked(bucket, index, value_size, 0);
 }
-inline void *cecs_flatbucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    if (index >= CECS_FLATBUCKET8_MAX_COUNT) {
-        assert(false && "error: cecs_flatbucket_get_value_mut_unchecked called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    return &bucket->values[index * value_size];
+inline void *cecs_flatset_get_bucket_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_mut_unchecked(bucket, index, value_size, 0);
 }
-inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    if (index >= cecs_flatbucket_get_count(*bucket)) {
-        assert(false && "error: cecs_flatbucket_get_value called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    return &bucket->values[index * value_size];
+inline const void *cecs_flatset_get_bucket_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value(bucket, index, value_size, 0);
 }
-inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    if (index >= cecs_flatbucket_get_count(*bucket)) {
-        assert(false && "error: cecs_flatbucket_get_value_mut called with out of bounds index");
-        exit(EXIT_FAILURE);
-    }
-    return &bucket->values[index * value_size];
+inline void *cecs_flatset_get_bucket_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_mut(bucket, index, value_size, 0);
 }
-uint_fast8_t cecs_flatbucket_find_hash_index(
-    const cecs_flatbucket *bucket,
-    const cecs_flatset_hash hash,
-    const cecs_flatset_hash_low_fast hash7,
-    const size_t hash_offset,
-    const size_t hash_stride
-);
 
 typedef struct cecs_flatset {
     cecs_flatbucket *buckets;
