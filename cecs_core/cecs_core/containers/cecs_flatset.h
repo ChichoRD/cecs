@@ -43,7 +43,7 @@ static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
 }
 
 static inline size_t cecs_flatset_bucket_size(const size_t value_size) {
-    return cecs_max(sizeof(cecs_flatbucket), value_size) + (value_size * CECS_FLATBUCKET8_MAX_COUNT);
+    return sizeof(cecs_flatbucket) + (value_size << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
 }
 
 // Set bucket access functions

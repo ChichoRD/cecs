@@ -57,9 +57,9 @@ static inline size_t cecs_flatmap_bucket_count(const cecs_flatmap *set) {
 }
 
 static inline size_t cecs_flatmap_bucket_size(const size_t value_size) {
-    return cecs_max(sizeof(cecs_flatbucket), value_size)
-        + (value_size * CECS_FLATBUCKET8_MAX_COUNT)
-        + (sizeof(cecs_flatmap_hash) * CECS_FLATBUCKET8_MAX_COUNT);
+    return sizeof(cecs_flatbucket)
+        + (value_size << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
+        + (sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
 }
 
 // Set bucket access functions

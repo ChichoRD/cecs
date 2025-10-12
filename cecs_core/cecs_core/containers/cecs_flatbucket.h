@@ -102,11 +102,4 @@ uint_fast8_t cecs_flatbucket_find_hash_index(
 );
 void cecs_flatbucket_reset(cecs_flatbucket *bucket, const size_t value_size);
 
-
-static inline cecs_flatbucket *cecs_flatbucket_start_from_allocation(uint8_t *const bucket_allocation, const size_t value_size) {
-    return (cecs_flatbucket *)(bucket_allocation + (cecs_max(sizeof(cecs_flatbucket), value_size) - sizeof(cecs_flatbucket)));
-}
-static inline uint8_t *cecs_flatbucket_allocation_start_from_bucket(cecs_flatbucket *const bucket, const size_t value_size) {
-    return (uint8_t *)bucket - (cecs_max(sizeof(cecs_flatbucket), value_size) - sizeof(cecs_flatbucket));
-}
 #endif
