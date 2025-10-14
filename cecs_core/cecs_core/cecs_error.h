@@ -1,9 +1,21 @@
 #ifndef CECS_ERROR_H
 #define CECS_ERROR_H
 
+#ifndef CECS_ERROR_PRINTS_STDERR
+#define CECS_ERROR_PRINTS_STDERR_DEFAULT true
+#define CECS_ERROR_PRINTS_STDERR CECS_ERROR_PRINTS_STDERR_DEFAULT
+
+#endif
+
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+#if !NDEBUG || CECS_ERROR_PRINTS_STDERR
+#include <stdio.h>
+#endif
+
 
 #define CECS_COMPILER_NONE 0
 #define CECS_COMPILER_CLANG 1
@@ -42,6 +54,10 @@ inline void cecs_unreachable(void) {
 }
 
 inline void cecs_assert_unreachable(const char *const message) {
+#if !NDEBUG || CECS_ERROR_PRINTS_STDERR
+    fprintf(stderr, "\x1B[31m""CECS ERROR!""\x1B[0m" " %s\n" , message);
+#endif
+
     (void)message;
     assert(false && "fatal error: unreachable code reached");
     cecs_unreachable();
@@ -103,6 +119,10 @@ inline void cecs_fail(void) {
 }
 
 inline void cecs_assert_and_fail(const char *const message) {
+#if !NDEBUG || CECS_ERROR_PRINTS_STDERR
+    fprintf(stderr, "\x1B[31m""CECS ERROR!""\x1B[0m" " %s\n", message);
+#endif
+
     (void)message;
     cecs_fail();
 }
