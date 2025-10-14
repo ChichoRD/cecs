@@ -2,223 +2,297 @@
 #include <assert.h>
 
 #include "cecs_dynarray.h"
+#include <cecs_core/cecs_error.h>
 #include <cecs_math/relations/cecs_ordering.h>
 
 extern inline size_t cecs_dynarray_count(const cecs_dynarray *arr);
 extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);
 extern inline cecs_dynarray cecs_dynarray_create(void);
 
-cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator* a, const size_t values_capacity, const size_t value_size) {
-    if (value_size == 0) {
-        assert(false && "error: attempted to create dynamic array with zero size elements");
-        exit(EXIT_FAILURE);
-    } else if (values_capacity == 0) {
-        return cecs_dynarray_create();
-    } else {
-        return (cecs_dynarray) {
-            .values = cecs_allocator_alloc_aligned(a,  value_size * values_capacity, cecs_max_alignment_from_size(value_size)),
-            .values_used = 0,
-            .values_capacity = values_capacity
-        };
-    }
-}
-void cecs_dynarray_destroy(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
-    if (arr->values) {
-        cecs_allocator_free(a, arr->values, value_size * arr->values_capacity);
-        arr->values = NULL;
-    }
-    arr->values_used = 0;
-    arr->values_capacity = 0;
-}
-
-void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
-    if (values_new_capacity > arr->values_capacity) {
-        arr->values = cecs_allocator_realloc_aligned(
-            a,
-            arr->values,
-            value_size * arr->values_capacity,
-            value_size * values_new_capacity,
-            cecs_max_alignment_from_size(value_size)
-        );
-        arr->values_capacity = values_new_capacity;
-    } else if (values_new_capacity < arr->values_capacity) {
-        assert(false && "fatal error: attempted to grow dynamic array to smaller capacity");
-        exit(EXIT_FAILURE);
-    }
-}
-void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
-    cecs_dynarray_reserve_exact(arr, a, cecs_max(values_new_capacity, arr->values_capacity << 1), value_size);
-}
-
-void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
-    if (values_new_capacity < arr->values_used) {
-        assert(
-            false
-            && "fatal error: attempted to shrink dynamic array to smaller capacity than used."
-            "Use cecs_dynarray_truncate() to truncate the array before shrinking."
-        );
-        exit(EXIT_FAILURE);
-    } else if (values_new_capacity < arr->values_capacity) {
-        arr->values = cecs_allocator_realloc_aligned(
-            a,
-            arr->values,
-            value_size * arr->values_capacity,
-            value_size * values_new_capacity,
-            cecs_max_alignment_from_size(value_size)
-        );
-        arr->values_capacity = values_new_capacity;
-    } else if (values_new_capacity > arr->values_capacity) {
-        assert(false && "fatal error: attempted to shrink dynamic array to a capacity larger or equal than current capacity");
-        exit(EXIT_FAILURE);
-    }
-}
-void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
-    cecs_dynarray_shrink_exact(arr, a, cecs_max(values_new_capacity, arr->values_used), value_size);
-}
-
-void *cecs_dynarray_push(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
-    if (arr->values_used + 1 > arr->values_capacity) {
-        cecs_dynarray_reserve_exact(arr, a, arr->values_capacity << 1, value_size);
-    }
+void *cecs_array_push(cecs_array *arr, const size_t value_size) {
+    cecs_assert_or_exit(
+        arr->values_used < arr->values_capacity,
+        "error: attempted to push to full cecs_array"
+    );
     void *const element = arr->values + arr->values_used * value_size;
     ++arr->values_used;
     return element;
 }
-void *cecs_dynarray_push_many(cecs_dynarray *arr, cecs_allocator *a, const size_t count, const size_t value_size) {
-    const size_t new_count = arr->values_used + count;
-    if (new_count > arr->values_capacity) {
-        cecs_dynarray_reserve(arr, a, new_count, value_size);
-    }
+void *cecs_array_push_many(cecs_array *arr, const size_t count, const size_t value_size) {
+    cecs_assert_or_exit(
+        arr->values_used + count <= arr->values_capacity,
+        "error: attempted to push many to cecs_array exceeding its capacity"
+    );
     void *const elements = arr->values + arr->values_used * value_size;
-    arr->values_used = new_count;
+    arr->values_used += count;
     return elements;
 }
+void *cecs_array_push_many_copy(cecs_array *arr, const void *values, const size_t count, const size_t value_size) {
+    void *const elements = cecs_array_push_many(arr, count, value_size);
+    return memcpy(elements, values, count * value_size);
+}
 
+void *cecs_array_extend(cecs_array *arr, const size_t start_index_inclusive, const size_t end_index_exclusive, const size_t value_size) {
+    const size_t extend_count = end_index_exclusive - start_index_inclusive;
+    if (cecs_expect_not(start_index_inclusive > end_index_exclusive)) {
+        cecs_assert_and_fail("error: attempted to extend cecs_array with start index greater than end index");
+    } else if (cecs_expect_not(end_index_exclusive > arr->values_used)) {
+        cecs_assert_and_fail("error: attempted to extend cecs_array with end index greater than count");
+    } else if (cecs_expect_not(arr->values_used + extend_count > arr->values_capacity)) {
+        cecs_assert_and_fail("error: attempted to extend cecs_array exceeding its capacity");
+    }
+    
+    void *const extension_start = arr->values + start_index_inclusive * value_size;
+    if (start_index_inclusive < arr->values_used) {
+        memmove(
+            arr->values + (end_index_exclusive) * value_size,
+            extension_start,
+            (arr->values_used - start_index_inclusive) * value_size
+        );
+    }
+    arr->values_used += extend_count;
+    return extension_start;
+}
+void *cecs_array_insert_many_copy(cecs_array *arr, const size_t index, const void *values, const size_t count, const size_t value_size) {
+    void *const elements = cecs_array_insert_many(arr, index, count, value_size);
+    return memcpy(elements, values, count * value_size);
+}
+
+void cecs_array_pop(cecs_array *arr) {
+    cecs_assert_or_exit(
+        arr->values_used > 0,
+        "error: attempted to pop from empty cecs_array"
+    );
+    --arr->values_used;
+}
+void cecs_array_truncate(cecs_array *arr, const size_t new_count) {
+    cecs_assert_or_exit(
+        new_count <= arr->values_used,
+        "error: attempted to truncate cecs_array to a larger count"
+    );
+    arr->values_used = new_count;
+}
+void cecs_array_swap_last_pop(cecs_array *arr, const size_t index, const size_t value_size) {
+    cecs_assert_or_exit(
+        arr->values_used > 0,
+        "error: attempted to swap-last-pop from empty cecs_array"
+    );
+    switch (arr->values_used) {
+    case 0: {
+        cecs_assert_unreachable("fatal: unreachable");
+        break;
+    }
+    case 1: {
+        arr->values_used = 0;
+        break;
+    }
+    default: {
+        void *const swapped = cecs_array_get_mut(arr, index, value_size);
+        const void *const last = cecs_array_last(arr, value_size);
+        memcpy(swapped, last, value_size);
+        --arr->values_used;
+        break;
+    }
+    }
+}
+
+void cecs_array_remove(cecs_array *arr, const size_t index, const size_t value_size) {
+    cecs_assert_or_exit(
+        index < arr->values_used,
+        "error: attempted to remove from cecs_array with out-of-bounds index"
+    );
+    if (index + 1 < arr->values_used) {
+        memmove(
+            arr->values + index * value_size,
+            arr->values + (index + 1) * value_size,
+            (arr->values_used - index - 1) * value_size
+        );
+    }
+    --arr->values_used;
+}
+void cecs_array_remove_many(cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
+    cecs_assert_or_exit(
+        index + count <= arr->values_used,
+        "error: attempted to remove from cecs_array with out-of-bounds index"
+    );
+    if (index + count < arr->values_used) {
+        memmove(
+            arr->values + index * value_size,
+            arr->values + (index + count) * value_size,
+            (arr->values_used - index - count) * value_size
+        );
+    }
+    arr->values_used -= count;
+}
+
+static inline void *cecs_array_get_ptr(const cecs_array *arr, const size_t index, const size_t size) {
+    cecs_assert_or_exit(
+        index < arr->values_used,
+        "error: attempted to get element from cecs_array with out-of-bounds index"
+    );
+    return arr->values + index * size;
+}
+const void *cecs_array_get(const cecs_array *arr, const size_t index, const size_t size) {
+    return cecs_array_get_ptr(arr, index, size);
+}
+void *cecs_array_get_mut(cecs_array *arr, const size_t index, const size_t size) {
+    return cecs_array_get_ptr(arr, index, size);
+}
+static inline void *cecs_array_get_range_ptr(const cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
+    cecs_assert_or_exit(
+        index + count <= arr->values_used,
+        "error: attempted to get range from cecs_array with out-of-bounds range"
+    );
+    return arr->values + index * value_size;
+}
+const void *cecs_array_get_range(const cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
+    return cecs_array_get_range_ptr(arr, index, count, value_size);
+}
+void *cecs_array_get_range_mut(cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
+    return cecs_array_get_range_ptr(arr, index, count, value_size);
+}
+
+
+// static inline const uint8_t *cecs_dynarray_values(const cecs_dynarray *arr) {
+//     return arr->array.values;
+// }
+// static inline uint8_t *cecs_dynarray_values_mut(cecs_dynarray *arr) {
+//     return arr->array.values;
+// }
+cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator *a, const size_t values_capacity, const size_t value_size) {
+    if (value_size == 0 || values_capacity == 0) {
+        return cecs_dynarray_create();
+    } else {
+        void *const values = cecs_allocator_alloc_aligned(a,  value_size * values_capacity, cecs_max_alignment_from_size(value_size));
+        return (cecs_dynarray) {
+            .array = cecs_array_create(values, values_capacity)
+        };
+    }
+}
+void cecs_dynarray_destroy(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
+    if (arr->array.values) {
+        cecs_allocator_free(a, arr->array.values, value_size * arr->array.values_capacity);
+        arr->array.values = NULL;
+    }
+    arr->array.values_used = 0;
+    arr->array.values_capacity = 0;
+}
+
+void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
+    if (values_new_capacity > arr->array.values_capacity) {
+        arr->array.values = cecs_allocator_realloc_aligned(
+            a,
+            arr->array.values,
+            value_size * arr->array.values_capacity,
+            value_size * values_new_capacity,
+            cecs_max_alignment_from_size(value_size)
+        );
+        arr->array.values_capacity = values_new_capacity;
+    } else if (cecs_expect_not(values_new_capacity < arr->array.values_capacity)) {
+        cecs_assert_and_fail("fatal error: attempted to grow dynamic array to smaller capacity");
+    }
+}
+void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
+    cecs_dynarray_reserve_exact(arr, a, cecs_max(values_new_capacity, arr->array.values_capacity << 1), value_size);
+}
+
+void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
+    if (cecs_expect_not(values_new_capacity < arr->array.values_used)) {
+        cecs_assert_and_fail(
+            "fatal error: attempted to shrink dynamic array to smaller capacity than used."
+            "Use cecs_dynarray_truncate() to truncate the array before shrinking."
+        );
+    } else if (values_new_capacity < arr->array.values_capacity) {
+        arr->array.values = cecs_allocator_realloc_aligned(
+            a,
+            arr->array.values,
+            value_size * arr->array.values_capacity,
+            value_size * values_new_capacity,
+            cecs_max_alignment_from_size(value_size)
+        );
+        arr->array.values_capacity = values_new_capacity;
+    } else if (cecs_expect_not(values_new_capacity > arr->array.values_capacity)) {
+        cecs_assert_and_fail("fatal error: attempted to shrink dynamic array to a capacity larger or equal than current capacity");
+    }
+}
+void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
+    cecs_dynarray_shrink_exact(arr, a, cecs_max(values_new_capacity, arr->array.values_used), value_size);
+}
+
+void *cecs_dynarray_push(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
+    const size_t capacity = cecs_dynarray_capacity(arr);
+    if (cecs_dynarray_count(arr) + 1 > capacity) {
+        cecs_dynarray_reserve_exact(arr, a, capacity << 1, value_size);
+    }
+    return cecs_array_push(&arr->array, value_size);
+}
+void *cecs_dynarray_push_many(cecs_dynarray *arr, cecs_allocator *a, const size_t count, const size_t value_size) {
+    const size_t current_count = cecs_dynarray_count(arr);
+    const size_t capacity = cecs_dynarray_capacity(arr);
+    const size_t new_count = current_count + count;
+    if (new_count > capacity) {
+        cecs_dynarray_reserve(arr, a, new_count, value_size);
+    }
+    return cecs_array_push_many(&arr->array, count, value_size);
+}
 void *cecs_dynarray_push_many_copy(cecs_dynarray *arr, cecs_allocator *a, const void *values, const size_t count, const size_t value_size) {
     void *const elements = cecs_dynarray_push_many(arr, a, count, value_size);
     return memcpy(elements, values, count * value_size);
 }
 
 void *cecs_dynarray_extend(cecs_dynarray *arr, cecs_allocator *a, const size_t start_index_inclusive, const size_t end_index_exclusive, const size_t value_size) {
-    if (start_index_inclusive > end_index_exclusive) {
-        assert(
-            false
-            && "error: attempted to extend dynamic array with invalid range"
-            "start_index_inclusive must be less than or equal to end_index_exclusive"
-        );
-        exit(EXIT_FAILURE);
-    } else if (start_index_inclusive >= arr->values_used) {
-        assert(false && "error: attempted to extend dynamic array with starting index out of bounds");
-        exit(EXIT_FAILURE);
-    } else if (end_index_exclusive > arr->values_used) {
-        assert(false && "error: attempted to extend dynamic array with end index out of bounds");
-        exit(EXIT_FAILURE);
-    }
-
-    const size_t values_count = end_index_exclusive - start_index_inclusive;
-    const size_t new_count = arr->values_used + values_count;
-    void *const elements = arr->values + start_index_inclusive * value_size;
-    if (values_count == 0) {
-        return elements;
-    } else if (new_count > arr->values_capacity) {
+    const size_t capacity = cecs_dynarray_capacity(arr);
+    const size_t extend_count = end_index_exclusive - start_index_inclusive;
+    const size_t new_count = cecs_dynarray_count(arr) + extend_count;
+    if (new_count > capacity) {
         cecs_dynarray_reserve(arr, a, new_count, value_size);
     }
-
-    memmove(
-        arr->values + arr->values_used * value_size,
-        elements,
-        values_count * value_size
-    );
-    arr->values_used = new_count;
-    return elements;
+    return cecs_array_extend(&arr->array, start_index_inclusive, end_index_exclusive, value_size);
 }
 void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size) {
     void *const elements = cecs_dynarray_insert_many(arr, a, index, count, value_size);
     return memcpy(elements, values, count * value_size);
 }
 
-void cecs_dynarray_pop(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size)
-{
-    --arr->values_used;
-    const size_t half_capacity = arr->values_capacity >> 1;
-    if (arr->values_used < half_capacity) {
+void cecs_dynarray_pop(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
+    cecs_array_pop(&arr->array);
+    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
+    if (cecs_dynarray_count(arr) < half_capacity) {
         cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 void cecs_dynarray_truncate(cecs_dynarray *arr, cecs_allocator *a, const size_t new_count, const size_t value_size) {
-    arr->values_used = new_count;
-    if (arr->values_used < (arr->values_capacity >> 1)) {
-        cecs_dynarray_shrink_exact(arr, a, arr->values_capacity >> 1, value_size);
+    cecs_array_truncate(&arr->array, new_count);
+    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
+    if (cecs_dynarray_count(arr) < half_capacity) {
+        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 void cecs_dynarray_swap_last_pop(cecs_dynarray* arr, cecs_allocator* a, const size_t index, const size_t value_size) {
-    switch (arr->values_used) {
-    case 0: {
-        assert(false && "error: attempted to swap last element of empty cecs_dynarray");
-        exit(EXIT_FAILURE);
-    }
-    case 1: {
-        --arr->values_used;
-    }
-    default: {
-        void *const swapped = cecs_dynarray_get_mut(arr, index, value_size);
-        const void *const last = cecs_dynarray_last(arr, value_size);
-        memcpy(swapped, last, value_size);
-        --arr->values_used;
-    }
-    }
-    const size_t half_capacity = arr->values_capacity >> 1;
-    if (arr->values_used < half_capacity) {
+    cecs_array_swap_last_pop(&arr->array, index, value_size);
+    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
+    if (cecs_dynarray_count(arr) < half_capacity) {
         cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 
 void cecs_dynarray_remove(cecs_dynarray* arr, cecs_allocator* a, const size_t index, const size_t value_size) {
-    if (index >= arr->values_used) {
-        assert(false && "error: attempted to remove element with index out of bounds");
-        exit(EXIT_FAILURE);
-    }
-
-    --arr->values_used;
-    memmove(
-        arr->values + index * value_size,
-        arr->values + (index + 1) * value_size,
-        (arr->values_used - index) * value_size
-    );
-
-    const size_t half_capacity = arr->values_capacity >> 1;
-    if (arr->values_used < half_capacity) {
+    cecs_array_remove(&arr->array, index, value_size);
+    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
+    if (cecs_dynarray_count(arr) < half_capacity) {
         cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 void cecs_dynarray_remove_many(cecs_dynarray* arr, cecs_allocator* a, const size_t index, const size_t count, const size_t value_size) {
-    if (index >= arr->values_used) {
-        assert(false && "error: attempted to remove elements with starting index out of bounds");
-        exit(EXIT_FAILURE);
-    } else if (index + count > arr->values_used) {
-        assert(false && "error: attempted to remove elements with end out of bounds");
-        exit(EXIT_FAILURE);
-    }
-
-    arr->values_used -= count;
-    memmove(
-        arr->values + index * value_size,
-        arr->values + (index + count) * value_size,
-        (arr->values_used - index) * value_size
-    );
-
-    const size_t half_capacity = arr->values_capacity >> 1;
-    if (arr->values_used < half_capacity) {
+    cecs_array_remove_many(&arr->array, index, count, value_size);
+    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
+    if (cecs_dynarray_count(arr) < half_capacity) {
         cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
     }
 }
 
 static inline void *cecs_dynarray_get_ptr(const cecs_dynarray *arr, const size_t index, const size_t size) {
-    if (index >= arr->values_used) {
-        assert(false && "error: attempted to get element with index out of bounds");
-        exit(EXIT_FAILURE);
-    }
-    return arr->values + index * size;
+    return cecs_array_get_ptr(&arr->array, index, size);
 }
 void* cecs_dynarray_get_mut(cecs_dynarray* arr, const size_t index, const size_t size) {
     return cecs_dynarray_get_ptr(arr, index, size);
@@ -227,14 +301,7 @@ const void *cecs_dynarray_get(const cecs_dynarray *arr, const size_t index, cons
     return cecs_dynarray_get_ptr(arr, index, size);
 }
 static inline void *cecs_dynarray_get_range_ptr(const cecs_dynarray *arr, const size_t index, const size_t count, const size_t size) {
-    if (index >= arr->values_used) {
-        assert(false && "error: attempted to get elements with starting index out of bounds");
-        exit(EXIT_FAILURE);
-    } else if (index + count > arr->values_used) {
-        assert(false && "error: attempted to get elements with end out of bounds");
-        exit(EXIT_FAILURE);
-    }
-    return arr->values + index * size;
+    return cecs_array_get_range_ptr(&arr->array, index, count, size);
 }
 void *cecs_dynarray_get_range_mut(cecs_dynarray* arr, const size_t index, const size_t count, const size_t value_size) {
     return cecs_dynarray_get_range_ptr(arr, index, count, value_size);
