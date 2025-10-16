@@ -1,5 +1,6 @@
 #include "cecs_flatbucket.h"
-#include "allocator/cecs_allocation.h"
+#include <string.h>
+#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
 
 const uint_fast8_t cecs_flatbucket_max_count = CECS_FLATBUCKET8_MAX_COUNT;
 
@@ -170,7 +171,5 @@ uint_fast8_t cecs_flatbucket_find_hash_index(
 
 void cecs_flatbucket_reset(cecs_flatbucket *bucket, const size_t value_size) {
     *bucket = (cecs_flatbucket){0};
-    if (!CECS_ALLOC_FUNC_IS_ZERO_INIT) {
-        memset(bucket->values, 0, cecs_flatbucket_max_count * value_size);
-    }
+    memset(bucket->values, 0, cecs_flatbucket_max_count * value_size);
 }

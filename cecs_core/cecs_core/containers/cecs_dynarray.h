@@ -1,7 +1,7 @@
 #ifndef CECS_DYNARRAY_H
 #define CECS_DYNARRAY_H
 
-#include "cecs_allocator.h"
+#include <cecs_core/cecs_allocator.h>
 #include <stddef.h>
 #include <stdint.h>
 

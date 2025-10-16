@@ -108,17 +108,17 @@ project(cecs_fiddle_test C)
         "${CMAKE_CURRENT_SOURCE_DIR}/examples/fiddle_test/src/main.c"
         ${CECS_MATH_SOURCES}
         "${CECS_CORE_SRC_DIRECTORY}/cecs_error.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_allocation.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_memory.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_bump_allocator.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_arena_allocator.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/allocator/cecs_implicit_arena_allocator.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_allocation.c"
+        "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_memory.c"
+        "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_bump_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_arena_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_implicit_arena_allocator.c"
+        "${CECS_CORE_SRC_DIRECTORY}/cecs_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_dynarray.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatbucket.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatset.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatmap_v2.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_sparse_set_v2.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatmap.c"
+        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_sparse_set.c"
     )
     target_include_directories(
         ${PROJECT_NAME}

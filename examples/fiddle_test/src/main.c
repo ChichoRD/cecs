@@ -1,9 +1,9 @@
 // #include <cecs_math/cecs_math.h>
-#include <cecs_core/containers/cecs_allocator.h>
+#include <cecs_core/cecs_allocator.h>
 #include <cecs_core/containers/cecs_dynarray.h>
-#include <cecs_core/containers/cecs_sparse_set_v2.h>
+#include <cecs_core/containers/cecs_sparse_set.h>
 #include <cecs_core/containers/cecs_flatset.h>
-#include <cecs_core/containers/cecs_flatmap_v2.h>
+#include <cecs_core/containers/cecs_flatmap.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>

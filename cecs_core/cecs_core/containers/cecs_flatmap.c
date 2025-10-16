@@ -1,350 +1,567 @@
-#include <memory.h>
-#include <stdlib.h>
-
 #include "cecs_flatmap.h"
+#include <cecs_math/arithmetic/cecs_integer_arithmetic.h>
+#include <cecs_math/relations/cecs_ordering.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <stdbool.h>
+#include <memory.h>
 
-const cecs_flatmap_low_hash cecs_flatmap_low_hash_mask = CECS_FLATMPAP_LOW_HASH_MASK;
-const uint8_t cecs_flatmap_ctrl_non_occupied_last_max = CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_MAX;
+extern inline const void *cecs_flatmap_bucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
+extern inline void *cecs_flatmap_bucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
+extern inline const void *cecs_flatmap_bucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
+extern inline void *cecs_flatmap_bucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size);
 
-static inline cecs_flatmap_low_hash cecs_flatmap_hash_low(const cecs_flatmap_hash hash) {
-    return hash & cecs_flatmap_low_hash_mask;
+extern inline const cecs_flatmap_hash *cecs_flatmap_bucket_get_key_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index);
+extern inline cecs_flatmap_hash *cecs_flatmap_bucket_get_key_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index);
+extern inline const cecs_flatmap_hash *cecs_flatmap_bucket_get_key(const cecs_flatbucket *bucket, const uint_fast8_t index);
+extern inline cecs_flatmap_hash *cecs_flatmap_bucket_get_key_mut(cecs_flatbucket *bucket, const uint_fast8_t index);
+
+
+cecs_flatmap cecs_flatmap_create(void) {
+    cecs_flatmap set = {
+        .buckets = NULL,
+        .bucket_count = 0,
+        .values_count = 0
+    };
+    return set;
 }
-static inline cecs_flatmap_hash cecs_flatmap_hash_high(const cecs_flatmap_hash hash) {
-    return hash >> CECS_FLATMAP_LOW_HASH_BITS;
-}
-static inline cecs_flatmap_low_hash cecs_flatmap_hash_split(const cecs_flatmap_hash hash, cecs_flatmap_hash *out_high_hash) {
-    *out_high_hash = cecs_flatmap_hash_high(hash);
-    return cecs_flatmap_hash_low(hash);
-}
-[[maybe_unused]]
-static inline cecs_flatmap_low_hash cecs_flatmap_hash_split_mut(cecs_flatmap_hash *in_out_hash) {
-    cecs_flatmap_low_hash low_hash = cecs_flatmap_hash_low(*in_out_hash);
-    *in_out_hash >>= CECS_FLATMAP_LOW_HASH_BITS;
-    return low_hash;
+cecs_flatmap cecs_flatmap_create_with_capacity(cecs_allocator *allocator, const size_t bucket_count, const size_t value_size) {
+    if (!cecs_is_pow2(bucket_count)) {
+        assert(false && "error: cecs_flatmap_create_with_capacity called with non power of two bucket count");
+        exit(EXIT_FAILURE);
+    }
+
+    uint8_t *const bucket_allocation = (uint8_t *)cecs_allocator_alloc_aligned(
+        allocator,
+        bucket_count * cecs_flatmap_bucket_size(value_size),
+        8
+    );
+    cecs_flatmap set = {
+        .buckets = (cecs_flatbucket *)bucket_allocation,
+        .bucket_count = bucket_count,
+        .values_count = 0
+    };
+    for (size_t i = 0; i < bucket_count; i++) {
+        cecs_flatbucket *bucket = cecs_flatmap_get_bucket_mut(&set, i, value_size);
+        cecs_flatbucket_reset(bucket, value_size);
+    }
+    return set;
 }
 
-static inline bool cecs_flatmap_count_is_pow2m1(size_t count) {
-    return ((count + 1) & (count)) == 0;
+void cecs_flatmap_clear(cecs_flatmap *set, const size_t value_size) {
+    for (size_t i = 0; i < set->bucket_count; i++) {
+        cecs_flatbucket *bucket = cecs_flatmap_get_bucket_mut(set, i, value_size);
+        cecs_flatbucket_reset(bucket, value_size);
+    }
+    set->values_count = 0;
+}
+void cecs_flatmap_destroy(cecs_flatmap *set, cecs_allocator *allocator, const size_t value_size) {
+    if (set->buckets) {
+        uint8_t *const allocation = (uint8_t *)set->buckets;
+        cecs_allocator_free(allocator, allocation, set->bucket_count * cecs_flatmap_bucket_size(value_size));
+        set->buckets = NULL;
+    }
+    set->bucket_count = 0;
+    set->values_count = 0;
 }
 
-static inline size_t cecs_flatmap_offset_of_ctrl_padding(size_t count) {
-    return count * sizeof(cecs_flatmap_ctrl);
+void cecs_flatmap_extend_exclusive(
+    cecs_flatmap *destination,
+    const cecs_flatmap *source,
+    const size_t value_size
+) {
+    const size_t destination_initial_count = cecs_flatmap_count(destination);
+    const size_t source_count = cecs_flatmap_count(source);
+    const size_t destination_remaining_capacity = cecs_flatmap_capacity(destination) - destination_initial_count;
+    if (destination_remaining_capacity < source_count) {
+        assert(false && "error: cecs_flatmap_extend_exclusive called with insufficient capacity in destination");
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t i = 0; i < source->bucket_count; ++i) {
+        const cecs_flatbucket *source_bucket = cecs_flatmap_get_bucket(source, i, value_size);
+        const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
+        for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
+            const uint8_t *const source_value = cecs_flatmap_bucket_get_value(source_bucket, j, value_size);
+            void *const destination_value = cecs_flatmap_insert_within_expect(
+                destination,
+                *cecs_flatmap_bucket_get_key(source_bucket, j),
+                value_size
+            );
+            memcpy(destination_value, source_value, value_size);
+        }
+    }
+    if (cecs_flatmap_count(destination) != (destination_initial_count + source_count)) {
+        assert(false && "error: cecs_flatmap_extend_exclusive did not extend the destination set correctly with the expected number of values");
+        exit(EXIT_FAILURE);
+    }
+}
+void cecs_flatmap_extend(
+    cecs_flatmap *destination,
+    const cecs_flatmap *source,
+    cecs_allocator *allocator,
+    const size_t value_size
+) {
+    const size_t destination_initial_count = cecs_flatmap_count(destination);
+    const size_t source_count = cecs_flatmap_count(source);
+    const size_t destination_remaining_capacity = cecs_flatmap_capacity(destination) - destination_initial_count;
+    if (destination_remaining_capacity < source_count) {
+        assert(false && "error: cecs_flatmap_extend called with insufficient capacity in destination");
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t i = 0; i < source->bucket_count; ++i) {
+        const cecs_flatbucket *source_bucket = cecs_flatmap_get_bucket(source, i, value_size);
+        const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*source_bucket);
+        for (uint_fast8_t j = 0; j < bucket_value_count; ++j) {
+            const uint8_t *const source_value = cecs_flatmap_bucket_get_value(source_bucket, j, value_size);
+            void *const destination_value = cecs_flatmap_find_or_insert(
+                destination,
+                allocator,
+                *cecs_flatmap_bucket_get_key(source_bucket, j),
+                value_size
+            );
+            memcpy(destination_value, source_value, value_size);
+        }
+    }
 }
 
-// TODO: add offsetof calculation to math and utility
-static inline size_t cecs_flatmap_offset_of_values(size_t count) {
-    static const size_t alignment_mask = 0x0F;
-    const size_t padding_offset = cecs_flatmap_offset_of_ctrl_padding(count);
-    return padding_offset + (((alignment_mask + 1) - (padding_offset & alignment_mask)) & alignment_mask);
+void cecs_flatmap_resize(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const size_t new_bucket_count,
+    const size_t value_size
+) {
+    cecs_flatmap new_set = cecs_flatmap_create_with_capacity(
+        allocator,
+        new_bucket_count,
+        value_size
+    );
+    cecs_flatmap_extend_exclusive(&new_set, set, value_size);
+    cecs_flatmap_destroy(set, allocator, value_size);
+    *set = new_set;
 }
-static inline size_t cecs_flatmap_offset_of_next_value(size_t value_size) {
-    static const size_t alignment_mask = 0x07;
-    const size_t padding_offset = sizeof(cecs_flatmap_hash_header) + value_size;
-    return padding_offset + (((alignment_mask + 1) - (padding_offset & alignment_mask)) & alignment_mask);
-}
-static inline size_t cecs_flatmap_offset_of_values_end(size_t count, size_t value_size) {
-    return cecs_flatmap_offset_of_values(count) + count * cecs_flatmap_offset_of_next_value(value_size);
-}
-
-static inline cecs_flatmap_ctrl *cecs_flatmap_ctrl_at(const cecs_flatmap *m, size_t index) {
-    assert(index < m->count && "error: flatmap ctrl index out of bounds");
-    return m->ctrl_and_hash_values + index;
-}
-static inline cecs_flatmap_hash_header *cecs_flatmap_hash_values(const cecs_flatmap *m) {
-    return (cecs_flatmap_hash_header *)(((uint8_t *)m->ctrl_and_hash_values) + cecs_flatmap_offset_of_values(m->count));
-}
-static inline cecs_flatmap_hash_header *cecs_flatmap_hash_value_at(const cecs_flatmap *m, size_t index, size_t value_size) {
-    assert(index < m->count && "error: flatmap hash-value index out of bounds");
-    return (cecs_flatmap_hash_header *)(
-        ((uint8_t *)cecs_flatmap_hash_values(m)) + index * cecs_flatmap_offset_of_next_value(value_size)
+void cecs_flatmap_shrink(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const size_t new_bucket_count,
+    const size_t value_size
+) {
+    const size_t clamped_bucket_count = cecs_max((cecs_flatmap_count(set) + 7) >> CECS_FLATBUCKET8_MAX_COUNT_LOG2, new_bucket_count);
+    cecs_flatmap_resize(
+        set,
+        allocator,
+        clamped_bucket_count,
+        value_size
     );
 }
 
-static bool cecs_flatmap_find_or_next_empty(
-    const cecs_flatmap *m,
+static inline size_t cecs_flatmap_bucket_index_from_hash(const cecs_flatmap_hash hash, const size_t bucket_count_mask) {
+    assert(
+        cecs_is_pow2(bucket_count_mask + 1)
+        && "error: cecs_flatmap_bucket_index_from_hash called with non power of two bucket count mask"
+    );
+    return (hash >> CECS_FLATBUCKET8_MAX_COUNT_LOG2) & bucket_count_mask;
+}
+cecs_flatbucket *cecs_flatmap_find_insert_bucket_expect(
+    cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    size_t *out_index,
-    const size_t value_size,
-    size_t *out_previous_index
+    const size_t value_size
 ) {
-    *out_previous_index = m->count;
-    if (m->count == 0) {
-        *out_index = 0;
-        return false;
+    const cecs_flatmap_hash_low_fast hash7 = cecs_flatbucket_hash_low_get(hash);
+    const size_t bucket_count = cecs_flatmap_bucket_count(set);
+    if (!cecs_is_pow2(bucket_count)) {
+        assert(false && "error: cecs_flatmap_find_insert_bucket_expect called with non power of two bucket count");
+        exit(EXIT_FAILURE);
     }
 
-    cecs_flatmap_high_hash high_hash;
-    const cecs_flatmap_low_hash low_hash = cecs_flatmap_hash_split(hash, &high_hash);
-    size_t index = high_hash % m->count;
-
-    cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
-    while (ctrl->any.occupied || ctrl->non_occupied.deleted) {
-        uint_fast8_t increment;
-        if (ctrl->any.occupied) {
-            increment = 1;
-            if (
-                ctrl->occupied.low_hash == low_hash
-                && cecs_flatmap_hash_value_at(m, index, value_size)->hash == hash
-            ){
-                *out_index = index;
-                return true;
-            }
-        } else {
-            assert(ctrl->non_occupied.deleted && "fatal error: flatmap non-occupied ctrl must be deleted");
-            increment = ctrl->non_occupied.last_non_occupied + 1;
+    const size_t bucket_count_mask = bucket_count - 1; 
+    const size_t initial_bucket_index = cecs_flatmap_bucket_index_from_hash(hash, bucket_count_mask);
+    size_t next_bucket_index = initial_bucket_index;
+    cecs_flatbucket *bucket;
+    cecs_flatbucket *insert;
+    do {
+        bucket = cecs_flatmap_get_bucket_mut(set, next_bucket_index, value_size);
+        const uint_fast8_t index = cecs_flatbucket_find_hash_index(bucket, hash, hash7, 0, sizeof(cecs_flatmap_hash));
+        if (index < CECS_FLATBUCKET8_MAX_COUNT) {
+            assert(false && "error: cecs_flatmap_insert_within_expect called with already occupied hash_low");
+            exit(EXIT_FAILURE);
+        } else if (!cecs_flatbucket_is_full(*bucket)) {
+            insert = bucket;
         }
-        
-        *out_previous_index = index;
-        index += increment;
-        ctrl += increment;
-    }
+        next_bucket_index = (next_bucket_index + 1) & bucket_count_mask;
+    } while (
+        (next_bucket_index != initial_bucket_index)
+        && cecs_flatbucket_has_been_full(*bucket)
+    );
 
-    *out_index = index;
+    if (cecs_flatbucket_is_full(*insert)) {
+        assert(false && "fatal error: cecs_flatmap_insert_within_expect called on full bucket");
+        exit(EXIT_FAILURE);
+    }
+    return insert;
+}
+cecs_flatbucket *cecs_flatmap_find_insert_bucket(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size,
+    uint_fast8_t *out_index
+) {
+    const cecs_flatmap_hash_low_fast hash7 = cecs_flatbucket_hash_low_get(hash);
+    const size_t bucket_count = cecs_flatmap_bucket_count(set);
+    if (!cecs_is_pow2(bucket_count)) {
+        assert(false && "error: cecs_flatmap_find_insert_bucket_expect called with non power of two bucket count");
+        exit(EXIT_FAILURE);
+    }
+    
+    const size_t bucket_count_mask = bucket_count - 1; 
+    const size_t initial_bucket_index = cecs_flatmap_bucket_index_from_hash(hash, bucket_count_mask);
+    size_t next_bucket_index = initial_bucket_index;
+    cecs_flatbucket *bucket;
+    cecs_flatbucket *insert;
+    do {
+        bucket = cecs_flatmap_get_bucket_mut(set, next_bucket_index, value_size);
+        const uint_fast8_t index = cecs_flatbucket_find_hash_index(bucket, hash, hash7, 0, sizeof(cecs_flatmap_hash));
+        if (index < CECS_FLATBUCKET8_MAX_COUNT) {
+            *out_index = index;
+            return bucket;
+        } else if (!cecs_flatbucket_is_full(*bucket)) {
+            insert = bucket;
+        }
+
+        next_bucket_index = (next_bucket_index + 1) & bucket_count_mask;
+    } while (
+        (next_bucket_index != initial_bucket_index)
+        && cecs_flatbucket_has_been_full(*bucket)
+    );
+    *out_index = cecs_flatbucket_get_count(*insert);
+    return insert;
+}
+
+bool cecs_flatmap_find_bucket(
+    const cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size,
+    const cecs_flatbucket **out_bucket,
+    uint_fast8_t *out_index
+) {
+    const cecs_flatmap_hash_low_fast hash7 = cecs_flatbucket_hash_low_get(hash);
+    const size_t bucket_count = cecs_flatmap_bucket_count(set);
+    if (!cecs_is_pow2(bucket_count)) {
+        assert(false && "error: cecs_flatmap_find_insert_bucket_expect called with non power of two bucket count");
+        exit(EXIT_FAILURE);
+    }
+    
+    const size_t bucket_count_mask = bucket_count - 1;
+    const size_t initial_bucket_index = cecs_flatmap_bucket_index_from_hash(hash, bucket_count_mask);
+    size_t next_bucket_index = initial_bucket_index;
+    const cecs_flatbucket *bucket;
+    do {
+        bucket = cecs_flatmap_get_bucket(set, next_bucket_index, value_size);
+        const uint_fast8_t index = cecs_flatbucket_find_hash_index(bucket, hash, hash7, 0, sizeof(cecs_flatmap_hash));
+        if (index < CECS_FLATBUCKET8_MAX_COUNT) {
+            *out_bucket = bucket;
+            *out_index = index;
+            return true;
+        }
+        next_bucket_index = (next_bucket_index + 1) & bucket_count_mask;
+    } while ((next_bucket_index != initial_bucket_index) && cecs_flatbucket_has_been_full(*bucket));
+    
+    *out_bucket = NULL;
+    *out_index = CECS_FLATBUCKET8_MAX_COUNT;
+    return false;
+}
+bool cecs_flatmap_find_bucket_mut(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size,
+    cecs_flatbucket **out_bucket,
+    uint_fast8_t *out_index
+) {
+    const cecs_flatmap_hash_low_fast hash7 = cecs_flatbucket_hash_low_get(hash);
+    const size_t bucket_count = cecs_flatmap_bucket_count(set);
+    if (!cecs_is_pow2(bucket_count)) {
+        assert(false && "error: cecs_flatmap_find_insert_bucket_expect called with non power of two bucket count");
+        exit(EXIT_FAILURE);
+    }
+    
+    const size_t bucket_count_mask = bucket_count - 1;
+    const size_t initial_bucket_index = cecs_flatmap_bucket_index_from_hash(hash, bucket_count_mask);
+    size_t next_bucket_index = initial_bucket_index;
+    cecs_flatbucket *bucket;
+    do {
+        bucket = cecs_flatmap_get_bucket_mut(set, next_bucket_index, value_size);
+        const uint_fast8_t index = cecs_flatbucket_find_hash_index(bucket, hash, hash7, 0, sizeof(cecs_flatmap_hash));
+        if (index < CECS_FLATBUCKET8_MAX_COUNT) {
+            *out_bucket = bucket;
+            *out_index = index;
+            return true;
+        }
+        next_bucket_index = (next_bucket_index + 1) & bucket_count_mask;
+    } while ((next_bucket_index != initial_bucket_index) && cecs_flatbucket_has_been_full(*bucket));
+    
+    *out_bucket = NULL;
+    *out_index = CECS_FLATBUCKET8_MAX_COUNT;
     return false;
 }
 
-static bool cecs_flatmap_find_next_empty(
-    const cecs_flatmap *m,
+bool cecs_flatmap_find(
+    const cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    size_t *out_index,
-    size_t *out_previous_index
+    const size_t value_size,
+    const void **out_value
 ) {
-    *out_previous_index = m->count;
-    if (m->count == 0) {
-        *out_index = 0;
-        return false;
-    }
-
-    size_t index = cecs_flatmap_hash_high(hash) % m->count;
-    cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
-    while (ctrl->any.occupied) {
-        *out_previous_index = index;
-        ++index;
-        ++ctrl;
-    }
-
-    *out_index = index;
-    return true;
-}
-
-cecs_flatmap cecs_flatmap_create(void) {
-    return (cecs_flatmap){
-        .ctrl_and_hash_values = NULL,
-        .count = 0,
-        .occupied = 0
-    };
-}
-
-// cecs_flatmap cecs_flatmap_create_with_size(cecs_arena *a, size_t value_count, size_t value_size) {
-//     const size_t count_pow2m1 = cecs_next_pow2(value_count) - 1;
-//     return (cecs_flatmap){
-//         .ctrl_and_hash_values = cecs_arena_alloc(a, cecs_flatmap_offset_of_values_end(count_pow2m1, value_size)),
-//         .count = count_pow2m1,
-//         .occupied = 0
-//     };
-// }
-
-bool cecs_flatmap_get(
-    const cecs_flatmap *m,
-    const cecs_flatmap_hash hash,
-    void **out_value,
-    const size_t value_size
-) {
-    size_t previous_index;
-    size_t index;
-    if (cecs_flatmap_find_or_next_empty(m, hash, &index, value_size, &previous_index)) {
-        *out_value = cecs_flatmap_hash_value_at(m, index, value_size) + 1;
+    const cecs_flatbucket *bucket;
+    uint_fast8_t index;
+    if (cecs_flatmap_find_bucket(
+        set,
+        hash,
+        value_size,
+        &bucket,
+        &index
+    )) {
+        *out_value = cecs_flatmap_bucket_get_value(bucket, index, value_size);
         return true;
-    } else {
-        *out_value = NULL;
-        return false;
     }
+    return false;
 }
-
-static size_t cecs_flatmap_set_count_and_rehash(cecs_flatmap *m, cecs_arena *a, const size_t value_size, const size_t new_count) {
-    assert(cecs_flatmap_count_is_pow2m1(new_count) && "fatal error: flatmap new count is not power of 2 minus 1");
-    
-    size_t old_map_size = 0;
-    cecs_arena arena = cecs_arena_create();
-    cecs_flatmap old_map = (cecs_flatmap){
-        .ctrl_and_hash_values = NULL,
-        .count = m->count,
-        .occupied = m->occupied
-    };
-    if (old_map.count > 0) {
-        old_map_size = cecs_flatmap_offset_of_values_end(old_map.count, value_size);
-        arena = cecs_arena_create_with_capacity(old_map_size);
-        old_map.ctrl_and_hash_values = cecs_arena_alloc(&arena, old_map_size);
-        memcpy(old_map.ctrl_and_hash_values, m->ctrl_and_hash_values, old_map_size);
-    }
-
-    const size_t new_map_size = cecs_flatmap_offset_of_values_end(new_count, value_size);
-    m->ctrl_and_hash_values = cecs_arena_realloc(a, m->ctrl_and_hash_values, old_map_size, new_map_size);
-    m->count = new_count;
-    m->occupied = 0;
-    memset(m->ctrl_and_hash_values, 0, new_map_size);
-    
-    cecs_flatmap_iterator it = cecs_flatmap_iterator_create_at(&old_map, 0);
-    if (old_map.count > 0 && !old_map.ctrl_and_hash_values[0].any.occupied) {
-        cecs_flatmap_iterator_next_occupied(&it);
-    }
-
-    size_t occupied_count = 0;
-    while (!cecs_flatmap_iterator_done_occupied(&it, occupied_count)) {
-        const cecs_flatmap_hash_header *old_hash_value = cecs_flatmap_hash_value_at(&old_map, it.index, value_size);
-
-        void *out_value;
-        bool added = cecs_flatmap_add(m, a, old_hash_value->hash, old_hash_value + 1, value_size, &out_value);
-        assert(added && "fatal error: flatmap rehash failed to add value");
-        ++occupied_count;
-
-        cecs_flatmap_iterator_next_occupied(&it);
-    }
-
-    assert(m->occupied == old_map.occupied && "fatal error: flatmap rehash failed to maintain occupied count");
-    cecs_arena_free(&arena);
-    return new_count;
-}
-
-[[maybe_unused]]
-static inline size_t cecs_flatmap_rehash(cecs_flatmap *m, cecs_arena *a, const size_t value_size) {
-    return cecs_flatmap_set_count_and_rehash(m, a, value_size, m->count);
-}
-
-bool cecs_flatmap_add(
-    cecs_flatmap *m,
-    cecs_arena *a,
+bool cecs_flatmap_find_mut(
+    cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    const void *value,
     const size_t value_size,
     void **out_value
 ) {
-    size_t previous_index;
-    size_t index;
-    if (cecs_flatmap_find_or_next_empty(m, hash, &index, value_size, &previous_index)) {
-        *out_value = NULL;
-        return false;
+    cecs_flatbucket *bucket;
+    uint_fast8_t index;
+    if (cecs_flatmap_find_bucket_mut(
+        set,
+        hash,
+        value_size,
+        &bucket,
+        &index
+    )) {
+        *out_value = cecs_flatmap_bucket_get_value_mut(bucket, index, value_size);
+        return true;
     }
-
-    while (index + 1 >= m->count) {
-        cecs_flatmap_set_count_and_rehash(m, a, value_size, ((m->count + 1) << 1) - 1);
-        cecs_flatmap_find_next_empty(m, hash, &index, &previous_index);
-    }
-    assert(index + 1 < m->count && "error: flatmap insertion index must be below the last value index, last is reserved for empty");
-
-    cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
-    ctrl->any.occupied = true;
-    ctrl->occupied.low_hash = cecs_flatmap_hash_low(hash);
-
-    if (previous_index < index) {
-        cecs_flatmap_ctrl *prev_ctrl = cecs_flatmap_ctrl_at(m, previous_index);
-        if (!prev_ctrl->any.occupied) {
-            prev_ctrl->non_occupied.last_non_occupied = index - previous_index - 1;
-        }
-    }
-
-    cecs_flatmap_hash_header *hash_value = cecs_flatmap_hash_value_at(m, index, value_size);
-    hash_value->hash = hash;
-    *out_value = memcpy(hash_value + 1, value, value_size);
-
-    ++m->occupied;
-    assert(m->occupied < m->count && "fatal error: flatmap occupied count must be below count");
-    return true;
+    return false;
 }
-
-bool cecs_flatmap_remove(
-    cecs_flatmap *m,
-    cecs_arena *a,
+const void *cecs_flatmap_find_expect(
+    const cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    void *out_removed_value,
     const size_t value_size
 ) {
-    size_t previous_index;
-    size_t index;
-    if (!cecs_flatmap_find_or_next_empty(m, hash, &index, value_size, &previous_index)) {
-        return false;
+    const void *out_value;
+    if (!cecs_flatmap_find(set, hash, value_size, &out_value)) {
+        assert(false && "error: cecs_flatmap_find_expect called with non-existing hash");
+        exit(EXIT_FAILURE);    
     }
-    assert(index + 1 < m->count && "error: flatmap removal index must be below the last value index, last is reserved for empty");
-    
-    cecs_flatmap_ctrl *ctrl = cecs_flatmap_ctrl_at(m, index);
-    ctrl->any.occupied = false;
-    ctrl->non_occupied.deleted = true;
-    if (ctrl[1].any.occupied) {
-        ctrl->non_occupied.last_non_occupied = 0;
-    } else {
-        ctrl->non_occupied.last_non_occupied =
-            min(cecs_flatmap_ctrl_non_occupied_last_max, ctrl[1].non_occupied.last_non_occupied + 1);
-    }
-
-    if (previous_index < index) {
-        cecs_flatmap_ctrl *prev_ctrl = cecs_flatmap_ctrl_at(m, previous_index);
-        if (!prev_ctrl->any.occupied) {
-            prev_ctrl->non_occupied.last_non_occupied =
-                min(cecs_flatmap_ctrl_non_occupied_last_max, ctrl->non_occupied.last_non_occupied + index - previous_index);
-        }
-    }
-
-    cecs_flatmap_hash_header *hash_value = cecs_flatmap_hash_value_at(m, index, value_size);
-    memcpy(out_removed_value, hash_value + 1, value_size);
-
-    --m->occupied;
-    if (m->occupied < m->count >> 3) {
-        cecs_flatmap_set_count_and_rehash(m, a, value_size, ((m->count + 1) >> 1) - 1);
-    }
-    return true;
+    return out_value;
 }
-
-void *cecs_flatmap_get_or_add(
-    cecs_flatmap *m,
-    cecs_arena *a,
+const void *cecs_flatmap_find_expect_mut(
+    cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    const void *value,
     const size_t value_size
 ) {
     void *out_value;
-    if (!cecs_flatmap_get(m, hash, &out_value, value_size)) {
-        cecs_flatmap_add(m, a, hash, value, value_size, &out_value);
+    if (!cecs_flatmap_find_mut(set, hash, value_size, &out_value)) {
+        assert(false && "error: cecs_flatmap_find_expect_mut called with non-existing hash");
+        exit(EXIT_FAILURE);    
     }
     return out_value;
 }
 
-cecs_flatmap_iterator cecs_flatmap_iterator_create_at(cecs_flatmap *m, const size_t index) {
-    return (cecs_flatmap_iterator){
-        .map = m,
-        .index = index
-    };
+#define CECS_FLATMAP_FULL_LOAD_FACTOR_TENTH 10
+#ifndef CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH
+#define CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH_DEFAULT 8
+#define CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH_DEFAULT
+#endif
+static_assert(
+    CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH > 0 && CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH <= CECS_FLATMAP_FULL_LOAD_FACTOR_TENTH,
+    "CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH must be between 1 and 10"
+);
+#ifndef CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH
+#define CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH_DEFAULT 2
+#define CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH_DEFAULT
+#endif
+static_assert(
+    CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH > 0 && CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH <= CECS_FLATMAP_FULL_LOAD_FACTOR_TENTH,
+    "CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH must be between 1 and 10"
+);
+
+void *cecs_flatmap_insert_into_bucket_expect(
+    cecs_flatmap *set,
+    cecs_flatbucket *bucket,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+) {
+    const uint_fast8_t index = cecs_flatbucket_get_count(*bucket);
+    void *const value = cecs_flatbucket_insert_expect(
+        bucket,
+        index,
+        cecs_flatbucket_hash_low_get(hash),
+        value_size,
+        sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2 
+    );
+    *cecs_flatmap_bucket_get_key_mut(bucket, index) = hash;
+    ++set->values_count;
+    return value;
 }
 
-bool cecs_flatmap_iterator_done(const cecs_flatmap_iterator *it) {
-    return it->index >= it->map->count;
-}
-
-bool cecs_flatmap_iterator_done_occupied(const cecs_flatmap_iterator *it, const size_t occupied_visited) {
-    return occupied_visited >= it->map->occupied || cecs_flatmap_iterator_done(it);
-}
-
-size_t cecs_flatmap_iterator_next(cecs_flatmap_iterator *it){
-    return ++it->index;
-}
-
-size_t cecs_flatmap_iterator_next_occupied(cecs_flatmap_iterator *it) {
-    ++it->index;
-    cecs_flatmap_ctrl *ctrl = it->map->ctrl_and_hash_values + it->index;
-
-    while (
-        !cecs_flatmap_iterator_done(it)
-        && !ctrl->any.occupied
-    ) {
-        it->index += ctrl->non_occupied.last_non_occupied + 1;
-        ctrl += ctrl->non_occupied.last_non_occupied + 1;
+void *cecs_flatmap_insert_within_expect(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+) {
+    if (cecs_flatmap_count(set) >= cecs_flatmap_capacity(set)) {
+        assert(false && "error: cecs_flatmap_insert_expect called on full set");
+        exit(EXIT_FAILURE);
     }
-    return it->index;
-}
 
-cecs_flatmap_hash_header *cecs_flatmap_iterator_current_hash(const cecs_flatmap_iterator *it, const size_t value_size) {
-    return cecs_flatmap_hash_value_at(it->map, it->index, value_size);
+    cecs_flatbucket *insert = cecs_flatmap_find_insert_bucket_expect(
+        set,
+        hash,
+        value_size
+    );
+    return cecs_flatmap_insert_into_bucket_expect(
+        set,
+        insert,
+        hash,
+        value_size
+    );
 }
+void *cecs_flatmap_insert_expect(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+) {
+    if (((cecs_flatmap_count(set) + 1) * CECS_FLATMAP_FULL_LOAD_FACTOR_TENTH) >= (cecs_flatmap_capacity(set) * CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH)) {
+        cecs_flatmap_resize(
+            set,
+            allocator,
+            cecs_flatmap_bucket_count(set) << 1,
+            value_size
+        );
+    }
+    return cecs_flatmap_insert_within_expect(set, hash, value_size);
+}
+void *cecs_flatmap_find_or_insert(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+) {
+    if (((cecs_flatmap_count(set) + 1) * CECS_FLATMAP_FULL_LOAD_FACTOR_TENTH) >= (cecs_flatmap_capacity(set) * CECS_FLATMAP_MAX_LOAD_FACTOR_TENTH)) {
+        cecs_flatmap_resize(
+            set,
+            allocator,
+            cecs_flatmap_bucket_count(set) << 1,
+            value_size
+        );
+    }
 
-void *cecs_flatmap_iterator_current_value(const cecs_flatmap_iterator *it, const size_t value_size) {
-    return cecs_flatmap_iterator_current_hash(it, value_size) + 1;
+    uint_fast8_t index;
+    cecs_flatbucket *insert = cecs_flatmap_find_insert_bucket(
+        set,
+        hash,
+        value_size,
+        &index
+    );
+    const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*insert);
+    if (index < bucket_value_count) {
+        return cecs_flatmap_bucket_get_value_mut(insert, index, value_size);
+    } else {
+        const cecs_flatmap_hash_low_fast hash7 = cecs_flatbucket_hash_low_get(hash);
+        void *const value = cecs_flatbucket_insert_expect(
+            insert,
+            index,
+            hash7,
+            value_size,
+            sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2
+        );
+        *cecs_flatmap_bucket_get_key_mut(insert, index) = hash;
+        ++set->values_count;
+        return value;
+    }
+}
+void cecs_flatmap_remove_from_bucket_stable_expect(
+    cecs_flatmap *set,
+    cecs_flatbucket *bucket,
+    const uint_fast8_t index,
+    const size_t value_size
+) {
+    if (index >= cecs_flatbucket_get_count(*bucket)) {
+        assert(false && "error: cecs_flatmap_remove_from_bucket_expect called with out of bounds index");
+        exit(EXIT_FAILURE);
+    }
+    const uint_fast8_t last_index = cecs_flatbucket_get_count(*bucket) - 1;
+    const cecs_flatmap_hash last_hash = *cecs_flatmap_bucket_get_key(bucket, last_index);
+    cecs_flatbucket_remove_expect(bucket, index, value_size, sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+    if (index < last_index) {
+        *cecs_flatmap_bucket_get_key_mut(bucket, index) = last_hash;
+    }
+    --set->values_count;
+}
+void cecs_flatmap_remove_from_bucket_expect(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    cecs_flatbucket *bucket,
+    const uint_fast8_t index,
+    const size_t value_size
+) {
+    cecs_flatmap_remove_from_bucket_stable_expect(
+        set,
+        bucket,
+        index,
+        value_size
+    );
+    if ((set->values_count * CECS_FLATMAP_FULL_LOAD_FACTOR_TENTH) < (cecs_flatmap_capacity(set) * CECS_FLATMAP_MIN_LOAD_FACTOR_TENTH)) {
+        cecs_flatmap_shrink(
+            set,
+            allocator,
+            cecs_flatmap_bucket_count(set) >> 1,
+            value_size
+        );
+    }
+}
+bool cecs_flatmap_find_remove(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+) {
+    cecs_flatbucket *bucket;
+    uint_fast8_t index;
+    if (cecs_flatmap_find_bucket_mut(
+        set,
+        hash,
+        value_size,
+        &bucket,
+        &index
+    )) {
+        if (index >= CECS_FLATBUCKET8_MAX_COUNT) {
+            assert(false && "fatal error: cecs_flatmap_find_bucket_mut returned out of bounds index");
+            exit(EXIT_FAILURE);
+        }
+        cecs_flatmap_remove_from_bucket_expect(
+            set,
+            allocator,
+            bucket,
+            index,
+            value_size
+        );
+        return true;
+    }    
+    return false;
+}
+void cecs_flatmap_find_remove_expect(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+) {
+    if (!cecs_flatmap_find_remove(set, allocator, hash, value_size)) {
+        assert(false && "error: cecs_flatmap_remove_expect called with non-existing hash");
+        exit(EXIT_FAILURE);
+    }
 }

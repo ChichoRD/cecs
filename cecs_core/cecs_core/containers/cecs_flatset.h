@@ -1,8 +1,9 @@
 #ifndef CECS_FLATSET_H
 #define CECS_FLATSET_H
 
-#include "cecs_allocator.h"
+
 #include "cecs_flatbucket.h"
+#include <cecs_core/cecs_allocator.h>
 #include <cecs_math/relations/cecs_ordering.h>
 #include <stdint.h>
 #include <assert.h>

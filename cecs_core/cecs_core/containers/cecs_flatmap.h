@@ -1,118 +1,219 @@
 #ifndef CECS_FLATMAP_H
 #define CECS_FLATMAP_H
 
-// TODO: robin hood hashing
+#include "cecs_flatbucket.h"
 
-
+#include <cecs_core/cecs_allocator.h>
+#include <cecs_math/relations/cecs_ordering.h>
 #include <stdint.h>
 #include <assert.h>
 
-#include "cecs_arena.h"
-#include "cecs_dynamic_array.h"
+typedef cecs_flatbucket_hash cecs_flatmap_hash;
+typedef cecs_flatbucket_hash_low cecs_flatmap_hash_low;
+typedef cecs_flatbucket_hash_low_fast cecs_flatmap_hash_low_fast;
 
-typedef uint64_t cecs_flatmap_hash;
-typedef uint8_t cecs_flatmap_low_hash;
-typedef uint64_t cecs_flatmap_high_hash;
+// Bucket value access functions
+inline const void *cecs_flatmap_bucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_unchecked(bucket, index, value_size, sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+}
+inline void *cecs_flatmap_bucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_mut_unchecked(bucket, index, value_size, sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+}
+inline const void *cecs_flatmap_bucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value(bucket, index, value_size, sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+}
+inline void *cecs_flatmap_bucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_mut(bucket, index, value_size, sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+}
 
-typedef struct cecs_flatmap_ctrl_occupied {
-    bool occupied : 1;
-    cecs_flatmap_low_hash low_hash : 7;
-} cecs_flatmap_ctrl_occupied;
-typedef struct cecs_flatmap_ctrl_non_occupied {
-    bool occupied : 1;
-    bool deleted : 1;
-    uint8_t last_non_occupied : 6;
-} cecs_flatmap_ctrl_non_occupied;
-typedef struct cecs_flatmap_ctrl_any {
-    bool occupied : 1;
-    uint8_t uninitialised : 7;
-} cecs_flatmap_ctrl_any;
+inline const cecs_flatmap_hash *cecs_flatmap_bucket_get_key_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index) {
+    return (const cecs_flatmap_hash *)cecs_flatbucket_get_value_unchecked(bucket, index, sizeof(cecs_flatmap_hash), 0);
+}
+inline cecs_flatmap_hash *cecs_flatmap_bucket_get_key_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index) {
+    return (cecs_flatmap_hash *)cecs_flatbucket_get_value_mut_unchecked(bucket, index, sizeof(cecs_flatmap_hash), 0);
+}
+inline const cecs_flatmap_hash *cecs_flatmap_bucket_get_key(const cecs_flatbucket *bucket, const uint_fast8_t index) {
+    return (const cecs_flatmap_hash *)cecs_flatbucket_get_value(bucket, index, sizeof(cecs_flatmap_hash), 0);
+}
+inline cecs_flatmap_hash *cecs_flatmap_bucket_get_key_mut(cecs_flatbucket *bucket, const uint_fast8_t index) {
+    return (cecs_flatmap_hash *)cecs_flatbucket_get_value_mut(bucket, index, sizeof(cecs_flatmap_hash), 0);
+}
 
-typedef union cecs_flatmap_ctrl {
-    cecs_flatmap_ctrl_occupied occupied;
-    cecs_flatmap_ctrl_non_occupied non_occupied;
-    cecs_flatmap_ctrl_any any;
-} cecs_flatmap_ctrl;
-static_assert(
-    sizeof(cecs_flatmap_ctrl_occupied) == sizeof(cecs_flatmap_ctrl_occupied)
-    && sizeof(cecs_flatmap_ctrl_occupied) == sizeof(cecs_flatmap_ctrl_any),
-    "static error: flatmap ctrl size mismatch"
-);
-static_assert(
-    sizeof(cecs_flatmap_ctrl) == sizeof(uint8_t),
-    "static error: flatmap ctrl size must be 1 byte"
-);
-
-#define CECS_FLATMAP_LOW_HASH_BITS 7
-#define CECS_FLATMPAP_LOW_HASH_MASK ((1 << CECS_FLATMAP_LOW_HASH_BITS) - 1)
-extern const cecs_flatmap_low_hash cecs_flatmap_low_hash_mask;
-
-#define CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_BITS 6
-#define CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_MAX ((1 << CECS_FLATMAP_CTRL_NON_OCCUPIED_LAST_BITS) - 1)
-
-extern const uint8_t cecs_flatmap_ctrl_non_occupied_last_max;
-
-typedef union cecs_flatmap_hash_header {
-    //cecs_flatmap_high_hash high_hash;
-    cecs_flatmap_hash hash;
-} cecs_flatmap_hash_header;
 
 typedef struct cecs_flatmap {
-    cecs_flatmap_ctrl *ctrl_and_hash_values;
-    size_t count;
-    size_t occupied;
+    cecs_flatbucket *buckets;
+    size_t bucket_count;
+    size_t values_count;
 } cecs_flatmap;
 
-cecs_flatmap cecs_flatmap_create(void);
-// cecs_flatmap cecs_flatmap_create_with_size(cecs_arena *a, size_t capacity, size_t value_size);
+// Set capacity and count functions
+static inline size_t cecs_flatmap_capacity(const cecs_flatmap *set) {
+    return set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT;
+}
+static inline size_t cecs_flatmap_count(const cecs_flatmap *set) {
+    return set->values_count;
+}
+static inline size_t cecs_flatmap_bucket_count(const cecs_flatmap *set) {
+    return set->bucket_count;
+}
 
-bool cecs_flatmap_get(
-    const cecs_flatmap *m,
-    const cecs_flatmap_hash hash,
-    void **out_value,
+static inline size_t cecs_flatmap_bucket_size(const size_t value_size) {
+    return sizeof(cecs_flatbucket)
+        + (value_size << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
+        + (sizeof(cecs_flatmap_hash) << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+}
+
+// Set bucket access functions
+static inline const cecs_flatbucket *cecs_flatmap_get_bucket(const cecs_flatmap *set, const size_t bucket_index, const size_t value_size) {
+    if (bucket_index >= set->bucket_count) {
+        assert(false && "error: cecs_flatmap_get_bucket called with out of bounds bucket index");
+        exit(EXIT_FAILURE);
+    }
+    return (const cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatmap_bucket_size(value_size) * bucket_index);
+    // static_assert(false, "FIXME: alignment");
+}
+static inline cecs_flatbucket *cecs_flatmap_get_bucket_mut(cecs_flatmap *set, const size_t bucket_index, const size_t value_size) {
+    if (bucket_index >= set->bucket_count) {
+        assert(false && "error: cecs_flatmap_get_bucket_mut called with out of bounds bucket index");
+        exit(EXIT_FAILURE);
+    }
+    return (cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatmap_bucket_size(value_size) * bucket_index);
+}
+
+// Set creation and destruction functions
+cecs_flatmap cecs_flatmap_create(void);
+cecs_flatmap cecs_flatmap_create_with_capacity(cecs_allocator *allocator, const size_t bucket_count, const size_t value_size);
+void cecs_flatmap_clear(cecs_flatmap *set, const size_t value_size);
+void cecs_flatmap_destroy(cecs_flatmap *set, cecs_allocator *allocator, const size_t value_size);
+
+// Set memory management functions
+void cecs_flatmap_extend_exclusive(
+    cecs_flatmap *destination,
+    const cecs_flatmap *source,
+    const size_t value_size
+);
+void cecs_flatmap_extend(
+    cecs_flatmap *destination,
+    const cecs_flatmap *source,
+    cecs_allocator *allocator,
+    const size_t value_size
+);
+void cecs_flatmap_resize(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const size_t new_bucket_count,
+    const size_t value_size
+);
+void cecs_flatmap_shrink(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const size_t new_bucket_count,
     const size_t value_size
 );
 
-bool cecs_flatmap_add(
-    cecs_flatmap *m,
-    cecs_arena *a,
+// Set search functions
+bool cecs_flatmap_find(
+    const cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    const void *value,
     const size_t value_size,
+    const void **out_value
+);
+bool cecs_flatmap_find_mut(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+    ,
     void **out_value
 );
-
-bool cecs_flatmap_remove(
-    cecs_flatmap *m,
-    cecs_arena *a,
+const void *cecs_flatmap_find_expect(
+    const cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    void *out_removed_value,
+    const size_t value_size
+);
+const void *cecs_flatmap_find_expect_mut(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
     const size_t value_size
 );
 
-void *cecs_flatmap_get_or_add(
-    cecs_flatmap *m,
-    cecs_arena *a,
+// Set bucket search functions
+bool cecs_flatmap_find_bucket(
+    const cecs_flatmap *set,
     const cecs_flatmap_hash hash,
-    const void *value,
+    const size_t value_size,
+    const cecs_flatbucket **out_bucket,
+    uint_fast8_t *out_index
+);
+bool cecs_flatmap_find_bucket_mut(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size,
+    cecs_flatbucket **out_bucket,
+    uint_fast8_t *out_index
+);
+cecs_flatbucket *cecs_flatmap_find_insert_bucket_expect(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+    
+);
+cecs_flatbucket *cecs_flatmap_find_insert_bucket(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size,
+    uint_fast8_t *out_index
+);
+
+// Set insertion functions
+void *cecs_flatmap_insert_into_bucket_expect(
+    cecs_flatmap *set,
+    cecs_flatbucket *bucket,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+);
+void *cecs_flatmap_insert_within_expect(
+    cecs_flatmap *set,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+);
+void *cecs_flatmap_insert_expect(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+);
+void *cecs_flatmap_find_or_insert(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
     const size_t value_size
 );
 
-typedef struct cecs_flatmap_iterator {
-    cecs_flatmap *map;
-    size_t index;
-} cecs_flatmap_iterator;
-
-cecs_flatmap_iterator cecs_flatmap_iterator_create_at(cecs_flatmap *m, const size_t index);
-bool cecs_flatmap_iterator_done(const cecs_flatmap_iterator *it);
-bool cecs_flatmap_iterator_done_occupied(const cecs_flatmap_iterator *it, const size_t occupied_visited_count);
-size_t cecs_flatmap_iterator_next(cecs_flatmap_iterator *it);
-size_t cecs_flatmap_iterator_next_occupied(cecs_flatmap_iterator *it);
-
-static inline size_t cecs_flatmap_iterator_current(const cecs_flatmap_iterator *it) {
-    return it->index;
-}
-cecs_flatmap_hash_header *cecs_flatmap_iterator_current_hash(const cecs_flatmap_iterator *it, const size_t value_size);
-void *cecs_flatmap_iterator_current_value(const cecs_flatmap_iterator *it, const size_t value_size);
+// Set removal functions
+void cecs_flatmap_remove_from_bucket_stable_expect(
+    cecs_flatmap *set,
+    cecs_flatbucket *bucket,
+    const uint_fast8_t index,
+    const size_t value_size
+);
+void cecs_flatmap_remove_from_bucket_expect(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    cecs_flatbucket *bucket,
+    const uint_fast8_t index,
+    const size_t value_size
+);
+bool cecs_flatmap_find_remove(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+);
+void cecs_flatmap_find_remove_expect(
+    cecs_flatmap *set,
+    cecs_allocator *allocator,
+    const cecs_flatmap_hash hash,
+    const size_t value_size
+);
 
 #endif
