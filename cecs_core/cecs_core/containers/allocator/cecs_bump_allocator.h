@@ -33,13 +33,14 @@ void cecs_bump_view_allocator_free(cecs_bump_view_allocator *allocator, void *co
 inline uint8_t *cecs_bump_view_allocator_snapshot(cecs_bump_view_allocator *allocator) {
     return allocator->next;
 }
-inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocator, uint8_t *const snapshot) {
+inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocator, uint8_t *const snapshot, uint8_t *const end_snapshot) {
     cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
-    cecs_assert_or_exit(snapshot < allocator->block.memory_end, "fatal error: snapshot is out of bounds");
+    cecs_assert_or_exit(end_snapshot == allocator->next, "fatal error: end snapshot does not match current allocator state");
+    cecs_assert_or_exit(allocator->block.memory_start <= snapshot && snapshot <= allocator->block.memory_end, "fatal error: snapshot is out of bounds");
     allocator->next = snapshot;
 }
 inline void cecs_bump_view_allocator_reset(cecs_bump_view_allocator *allocator) {
-    cecs_bump_view_allocator_reset_to(allocator, allocator->block.memory_start);
+    cecs_bump_view_allocator_reset_to(allocator, allocator->block.memory_start, allocator->block.memory_end);
 }
 inline void cecs_bump_view_allocator_destroy(cecs_bump_view_allocator *allocator) {
     allocator->next = NULL;
@@ -91,8 +92,8 @@ inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *const
 inline uint8_t *cecs_bump_allocator_snapshot(cecs_bump_allocator *allocator) {
     return cecs_bump_view_allocator_snapshot(&allocator->view);
 }
-inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot) {
-    cecs_bump_view_allocator_reset_to(&allocator->view, snapshot);
+inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot, uint8_t *const end_snapshot) {
+    cecs_bump_view_allocator_reset_to(&allocator->view, snapshot, end_snapshot);
 }
 inline void cecs_bump_allocator_reset(cecs_bump_allocator *allocator) {
     cecs_bump_view_allocator_reset(&allocator->view);

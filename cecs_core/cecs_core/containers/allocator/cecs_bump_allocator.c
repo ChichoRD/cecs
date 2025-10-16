@@ -94,7 +94,7 @@ void cecs_bump_view_allocator_free(cecs_bump_view_allocator *allocator, void *co
     }
 }
 extern inline uint8_t *cecs_bump_view_allocator_snapshot(cecs_bump_view_allocator *allocator);
-extern inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocator, uint8_t *const snapshot);
+extern inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocator, uint8_t *const snapshot, uint8_t *const end_snapshot);
 extern inline void cecs_bump_view_allocator_reset(cecs_bump_view_allocator *allocator);
 extern inline void cecs_bump_view_allocator_destroy(cecs_bump_view_allocator *allocator);
 
@@ -132,7 +132,7 @@ extern inline void *cecs_bump_allocator_realloc_expect(
 
 extern inline void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *block, const size_t block_size);
 extern inline uint8_t *cecs_bump_allocator_snapshot(cecs_bump_allocator *allocator);
-extern inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot);
+extern inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot, uint8_t *const end_snapshot);
 extern inline void cecs_bump_allocator_reset(cecs_bump_allocator *allocator);
 
 extern inline size_t cecs_bump_allocator_capacity(const cecs_bump_allocator *allocator);
