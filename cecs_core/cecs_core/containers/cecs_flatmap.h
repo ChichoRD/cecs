@@ -4,7 +4,6 @@
 #include "cecs_flatbucket.h"
 
 #include <cecs_core/cecs_allocator.h>
-#include <cecs_math/relations/cecs_ordering.h>
 #include <stdint.h>
 #include <assert.h>
 

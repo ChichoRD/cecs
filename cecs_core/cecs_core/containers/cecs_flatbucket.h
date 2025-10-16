@@ -2,7 +2,6 @@
 #define CECS_FLATBUCKET_H
 
 #include <cecs_core/cecs_error.h>
-#include <cecs_math/relations/cecs_ordering.h>
 #include <stdint.h>
 #include <assert.h>
 

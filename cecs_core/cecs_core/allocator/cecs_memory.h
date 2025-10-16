@@ -51,20 +51,7 @@ bool cecs_memory_block_unmap(cecs_memory_block *block);
 void cecs_memory_block_unmap_expect(cecs_memory_block *block);
 
 size_t cecs_max_alignment_from_size(const size_t size);
-inline const uint8_t *cecs_aligned_ptr(const uint8_t *const address, const size_t alignment) {
-    assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
-
-    static_assert(sizeof(size_t) == sizeof(uintptr_t), "fatal static error: size_t is not the same size as uintptr_t");
-    uint8_t *const aligned = (uint8_t *)cecs_align_to_pow2((size_t)address, alignment);
-    return aligned;
-}
-inline uint8_t *cecs_aligned_ptr_mut(uint8_t *const address, const size_t alignment) {
-    assert(cecs_is_pow2(alignment) && "fatal error: alignment is not a power of 2");
-
-    static_assert(sizeof(size_t) == sizeof(uintptr_t), "fatal static error: size_t is not the same size as uintptr_t");
-    uint8_t *const aligned = (uint8_t *)cecs_align_to_pow2((size_t)address, alignment);
-    return aligned;
-}
-
+const uint8_t *cecs_aligned_ptr(const uint8_t *const address, const size_t alignment);
+uint8_t *cecs_aligned_ptr_mut(uint8_t *const address, const size_t alignment);
 
 #endif
