@@ -116,7 +116,7 @@ cecs_bump_allocator cecs_bump_allocator_create_alloc(const size_t block_size) {
 cecs_bump_allocator cecs_bump_allocator_create_virtual(const size_t page_count) {
     const size_t size = page_count * cecs_system_page_size();
     return (cecs_bump_allocator){
-        .view = cecs_bump_view_allocator_create(cecs_memory_block_reserve_expect(size))
+        .view = cecs_bump_view_allocator_create(cecs_memory_block_map_expect(size))
     };
 }
 

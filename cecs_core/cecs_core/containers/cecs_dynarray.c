@@ -79,7 +79,7 @@ void cecs_array_swap_last_pop(cecs_array *arr, const size_t index, const size_t 
     );
     switch (arr->values_used) {
     case 0: {
-        cecs_assert_unreachable("fatal: unreachable");
+        cecs_unreachable();
         break;
     }
     case 1: {

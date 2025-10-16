@@ -36,8 +36,8 @@ inline size_t cecs_system_pages_size_for(const size_t bytes) {
 
 
 bool cecs_memory_block_is_valid(const cecs_raw_memory_block *block);
-cecs_raw_memory_block cecs_memory_block_reserve(const size_t size);
-cecs_memory_block cecs_memory_block_reserve_expect(const size_t size);
+cecs_raw_memory_block cecs_memory_block_map(const size_t size);
+cecs_memory_block cecs_memory_block_map_expect(const size_t size);
 
 bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size, uint8_t *const commit_start);
 void cecs_memory_block_commit_expect(cecs_memory_block *block, const size_t size, uint8_t *const commit_start);

@@ -68,7 +68,7 @@ bool cecs_memory_block_is_valid(const cecs_raw_memory_block *block) {
 #endif
 }
 
-cecs_raw_memory_block cecs_memory_block_reserve(const size_t size) {
+cecs_raw_memory_block cecs_memory_block_map(const size_t size) {
 #if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
     void *const memory = VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
 #elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
@@ -80,8 +80,8 @@ cecs_raw_memory_block cecs_memory_block_reserve(const size_t size) {
         .reserved = size
     };
 }
-cecs_memory_block cecs_memory_block_reserve_expect(const size_t size) {
-    cecs_raw_memory_block block = cecs_memory_block_reserve(size);
+cecs_memory_block cecs_memory_block_map_expect(const size_t size) {
+    cecs_raw_memory_block block = cecs_memory_block_map(size);
     cecs_assert_or_exit(
         cecs_memory_block_is_valid(&block),
         "error: cecs_memory_block_reserve_expect failed to reserve memory"
