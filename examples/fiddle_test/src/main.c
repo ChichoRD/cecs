@@ -11,6 +11,8 @@
 #include <float.h>
 #include <math.h>
 
+#include <cecs_core/world/cecs_entity.h>
+
 
 void test_dynarray(cecs_allocator *allocator) {
     printf("=== Testing Dynamic Array ===\n");
@@ -1379,6 +1381,242 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     printf("=== Flatmap SIMD tests completed ===\n");
 }
 
+void test_entity(cecs_allocator *allocator) {
+    (void)allocator;
+    printf("\n=== Testing Entity ===\n");
+
+    // Derived constants from layout
+    static const size_t index_mask = (size_t)CECS_ENTITY_INDEX_BITS_MASK; // lower INDEX bits
+    static const uint_fast8_t gen_mask = (uint_fast8_t)(CECS_ENTITY_GENERATION_BITS_MASK >> CECS_ENTITY_GENERATION_BITS_OFFSET);
+    static const uint8_t flags_mask = (uint8_t)(CECS_ENTITY_GENERAL_META_BITS_MASK >> CECS_ENTITY_GENERAL_META_BITS_OFFSET);
+
+    // Test 1: Basic creation and field extraction
+    {
+        const size_t idx = 12345;
+        const cecs_entity_meta_type flags = cecs_entity_meta_type_alive;
+        const uint_fast8_t gen = 42;
+
+        cecs_entity e = cecs_entity_create(idx, flags, gen);
+
+        if (cecs_entity_index(e) != idx) {
+            fprintf(stderr, "ERROR: Index mismatch: expected %zu, got %zu\n", idx, cecs_entity_index(e));
+            assert(false && "Index mismatch");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_generation(e) != gen) {
+            fprintf(stderr, "ERROR: Generation mismatch: expected %u, got %u\n", (unsigned)gen, (unsigned)cecs_entity_generation(e));
+            assert(false && "Generation mismatch");
+            exit(EXIT_FAILURE);
+        }
+        if (!cecs_entity_is_alive(e)) {
+            fprintf(stderr, "ERROR: Alive flag not set as expected\n");
+            assert(false && "Alive flag not set as expected");
+            exit(EXIT_FAILURE);
+        }
+
+        const uint_fast16_t meta = cecs_entity_meta(e);
+        const uint_fast16_t meta_expected = (uint_fast16_t)flags | ((uint_fast16_t)gen << CECS_ENTITY_GENERAL_META_BITS);
+        if (meta != meta_expected) {
+            fprintf(stderr, "ERROR: Meta mismatch: expected 0x%04X, got 0x%04X\n", (unsigned)meta_expected, (unsigned)meta);
+            assert(false && "Meta mismatch");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 2: Flag toggling and equality
+    {
+        cecs_entity e0 = cecs_entity_create(777, cecs_entity_meta_type_none, 3);
+        if (cecs_entity_is_alive(e0)) {
+            fprintf(stderr, "ERROR: Entity unexpectedly alive\n");
+            assert(false && "Entity unexpectedly alive");
+            exit(EXIT_FAILURE);
+        }
+
+        cecs_entity e1 = cecs_entity_set_alive(e0);
+        if (!cecs_entity_is_alive(e1)) {
+            fprintf(stderr, "ERROR: Failed to set alive flag\n");
+            assert(false && "Failed to set alive flag");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_index(e1) != cecs_entity_index(e0)) {
+            fprintf(stderr, "ERROR: Index changed when setting flag\n");
+            assert(false && "Index changed when setting flag");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_generation(e1) != cecs_entity_generation(e0)) {
+            fprintf(stderr, "ERROR: Generation changed when setting flag\n");
+            assert(false && "Generation changed when setting flag");
+            exit(EXIT_FAILURE);
+        }
+
+        cecs_entity e2 = cecs_entity_unset_alive(e1);
+        if (cecs_entity_is_alive(e2)) {
+            fprintf(stderr, "ERROR: Failed to unset alive flag\n");
+            assert(false && "Failed to unset alive flag");
+            exit(EXIT_FAILURE);
+        }
+        if (e0.value != e2.value) {
+            fprintf(stderr, "ERROR: Unset did not restore original state\n");
+            assert(false && "Unset did not restore original state");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 3: Generation operations (set/add/sub/next/prev)
+    {
+        cecs_entity e = cecs_entity_create(321, cecs_entity_meta_type_alive, 10);
+        cecs_entity eg = cecs_entity_set_generation(e, 77);
+        if (cecs_entity_generation(eg) != 77) {
+            fprintf(stderr, "ERROR: Generation set failed\n");
+            assert(false && "Generation set failed");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_index(eg) != cecs_entity_index(e)) {
+            fprintf(stderr, "ERROR: Index changed on set_generation\n");
+            assert(false && "Index changed on set_generation");
+            exit(EXIT_FAILURE);
+        }
+        if (!cecs_entity_is_alive(eg)) {
+            fprintf(stderr, "ERROR: Flags changed on set_generation\n");
+            assert(false && "Flags changed on set_generation");
+            exit(EXIT_FAILURE);
+        }
+
+        cecs_entity eadd = cecs_entity_generation_add(eg, 5);
+        if (cecs_entity_generation(eadd) != (uint_fast8_t)(77 + 5)) {
+            fprintf(stderr, "ERROR: Generation add failed\n");
+            assert(false && "Generation add failed");
+            exit(EXIT_FAILURE);
+        }
+
+        cecs_entity esub = cecs_entity_generation_sub(eadd, 3);
+        if (cecs_entity_generation(esub) != (uint_fast8_t)(77 + 5 - 3)) {
+            fprintf(stderr, "ERROR: Generation sub failed\n");
+            assert(false && "Generation sub failed");
+            exit(EXIT_FAILURE);
+        }
+
+        if (cecs_entity_generation(cecs_entity_next_generation(esub)) != (uint_fast8_t)(cecs_entity_generation(esub) + 1)) {
+            fprintf(stderr, "ERROR: next_generation failed\n");
+            assert(false && "next_generation failed");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_generation(cecs_entity_prev_generation(esub)) != (uint_fast8_t)(cecs_entity_generation(esub) - 1)) {
+            fprintf(stderr, "ERROR: prev_generation failed\n");
+            assert(false && "prev_generation failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 4: "Abusing" representation: compute next entity by +1 (safe region)
+    {
+        const size_t idx = 100;
+        const uint_fast8_t gen = 5;
+        cecs_entity e = cecs_entity_create(idx, cecs_entity_meta_type_alive, gen);
+        cecs_entity enext = cecs_entity_from_value(e.value + 1);
+
+        if (cecs_entity_index(enext) != (idx + 1)) {
+            fprintf(stderr, "ERROR: Index +1 via value add failed: expected %zu, got %zu\n", idx + 1, cecs_entity_index(enext));
+            assert(false && "Index +1 via value add failed");
+            exit(EXIT_FAILURE);
+        }
+        if (!cecs_entity_is_alive(enext)) {
+            fprintf(stderr, "ERROR: Flags changed when adding 1 to value\n");
+            assert(false && "Flags changed when adding 1 to value");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_generation(enext) != gen) {
+            fprintf(stderr, "ERROR: Generation changed when adding 1 to value\n");
+            assert(false && "Generation changed when adding 1 to value");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 5: Boundary carry from index into meta (index wrap)
+    {
+        const size_t idx_max = index_mask;
+        cecs_entity e = cecs_entity_create(idx_max, cecs_entity_meta_type_none, 0);
+        cecs_entity ewrap = cecs_entity_from_value(e.value + 1);
+
+        if (cecs_entity_index(ewrap) != 0) {
+            fprintf(stderr, "ERROR: Index wrap failed: expected 0, got %zu\n", cecs_entity_index(ewrap));
+            assert(false && "Index wrap failed");
+            exit(EXIT_FAILURE);
+        }
+        const uint8_t flags_after = (uint8_t)cecs_entity_meta_flags(ewrap);
+        if ((flags_after & 0x1u) == 0) {
+            fprintf(stderr, "ERROR: Expected carry into flags LSB, got flags=0x%02X\n", flags_after);
+            assert(false && "Expected carry into flags LSB");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_generation(ewrap) != 0) {
+            fprintf(stderr, "ERROR: Generation changed unexpectedly on index carry\n");
+            assert(false && "Generation changed unexpectedly on index carry");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 6: Max index creation works
+    {
+        const size_t idx_max = index_mask;
+        cecs_entity e = cecs_entity_create(idx_max, cecs_entity_meta_type_alive, 255u & gen_mask);
+        if (cecs_entity_index(e) != idx_max) {
+            fprintf(stderr, "ERROR: Max index creation failed\n");
+            assert(false && "Max index creation failed");
+            exit(EXIT_FAILURE);
+        }
+        if (!cecs_entity_is_alive(e)) {
+            fprintf(stderr, "ERROR: Alive flag lost at max index\n");
+            assert(false && "Alive flag lost at max index");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_generation(e) != (uint_fast8_t)(255u & gen_mask)) {
+            fprintf(stderr, "ERROR: Generation mismatch at max index\n");
+            assert(false && "Generation mismatch at max index");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 7: Generation overflow wraps within generation field
+    {
+        const uint_fast8_t gmax = gen_mask; // e.g., 0xFF for 8 bits
+        cecs_entity e = cecs_entity_create(42, cecs_entity_meta_type_none, gmax);
+        cecs_entity ewrap = cecs_entity_generation_add(e, 1);
+        if (cecs_entity_generation(ewrap) != (uint_fast8_t)0) {
+            fprintf(stderr, "ERROR: Generation overflow wrap failed: expected 0, got %u\n", (unsigned)cecs_entity_generation(ewrap));
+            assert(false && "Generation overflow wrap failed");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_meta_flags(ewrap) != cecs_entity_meta_flags(e)) {
+            fprintf(stderr, "ERROR: Flags changed on generation overflow\n");
+            assert(false && "Flags changed on generation overflow");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_index(ewrap) != cecs_entity_index(e)) {
+            fprintf(stderr, "ERROR: Index changed on generation overflow\n");
+            assert(false && "Index changed on generation overflow");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Test 8: Bit masks are consistent with extraction helpers
+    {
+        cecs_entity e = cecs_entity_create(0x1234, (cecs_entity_meta_type)(flags_mask & 0xA5u), (uint_fast8_t)(gen_mask & 0x5Au));
+        const uint_fast16_t meta = cecs_entity_meta(e);
+        const uint8_t flags = cecs_entity_meta_flags(e);
+        const uint_fast8_t gen = cecs_entity_generation(e);
+
+        const uint_fast16_t recomposed = (uint_fast16_t)flags | ((uint_fast16_t)gen << CECS_ENTITY_GENERAL_META_BITS);
+        if (meta != recomposed) {
+            fprintf(stderr, "ERROR: Meta recomposition mismatch: expected 0x%04X, got 0x%04X\n", (unsigned)recomposed, (unsigned)meta);
+            assert(false && "Meta recomposition mismatch");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    printf("=== Entity tests completed ===\n");
+}
+
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
 
@@ -1389,6 +1627,7 @@ int main(void) {
     test_flatset_simd(&allocator);
     test_flatmap(&allocator);
     test_flatmap_simd(&allocator);
+    test_entity(&allocator);
 
     printf("\n=== All tests completed successfully ===\n");
 

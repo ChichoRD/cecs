@@ -119,6 +119,7 @@ project(cecs_fiddle_test C)
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatset.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatmap.c"
         "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_sparse_set.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_entity.c"
     )
     target_include_directories(
         ${PROJECT_NAME}
