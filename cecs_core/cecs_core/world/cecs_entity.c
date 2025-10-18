@@ -22,9 +22,9 @@ extern inline bool cecs_entity_is_illegal(const cecs_entity entity);
 extern inline cecs_entity cecs_entity_set_illegal(const cecs_entity entity);
 extern inline cecs_entity cecs_entity_unset_illegal(const cecs_entity entity);
 
-extern inline bool cecs_entity_is_alive(const cecs_entity entity);
-extern inline cecs_entity cecs_entity_set_alive(const cecs_entity entity);
-extern inline cecs_entity cecs_entity_unset_alive(const cecs_entity entity);
+extern inline bool cecs_entity_is_free(const cecs_entity entity);
+extern inline cecs_entity cecs_entity_set_free(const cecs_entity entity);
+extern inline cecs_entity cecs_entity_unset_free(const cecs_entity entity);
 
 cecs_entity cecs_entity_from_value(const cecs_entity_value value) {
     const cecs_entity entity = cecs_entity_from_value_unchecked(value);
@@ -51,11 +51,4 @@ cecs_entity cecs_entity_create(const size_t index, const cecs_entity_meta_flag f
         "error: cecs_entity_create called with out of bounds generation"
     );
     return cecs_entity_create_unchecked(index, flags, generation);
-}
-cecs_entity cecs_entity_create_expect(const size_t index, const cecs_entity_meta_flag flags, const uint_fast8_t generation) {
-    cecs_assert_or_exit(
-        !(flags & cecs_entity_meta_type_illegal),
-        "error: cecs_entity_create_expect called with illegal flags"
-    );
-    return cecs_entity_create(index, flags, generation);
 }

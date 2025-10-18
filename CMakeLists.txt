@@ -1,51 +1,25 @@
 cmake_minimum_required(VERSION 3.15...3.30)
+if (MSVC)
+    add_compile_options(
+        /Wall /WX
+    )
+else()
+    add_compile_options(
+        -Wall -Wextra -Wpedantic -Werror
+        -mlzcnt -mavx -mavx2
+    )
+endif()
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
+set(
+    CECS_CORE_DIRECTORY
+    "${CMAKE_CURRENT_SOURCE_DIR}/cecs_core/"
+)
+set(
+    CECS_CORE_SRC_DIRECTORY
+    "${CECS_CORE_DIRECTORY}/cecs_core/"
+)
 
 project(cecs_math C)
-    set(CMAKE_C_STANDARD 11)
-    set(CMAKE_C_STANDARD_REQUIRED ON)
-
-    if (MSVC)
-        message(STATUS "MSVC detected")
-        add_compile_options(
-            /Zc:preprocessor
-            /we\"4022\"
-
-            /W4
-            /wd\"5045\"
-            /wd\"4115\"
-            /wd\"4255\"
-            /wd\"4668\"
-
-            /Zc:wchar_t
-            /Zi
-
-            # /EHsc
-            /nologo
-        )
-    else()
-        message(STATUS "GCC/Clang detected")
-        add_compile_options(
-            -Wall
-            -Wextra
-            -Wpedantic
-
-            # -Wno-gnu-zero-variadic-macro-arguments
-            # -Wno-newline-eof
-            # -Wno-unused-function
-            # -Wno-extra-semi
-            # -Wno-static-in-inline
-            -Werror
-
-            -mlzcnt
-            -mavx
-            -mavx2
-        )
-    endif()
-
     set(
         CECS_MATH_DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/cecs_math/"
@@ -73,35 +47,6 @@ project(cecs_math C)
         ${CECS_MATH_DIRECTORY}
     )
 
-project(cecs_app C)
-    set(
-        CECS_CORE_DIRECTORY
-        "${CMAKE_CURRENT_SOURCE_DIR}/cecs_core/"
-    )
-    set(
-        CECS_CORE_SRC_DIRECTORY
-        "${CECS_CORE_DIRECTORY}/cecs_core/"
-    )
-
-    file(
-        GLOB_RECURSE
-        CECS_SOURCES
-        CMAKE_CONFIGURE_DEPENDS
-        ${CECS_CORE_SRC_DIRECTORY}/*.c
-    )
-
-    add_executable(
-        ${PROJECT_NAME}
-        "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
-        ${CECS_SOURCES}
-        ${CECS_MATH_SOURCES}
-    )
-    target_include_directories(
-        ${PROJECT_NAME}
-        PUBLIC ${CECS_CORE_DIRECTORY}
-        PUBLIC ${CECS_MATH_DIRECTORY}
-    )
-
 project(cecs_fiddle_test C)
     add_executable(
         ${PROJECT_NAME}
@@ -114,12 +59,13 @@ project(cecs_fiddle_test C)
         "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_arena_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_implicit_arena_allocator.c"
         "${CECS_CORE_SRC_DIRECTORY}/cecs_allocator.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_dynarray.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatbucket.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatset.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_flatmap.c"
-        "${CECS_CORE_SRC_DIRECTORY}/containers/cecs_sparse_set.c"
+        "${CECS_CORE_SRC_DIRECTORY}/container/cecs_dynarray.c"
+        "${CECS_CORE_SRC_DIRECTORY}/container/cecs_flatbucket.c"
+        "${CECS_CORE_SRC_DIRECTORY}/container/cecs_flatset.c"
+        "${CECS_CORE_SRC_DIRECTORY}/container/cecs_flatmap.c"
+        "${CECS_CORE_SRC_DIRECTORY}/container/cecs_sparse_set.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/cecs_entity.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_entity_storage.c"
     )
     target_include_directories(
         ${PROJECT_NAME}
@@ -127,34 +73,53 @@ project(cecs_fiddle_test C)
         PUBLIC ${CECS_MATH_DIRECTORY}
     )
 
-project(cecs_lib C)
-    add_library(
-        cecs
-        STATIC
-        ${CECS_SOURCES}
-        ${CECS_MATH_SOURCES}
-    )
-    target_include_directories(
-        cecs
-        PUBLIC ${CECS_CORE_DIRECTORY}
-        PUBLIC ${CECS_MATH_DIRECTORY}
-    )
+# project(cecs_lib C)
+#     add_library(
+#         cecs
+#         STATIC
+#         ${CECS_SOURCES}
+#         ${CECS_MATH_SOURCES}
+#     )
+#     target_include_directories(
+#         cecs
+#         PUBLIC ${CECS_CORE_DIRECTORY}
+#         PUBLIC ${CECS_MATH_DIRECTORY}
+#     )
 
+# project(cecs_app C)
+#     file(
+#         GLOB_RECURSE
+#         CECS_SOURCES
+#         CMAKE_CONFIGURE_DEPENDS
+#         ${CECS_CORE_SRC_DIRECTORY}/*.c
+#     )
 
-project(cecs_app_lib_only C)
-    add_executable(
-        ${PROJECT_NAME}
-        "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
-    )
-    target_include_directories(
-        ${PROJECT_NAME}
-        PUBLIC
-        ${CECS_CORE_DIRECTORY}
-    )
-    target_link_libraries(
-        ${PROJECT_NAME}
-        "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>/cecs.lib"
-    )
+#     add_executable(
+#         ${PROJECT_NAME}
+#         "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
+#         ${CECS_SOURCES}
+#         ${CECS_MATH_SOURCES}
+#     )
+#     target_include_directories(
+#         ${PROJECT_NAME}
+#         PUBLIC ${CECS_CORE_DIRECTORY}
+#         PUBLIC ${CECS_MATH_DIRECTORY}
+#     )
+
+# project(cecs_app_lib_only C)
+#     add_executable(
+#         ${PROJECT_NAME}
+#         "${CMAKE_CURRENT_SOURCE_DIR}/examples/app/src/main.c"
+#     )
+#     target_include_directories(
+#         ${PROJECT_NAME}
+#         PUBLIC
+#         ${CECS_CORE_DIRECTORY}
+#     )
+#     target_link_libraries(
+#         ${PROJECT_NAME}
+#         "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>/cecs.lib"
+#     )
 
 
 set(CECS_GRAPHICS OFF)

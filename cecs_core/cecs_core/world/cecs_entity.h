@@ -111,7 +111,7 @@ inline cecs_entity cecs_entity_prev_generation(const cecs_entity entity) {
 typedef enum cecs_entity_meta_type {
     cecs_entity_meta_type_none = 0,
     cecs_entity_meta_type_illegal = 1 << 0,
-    cecs_entity_meta_type_alive = 1 << 1,
+    cecs_entity_meta_type_free = 1 << 1,
     // TODO: more flags
 } cecs_entity_meta_type;
 typedef uint8_t cecs_entity_meta_flag;
@@ -146,19 +146,18 @@ inline cecs_entity cecs_entity_unset_illegal(const cecs_entity entity) {
     return cecs_entity_unset_meta_flag(entity, cecs_entity_meta_type_illegal);
 }
 
-inline bool cecs_entity_is_alive(const cecs_entity entity) {
-    return cecs_entity_has_meta_flag(entity, cecs_entity_meta_type_alive);
+inline bool cecs_entity_is_free(const cecs_entity entity) {
+    return cecs_entity_has_meta_flag(entity, cecs_entity_meta_type_free);
 }
-inline cecs_entity cecs_entity_set_alive(const cecs_entity entity) {
-    return cecs_entity_set_meta_flag(entity, cecs_entity_meta_type_alive);
+inline cecs_entity cecs_entity_set_free(const cecs_entity entity) {
+    return cecs_entity_set_meta_flag(entity, cecs_entity_meta_type_free);
 }
-inline cecs_entity cecs_entity_unset_alive(const cecs_entity entity) {
-    return cecs_entity_unset_meta_flag(entity, cecs_entity_meta_type_alive);
+inline cecs_entity cecs_entity_unset_free(const cecs_entity entity) {
+    return cecs_entity_unset_meta_flag(entity, cecs_entity_meta_type_free);
 }
 
 cecs_entity cecs_entity_from_value(const cecs_entity_value value);
 cecs_entity cecs_entity_create_unchecked(const size_t index, const cecs_entity_meta_flag flags, const uint_fast8_t generation);
 cecs_entity cecs_entity_create(const size_t index, const cecs_entity_meta_flag flags, const uint_fast8_t generation);
-cecs_entity cecs_entity_create_expect(const size_t index, const cecs_entity_meta_flag flags, const uint_fast8_t generation);
 
 #endif
