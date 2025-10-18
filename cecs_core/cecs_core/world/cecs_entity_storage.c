@@ -27,9 +27,16 @@ cecs_entity cecs_entity_storage_get_entity_exact(const cecs_entity_storage *stor
     );
     return stored_entity;
 }
+static inline cecs_entity *cecs_entity_storage_peek_entity_mut(cecs_entity_storage *storage, const size_t index) {
+    cecs_assert_or_exit(
+        index < cecs_entity_storage_total_count(storage),
+        "error: cecs_entity_storage_peek_entity_mut called with out of bounds index"
+    );
+    return (cecs_entity*)cecs_dynarray_get_mut(&storage->entities, index, sizeof(cecs_entity));
+}
 static inline cecs_entity *cecs_entity_storage_get_entity_exact_mut(cecs_entity_storage *storage, const cecs_entity entity) {
     const size_t index = cecs_entity_index(entity);
-    cecs_entity *const stored_entity = (cecs_entity*)cecs_dynarray_get_mut(&storage->entities, index, sizeof(cecs_entity));
+    cecs_entity *const stored_entity = cecs_entity_storage_peek_entity_mut(storage, index);
     cecs_assert_or_exit(
         !cecs_entity_is_free(*stored_entity),
         "error: cecs_entity_storage_get_entity_exact_mut called for a free entity"
@@ -43,11 +50,14 @@ static inline cecs_entity *cecs_entity_storage_get_entity_exact_mut(cecs_entity_
 
 cecs_entity cecs_entity_storage_alloc_entity(cecs_entity_storage *storage, cecs_allocator *allocator) {
     if (storage->free_count > 0) {
-        const cecs_entity entity = storage->next_free;
+        const cecs_entity entity = cecs_entity_unset_free(storage->next_free);
         const size_t next_free_index = cecs_entity_index(entity);
-        storage->next_free = cecs_entity_storage_peek_entity(storage, next_free_index);
+
+        cecs_entity *const entity_slot = cecs_entity_storage_peek_entity_mut(storage, next_free_index);
         --storage->free_count;
-        return cecs_entity_unset_free(entity);
+        storage->next_free = *entity_slot;
+        *entity_slot = entity;
+        return entity;
     } else {
         const size_t new_index = cecs_entity_storage_total_count(storage);
         cecs_entity new_entity = cecs_entity_create(new_index, cecs_entity_meta_type_none, 0);

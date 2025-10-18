@@ -1,9 +1,13 @@
-// #include <cecs_math/cecs_math.h>
+
 #include <cecs_core/cecs_allocator.h>
 #include <cecs_core/container/cecs_dynarray.h>
 #include <cecs_core/container/cecs_sparse_set.h>
 #include <cecs_core/container/cecs_flatset.h>
 #include <cecs_core/container/cecs_flatmap.h>
+
+#include <cecs_core/world/cecs_entity.h>
+#include <cecs_core/world/cecs_entity_storage.h>
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -12,7 +16,6 @@
 #include <limits.h>
 #include <math.h>
 
-#include <cecs_core/world/cecs_entity.h>
 
 
 void test_dynarray(cecs_allocator *allocator) {
@@ -1678,6 +1681,181 @@ void test_entity(cecs_allocator *allocator) {
     printf("=== Entity tests completed ===\n");
 }
 
+void test_entity_storage(cecs_allocator *allocator) {
+    printf("\n=== Testing Entity Storage ===\n");
+
+    // --- Test 1: Creation and initial state ---
+    printf("\n--- Test 1: Creation and initial state ---\n");
+    cecs_entity_storage storage = cecs_entity_storage_create_with_capacity(allocator, 8);
+    if (cecs_entity_storage_total_count(&storage) != 0 ||
+        cecs_entity_storage_free_count(&storage) != 0 ||
+        cecs_entity_storage_used_count(&storage) != 0) {
+        fprintf(stderr, "ERROR: initial storage counts incorrect\n");
+        assert(false && "initial storage counts incorrect");
+        exit(EXIT_FAILURE);
+    }
+    printf("Initial: total=%zu, used=%zu, free=%zu\n",
+           cecs_entity_storage_total_count(&storage),
+           cecs_entity_storage_used_count(&storage),
+           cecs_entity_storage_free_count(&storage));
+
+    // --- Test 2: Allocate 5 entities ---
+    printf("\n--- Test 2: Allocate 5 entities ---\n");
+    cecs_entity e[5];
+    for (size_t i = 0; i < 5; ++i) {
+        e[i] = cecs_entity_storage_alloc_entity(&storage, allocator);
+        size_t idx = cecs_entity_index(e[i]);
+        printf("Allocated[%zu]: value=0x%016llX, index=%zu, gen=%u, free=%d\n",
+               i, (unsigned long long)e[i].value, idx, (unsigned)cecs_entity_generation(e[i]), (int)cecs_entity_is_free(e[i]));
+        if (idx != i || cecs_entity_is_free(e[i]) || cecs_entity_generation(e[i]) != 0) {
+            fprintf(stderr, "ERROR: allocation mismatch at %zu\n", i);
+            assert(false && "allocation mismatch");
+            exit(EXIT_FAILURE);
+        }
+        // Validate getters
+        cecs_entity by_index = cecs_entity_storage_get_entity(&storage, idx);
+        if (by_index.value != e[i].value) {
+            fprintf(stderr, "ERROR: get_entity mismatch at %zu\n", i);
+            assert(false && "get_entity mismatch");
+            exit(EXIT_FAILURE);
+        }
+        cecs_entity exact = cecs_entity_storage_get_entity_exact(&storage, e[i]);
+        if (exact.value != e[i].value) {
+            fprintf(stderr, "ERROR: get_entity_exact mismatch at %zu\n", i);
+            assert(false && "get_entity_exact mismatch");
+            exit(EXIT_FAILURE);
+        }
+    }
+    if (cecs_entity_storage_total_count(&storage) != 5 ||
+        cecs_entity_storage_used_count(&storage) != 5 ||
+        cecs_entity_storage_free_count(&storage) != 0) {
+        fprintf(stderr, "ERROR: counts after initial allocations incorrect\n");
+        assert(false && "counts after initial allocations incorrect");
+        exit(EXIT_FAILURE);
+    }
+    printf("After alloc: total=%zu, used=%zu, free=%zu\n",
+           cecs_entity_storage_total_count(&storage),
+           cecs_entity_storage_used_count(&storage),
+           cecs_entity_storage_free_count(&storage));
+
+    // --- Test 3: Free some entities and test LIFO reuse and generation bump ---
+    printf("\n--- Test 3: Free [2,4,1] and reuse ---\n");
+    size_t free_order1[] = {2, 4, 1};
+    for (size_t i = 0; i < 3; ++i) {
+        size_t idx = free_order1[i];
+        cecs_entity prev = e[idx];
+        cecs_entity_storage_free_entity(&storage, prev);
+        printf("Freed index %zu: prev value=0x%016llX\n", idx, (unsigned long long)prev.value);
+    }
+    printf("Counts after free: total=%zu, used=%zu, free=%zu\n",
+           cecs_entity_storage_total_count(&storage),
+           cecs_entity_storage_used_count(&storage),
+           cecs_entity_storage_free_count(&storage));
+    if (cecs_entity_storage_used_count(&storage) != 2 || cecs_entity_storage_free_count(&storage) != 3) {
+        fprintf(stderr, "ERROR: counts after partial free incorrect\n");
+        assert(false && "counts after partial free incorrect");
+        exit(EXIT_FAILURE);
+    }
+    // Reuse: expect LIFO: [1,4,2]
+    size_t expected_reuse1[] = {1, 4, 2};
+    for (size_t i = 0; i < 3; ++i) {
+        cecs_entity r = cecs_entity_storage_alloc_entity(&storage, allocator);
+        size_t idx = cecs_entity_index(r);
+        uint_fast8_t gen = cecs_entity_generation(r);
+        if (idx != expected_reuse1[i]) {
+            fprintf(stderr, "ERROR: LIFO reuse mismatch: expected %zu, got %zu\n", expected_reuse1[i], idx);
+            assert(false && "LIFO reuse mismatch");
+            exit(EXIT_FAILURE);
+        }
+        if (gen != (uint_fast8_t)(cecs_entity_generation(e[idx]) + 1)) {
+            fprintf(stderr, "ERROR: generation not incremented on reuse for index %zu: expected %u, got %u\n",
+                    idx, (unsigned)(cecs_entity_generation(e[idx]) + 1), (unsigned)gen);
+            assert(false && "generation not incremented on reuse");
+            exit(EXIT_FAILURE);
+        }
+        if (cecs_entity_is_free(r)) {
+            fprintf(stderr, "ERROR: reused entity has free flag set for index %zu\n", idx);
+            assert(false && "reused entity free flag set");
+            exit(EXIT_FAILURE);
+        }
+        printf("Reused -> index=%zu, gen=%u\n", idx, (unsigned)gen);
+        e[idx] = r; // update latest entity for that index
+    }
+    if (cecs_entity_storage_used_count(&storage) != 5 || cecs_entity_storage_free_count(&storage) != 0) {
+        fprintf(stderr, "ERROR: counts after reuse incorrect\n");
+        assert(false && "counts after reuse incorrect");
+        exit(EXIT_FAILURE);
+    }
+
+    // --- Test 4: Free all, then allocate all to check global LIFO ---
+    printf("\n--- Test 4: Free all then allocate all ---\n");
+    for (size_t i = 0; i < 5; ++i) {
+        cecs_entity_storage_free_entity(&storage, e[i]);
+    }
+    if (cecs_entity_storage_free_count(&storage) != 5 || cecs_entity_storage_used_count(&storage) != 0) {
+        fprintf(stderr, "ERROR: counts after freeing all incorrect\n");
+        assert(false && "counts after freeing all incorrect");
+        exit(EXIT_FAILURE);
+    }
+    // Free order was [0,1,2,3,4] -> LIFO reuse should be [4,3,2,1,0]
+    size_t expected_reuse2[] = {4, 3, 2, 1, 0};
+    for (size_t i = 0; i < 5; ++i) {
+        cecs_entity r = cecs_entity_storage_alloc_entity(&storage, allocator);
+        if (cecs_entity_index(r) != expected_reuse2[i]) {
+            fprintf(stderr, "ERROR: global LIFO reuse mismatch: expected %zu, got %zu\n", expected_reuse2[i], cecs_entity_index(r));
+            assert(false && "global LIFO reuse mismatch");
+            exit(EXIT_FAILURE);
+        }
+        e[cecs_entity_index(r)] = r; // update holder
+        printf("Reused-all -> index=%zu, gen=%u\n", cecs_entity_index(r), (unsigned)cecs_entity_generation(r));
+    }
+
+    // --- Test 5: Append growth beyond reused slots ---
+    printf("\n--- Test 5: Append growth beyond reused slots ---\n");
+    size_t total_before = cecs_entity_storage_total_count(&storage);
+    cecs_entity extra = cecs_entity_storage_alloc_entity(&storage, allocator);
+    if (cecs_entity_index(extra) != total_before) {
+        fprintf(stderr, "ERROR: append growth index mismatch: expected %zu, got %zu\n", total_before, cecs_entity_index(extra));
+        assert(false && "append growth index mismatch");
+        exit(EXIT_FAILURE);
+    }
+    if (cecs_entity_storage_total_count(&storage) != total_before + 1) {
+        fprintf(stderr, "ERROR: total count did not grow by 1 after append allocation\n");
+        assert(false && "total count append mismatch");
+        exit(EXIT_FAILURE);
+    }
+    printf("Append alloc -> index=%zu (total now %zu)\n", cecs_entity_index(extra), cecs_entity_storage_total_count(&storage));
+
+    // --- Test 6: Generation wrap on a fresh storage (controlled) ---
+    printf("\n--- Test 6: Generation wrap on fresh storage ---\n");
+    cecs_entity_storage wrap = cecs_entity_storage_create();
+    cecs_entity w = cecs_entity_storage_alloc_entity(&wrap, allocator); // index 0, gen 0
+    const size_t gen_bits = (size_t)CECS_ENTITY_GENERATION_BITS; // number of generation bits (should be 8)
+    const uint_fast8_t gen_mod = (uint_fast8_t)((1u << gen_bits) - 1u); // mask for wrap
+    const uint_fast8_t initial_gen = cecs_entity_generation(w);
+    const size_t cycles = (size_t)gen_mod + 2; // wrap and two more
+    for (size_t i = 1; i <= cycles; ++i) {
+        // Free and immediately re-allocate to reuse the same slot
+        cecs_entity_storage_free_entity(&wrap, w);
+        w = cecs_entity_storage_alloc_entity(&wrap, allocator);
+        uint_fast8_t expected = (uint_fast8_t)((initial_gen + i) & gen_mod);
+        if (cecs_entity_index(w) != 0 || cecs_entity_generation(w) != expected || cecs_entity_is_free(w)) {
+            fprintf(stderr, "ERROR: wrap cycle %zu: idx=%zu gen=%u expected=%u free=%d\n",
+                    i, cecs_entity_index(w), (unsigned)cecs_entity_generation(w), (unsigned)expected, (int)cecs_entity_is_free(w));
+            assert(false && "generation wrap mismatch");
+            exit(EXIT_FAILURE);
+        }
+        if (i % 64 == 0 || i == cycles) {
+            printf("Wrap cycle %zu -> gen=%u\n", i, (unsigned)cecs_entity_generation(w));
+        }
+    }
+
+    // Cleanup
+    cecs_entity_storage_destroy(&storage, allocator);
+    cecs_entity_storage_destroy(&wrap, allocator);
+    printf("=== Entity Storage tests completed ===\n");
+}
+
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
 
@@ -1689,6 +1867,7 @@ int main(void) {
     test_flatmap(&allocator);
     test_flatmap_simd(&allocator);
     test_entity(&allocator);
+    test_entity_storage(&allocator);
 
     printf("\n=== All tests completed successfully ===\n");
 

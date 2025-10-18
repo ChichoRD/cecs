@@ -221,8 +221,9 @@ void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator *a, const size_t va
 
 void *cecs_dynarray_push(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
     const size_t capacity = cecs_dynarray_capacity(arr);
-    if (cecs_dynarray_count(arr) + 1 > capacity) {
-        cecs_dynarray_reserve_exact(arr, a, capacity << 1, value_size);
+    const size_t new_count = cecs_dynarray_count(arr) + 1;
+    if (new_count > capacity) {
+        cecs_dynarray_reserve(arr, a, new_count, value_size);
     }
     return cecs_array_push(&arr->array, value_size);
 }
