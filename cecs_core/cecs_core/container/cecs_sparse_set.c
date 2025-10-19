@@ -26,6 +26,13 @@ extern inline size_t *cecs_sparse_set_get_sparse_key_mut(cecs_sparse_set *set, c
 extern inline const void *cecs_sparse_set_get_value_by_index(const cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size);
 extern inline void *cecs_sparse_set_get_value_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size);
 extern inline const size_t *cecs_sparse_set_get_sparse_key_by_index(const cecs_sparse_set *set, const cecs_dense_index index);
+extern inline size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index) {
+    if (!cecs_dense_index_is_valid(index)) {
+        assert(false && "fatal error: cecs_sparse_set_get_sparse_key_by_index_mut called with invalid index");
+        exit(EXIT_FAILURE);
+    }
+    return cecs_dynarray_get_mut(&set->values.sparse_from_dense, index.value, sizeof(size_t));
+}
 
 cecs_dense_set cecs_dense_set_create(void) {
     return (cecs_dense_set){
