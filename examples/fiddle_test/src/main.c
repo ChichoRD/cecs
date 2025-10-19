@@ -7,6 +7,7 @@
 
 #include <cecs_core/world/cecs_entity.h>
 #include <cecs_core/world/cecs_entity_storage.h>
+#include <cecs_core/world/cecs_component_storage.h>
 
 #include <stdio.h>
 #include <stddef.h>
@@ -1339,7 +1340,7 @@ void test_flatmap_simd(cecs_allocator *allocator) {
         size_t masked_key_sum = 0;
         int masked_data_sum = 0;
         uint32_t masked_flags_or = 0;
-        size_t min_key = SIZE_MAX;
+        size_t min_key = (size_t)~(size_t)0;
         size_t max_key = 0;
         
         for (uint_fast8_t i = 0; i < 8; ++i) {
@@ -1356,7 +1357,7 @@ void test_flatmap_simd(cecs_allocator *allocator) {
         size_t checked_key_sum = 0;
         int checked_data_sum = 0;
         uint32_t checked_flags_or = 0;
-        size_t checked_min_key = SIZE_MAX;
+        size_t checked_min_key = (size_t)~(size_t)0;
         size_t checked_max_key = 0;
         
         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
@@ -1856,18 +1857,380 @@ void test_entity_storage(cecs_allocator *allocator) {
     printf("=== Entity Storage tests completed ===\n");
 }
 
-int main(void) {
-    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
+void test_component_storage_sparse_set(cecs_allocator *allocator) {
+    printf("\n=== Testing Component Storage (Sparse Set) ===\n");
 
-    // test_msn(); // Test the msnh15_u4_dbg function
+    typedef struct test_component {
+        int value;
+        float weight;
+        char tag[16];
+    } test_component;
+
+    // --- Test 1: Creation and initial state ---
+    printf("\n--- Test 1: Creation and initial state ---\n");
+    cecs_component_storage storage = cecs_component_storage_create_sparse_set(allocator, 8, sizeof(test_component));
+    if (storage.type != cecs_component_storage_type_sparse_set) {
+        fprintf(stderr, "ERROR: storage type mismatch\n");
+        assert(false && "storage type mismatch");
+        exit(EXIT_FAILURE);
+    }
+    const cecs_sparse_set_storage *sparse = cecs_component_storage_sparse_set(&storage);
+    if (cecs_sparse_set_value_count(&sparse->set) != 0) {
+        fprintf(stderr, "ERROR: initial count should be 0\n");
+        assert(false && "initial count incorrect");
+        exit(EXIT_FAILURE);
+    }
+    printf("Storage type: sparse_set, initial count: %u\n", cecs_sparse_set_value_count(&sparse->set));
+
+    // --- Test 2: Insert components at various keys ---
+    printf("\n--- Test 2: Insert components at various keys ---\n");
+    size_t test_keys[] = {0, 5, 10, 100, 1000, 50000};
+    for (size_t i = 0; i < 6; ++i) {
+        test_component *comp = (test_component*)cecs_component_storage_insert_expect(&storage, allocator, test_keys[i], sizeof(test_component));
+        comp->value = (int)(test_keys[i] * 10);
+        comp->weight = (float)(test_keys[i] * 0.5f);
+        snprintf(comp->tag, sizeof(comp->tag), "key_%zu", test_keys[i]);
+        printf("Inserted key=%zu: value=%d, weight=%.1f, tag=%s\n", test_keys[i], comp->value, comp->weight, comp->tag);
+    }
+    sparse = cecs_component_storage_sparse_set(&storage);
+    if (cecs_sparse_set_value_count(&sparse->set) != 6) {
+        fprintf(stderr, "ERROR: count after insertions should be 6, got %u\n", cecs_sparse_set_value_count(&sparse->set));
+        assert(false && "count after insertions incorrect");
+        exit(EXIT_FAILURE);
+    }
+
+    // --- Test 3: Contains checks ---
+    printf("\n--- Test 3: Contains checks ---\n");
+    for (size_t i = 0; i < 6; ++i) {
+        if (!cecs_component_storage_contains(&storage, test_keys[i], sizeof(test_component))) {
+            fprintf(stderr, "ERROR: expected key %zu to be present\n", test_keys[i]);
+            assert(false && "expected key present");
+            exit(EXIT_FAILURE);
+        }
+        printf("Contains key=%zu: true\n", test_keys[i]);
+    }
+    size_t missing_keys[] = {1, 7, 99, 999, 49999};
+    for (size_t i = 0; i < 5; ++i) {
+        if (cecs_component_storage_contains(&storage, missing_keys[i], sizeof(test_component))) {
+            fprintf(stderr, "ERROR: key %zu should not be present\n", missing_keys[i]);
+            assert(false && "unexpected key present");
+            exit(EXIT_FAILURE);
+        }
+        printf("Contains key=%zu: false (expected)\n", missing_keys[i]);
+    }
+
+    // --- Test 4: Get operations ---
+    printf("\n--- Test 4: Get operations ---\n");
+    for (size_t i = 0; i < 6; ++i) {
+        const test_component *comp = (const test_component*)cecs_component_storage_get(&storage, test_keys[i], sizeof(test_component));
+        if (comp->value != (int)(test_keys[i] * 10)) {
+            fprintf(stderr, "ERROR: value mismatch for key %zu\n", test_keys[i]);
+            assert(false && "value mismatch");
+            exit(EXIT_FAILURE);
+        }
+        printf("Get key=%zu: value=%d, weight=%.1f, tag=%s\n", test_keys[i], comp->value, comp->weight, comp->tag);
+    }
+
+    // --- Test 5: Get_mut and modify ---
+    printf("\n--- Test 5: Get_mut and modify ---\n");
+    for (size_t i = 0; i < 3; ++i) {
+        test_component *comp = (test_component*)cecs_component_storage_get_mut(&storage, test_keys[i], sizeof(test_component));
+        comp->value += 5000;
+        comp->weight *= 2.0f;
+        snprintf(comp->tag, sizeof(comp->tag), "mod_%zu", test_keys[i]);
+        printf("Modified key=%zu: new value=%d, new weight=%.1f, new tag=%s\n", 
+               test_keys[i], comp->value, comp->weight, comp->tag);
+    }
+    // Verify modifications
+    for (size_t i = 0; i < 3; ++i) {
+        const test_component *comp = (const test_component*)cecs_component_storage_get(&storage, test_keys[i], sizeof(test_component));
+        int expected_value = (int)(test_keys[i] * 10) + 5000;
+        if (comp->value != expected_value) {
+            fprintf(stderr, "ERROR: modified value mismatch for key %zu: expected %d, got %d\n", 
+                    test_keys[i], expected_value, comp->value);
+            assert(false && "modified value mismatch");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // --- Test 6: Get_or_insert ---
+    printf("\n--- Test 6: Get_or_insert ---\n");
+    // Existing key
+    size_t existing_key = test_keys[4];
+    test_component *existing = (test_component*)cecs_component_storage_get_or_insert(&storage, allocator, existing_key, sizeof(test_component));
+    int prev_value = existing->value;
+    (void)prev_value; // suppress unused variable warning
+    printf("Get_or_insert existing key=%zu: value=%d (no new insert)\n", existing_key, existing->value);
+    
+    sparse = cecs_component_storage_sparse_set(&storage);
+    size_t count_before = cecs_sparse_set_value_count(&sparse->set);
+    
+    // New key
+    size_t new_key = 25000;
+    test_component *new_comp = (test_component*)cecs_component_storage_get_or_insert(&storage, allocator, new_key, sizeof(test_component));
+    new_comp->value = 9999;
+    new_comp->weight = 123.45f;
+    snprintf(new_comp->tag, sizeof(new_comp->tag), "new_%zu", new_key);
+    
+    sparse = cecs_component_storage_sparse_set(&storage);
+    if (cecs_sparse_set_value_count(&sparse->set) != count_before + 1) {
+        fprintf(stderr, "ERROR: count should increase by 1 after get_or_insert new key\n");
+        assert(false && "count mismatch after get_or_insert");
+        exit(EXIT_FAILURE);
+    }
+    printf("Get_or_insert new key=%zu: value=%d, count now %u\n", 
+           new_key, new_comp->value, cecs_sparse_set_value_count(&sparse->set));
+
+    // --- Test 7: Remove operations ---
+    printf("\n--- Test 7: Remove operations ---\n");
+    size_t remove_keys[] = {test_keys[1], test_keys[3], new_key};
+    for (size_t i = 0; i < 3; ++i) {
+        bool removed = cecs_component_storage_remove(&storage, allocator, remove_keys[i], sizeof(test_component));
+        if (!removed) {
+            fprintf(stderr, "ERROR: failed to remove key %zu\n", remove_keys[i]);
+            assert(false && "remove failed");
+            exit(EXIT_FAILURE);
+        }
+        printf("Removed key=%zu\n", remove_keys[i]);
+    }
+    
+    sparse = cecs_component_storage_sparse_set(&storage);
+    if (cecs_sparse_set_value_count(&sparse->set) != 4) {
+        fprintf(stderr, "ERROR: count after removals should be 4, got %u\n", cecs_sparse_set_value_count(&sparse->set));
+        assert(false && "count after removals incorrect");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Verify removed keys no longer present
+    for (size_t i = 0; i < 3; ++i) {
+        if (cecs_component_storage_contains(&storage, remove_keys[i], sizeof(test_component))) {
+            fprintf(stderr, "ERROR: removed key %zu still present\n", remove_keys[i]);
+            assert(false && "removed key still present");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    // Try removing non-existent key
+    bool removed_missing = cecs_component_storage_remove(&storage, allocator, 77777, sizeof(test_component));
+    if (removed_missing) {
+        fprintf(stderr, "ERROR: unexpectedly removed non-existent key\n");
+        assert(false && "unexpectedly removed non-existent key");
+        exit(EXIT_FAILURE);
+    }
+    printf("Remove non-existent key=77777: false (expected)\n");
+
+    // --- Test 8: Re-insert after removal ---
+    printf("\n--- Test 8: Re-insert after removal ---\n");
+    size_t reinsert_key = test_keys[1];
+    test_component *reinserted = (test_component*)cecs_component_storage_insert_expect(&storage, allocator, reinsert_key, sizeof(test_component));
+    reinserted->value = 88888;
+    reinserted->weight = 999.99f;
+    snprintf(reinserted->tag, sizeof(reinserted->tag), "reins_%zu", reinsert_key);
+    printf("Re-inserted key=%zu: value=%d\n", reinsert_key, reinserted->value);
+    
+    const test_component *verify = (const test_component*)cecs_component_storage_get(&storage, reinsert_key, sizeof(test_component));
+    if (verify->value != 88888) {
+        fprintf(stderr, "ERROR: re-inserted value mismatch\n");
+        assert(false && "re-inserted value mismatch");
+        exit(EXIT_FAILURE);
+    }
+
+    // --- Test 9: Sparse key range (backward expansion) ---
+    printf("\n--- Test 9: Sparse key range (backward expansion) ---\n");
+    // Insert a very low key to trigger backward expansion in sparse_set_storage
+    size_t low_key = 0;
+    test_component *low_comp = (test_component*)cecs_component_storage_get_or_insert(&storage, allocator, low_key, sizeof(test_component));
+    low_comp->value = -1;
+    low_comp->weight = 0.0f;
+    snprintf(low_comp->tag, sizeof(low_comp->tag), "low_%zu", low_key);
+    printf("Inserted low key=%zu (already existed): value=%d\n", low_key, low_comp->value);
+    
+    // Insert another low key that might be in a skipped page
+    size_t very_low_key = 2;
+    if (!cecs_component_storage_contains(&storage, very_low_key, sizeof(test_component))) {
+        test_component *very_low = (test_component*)cecs_component_storage_insert_expect(&storage, allocator, very_low_key, sizeof(test_component));
+        very_low->value = -2;
+        very_low->weight = -1.0f;
+        snprintf(very_low->tag, sizeof(very_low->tag), "vlow_%zu", very_low_key);
+        printf("Inserted very low key=%zu: value=%d\n", very_low_key, very_low->value);
+    }
+
+    // --- Test 10: Clear storage ---
+    printf("\n--- Test 10: Clear storage ---\n");
+    cecs_component_storage_clear(&storage, allocator, sizeof(test_component));
+    sparse = cecs_component_storage_sparse_set(&storage);
+    if (cecs_sparse_set_value_count(&sparse->set) != 0) {
+        fprintf(stderr, "ERROR: count after clear should be 0, got %u\n", cecs_sparse_set_value_count(&sparse->set));
+        assert(false && "count after clear incorrect");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Verify none of the original keys are present
+    for (size_t i = 0; i < 6; ++i) {
+        if (cecs_component_storage_contains(&storage, test_keys[i], sizeof(test_component))) {
+            fprintf(stderr, "ERROR: key %zu still present after clear\n", test_keys[i]);
+            assert(false && "key present after clear");
+            exit(EXIT_FAILURE);
+        }
+    }
+    printf("After clear: count=%u, all keys removed\n", cecs_sparse_set_value_count(&sparse->set));
+
+    // --- Test 11: Re-populate after clear ---
+    printf("\n--- Test 11: Re-populate after clear ---\n");
+    for (size_t i = 0; i < 3; ++i) {
+        test_component *comp = (test_component*)cecs_component_storage_insert_expect(&storage, allocator, i * 100, sizeof(test_component));
+        comp->value = (int)i;
+        comp->weight = (float)i * 1.5f;
+        snprintf(comp->tag, sizeof(comp->tag), "repop_%zu", i);
+        printf("Re-populated key=%zu: value=%d\n", i * 100, comp->value);
+    }
+    sparse = cecs_component_storage_sparse_set(&storage);
+    if (cecs_sparse_set_value_count(&sparse->set) != 3) {
+        fprintf(stderr, "ERROR: count after re-population should be 3, got %u\n", cecs_sparse_set_value_count(&sparse->set));
+        assert(false && "count after re-population incorrect");
+        exit(EXIT_FAILURE);
+    }
+
+    // --- Test 12: Reverse-order insertion and paging behavior ---
+    printf("\n--- Test 12: Reverse-order insertion and paging behavior ---\n");
+    {
+        cecs_component_storage rstorage = cecs_component_storage_create_sparse_set(allocator, 0, sizeof(test_component));
+        const size_t rkeys[] = {50000, 1000, 100, 31, 17, 16, 3, 1, 0};
+        const size_t rkeys_count = sizeof(rkeys) / sizeof(rkeys[0]);
+
+        typedef struct key_map_rec { size_t key; size_t mapped; } key_map_rec;
+        key_map_rec recs[32];
+        size_t rec_count = 0;
+
+        size_t prev_offset = 0;
+        bool have_prev_offset = false;
+
+        for (size_t i = 0; i < rkeys_count; ++i) {
+            const size_t k = rkeys[i];
+            test_component *comp = (test_component*)cecs_component_storage_insert_expect(&rstorage, allocator, k, sizeof(test_component));
+            comp->value = (int)k;
+            comp->weight = (float)k;
+            snprintf(comp->tag, sizeof(comp->tag), "rev_%zu", k);
+
+            const cecs_sparse_set_storage *rsparse = cecs_component_storage_sparse_set(&rstorage);
+            const size_t offset = cecs_sparse_set_storage_map_offset(rsparse);
+            const size_t mapped = cecs_sparse_set_storage_map_key(rsparse, k);
+            const unsigned count_now = cecs_sparse_set_value_count(&rsparse->set);
+
+            printf("rev-insert key=%zu -> skipped_key_pages=%zu, map_offset=%zu, mapped=%zu, count=%u, key_range_capacity=%zu\n",
+                   k, rsparse->skipped_key_pages, offset, mapped, count_now, cecs_sparse_set_sparse_range_size(&rsparse->set));
+
+            if (!have_prev_offset) {
+                prev_offset = offset;
+                have_prev_offset = true;
+            } else {
+                if (k < prev_offset) {
+                    // Backward expansion should have occurred, offset must decrease
+                    if (!(offset < prev_offset)) {
+                        fprintf(stderr, "ERROR: expected map offset to decrease on backward expansion: prev=%zu new=%zu\n", prev_offset, offset);
+                        assert(false && "map offset did not decrease on backward expansion");
+                        exit(EXIT_FAILURE);
+                    }
+                    const size_t delta = prev_offset - offset;
+                    // All previously inserted keys should have their mapped index increased by delta
+                    for (size_t r = 0; r < rec_count; ++r) {
+                        const size_t new_mapped = cecs_sparse_set_storage_map_key(rsparse, recs[r].key);
+                        if (new_mapped != recs[r].mapped + delta) {
+                            fprintf(stderr, "ERROR: mapped shift mismatch for key %zu: expected %zu, got %zu (delta=%zu)\n",
+                                    recs[r].key, recs[r].mapped + delta, new_mapped, delta);
+                            assert(false && "mapped index did not shift by delta after expansion");
+                            exit(EXIT_FAILURE);
+                        }
+                        // update stored mapping
+                        recs[r].mapped = new_mapped;
+                    }
+                    prev_offset = offset;
+                } else {
+                    // No backward expansion expected; offset stays the same
+                    if (offset != prev_offset) {
+                        fprintf(stderr, "ERROR: unexpected map offset change without backward expansion: prev=%zu new=%zu (key=%zu)\n",
+                                prev_offset, offset, k);
+                        assert(false && "unexpected map offset change");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+
+            // Append record for current key
+            recs[rec_count++] = (key_map_rec){ .key = k, .mapped = mapped };
+
+            // Contains must be true for all inserted keys so far
+            for (size_t j = 0; j < rec_count; ++j) {
+                if (!cecs_component_storage_contains(&rstorage, recs[j].key, sizeof(test_component))) {
+                    fprintf(stderr, "ERROR: contains false for inserted key %zu\n", recs[j].key);
+                    assert(false && "contains failed for inserted key");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            // Count must equal number of inserted keys so far
+            if (count_now != rec_count) {
+                fprintf(stderr, "ERROR: count mismatch after insertion %zu: expected %zu, got %u\n", i, rec_count, count_now);
+                assert(false && "count mismatch in reverse insertion");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // With key 0 inserted last, offset should be 0 and skipped_key_pages should be 0
+        const cecs_sparse_set_storage *rsparse_final = cecs_component_storage_sparse_set(&rstorage);
+        const size_t final_offset = cecs_sparse_set_storage_map_offset(rsparse_final);
+        if (!(final_offset == 0 && rsparse_final->skipped_key_pages == 0)) {
+            fprintf(stderr, "ERROR: final offset/skipped_key_pages mismatch: offset=%zu skipped=%zu\n",
+                    final_offset, rsparse_final->skipped_key_pages);
+            assert(false && "final paging state mismatch");
+            exit(EXIT_FAILURE);
+        }
+        printf("Reverse-order final: map_offset=%zu, skipped_key_pages=%zu (expected both zero)\n",
+               final_offset, rsparse_final->skipped_key_pages);
+
+        cecs_component_storage_destroy(&rstorage, allocator, sizeof(test_component));
+    }
+
+    // Cleanup
+    cecs_component_storage_destroy(&storage, allocator, sizeof(test_component));
+    printf("=== Component Storage (Sparse Set) tests completed ===\n");
+}
+
+void test_component_storage(cecs_allocator *allocator) {
+    test_component_storage_sparse_set(allocator);
+    // Future: test_component_storage_flatmap(allocator);
+    // Future: test_component_storage_other_types(allocator);
+}
+
+int main(void) {
+    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256 * 4);
+
     test_dynarray(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_sparse_set(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_flatset(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_flatset_simd(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_flatmap(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_flatmap_simd(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_entity(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
     test_entity_storage(&allocator);
+    // cecs_allocator_reset(&allocator);
+
+    test_component_storage(&allocator);
+    // cecs_allocator_reset(&allocator);
 
     printf("\n=== All tests completed successfully ===\n");
 

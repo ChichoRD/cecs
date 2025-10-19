@@ -42,16 +42,55 @@ void *cecs_array_extend(cecs_array *arr, const size_t start_index_inclusive, con
         cecs_assert_and_fail("error: attempted to extend cecs_array exceeding its capacity");
     }
     
-    void *const extension_start = arr->values + start_index_inclusive * value_size;
-    if (start_index_inclusive < arr->values_used) {
-        memmove(
-            arr->values + (end_index_exclusive) * value_size,
-            extension_start,
-            (arr->values_used - start_index_inclusive) * value_size
+    void *const extension_destination = arr->values + arr->values_used * value_size;
+    if (extend_count > 0) {
+        const void *const extension_source = arr->values + start_index_inclusive * value_size;
+        memcpy(
+            extension_destination,
+            extension_source,
+            extend_count * value_size
         );
+        arr->values_used += extend_count;
     }
-    arr->values_used += extend_count;
-    return extension_start;
+    return extension_destination;
+}
+void *cecs_array_insert(cecs_array *arr, const size_t index, const size_t value_size) {
+    if (cecs_expect_not(index > arr->values_used)) {
+        cecs_assert_and_fail("error: attempted to insert in cecs_array with end index greater than count");
+    } else if (cecs_expect_not(arr->values_used + 1 > arr->values_capacity)) {
+        cecs_assert_and_fail("error: attempted to insert in cecs_array exceeding its capacity");
+    }
+
+    uint8_t *const insertion_start = arr->values + index * value_size;
+    uint8_t *const insertion_end = insertion_start + value_size;
+    const size_t move_count = arr->values_used - index;
+    const size_t move_size = move_count * value_size;
+    if (move_count <= 1) {
+        memcpy(insertion_end, insertion_start, move_size);
+    } else {
+        memmove(insertion_end, insertion_start, move_size);
+    }
+    ++arr->values_used;
+    return insertion_start;
+}
+void *cecs_array_insert_many(cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
+    if (cecs_expect_not(index > arr->values_used)) {
+        cecs_assert_and_fail("error: attempted to insert in cecs_array with end index greater than count");
+    } else if (cecs_expect_not(arr->values_used + count > arr->values_capacity)) {
+        cecs_assert_and_fail("error: attempted to insert in cecs_array exceeding its capacity");
+    }
+
+    uint8_t *const insertion_start = arr->values + index * value_size;
+    uint8_t *const insertion_end = insertion_start + count * value_size;
+    const size_t move_count = arr->values_used - index;
+    const size_t move_size = move_count * value_size;
+    if (move_count <= count) {
+        memcpy(insertion_end, insertion_start, move_size);
+    } else {
+        memmove(insertion_end, insertion_start, move_size);
+    }
+    arr->values_used += count;
+    return insertion_start;
 }
 void *cecs_array_insert_many_copy(cecs_array *arr, const size_t index, const void *values, const size_t count, const size_t value_size) {
     void *const elements = cecs_array_insert_many(arr, index, count, value_size);
@@ -250,7 +289,24 @@ void *cecs_dynarray_extend(cecs_dynarray *arr, cecs_allocator *a, const size_t s
     }
     return cecs_array_extend(&arr->array, start_index_inclusive, end_index_exclusive, value_size);
 }
-void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size) {
+void *cecs_dynarray_insert(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t value_size) {
+    const size_t capacity = cecs_dynarray_capacity(arr);
+    const size_t new_count = cecs_dynarray_count(arr) + 1;
+    if (new_count > capacity) {
+        cecs_dynarray_reserve(arr, a, new_count, value_size);
+    }
+    return cecs_array_insert(&arr->array, index, value_size);
+}
+void *cecs_dynarray_insert_many(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t count, const size_t value_size) {
+    const size_t capacity = cecs_dynarray_capacity(arr);
+    const size_t new_count = cecs_dynarray_count(arr) + count;
+    if (new_count > capacity) {
+        cecs_dynarray_reserve(arr, a, new_count, value_size);
+    }
+    return cecs_array_insert_many(&arr->array, index, count, value_size);
+}
+void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size)
+{
     void *const elements = cecs_dynarray_insert_many(arr, a, index, count, value_size);
     return memcpy(elements, values, count * value_size);
 }

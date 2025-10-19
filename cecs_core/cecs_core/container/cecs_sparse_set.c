@@ -96,10 +96,16 @@ void cecs_sparse_set_destroy(cecs_sparse_set *set, cecs_allocator *allocator, co
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
-        const size_t needed_capacity = range_size - current_size;
         cecs_dynarray_reserve(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
+    }
+}
+void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
+    const size_t current_size = cecs_sparse_set_sparse_range_size(set);
+    if (range_size > current_size) {
+        const size_t needed_capacity = range_size - current_size;
+        void *const inserted_keys = cecs_dynarray_push_many(&set->dense_from_sparse, allocator, needed_capacity, sizeof(cecs_dense_index));
         memset(
-            cecs_dynarray_push_many(&set->dense_from_sparse, allocator, needed_capacity, sizeof(cecs_dense_index)),
+            inserted_keys,
             UINT8_MAX,
             needed_capacity * sizeof(cecs_dense_index)
         );
@@ -121,11 +127,11 @@ void *cecs_sparse_set_insert_within_expect(cecs_sparse_set *set, cecs_allocator 
     }
 }
 void *cecs_sparse_set_insert_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size){
-    cecs_sparse_set_reserve_sparse_range(set, allocator, key + 1);
+    cecs_sparse_set_upsize_sparse_range(set, allocator, key + 1);
     return cecs_sparse_set_insert_within_expect(set, allocator, key, value_size);
 }
 void *cecs_sparse_set_get_or_insert(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
-    cecs_sparse_set_reserve_sparse_range(set, allocator, key + 1);
+    cecs_sparse_set_upsize_sparse_range(set, allocator, key + 1);
     cecs_dense_index *const index = cecs_sparse_set_get_index_mut(set, key);
     if (cecs_dense_index_is_valid(*index)) {
         return cecs_dynarray_get_mut(&set->values.values, index->value, value_size);
@@ -142,6 +148,9 @@ void cecs_sparse_set_remove_expect(cecs_sparse_set *set, cecs_allocator *allocat
     }
 }
 bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
+    if (key >= cecs_sparse_set_sparse_range_size(set)) {
+        return false;
+    }
     const size_t last_value_key =
         *(const size_t *)cecs_sparse_set_get_sparse_key_by_index(set, cecs_dense_index_create_valid(cecs_sparse_set_value_count(set) - 1));
     cecs_dense_index *const swapped_index = cecs_sparse_set_get_index_mut(set, last_value_key);

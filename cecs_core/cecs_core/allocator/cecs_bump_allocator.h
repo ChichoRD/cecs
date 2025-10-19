@@ -40,7 +40,7 @@ inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocato
     allocator->next = snapshot;
 }
 inline void cecs_bump_view_allocator_reset(cecs_bump_view_allocator *allocator) {
-    cecs_bump_view_allocator_reset_to(allocator, allocator->block.memory_start, allocator->block.memory_end);
+    cecs_bump_view_allocator_reset_to(allocator, allocator->block.memory_start, allocator->next);
 }
 inline void cecs_bump_view_allocator_destroy(cecs_bump_view_allocator *allocator) {
     allocator->next = NULL;
