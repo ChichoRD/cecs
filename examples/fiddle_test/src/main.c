@@ -16,6 +16,7 @@
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <string.h>
 
 
 
@@ -2168,6 +2169,33 @@ void test_component_storage_sparse_set(cecs_allocator *allocator) {
                 }
             }
 
+            // Verify all previously inserted values can be retrieved and match expected data
+            for (size_t j = 0; j < rec_count; ++j) {
+                const size_t expected_key = recs[j].key;
+                const test_component *retrieved = (const test_component*)cecs_component_storage_get(&rstorage, expected_key, sizeof(test_component));
+                
+                if (retrieved->value != (int)expected_key) {
+                    fprintf(stderr, "ERROR: value mismatch for key %zu: expected %d, got %d\n",
+                            expected_key, (int)expected_key, retrieved->value);
+                    assert(false && "retrieved value does not match inserted value");
+                    exit(EXIT_FAILURE);
+                }
+                if (retrieved->weight != (float)expected_key) {
+                    fprintf(stderr, "ERROR: weight mismatch for key %zu: expected %.1f, got %.1f\n",
+                            expected_key, (float)expected_key, retrieved->weight);
+                    assert(false && "retrieved weight does not match inserted weight");
+                    exit(EXIT_FAILURE);
+                }
+                char expected_tag[16];
+                snprintf(expected_tag, sizeof(expected_tag), "rev_%zu", expected_key);
+                if (strcmp(retrieved->tag, expected_tag) != 0) {
+                    fprintf(stderr, "ERROR: tag mismatch for key %zu: expected '%s', got '%s'\n",
+                            expected_key, expected_tag, retrieved->tag);
+                    assert(false && "retrieved tag does not match inserted tag");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
             // Count must equal number of inserted keys so far
             if (count_now != rec_count) {
                 fprintf(stderr, "ERROR: count mismatch after insertion %zu: expected %zu, got %u\n", i, rec_count, count_now);
@@ -2187,6 +2215,32 @@ void test_component_storage_sparse_set(cecs_allocator *allocator) {
         }
         printf("Reverse-order final: map_offset=%zu, skipped_key_pages=%zu (expected both zero)\n",
                final_offset, rsparse_final->skipped_key_pages);
+
+        // Final comprehensive value verification: retrieve all keys and validate data integrity
+        printf("Final verification: retrieving all %zu keys to validate data integrity after all remappings\n", rkeys_count);
+        for (size_t i = 0; i < rkeys_count; ++i) {
+            const size_t key = rkeys[i];
+            const test_component *comp = (const test_component*)cecs_component_storage_get(&rstorage, key, sizeof(test_component));
+            
+            if (comp->value != (int)key || comp->weight != (float)key) {
+                fprintf(stderr, "ERROR: final verification failed for key %zu: value=%d (expected %d), weight=%.1f (expected %.1f)\n",
+                        key, comp->value, (int)key, comp->weight, (float)key);
+                assert(false && "final value verification failed");
+                exit(EXIT_FAILURE);
+            }
+            
+            char expected_tag[16];
+            snprintf(expected_tag, sizeof(expected_tag), "rev_%zu", key);
+            if (strcmp(comp->tag, expected_tag) != 0) {
+                fprintf(stderr, "ERROR: final tag verification failed for key %zu: got '%s', expected '%s'\n",
+                        key, comp->tag, expected_tag);
+                assert(false && "final tag verification failed");
+                exit(EXIT_FAILURE);
+            }
+            
+            printf("  Verified key=%zu: value=%d, weight=%.1f, tag=%s ✓\n", key, comp->value, comp->weight, comp->tag);
+        }
+        printf("All %zu reverse-order keys verified successfully with correct values despite internal remapping\n", rkeys_count);
 
         cecs_component_storage_destroy(&rstorage, allocator, sizeof(test_component));
     }
