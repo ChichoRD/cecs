@@ -2283,16 +2283,8 @@ int main(void) {
     test_entity_storage(&allocator);
     // cecs_allocator_reset(&allocator);
     
-    cecs_allocator_reset(&allocator);
     test_component_storage(&allocator);
     // cecs_allocator_reset(&allocator);
-
-    // cecs_allocator_reset(&allocator);
-    printf("Initial memory available: %zu bytes, memory allocated: %zu bytes, memory available now: %zu bytes\n",
-        cecs_allocator_bump(&allocator)->view.block.reserved,
-        cecs_bump_allocator_used(cecs_allocator_bump(&allocator)),
-        cecs_bump_allocator_available(cecs_allocator_bump(&allocator))
-    );
 
     printf("\n=== All tests completed successfully ===\n");
 
