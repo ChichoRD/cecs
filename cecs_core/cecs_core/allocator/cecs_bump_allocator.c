@@ -49,8 +49,12 @@ void *cecs_bump_view_allocator_realloc_aligned_expect(
             cecs_is_aligned_to_pow2((size_t)old_block, alignment),
             "fatal error: block is not aligned to alignment"
         );
-
+        
         uint8_t *const next = old_block + new_size;
+        printf("\x1b[32mFAST PATH! ""\x1b[0m\n" "Available: %zu, Needed: %td\n",
+            cecs_bump_view_allocator_available(allocator),
+            (ptrdiff_t)(next - allocator->block.memory_end)
+        );
         if (next <= allocator->block.memory_end) {
             allocator->next = next;
             return old_block;

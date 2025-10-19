@@ -53,10 +53,9 @@ void cecs_dense_set_destroy(cecs_dense_set *set, cecs_allocator *allocator, cons
 
 
 void *cecs_dense_set_push_key(cecs_dense_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
-    void *value = cecs_dynarray_push(&set->values, allocator, value_size);
     size_t *sparse_key = cecs_dynarray_push(&set->sparse_from_dense, allocator, sizeof(size_t));
     *sparse_key = key;
-    return value;
+    return cecs_dynarray_push(&set->values, allocator, value_size);
 }
 void cecs_dense_set_swap_last_pop(cecs_dense_set *set, cecs_allocator *allocator, const size_t index, const size_t value_size) {
     cecs_dynarray_swap_last_pop(&set->values, allocator, index, value_size);
@@ -97,6 +96,12 @@ void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
         cecs_dynarray_reserve(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
+    }
+}
+void cecs_sparse_set_reserve_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
+    const size_t current_size = cecs_sparse_set_sparse_range_size(set);
+    if (range_size > current_size) {
+        cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
     }
 }
 void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {

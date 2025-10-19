@@ -2091,11 +2091,11 @@ void test_component_storage_sparse_set(cecs_allocator *allocator) {
         assert(false && "count after re-population incorrect");
         exit(EXIT_FAILURE);
     }
-
+    
     // --- Test 12: Reverse-order insertion and paging behavior ---
     printf("\n--- Test 12: Reverse-order insertion and paging behavior ---\n");
     {
-        cecs_component_storage rstorage = cecs_component_storage_create_sparse_set(allocator, 0, sizeof(test_component));
+        cecs_component_storage rstorage = cecs_component_storage_create_sparse_set(allocator, 10, sizeof(test_component));
         const size_t rkeys[] = {50000, 1000, 100, 31, 17, 16, 3, 1, 0};
         const size_t rkeys_count = sizeof(rkeys) / sizeof(rkeys[0]);
 
@@ -2257,7 +2257,7 @@ void test_component_storage(cecs_allocator *allocator) {
 }
 
 int main(void) {
-    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256 * 4);
+    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
 
     test_dynarray(&allocator);
     // cecs_allocator_reset(&allocator);
@@ -2282,9 +2282,17 @@ int main(void) {
     
     test_entity_storage(&allocator);
     // cecs_allocator_reset(&allocator);
-
+    
+    cecs_allocator_reset(&allocator);
     test_component_storage(&allocator);
     // cecs_allocator_reset(&allocator);
+
+    // cecs_allocator_reset(&allocator);
+    printf("Initial memory available: %zu bytes, memory allocated: %zu bytes, memory available now: %zu bytes\n",
+        cecs_allocator_bump(&allocator)->view.block.reserved,
+        cecs_bump_allocator_used(cecs_allocator_bump(&allocator)),
+        cecs_bump_allocator_available(cecs_allocator_bump(&allocator))
+    );
 
     printf("\n=== All tests completed successfully ===\n");
 

@@ -46,7 +46,7 @@ static void cecs_sparse_set_storage_ensure_key_page(cecs_sparse_set_storage *sto
     const size_t needed_pages = storage->skipped_key_pages - key_page;
     const size_t needed_keys = needed_pages << CECS_SPARSE_SET_STORAGE_PAGE_SIZE_LOG2;
 
-    cecs_sparse_set_reserve_sparse_range(&storage->set, allocator, needed_keys + cecs_sparse_set_sparse_range_size(&storage->set));
+    cecs_sparse_set_reserve_sparse_range_exact(&storage->set, allocator, needed_keys + cecs_sparse_set_sparse_range_size(&storage->set));
     void *const inserted_keys = cecs_array_insert_many(
         &storage->set.dense_from_sparse.array,
         0,
