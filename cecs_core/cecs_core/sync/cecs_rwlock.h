@@ -33,7 +33,10 @@ typedef struct cecs_rwlock_borrow {
 typedef struct cecs_rwlock_borrow_mut {
     cecs_rwlock_value previous_ref_count;
 } cecs_rwlock_borrow_mut;
+bool cecs_rwlock_borrow_is_mutably_locked(const cecs_rwlock_borrow borrow);
 bool cecs_rwlock_borrow_acquired(const cecs_rwlock_borrow borrow);
+bool cecs_rwlock_borrow_mut_is_immutably_locked(const cecs_rwlock_borrow_mut borrow);
+bool cecs_rwlock_borrow_mut_is_mutably_locked(const cecs_rwlock_borrow_mut borrow);
 bool cecs_rwlock_borrow_mut_acquired(const cecs_rwlock_borrow_mut borrow);
 
 

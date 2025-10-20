@@ -17,8 +17,17 @@ static inline cecs_rwlock_borrow cecs_rwlock_borrow_from_count(const cecs_rwlock
 static inline cecs_rwlock_borrow_mut cecs_rwlock_borrow_mut_from_count(const cecs_rwlock_value count) {
     return (cecs_rwlock_borrow_mut){ .previous_ref_count = count };
 }
+extern inline bool cecs_rwlock_borrow_is_mutably_locked(const cecs_rwlock_borrow borrow) {
+    return borrow.new_shared_ref_count == CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK;
+}
 extern inline bool cecs_rwlock_borrow_acquired(const cecs_rwlock_borrow borrow) {
     return borrow.new_shared_ref_count < CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK;
+}
+extern inline bool cecs_rwlock_borrow_mut_is_immutably_locked(const cecs_rwlock_borrow_mut borrow) {
+    return (borrow.previous_ref_count & (~CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK)) != 0;
+}
+extern inline bool cecs_rwlock_borrow_mut_is_mutably_locked(const cecs_rwlock_borrow_mut borrow) {
+    return borrow.previous_ref_count == CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK;
 }
 extern inline bool cecs_rwlock_borrow_mut_acquired(const cecs_rwlock_borrow_mut borrow) {
     return borrow.previous_ref_count == 0ull;
@@ -61,18 +70,39 @@ cecs_rwlock_borrow_mut cecs_rwlock_acquire_mut(cecs_rwlock *const lock) {
 
 cecs_rwlock_borrow cecs_rwlock_acquire_or_exit(cecs_rwlock *const lock) {
     const cecs_rwlock_borrow borrow = cecs_rwlock_acquire(lock);
-    cecs_assert_or_exit(
-        cecs_rwlock_borrow_acquired(borrow),
-        "error: failed to acquire cecs_rwlock read lock"
-    );
+    if (cecs_expect_not(!cecs_rwlock_borrow_acquired(borrow))) {
+        if (cecs_rwlock_borrow_is_mutably_locked(borrow)) {
+            cecs_assert_and_fail(
+                "error: failed to acquire cecs_rwlock read lock, "
+                "lock is mutably locked by another thread"
+            );
+        } else {
+            cecs_assert_and_fail(
+                "error: failed to acquire cecs_rwlock read lock due to an unknown error"
+            );
+        }
+    }
     return borrow;
 }
 cecs_rwlock_borrow_mut cecs_rwlock_acquire_mut_or_exit(cecs_rwlock *const lock) {
     const cecs_rwlock_borrow_mut borrow = cecs_rwlock_acquire_mut(lock);
-    cecs_assert_or_exit(
-        cecs_rwlock_borrow_mut_acquired(borrow),
-        "error: failed to acquire cecs_rwlock write lock"
-    );
+    if (cecs_expect_not(!cecs_rwlock_borrow_mut_acquired(borrow))) {
+        if (cecs_rwlock_borrow_mut_is_immutably_locked(borrow)) {
+            cecs_assert_and_fail(
+                "error: failed to acquire cecs_rwlock write lock, "
+                "lock is immutably locked by other threads"
+            );
+        } else if (cecs_rwlock_borrow_mut_is_mutably_locked(borrow)) {
+            cecs_assert_and_fail(
+                "error: failed to acquire cecs_rwlock write lock, "
+                "lock is mutably locked by another thread"
+            );
+        } else {
+            cecs_assert_and_fail(
+                "error: failed to acquire cecs_rwlock write lock due to an unknown error"
+            );
+        }
+    }
     return borrow;
 }
 
