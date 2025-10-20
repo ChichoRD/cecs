@@ -22,6 +22,7 @@ typedef struct cecs_storage_world_access {
     cecs_storage_world_access_system access_system;
     cecs_storage_world_access_value last_access_type;
 } cecs_storage_world_access;
+// TODO: user and/or engine attachments
 typedef struct cecs_storage_world {
     cecs_component_storage storage;
     cecs_storage_world_access access;

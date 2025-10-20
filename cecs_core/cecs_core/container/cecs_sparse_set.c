@@ -116,6 +116,19 @@ void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *a
         );
     }
 }
+void cecs_sparse_set_upsize_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
+    const size_t current_size = cecs_sparse_set_sparse_range_size(set);
+    if (range_size > current_size) {
+        const size_t needed_capacity = range_size - current_size;
+        cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
+        void *const inserted_keys = cecs_array_push_many(&set->dense_from_sparse.array, needed_capacity, sizeof(cecs_dense_index));
+        memset(
+            inserted_keys,
+            UINT8_MAX,
+            needed_capacity * sizeof(cecs_dense_index)
+        );
+    }
+}
 
 void *cecs_sparse_set_insert_within_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
     if (key >= cecs_sparse_set_sparse_range_size(set)) {

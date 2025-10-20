@@ -150,6 +150,7 @@ inline const size_t *cecs_sparse_set_get_sparse_key_by_index(const cecs_sparse_s
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size);
 void cecs_sparse_set_reserve_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size);
 void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size);
+void cecs_sparse_set_upsize_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size);
 
 void *cecs_sparse_set_insert_within_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
 void *cecs_sparse_set_insert_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);

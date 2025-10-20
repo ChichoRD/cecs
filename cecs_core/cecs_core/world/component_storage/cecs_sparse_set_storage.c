@@ -46,19 +46,18 @@ static void cecs_sparse_set_storage_ensure_key_page(cecs_sparse_set_storage *sto
     const size_t needed_pages = storage->skipped_key_pages - key_page;
     const size_t needed_keys = needed_pages << CECS_SPARSE_SET_STORAGE_PAGE_SIZE_LOG2;
 
-    cecs_sparse_set_reserve_sparse_range_exact(&storage->set, allocator, needed_keys + cecs_sparse_set_sparse_range_size(&storage->set));
-    void *const inserted_keys = cecs_array_insert_many(
-        &storage->set.dense_from_sparse.array,
-        0,
-        needed_keys,
-        sizeof(cecs_dense_index)
-    );
-    memset(inserted_keys, UINT8_MAX, needed_keys * sizeof(cecs_dense_index));
-
+    cecs_sparse_set_upsize_sparse_range_exact(&storage->set, allocator, needed_keys + cecs_sparse_set_sparse_range_size(&storage->set));
     for (size_t i = 0; i < cecs_sparse_set_value_count(&storage->set); ++i) {
         extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
-        size_t *sparse_key = cecs_sparse_set_get_sparse_key_by_index_mut(&storage->set, cecs_dense_index_create_unchecked(i));
+        const cecs_dense_index index = cecs_dense_index_create_unchecked(i);
+        
+        size_t *sparse_key = cecs_sparse_set_get_sparse_key_by_index_mut(&storage->set, index);
+        cecs_dense_index *invalid_index = cecs_sparse_set_get_index_mut(&storage->set, *sparse_key);
+        *invalid_index = cecs_dense_index_create_invalid();
+
         *sparse_key += needed_keys;
+        cecs_dense_index *new_index = cecs_sparse_set_get_index_mut(&storage->set, *sparse_key);
+        *new_index = index;
     }
     storage->skipped_key_pages = key_page;
 }

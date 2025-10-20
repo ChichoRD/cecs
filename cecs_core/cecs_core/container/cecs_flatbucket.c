@@ -155,18 +155,25 @@ uint_fast8_t cecs_flatbucket_find_hash_index(
     const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(*bucket);
     if (first_index >= bucket_value_count) {
         return CECS_FLATBUCKET8_MAX_COUNT;
-    }
-    
-    for (uint_fast8_t i = 0; i < bucket_value_count; i++) {
-        const cecs_flatbucket_hash *stored_hash = (const cecs_flatbucket_hash *)(bucket->values + i * hash_stride + hash_offset);
-        if (
-            (index_mark & (1 << i))
-            && (*stored_hash == hash)
-        ) {
-            return i;
+    } else if (cecs_is_pow2(index_mark)) {
+        const cecs_flatbucket_hash *stored_hash = (const cecs_flatbucket_hash *)(bucket->values + first_index * hash_stride + hash_offset);
+        if (*stored_hash == hash) {
+            return first_index;
+        } else {
+            return CECS_FLATBUCKET8_MAX_COUNT;
         }
+    } else {        
+        for (uint_fast8_t i = first_index; i < bucket_value_count; i++) {
+            const cecs_flatbucket_hash *stored_hash = (const cecs_flatbucket_hash *)(bucket->values + i * hash_stride + hash_offset);
+            if (
+                (index_mark & (1 << i))
+                && (*stored_hash == hash)
+            ) {
+                return i;
+            }
+        }
+        return CECS_FLATBUCKET8_MAX_COUNT;
     }
-    return CECS_FLATBUCKET8_MAX_COUNT;
 }
 
 void cecs_flatbucket_reset(cecs_flatbucket *bucket, const size_t value_size) {
