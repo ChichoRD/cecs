@@ -37,23 +37,23 @@ bool cecs_storage_world_acquire_storage_mut_seq(cecs_storage_world *const world,
     }
 }
 
-cecs_rwlock_guard cecs_storage_world_acquire_storage(cecs_storage_world *const world, const cecs_component_storage **const out_storage) {
-    const cecs_rwlock_guard guard = cecs_rwlock_acquire(&world->access.access_lock);
-    if (cecs_rwlock_guard_acquired(guard)) {
+cecs_rwlock_borrow cecs_storage_world_acquire_storage(cecs_storage_world *const world, const cecs_component_storage **const out_storage) {
+    const cecs_rwlock_borrow borrow = cecs_rwlock_acquire(&world->access.access_lock);
+    if (cecs_rwlock_borrow_acquired(borrow)) {
         *out_storage = cecs_storage_world_acquire_storage_seq_unchecked(world);
     } else {
         *out_storage = NULL;
     }
-    return guard;
+    return borrow;
 }
-cecs_rwlock_guard_mut cecs_storage_world_acquire_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_component_storage **const out_storage) {
-    const cecs_rwlock_guard_mut guard = cecs_rwlock_acquire_mut(&world->access.access_lock);
-    if (cecs_rwlock_guard_mut_acquired(guard)) {
+cecs_rwlock_borrow_mut cecs_storage_world_acquire_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_component_storage **const out_storage) {
+    const cecs_rwlock_borrow_mut borrow = cecs_rwlock_acquire_mut(&world->access.access_lock);
+    if (cecs_rwlock_borrow_mut_acquired(borrow)) {
         *out_storage = cecs_storage_world_acquire_storage_mut_seq_unchecked(world, system_id);
     } else {
         *out_storage = NULL;
     }
-    return guard;
+    return borrow;
 }
 
 void cecs_storage_world_release_storage_seq(cecs_storage_world *const world) {
@@ -81,19 +81,19 @@ void cecs_storage_world_release_storage_mut_seq(cecs_storage_world *const world,
     );
     world->access.last_access_type = cecs_storage_world_access_type_none;
 }
-void cecs_storage_world_release_storage(cecs_storage_world *const world, cecs_rwlock_guard *const system_guard) {
-    cecs_rwlock_release(&world->access.access_lock, system_guard);
-    if (system_guard->new_reader_count == 0ull) {
+void cecs_storage_world_release_storage(cecs_storage_world *const world, cecs_rwlock_borrow *const system_borrow) {
+    cecs_rwlock_release(&world->access.access_lock, system_borrow);
+    if (system_borrow->new_shared_ref_count == 0ull) {
         cecs_storage_world_release_storage_seq(world);
     }
 }
-void cecs_storage_world_release_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_rwlock_guard_mut *const system_guard){
+void cecs_storage_world_release_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_rwlock_borrow_mut *const system_borrow){
     cecs_assert_or_exit(
         world->access.access_system.last_exclusive_system.value == system_id.value,
         "error: cecs_storage_world_release_storage_mut called with a system id that does not match the last exclusive system id"
     );
-    cecs_rwlock_release_mut(&world->access.access_lock, system_guard);
-    if (system_guard->new_writer_count == 0ull) {
+    cecs_rwlock_release_mut(&world->access.access_lock, system_borrow);
+    if (system_borrow->previous_ref_count == 0ull) {
         cecs_storage_world_release_storage_mut_seq(world, system_id);
     }
 }

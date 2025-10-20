@@ -38,14 +38,14 @@ inline cecs_component_storage *cecs_storage_world_get_storage_mut_unchecked(cecs
 bool cecs_storage_world_acquire_storage_seq(cecs_storage_world *const world, const cecs_component_storage **const out_storage);
 bool cecs_storage_world_acquire_storage_mut_seq(cecs_storage_world *const world, const cecs_system_id system_id, cecs_component_storage **const out_storage);
 
-cecs_rwlock_guard cecs_storage_world_acquire_storage(cecs_storage_world *const world, const cecs_component_storage **const out_storage);
-cecs_rwlock_guard_mut cecs_storage_world_acquire_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_component_storage **const out_storage);
+cecs_rwlock_borrow cecs_storage_world_acquire_storage(cecs_storage_world *const world, const cecs_component_storage **const out_storage);
+cecs_rwlock_borrow_mut cecs_storage_world_acquire_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_component_storage **const out_storage);
 
 void cecs_storage_world_release_storage_seq(cecs_storage_world *const world);
 void cecs_storage_world_release_storage_mut_seq(cecs_storage_world *const world, const cecs_system_id system_id);
 
-void cecs_storage_world_release_storage(cecs_storage_world *const world, cecs_rwlock_guard *const system_guard);
-void cecs_storage_world_release_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_rwlock_guard_mut *const system_guard);
+void cecs_storage_world_release_storage(cecs_storage_world *const world, cecs_rwlock_borrow *const system_borrow);
+void cecs_storage_world_release_storage_mut(cecs_storage_world *const world, const cecs_system_id system_id, cecs_rwlock_borrow_mut *const system_borrow);
 
 
 #endif
