@@ -3,7 +3,7 @@
 
 #include "cecs_component_storage.h"
 #include "cecs_system.h"
-#include <cecs_core/cecs_rwlock.h>
+#include <cecs_core/sync/cecs_rwlock.h>
 
 typedef enum cecs_storage_world_access_type {
     cecs_storage_world_access_type_none = 0,

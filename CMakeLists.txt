@@ -53,7 +53,7 @@ project(cecs_fiddle_test C)
         "${CMAKE_CURRENT_SOURCE_DIR}/examples/fiddle_test/src/main.c"
         ${CECS_MATH_SOURCES}
         "${CECS_CORE_SRC_DIRECTORY}/cecs_error.c"
-        "${CECS_CORE_SRC_DIRECTORY}/cecs_rwlock.c"
+        "${CECS_CORE_SRC_DIRECTORY}/sync/cecs_rwlock.c"
         "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_allocation.c"
         "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_memory.c"
         "${CECS_CORE_SRC_DIRECTORY}/allocator/cecs_bump_allocator.c"

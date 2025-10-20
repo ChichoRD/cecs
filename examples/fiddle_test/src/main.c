@@ -2256,8 +2256,6 @@ void test_component_storage(cecs_allocator *allocator) {
     // Future: test_component_storage_other_types(allocator);
 }
 
-#include <cecs_core/cecs_rwlock.h>
-
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
 

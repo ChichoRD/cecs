@@ -1,5 +1,5 @@
 #include "cecs_rwlock.h"
-#include "cecs_error.h"
+#include <cecs_core/cecs_error.h>
 #include <cecs_math/relations/cecs_ordering.h>
 
 #define CECS_RWLOCK_VALUE_MAX ((1ull << CECS_RWLOCK_VALUE_TYPE_BITS) - 1ull)
