@@ -2256,6 +2256,9 @@ void test_component_storage(cecs_allocator *allocator) {
     // Future: test_component_storage_other_types(allocator);
 }
 
+#include <cecs_core/world/cecs_storage_world.h>
+#include <cecs_core/world/group/cecs_sparse_set_group.h>
+
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
 
@@ -2287,6 +2290,72 @@ int main(void) {
     // cecs_allocator_reset(&allocator);
 
     printf("\n=== All tests completed successfully ===\n");
+
+    cecs_storage_world s0 = cecs_storage_world_create(cecs_component_storage_create_sparse_set(
+        &allocator, 16, sizeof(int)
+    ));
+    cecs_storage_world s1 = cecs_storage_world_create(cecs_component_storage_create_sparse_set(
+        &allocator, 16, sizeof(int)
+    ));
+    cecs_entity_storage egen = cecs_entity_storage_create_with_capacity(&allocator, 16);
+    cecs_sparse_set_group group = cecs_sparse_set_group_create();
+
+    cecs_component_storage_world *rs[2] = {0};
+    cecs_rwlock_borrow_mut l0 = cecs_storage_world_acquire_storage_mut_or_exit(&s0, &rs[0]);
+    cecs_rwlock_borrow_mut l1 = cecs_storage_world_acquire_storage_mut_or_exit(&s1, &rs[1]);
+
+    cecs_entity es[14] = {0};
+    for (size_t i = 0; i < 14; ++i) {
+        es[i] = cecs_entity_storage_alloc_entity(&egen, &allocator);
+        int *val0 = (int*)cecs_component_storage_insert_expect(
+            &rs[0]->storage, &allocator, cecs_entity_index(es[i]), sizeof(int)
+        );
+        *val0 = (int)(i * 10);
+    }
+    for (size_t i = 0; i < 7; ++i) {
+        int *val1 = (int*)cecs_component_storage_insert_expect(
+            &rs[1]->storage, &allocator, cecs_entity_index(es[i]), sizeof(int)
+        );
+        *val1 = (int)(i * 100);
+        cecs_sparse_set_group_insert(&group, rs, 2, 1, es[i], sizeof(int));
+    }
+
+    printf("Grouped free start: %zu, free end: %zu. Ungrouped free start: %zu, free end: %zu\n",
+        group.free_grouped_range.range.start, group.free_grouped_range.range.end,
+        group.free_ungrouped_range.range.start, group.free_ungrouped_range.range.end
+    );
+
+    for (size_t i = 0; i < 14; ++i) {
+        const int *val0 = (int*)cecs_component_storage_get(
+            &rs[0]->storage, cecs_entity_index(es[i]), sizeof(int)
+        );
+        if (i < 7) {
+            const int *val1 = (int*)cecs_component_storage_get(
+                &rs[1]->storage, cecs_entity_index(es[i]), sizeof(int)
+            );
+            if (*val0 != (int)(i * 10) || *val1 != (int)(i * 100)) {
+                fprintf(stderr, "ERROR: Mismatched grouped values at entity %zu: val0=%d (expected %d), val1=%d (expected %d)\n",
+                    i, *val0, (int)(i * 10), *val1, (int)(i * 100));
+                assert(false && "Mismatched grouped values");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            if (*val0 != (int)(i * 10)) {
+                fprintf(stderr, "ERROR: Mismatched ungrouped value at entity %zu: val0=%d (expected %d)\n",
+                    i, *val0, (int)(i * 10));
+                assert(false && "Mismatched ungrouped value");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
+    cecs_entity_storage_destroy(&egen, &allocator);
+
+    cecs_storage_world_release_storage_mut(&s1, &l1);
+    cecs_storage_world_release_storage_mut(&s0, &l0);
+
+    cecs_storage_world_destroy(&s1, &allocator, sizeof(int));
+    cecs_storage_world_destroy(&s0, &allocator, sizeof(int));
 
     // cleanup
     cecs_allocator_destroy(&allocator);

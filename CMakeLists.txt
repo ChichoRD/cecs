@@ -71,6 +71,7 @@ project(cecs_fiddle_test C)
         "${CECS_CORE_SRC_DIRECTORY}/world/component_storage/cecs_sparse_set_storage.c"
         # "${CECS_CORE_SRC_DIRECTORY}/world/cecs_system.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/cecs_storage_world.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/group/cecs_sparse_set_group.c"
     )
     target_include_directories(
         ${PROJECT_NAME}

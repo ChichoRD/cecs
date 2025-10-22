@@ -43,6 +43,13 @@
 #endif
 
 
+#if __STDC_VERSION__ >= 202311L
+#define cecs_noreturn [[noreturn]]
+#else
+#define cecs_noreturn _Noreturn
+#endif
+
+
 inline void cecs_unreachable(void) {
 #if CECS_COMPILER == CECS_COMPILER_CLANG
     __builtin_unreachable();
@@ -107,18 +114,18 @@ inline bool cecs_expect_always(const bool condition) {
 }
 
 
-inline void cecs_exit_success(void) {
+cecs_noreturn inline void cecs_exit_success(void) {
     exit(EXIT_SUCCESS);
 }
-inline void cecs_exit_failure(void) {
+cecs_noreturn inline void cecs_exit_failure(void) {
     exit(EXIT_FAILURE);
 }
-inline void cecs_fail(void) {
+cecs_noreturn inline void cecs_fail(void) {
     assert(false && "fatal error: fail and exit called");
     cecs_exit_failure();
 }
 
-inline void cecs_assert_and_fail(const char *const message) {
+cecs_noreturn inline void cecs_assert_and_fail(const char *const message) {
 #if !NDEBUG || CECS_ERROR_PRINTS_STDERR
     fprintf(stderr, "\x1B[31m""CECS ERROR!""\x1B[0m" " %s\n", message);
 #endif
@@ -136,6 +143,15 @@ inline void cecs_assert_or_exit(const bool condition, const char *const message)
     if (cecs_expect_not(!condition)) {
         cecs_assert_and_fail(message);
     }
+}
+
+cecs_noreturn inline void cecs_unimplemented_fail(const char *const message) {
+#if !NDEBUG || CECS_ERROR_PRINTS_STDERR
+    fprintf(stderr, "\x1B[33m""CECS UNIMPLEMENTED!""\x1B[0m" " %s\n", message);
+#endif
+
+    (void)message;
+    cecs_exit_failure();
 }
 
 #undef CECS_COMPILER_NONE
