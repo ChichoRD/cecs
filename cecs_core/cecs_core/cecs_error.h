@@ -138,11 +138,13 @@ inline void cecs_fail_exit_if(const bool condition) {
     if (cecs_expect_not(condition)) {
         cecs_fail();
     }
+    cecs_expect_never(condition);
 }
 inline void cecs_assert_or_exit(const bool condition, const char *const message) {
     if (cecs_expect_not(!condition)) {
         cecs_assert_and_fail(message);
     }
+    cecs_expect_always(condition);
 }
 
 cecs_noreturn inline void cecs_unimplemented_fail(const char *const message) {

@@ -18,7 +18,7 @@ static inline cecs_sparse_set_group cecs_sparse_set_group_create(void) {
     };
 }
 
-void *cecs_sparse_set_group_insert(
+size_t cecs_sparse_set_group_insert(
     cecs_sparse_set_group *const group,
     cecs_component_storage_world **const storages,
     const size_t count,
