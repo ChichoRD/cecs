@@ -2317,6 +2317,9 @@ int main(void) {
             &rs[1]->storage, &allocator, cecs_entity_index(es[i]), sizeof(int)
         );
         *val1 = (int)(i * 100);
+        cecs_sparse_set_group_push_ungrouped(&group, rs[1], es[i]);
+    }
+    for (size_t i = 0; i < 7; ++i) {
         cecs_sparse_set_group_insert(&group, rs, 2, 1, es[i], sizeof(int));
     }
 

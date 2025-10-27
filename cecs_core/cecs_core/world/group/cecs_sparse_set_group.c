@@ -127,7 +127,7 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
     return length;
 }
 
-static size_t cecs_sparse_set_group_reserve_grouped_range(
+static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped_range(
     cecs_sparse_set_group *group,
     cecs_component_storage_world **const storages,
     const size_t count,
@@ -141,18 +141,22 @@ static size_t cecs_sparse_set_group_reserve_grouped_range(
     const cecs_component_range take_range = cecs_exclusive_range_from(
         (cecs_range){group->free_ungrouped_range.range.start, midpoint}
     );
-    if (take_range.range.start == group->free_grouped_range.range.end) {
-        group->free_grouped_range = take_range;
-        group->free_ungrouped_range = cecs_exclusive_range_from(
-            (cecs_range){midpoint, group->free_ungrouped_range.range.end}
-        );
-        return 0u;
-    }
-
     const size_t length = cecs_exclusive_range_length(take_range);
-    const size_t take_start = take_range.range.end;
-    const size_t take_end = take_start + length;
     const size_t insertion_start = group->free_grouped_range.range.end;
+    const cecs_component_range move_range = cecs_exclusive_range_from(
+        (cecs_range){insertion_start, midpoint}
+    );
+    // TODO: introduce this optimization back later
+    // if (take_range.range.start == group->free_grouped_range.range.end) {
+    //     group->free_grouped_range = take_range;
+    //     group->free_ungrouped_range = cecs_exclusive_range_from(
+    //         (cecs_range){midpoint, group->free_ungrouped_range.range.end}
+    //     );
+    //     return 0u;
+    // }
+
+    const cecs_dense_index take_start = cecs_dense_index_create_valid(take_range.range.end);
+    const cecs_dense_index take_end = cecs_dense_index_create_valid(take_start.value + length);
     for (size_t i = 0; i < count; ++i) {
         cecs_component_storage_world *const storage = storages[i];
         cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&storage->storage);
@@ -167,27 +171,32 @@ static size_t cecs_sparse_set_group_reserve_grouped_range(
             cecs_array *const values_array = &set->values.values.array;
             cecs_array *const keys_array = &set->values.sparse_from_dense.array;
             const size_t initial_size = cecs_array_count(values_array);
+            const size_t temp_size = initial_size + length;
             cecs_assert_or_exit(initial_size == cecs_array_count(keys_array), "fatal error: values and keys arrays are out of sync");
             cecs_assert_or_exit(length <= initial_size, "fatal error: length to move is larger than the array size");
 
             void *const value_insert = cecs_array_insert_many(values_array, insertion_start, length, component_size);
             size_t *const key_insert = cecs_array_insert_many(keys_array, insertion_start, length, sizeof(size_t));
 
-            uint8_t *const value_take_start = cecs_array_get_mut(values_array, take_start, component_size);
-            size_t *const key_take_start = cecs_array_get_mut(keys_array, take_start, sizeof(size_t));
-            memcpy(value_insert, value_take_start, component_size * length);
-            memcpy(key_insert, key_take_start, sizeof(size_t) * length);
+            extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
+            uint8_t *const value_take_start = cecs_sparse_set_get_value_by_index_mut(set, take_start, component_size);
+            size_t *const key_take_start = cecs_sparse_set_get_sparse_key_by_index_mut(set, take_start);
+            memmove(value_insert, value_take_start, component_size * length);
+            memmove(key_insert, key_take_start, sizeof(size_t) * length);
 
-            memmove(
-                value_take_start,
-                cecs_array_get(values_array, take_end, component_size),
-                component_size * (initial_size - take_end)
-            );
-            memmove(
-                key_take_start,
-                cecs_array_get(keys_array, take_end, sizeof(size_t)),
-                sizeof(size_t) * (initial_size - take_end)
-            );
+            if (take_end.value < temp_size) {
+                const size_t move_count = temp_size - take_end.value;
+                memmove(
+                    value_take_start,
+                    cecs_sparse_set_get_value_by_index_mut(set, take_end, component_size),
+                    component_size * move_count
+                );
+                memmove(
+                    key_take_start,
+                    cecs_sparse_set_get_sparse_key_by_index_mut(set, take_end),
+                    sizeof(size_t) * move_count
+                );
+            }
 
             cecs_array_truncate(values_array, initial_size);
             cecs_array_truncate(keys_array, initial_size);
@@ -196,8 +205,8 @@ static size_t cecs_sparse_set_group_reserve_grouped_range(
                 const size_t moved_key = key_insert[j];
                 *cecs_sparse_set_get_index_mut(set, moved_key) = cecs_dense_index_create_valid(insertion_start + j);
             }
-            for (size_t j = insertion_start + length; j < take_start; ++j) {
-                const size_t moved_key = *(const size_t *)cecs_array_get(keys_array, j, sizeof(size_t));
+            for (size_t j = insertion_start + length; j < take_start.value; ++j) {
+                const size_t moved_key = *cecs_sparse_set_get_sparse_key_by_index(set, cecs_dense_index_create_valid(j));
                 cecs_dense_index *const index = cecs_sparse_set_get_index_mut(set, moved_key);
                 *index = cecs_dense_index_create_valid(index->value + length);
             }
@@ -206,10 +215,13 @@ static size_t cecs_sparse_set_group_reserve_grouped_range(
     // Update the ranges
     group->free_grouped_range.range.end += length;
     group->free_ungrouped_range.range.start += length;
-    return length;
+    return (cecs_sparse_set_group_insert_result){
+        .shifted_range = move_range,
+        .shift_length = length,
+    };
 }
 
-size_t cecs_sparse_set_group_insert(
+cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
     cecs_sparse_set_group *group,
     cecs_component_storage_world **const storages,
     const size_t count,
@@ -217,21 +229,17 @@ size_t cecs_sparse_set_group_insert(
     const cecs_entity entity,
     const size_t component_size
 ) {
-    cecs_component_storage_world *const storage = storages[storage_index];
+    const cecs_component_storage_world *const storage = storages[storage_index];
     const size_t entity_index = cecs_entity_index(entity);
-    cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&storage->storage);
+    const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&storage->storage);
     const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
-    const cecs_dense_index *const insert_index = cecs_sparse_set_get_index(&sparse_set_storage->set, insert_key);
-    cecs_assert_or_exit(
-        insert_index->value == cecs_sparse_set_value_count(&sparse_set_storage->set) - 1,
-        "fatal error: cecs_sparse_set_group_insert called for a component that was not the last to be added to a storage"
-    );
-    if (group->free_ungrouped_range.range.end == 0) {
-        group->free_ungrouped_range = cecs_exclusive_range_singleton(insert_index->value);
-    } else {
-        ++group->free_ungrouped_range.range.end;
-    }
 
+    const bool in_grouped_range = cecs_exclusive_range_contains(group->free_grouped_range, insert_key);
+    const bool in_ungrouped_range = cecs_exclusive_range_contains(group->free_ungrouped_range, insert_key);
+    cecs_assert_or_exit(
+        in_grouped_range || in_ungrouped_range,
+        "fatal error: cecs_sparse_set_group_insert called with an entity that is not in either the grouped or ungrouped free ranges"
+    );
     if (group->free_grouped_range.range.end == 0) {
         const size_t ungrouped_midpoint = (group->free_ungrouped_range.range.start + group->free_ungrouped_range.range.end + 1u) >> 1u;
         group->free_grouped_range = cecs_exclusive_range_from(
@@ -242,9 +250,9 @@ size_t cecs_sparse_set_group_insert(
         );
     }
 
-    size_t shift_length = 0;
+    cecs_sparse_set_group_insert_result result = {0};
     if (cecs_exclusive_range_is_empty(group->free_grouped_range)) {
-        shift_length += cecs_sparse_set_group_reserve_grouped_range(
+        result = cecs_sparse_set_group_reserve_grouped_range(
             group,
             storages,
             count,
@@ -258,5 +266,25 @@ size_t cecs_sparse_set_group_insert(
         entity_index,
         component_size
     );
-    return shift_length;
+    return result;
+}
+
+void cecs_sparse_set_group_push_ungrouped(
+    cecs_sparse_set_group *const group,
+    const cecs_component_storage_world *const storage,
+    const cecs_entity entity
+) {
+    const size_t entity_index = cecs_entity_index(entity);
+    const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&storage->storage);
+    const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
+    const cecs_dense_index *const insert_index = cecs_sparse_set_get_index(&sparse_set_storage->set, insert_key);
+    cecs_assert_or_exit(
+        insert_index->value == cecs_sparse_set_value_count(&sparse_set_storage->set) - 1,
+        "fatal error: cecs_sparse_set_group_push_ungrouped called for a component that was not the last to be added to a storage"
+    );
+    if (group->free_ungrouped_range.range.end == 0) {
+        group->free_ungrouped_range = cecs_exclusive_range_singleton(insert_index->value);
+    } else {
+        ++group->free_ungrouped_range.range.end;
+    }
 }

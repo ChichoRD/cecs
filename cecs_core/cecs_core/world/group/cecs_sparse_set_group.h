@@ -18,13 +18,22 @@ static inline cecs_sparse_set_group cecs_sparse_set_group_create(void) {
     };
 }
 
-size_t cecs_sparse_set_group_insert(
+typedef struct cecs_sparse_set_group_insert_result {
+    cecs_component_range shifted_range;
+    size_t shift_length;
+} cecs_sparse_set_group_insert_result;
+cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
     cecs_sparse_set_group *const group,
     cecs_component_storage_world **const storages,
     const size_t count,
     const size_t storage_index,
     const cecs_entity entity,
     const size_t component_size
+);
+void cecs_sparse_set_group_push_ungrouped(
+    cecs_sparse_set_group *const group,
+    const cecs_component_storage_world *const storage,
+    const cecs_entity entity
 );
 
 #endif
