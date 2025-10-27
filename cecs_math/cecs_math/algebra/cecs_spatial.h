@@ -8,8 +8,6 @@
 #include "../cecs_units.h"
 
 
-// TODO: cecs_core; separate unique relationship addition to own function
-
 inline cecs_versor_f32 cecs_versor_f32_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle) {
     const cecs_radians_f32 half_angle = angle * 0.5f;
     const float s = sinf(half_angle);

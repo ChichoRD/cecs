@@ -22,7 +22,6 @@ static_assert(
     "static error: cecs_flatbucket_hash_low_fast must be able to hold cecs_flatbucket_hash_low"
 );
 
-// TODO: try storing the full hashes explicitly
 typedef struct cecs_flatbucket8 {
     uint64_t hash_from_index8_u7;
     uint8_t values[];

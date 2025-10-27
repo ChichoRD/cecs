@@ -59,8 +59,7 @@ static void cecs_sparse_set_group_insert_within(
     ++group->free_grouped_range.range.start;
 }
 
-// TODO: distinguish when to use this one
-// DEPRECATED!
+// TODO: DEPRECATED! distinguish when to use this one
 size_t cecs_sparse_set_group_reserve_grouped_range_owning(
     cecs_sparse_set_group *group,
     cecs_component_registry **const registries,

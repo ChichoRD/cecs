@@ -40,7 +40,7 @@ bool cecs_rwlock_borrow_mut_is_mutably_locked(const cecs_rwlock_borrow_mut borro
 bool cecs_rwlock_borrow_mut_acquired(const cecs_rwlock_borrow_mut borrow);
 
 
-// TODO: maybe move to sync/ directory
+// TODO: maybe rename to atomic_cell since it is not a 'traditional' blocking rwlock
 // source: https://docs.rs/atomic_refcell/latest/atomic_refcell/
 typedef struct cecs_rwlock {
     _Atomic cecs_rwlock_value state;
