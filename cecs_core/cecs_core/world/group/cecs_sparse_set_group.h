@@ -3,7 +3,7 @@
 
 #include <cecs_core/container/cecs_range.h>
 #include <cecs_core/world/cecs_entity.h>
-#include <cecs_core/world/cecs_storage_world.h>
+#include <cecs_core/world/cecs_component_registry.h>
 
 typedef cecs_exclusive_range cecs_component_range;
 typedef struct cecs_sparse_set_group {
@@ -24,7 +24,7 @@ typedef struct cecs_sparse_set_group_insert_result {
 } cecs_sparse_set_group_insert_result;
 cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
     cecs_sparse_set_group *const group,
-    cecs_component_storage_world **const storages,
+    cecs_component_registry **const registries,
     const size_t count,
     const size_t storage_index,
     const cecs_entity entity,
@@ -32,7 +32,7 @@ cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
 );
 void cecs_sparse_set_group_push_ungrouped(
     cecs_sparse_set_group *const group,
-    const cecs_component_storage_world *const storage,
+    const cecs_component_registry *const registry,
     const cecs_entity entity
 );
 

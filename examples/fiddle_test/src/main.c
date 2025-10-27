@@ -7,7 +7,8 @@
 
 #include <cecs_core/world/cecs_entity.h>
 #include <cecs_core/world/cecs_entity_storage.h>
-#include <cecs_core/world/cecs_component_storage.h>
+#include <cecs_core/world/cecs_registry.h>
+#include <cecs_core/world/group/cecs_sparse_set_group.h>
 
 #include <stdio.h>
 #include <stddef.h>
@@ -2256,8 +2257,6 @@ void test_component_storage(cecs_allocator *allocator) {
     // Future: test_component_storage_other_types(allocator);
 }
 
-#include <cecs_core/world/cecs_storage_world.h>
-#include <cecs_core/world/group/cecs_sparse_set_group.h>
 
 int main(void) {
     cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
@@ -2291,18 +2290,18 @@ int main(void) {
 
     printf("\n=== All tests completed successfully ===\n");
 
-    cecs_storage_world s0 = cecs_storage_world_create(cecs_component_storage_create_sparse_set(
+    cecs_registry s0 = cecs_registry_create((cecs_component_registry){cecs_component_storage_create_sparse_set(
         &allocator, 16, sizeof(int)
-    ));
-    cecs_storage_world s1 = cecs_storage_world_create(cecs_component_storage_create_sparse_set(
+    )});
+    cecs_registry s1 = cecs_registry_create((cecs_component_registry){cecs_component_storage_create_sparse_set(
         &allocator, 16, sizeof(int)
-    ));
+    )});
     cecs_entity_storage egen = cecs_entity_storage_create_with_capacity(&allocator, 16);
     cecs_sparse_set_group group = cecs_sparse_set_group_create();
 
-    cecs_component_storage_world *rs[2] = {0};
-    cecs_rwlock_borrow_mut l0 = cecs_storage_world_acquire_storage_mut_or_exit(&s0, &rs[0]);
-    cecs_rwlock_borrow_mut l1 = cecs_storage_world_acquire_storage_mut_or_exit(&s1, &rs[1]);
+    cecs_component_registry *rs[2] = {0};
+    cecs_rwlock_borrow_mut l0 = cecs_registry_acquire_mut_or_exit(&s0, &rs[0]);
+    cecs_rwlock_borrow_mut l1 = cecs_registry_acquire_mut_or_exit(&s1, &rs[1]);
 
     cecs_entity es[14] = {0};
     for (size_t i = 0; i < 14; ++i) {
@@ -2354,11 +2353,11 @@ int main(void) {
 
     cecs_entity_storage_destroy(&egen, &allocator);
 
-    cecs_storage_world_release_storage_mut(&s1, &l1);
-    cecs_storage_world_release_storage_mut(&s0, &l0);
+    cecs_registry_release_mut(&s1, &l1);
+    cecs_registry_release_mut(&s0, &l0);
 
-    cecs_storage_world_destroy(&s1, &allocator, sizeof(int));
-    cecs_storage_world_destroy(&s0, &allocator, sizeof(int));
+    cecs_registry_destroy(&s1, &allocator, sizeof(int));
+    cecs_registry_destroy(&s0, &allocator, sizeof(int));
 
     // cleanup
     cecs_allocator_destroy(&allocator);

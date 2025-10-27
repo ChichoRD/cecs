@@ -4,7 +4,7 @@
 
 static void cecs_sparse_set_group_insert_within(
     cecs_sparse_set_group *group,
-    cecs_component_storage_world **const storages,
+    cecs_component_registry **const registries,
     const size_t count,
     const size_t entity_index,
     const size_t component_size
@@ -14,8 +14,8 @@ static void cecs_sparse_set_group_insert_within(
         "fatal error: cecs_sparse_set_group_insert_available called when there were no available grouped slots"
     );
     for (size_t i = 0; i < count; ++i) {
-        cecs_component_storage_world *const storage = storages[i];
-        cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&storage->storage);
+        cecs_component_registry *const registry = registries[i];
+        cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&registry->storage);
         cecs_sparse_set *const set = &sparse_set_storage->set;
         const size_t set_capacity = cecs_sparse_set_value_capacity(set);
         const size_t set_count = cecs_sparse_set_value_count(set);
@@ -63,7 +63,7 @@ static void cecs_sparse_set_group_insert_within(
 // DEPRECATED!
 size_t cecs_sparse_set_group_reserve_grouped_range_owning(
     cecs_sparse_set_group *group,
-    cecs_component_storage_world **const storages,
+    cecs_component_registry **const registries,
     const size_t count,
     const size_t component_size
 ) {
@@ -77,8 +77,8 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
     );
     const size_t length = cecs_exclusive_range_length(take_range);
     for (size_t i = 0; i < count; ++i) {
-        cecs_component_storage_world *const storage = storages[i];
-        cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&storage->storage);
+        cecs_component_registry *const registry = registries[i];
+        cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&registry->storage);
         cecs_sparse_set *const set = &sparse_set_storage->set;
         const size_t set_capacity = cecs_sparse_set_value_capacity(set);
         const size_t set_count = cecs_sparse_set_value_count(set);
@@ -129,7 +129,7 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
 
 static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped_range(
     cecs_sparse_set_group *group,
-    cecs_component_storage_world **const storages,
+    cecs_component_registry **const registries,
     const size_t count,
     const size_t component_size
 ) {
@@ -143,9 +143,6 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
     );
     const size_t length = cecs_exclusive_range_length(take_range);
     const size_t insertion_start = group->free_grouped_range.range.end;
-    const cecs_component_range move_range = cecs_exclusive_range_from(
-        (cecs_range){insertion_start, midpoint}
-    );
     // TODO: introduce this optimization back later
     // if (take_range.range.start == group->free_grouped_range.range.end) {
     //     group->free_grouped_range = take_range;
@@ -158,8 +155,8 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
     const cecs_dense_index take_start = cecs_dense_index_create_valid(take_range.range.end);
     const cecs_dense_index take_end = cecs_dense_index_create_valid(take_start.value + length);
     for (size_t i = 0; i < count; ++i) {
-        cecs_component_storage_world *const storage = storages[i];
-        cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&storage->storage);
+        cecs_component_registry *const registry = registries[i];
+        cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&registry->storage);
         cecs_sparse_set *const set = &sparse_set_storage->set;
         const size_t set_capacity = cecs_sparse_set_value_capacity(set);
         const size_t set_count = cecs_sparse_set_value_count(set);
@@ -216,22 +213,22 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
     group->free_grouped_range.range.end += length;
     group->free_ungrouped_range.range.start += length;
     return (cecs_sparse_set_group_insert_result){
-        .shifted_range = move_range,
+        .shifted_range = cecs_exclusive_range_from((cecs_range){insertion_start, take_range.range.start}),
         .shift_length = length,
     };
 }
 
 cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
     cecs_sparse_set_group *group,
-    cecs_component_storage_world **const storages,
+    cecs_component_registry **const registries,
     const size_t count,
     const size_t storage_index,
     const cecs_entity entity,
     const size_t component_size
 ) {
-    const cecs_component_storage_world *const storage = storages[storage_index];
+    const cecs_component_registry *const registry = registries[storage_index];
     const size_t entity_index = cecs_entity_index(entity);
-    const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&storage->storage);
+    const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&registry->storage);
     const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
 
     const bool in_grouped_range = cecs_exclusive_range_contains(group->free_grouped_range, insert_key);
@@ -254,14 +251,14 @@ cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
     if (cecs_exclusive_range_is_empty(group->free_grouped_range)) {
         result = cecs_sparse_set_group_reserve_grouped_range(
             group,
-            storages,
+            registries,
             count,
             component_size
         );
     }
     cecs_sparse_set_group_insert_within(
         group,
-        storages,
+        registries,
         count,
         entity_index,
         component_size
@@ -271,11 +268,11 @@ cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
 
 void cecs_sparse_set_group_push_ungrouped(
     cecs_sparse_set_group *const group,
-    const cecs_component_storage_world *const storage,
+    const cecs_component_registry *const registry,
     const cecs_entity entity
 ) {
     const size_t entity_index = cecs_entity_index(entity);
-    const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&storage->storage);
+    const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&registry->storage);
     const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
     const cecs_dense_index *const insert_index = cecs_sparse_set_get_index(&sparse_set_storage->set, insert_key);
     cecs_assert_or_exit(

@@ -67,10 +67,10 @@ project(cecs_fiddle_test C)
         "${CECS_CORE_SRC_DIRECTORY}/container/cecs_sparse_set.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/cecs_entity.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/cecs_entity_storage.c"
-        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_component_storage.c"
-        "${CECS_CORE_SRC_DIRECTORY}/world/component_storage/cecs_sparse_set_storage.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/registry/cecs_component_storage.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/registry/component_storage/cecs_sparse_set_storage.c"
         # "${CECS_CORE_SRC_DIRECTORY}/world/cecs_system.c"
-        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_storage_world.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_registry.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/group/cecs_sparse_set_group.c"
     )
     target_include_directories(
