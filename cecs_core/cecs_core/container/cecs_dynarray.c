@@ -164,7 +164,7 @@ void cecs_array_remove_many(cecs_array *arr, const size_t index, const size_t co
     arr->values_used -= count;
 }
 
-static inline void *cecs_array_get_ptr(const cecs_array *arr, const size_t index, const size_t size) {
+extern inline void *cecs_array_get_ptr(const cecs_array *arr, const size_t index, const size_t size) {
     cecs_assert_or_exit(
         index < arr->values_used,
         "error: attempted to get element from cecs_array with out-of-bounds index"
@@ -177,7 +177,7 @@ const void *cecs_array_get(const cecs_array *arr, const size_t index, const size
 void *cecs_array_get_mut(cecs_array *arr, const size_t index, const size_t size) {
     return cecs_array_get_ptr(arr, index, size);
 }
-static inline void *cecs_array_get_range_ptr(const cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
+extern inline void *cecs_array_get_range_ptr(const cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
     cecs_assert_or_exit(
         index + count <= arr->values_used,
         "error: attempted to get range from cecs_array with out-of-bounds range"
@@ -348,7 +348,7 @@ void cecs_dynarray_remove_many(cecs_dynarray* arr, cecs_allocator* a, const size
     }
 }
 
-static inline void *cecs_dynarray_get_ptr(const cecs_dynarray *arr, const size_t index, const size_t size) {
+extern inline void *cecs_dynarray_get_ptr(const cecs_dynarray *arr, const size_t index, const size_t size) {
     return cecs_array_get_ptr(&arr->array, index, size);
 }
 void* cecs_dynarray_get_mut(cecs_dynarray* arr, const size_t index, const size_t size) {
@@ -357,7 +357,7 @@ void* cecs_dynarray_get_mut(cecs_dynarray* arr, const size_t index, const size_t
 const void *cecs_dynarray_get(const cecs_dynarray *arr, const size_t index, const size_t size) {
     return cecs_dynarray_get_ptr(arr, index, size);
 }
-static inline void *cecs_dynarray_get_range_ptr(const cecs_dynarray *arr, const size_t index, const size_t count, const size_t size) {
+extern inline void *cecs_dynarray_get_range_ptr(const cecs_dynarray *arr, const size_t index, const size_t count, const size_t size) {
     return cecs_array_get_range_ptr(&arr->array, index, count, size);
 }
 void *cecs_dynarray_get_range_mut(cecs_dynarray* arr, const size_t index, const size_t count, const size_t value_size) {
