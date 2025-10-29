@@ -13,146 +13,158 @@ inline cecs_allocator cecs_allocator_create_from(
 cecs_allocator cecs_allocator_create_bump_alloc(const size_t size) {
     return cecs_allocator_create_from(
         (cecs_internal_allocator){ .bump = cecs_bump_allocator_create_alloc(size) },
-        cecs_internal_allocator_bump
+        cecs_internal_allocator_type_bump
     );
 }
 cecs_allocator cecs_allocator_create_bump_virtual(const size_t page_count) {
     return cecs_allocator_create_from(
         (cecs_internal_allocator){ .bump = cecs_bump_allocator_create_virtual(page_count) },
-        cecs_internal_allocator_bump
+        cecs_internal_allocator_type_bump
     );
 }
 cecs_allocator cecs_allocator_create_arena(size_t bump_size, size_t bump_capacity) {
     return cecs_allocator_create_from(
         (cecs_internal_allocator){ .arena = cecs_arena_allocator_create(bump_size, bump_capacity) },
-        cecs_internal_allocator_arena
+        cecs_internal_allocator_type_arena
     );
 }
 cecs_allocator cecs_allocator_create_implicit_arena(size_t bump_size, size_t bump_capacity) {
     return cecs_allocator_create_from(
         (cecs_internal_allocator){ .implicit_arena = cecs_implicit_arena_allocator_create(bump_size, bump_capacity) },
-        cecs_internal_allocator_implicit_arena
+        cecs_internal_allocator_type_implicit_arena
     );
 }
 
-void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment)
-{
+#define CECS_ALLOCATOR_TYPE_MAX cecs_internal_allocator_type_implicit_arena
+void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to alloc_aligned from an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc_aligned");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_none:
+        cecs_unreachable();
+    case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_alloc_aligned_expect(&allocator->allocator.bump, size, alignment);
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         return cecs_arena_allocator_alloc_aligned(&allocator->allocator.arena, size, alignment);
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         return cecs_implicit_arena_allocator_alloc_aligned(&allocator->allocator.implicit_arena, size, alignment);
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 
 void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to alloc from an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_none:
+        cecs_unreachable();
+    case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_alloc_expect(&allocator->allocator.bump, size);
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         return cecs_arena_allocator_alloc(&allocator->allocator.arena, size);
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         return cecs_implicit_arena_allocator_alloc(&allocator->allocator.implicit_arena, size);
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 
 void *cecs_allocator_realloc_aligned(
     cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to realloc_aligned from an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc_aligned");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_none:
+        cecs_unreachable();
+    case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_realloc_aligned_expect(&allocator->allocator.bump, block, block_size, new_size, alignment);
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         return cecs_arena_allocator_realloc_aligned(&allocator->allocator.arena, block, block_size, new_size, alignment);
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         return cecs_implicit_arena_allocator_realloc_aligned(
             &allocator->allocator.implicit_arena, block, block_size, new_size, alignment
         );
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 
 void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to realloc from an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_none:
+        cecs_unreachable();
+    case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_realloc_expect(&allocator->allocator.bump, block, block_size, new_size);
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         return cecs_arena_allocator_realloc(&allocator->allocator.arena, block, block_size, new_size);
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         return cecs_implicit_arena_allocator_realloc(
             &allocator->allocator.implicit_arena, block, block_size, new_size
         );
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 
 void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t block_size) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to free from an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to free");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_none:
+        cecs_unreachable();
+    case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_free(&allocator->allocator.bump, block, block_size);
         break;
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         cecs_arena_allocator_free(&allocator->allocator.arena, block, block_size);
         break;
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         cecs_implicit_arena_allocator_free(&allocator->allocator.implicit_arena, block, block_size);
         break;
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 
 void cecs_allocator_reset(cecs_allocator *allocator) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to reset an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to reset");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_reset(&allocator->allocator.bump);
         break;
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         cecs_arena_allocator_reset(&allocator->allocator.arena);
         break;
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         cecs_implicit_arena_allocator_reset(&allocator->allocator.implicit_arena);
         break;
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 
 void cecs_allocator_destroy(cecs_allocator *allocator) {
+    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to destroy an allocator of type 'none'");
+    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to destroy");
     switch (allocator->type) {
-    case cecs_internal_allocator_bump:
+    case cecs_internal_allocator_type_none:
+        cecs_unreachable();
+    case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_destroy(&allocator->allocator.bump);
         break;
-    case cecs_internal_allocator_arena:
+    case cecs_internal_allocator_type_arena:
         cecs_arena_allocator_destroy(&allocator->allocator.arena);
         break;
-    case cecs_internal_allocator_implicit_arena:
+    case cecs_internal_allocator_type_implicit_arena:
         cecs_implicit_arena_allocator_destroy(&allocator->allocator.implicit_arena);
         break;
-    default: {
-        assert(false && "fatal error: allocator type is not supported");
-        exit(EXIT_FAILURE);
-    }
+    default:
+        cecs_unreachable();
     }
 }
 

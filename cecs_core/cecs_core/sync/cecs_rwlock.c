@@ -23,6 +23,9 @@ extern inline bool cecs_rwlock_borrow_is_mutably_locked(const cecs_rwlock_borrow
 extern inline bool cecs_rwlock_borrow_acquired(const cecs_rwlock_borrow borrow) {
     return borrow.new_shared_ref_count < CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK;
 }
+extern inline void cecs_rwlock_borrow_release(cecs_rwlock_borrow *borrow) {
+    borrow->new_shared_ref_count = CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK;
+}
 extern inline bool cecs_rwlock_borrow_mut_is_immutably_locked(const cecs_rwlock_borrow_mut borrow) {
     return (borrow.previous_ref_count & (~CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK)) != 0;
 }
@@ -31,6 +34,9 @@ extern inline bool cecs_rwlock_borrow_mut_is_mutably_locked(const cecs_rwlock_bo
 }
 extern inline bool cecs_rwlock_borrow_mut_acquired(const cecs_rwlock_borrow_mut borrow) {
     return borrow.previous_ref_count == 0ull;
+}
+extern inline void cecs_rwlock_borrow_mut_release(cecs_rwlock_borrow_mut *borrow) {
+    borrow->previous_ref_count = CECS_RWLOCK_VALUE_IMMUTABLE_ACQUIRE_FATAL_MAX;
 }
 
 
@@ -112,8 +118,8 @@ void cecs_rwlock_release(cecs_rwlock *const lock, cecs_rwlock_borrow *const borr
         "error: attempted to release a cecs_rwlock read lock that was not successfully acquired"
     );
     const size_t sub = cecs_min(borrow->new_shared_ref_count, 1ull);
-    borrow->new_shared_ref_count = 0ull;
     const size_t previous_count = atomic_fetch_sub_explicit(&lock->state, sub, memory_order_release);
+    cecs_rwlock_borrow_release(borrow);
     (void)previous_count;
 }
 void cecs_rwlock_release_mut(cecs_rwlock *const lock, cecs_rwlock_borrow_mut *const borrow) {
@@ -122,4 +128,5 @@ void cecs_rwlock_release_mut(cecs_rwlock *const lock, cecs_rwlock_borrow_mut *co
         "error: attempted to release a cecs_rwlock write lock that was not successfully acquired"
     );
     atomic_store_explicit(&lock->state, borrow->previous_ref_count, memory_order_release);
+    cecs_rwlock_borrow_mut_release(borrow);
 }
