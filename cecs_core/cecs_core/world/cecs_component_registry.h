@@ -27,10 +27,12 @@ inline cecs_component_registry_userdata cecs_component_registry_userdata_create_
 }
 
 
+// TODO: view, view_mut, query, query_mut,
 typedef struct cecs_component_registry {
     cecs_component_storage storage;
     cecs_component_registry_userdata userdata;
     size_t component_size;
+    // TODO: component_groups
 } cecs_component_registry;
 
 inline cecs_component_registry cecs_component_registry_create(

@@ -278,7 +278,7 @@ void cecs_sparse_set_group_push_ungrouped(
         insert_index->value == cecs_sparse_set_value_count(&sparse_set_storage->set) - 1,
         "fatal error: cecs_sparse_set_group_push_ungrouped called for a component that was not the last to be added to a storage"
     );
-    if (group->free_ungrouped_range.range.end == 0) {
+    if (cecs_exclusive_range_is_empty(group->free_ungrouped_range)) {
         group->free_ungrouped_range = cecs_exclusive_range_singleton(insert_index->value);
     } else {
         ++group->free_ungrouped_range.range.end;
