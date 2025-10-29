@@ -6,18 +6,19 @@
 #include "world/cecs_view.h"
 
 typedef struct cecs_world {
-    cecs_entity_storage entity_storage;
+    cecs_entity_storage entities;
     cecs_world_components components;
 } cecs_world;
 
 
 inline cecs_entity cecs_world_alloc_entity(cecs_world *const world, cecs_allocator *const allocator) {
-    return cecs_entity_storage_alloc_entity(&world->entity_storage, allocator);
+    return cecs_entity_storage_alloc_entity(&world->entities, allocator);
 }
 inline void cecs_world_free_entity(cecs_world *const world, const cecs_entity entity) {
-    cecs_entity_storage_free_entity(&world->entity_storage, entity);
+    cecs_entity_storage_free_entity(&world->entities, entity);
 }
 
+// TODO: more defaults
 cecs_component_type cecs_world_register_component(
     cecs_world *const world,
     cecs_allocator *const allocator,

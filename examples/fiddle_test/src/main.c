@@ -2378,7 +2378,7 @@ int main(void) {
     printf("\n=== All tests completed successfully ===\n");
 
     cecs_world w = (cecs_world){
-        .entity_storage = cecs_entity_storage_create(),
+        .entities = cecs_entity_storage_create(),
         .components = cecs_world_components_create(),
     };
 
@@ -2387,23 +2387,28 @@ int main(void) {
     const cecs_component_type component_float =
         cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(float));
 
-    cecs_allocator allocator_int = cecs_allocator_alloc_bump_view(&allocator, 1024 * sizeof(int));
-    cecs_allocator allocator_float = cecs_allocator_alloc_bump_view(&allocator, 1024 * sizeof(float));
-    cecs_view_alloc view_alloc_int = cecs_world_acquire_view_alloc_from(&w, &allocator_int, component_int);
-    cecs_view_alloc view_alloc_float = cecs_world_acquire_view_alloc_from(&w, &allocator_float, component_float);
-
+    // AHH! We are not so far from usable, view-view (no groups optimization) ecs! YAY!
     cecs_entity es[24];
     for (size_t i = 0; i < 24; ++i) {
         es[i] = cecs_world_alloc_entity(&w, &allocator);
-        int *ival = (int *)cecs_view_alloc_insert_expect(&view_alloc_int, &w.components, &w.entity_storage, es[i]);
+    }
+    cecs_allocator allocator_int = cecs_allocator_alloc_bump_view(&allocator, 128 * sizeof(int));
+    cecs_allocator allocator_float = cecs_allocator_alloc_bump_view(&allocator, 128 * sizeof(float));
+    cecs_view_alloc view_alloc_int = cecs_world_acquire_view_alloc_from(&w, &allocator_int, component_int);
+    cecs_view_alloc view_alloc_float = cecs_world_acquire_view_alloc_from(&w, &allocator_float, component_float);
+
+    for (size_t i = 0; i < 24; ++i) {
+        int *ival = (int *)cecs_view_alloc_insert_expect(&view_alloc_int, &w.components, &w.entities, es[i]);
         *ival = ((int)i * 10);
-        float *fval = (float *)cecs_view_alloc_insert_expect(&view_alloc_float, &w.components, &w.entity_storage, es[i]);
+    }
+    for (size_t i = 0; i < 12; ++i) {
+        float *fval = (float *)cecs_view_alloc_insert_expect(&view_alloc_float, &w.components, &w.entities, es[i]);
         *fval = ((float)i * 0.5f);
     }
 
     cecs_bump_allocator *bump = cecs_allocator_bump_mut(&allocator);
-    cecs_bump_allocator_reset_to(bump, allocator_float.allocator.bump.view.block.memory_start, bump->view.next);
-    cecs_bump_allocator_reset_to(bump, allocator_int.allocator.bump.view.block.memory_start, bump->view.next);
+    cecs_bump_allocator_reset_to(bump, allocator_float.allocator.bump.view.next, allocator_float.allocator.bump.view.block.memory_end);
+    // cecs_bump_allocator_reset_to(bump, allocator_int.allocator.bump.view.next, bump->view.next);
 
     cecs_view_alloc_release(&view_alloc_float, &w.components);
     cecs_view_alloc_release(&view_alloc_int, &w.components);
@@ -2412,20 +2417,28 @@ int main(void) {
     cecs_view view_int = cecs_world_acquire_view(&w, component_int);
     cecs_view view_float = cecs_world_acquire_view(&w, component_float);
     for (size_t i = 0; i < 24; ++i) {
-        const int *ival = (const int *)cecs_view_get(view_int, &w.components, &w.entity_storage, es[i]);
-        const float *fval = (const float *)cecs_view_get(view_float, &w.components, &w.entity_storage, es[i]);
-        if (*ival != ((int)i * 10) || *fval != ((float)i * 0.5f)) {
-            fprintf(stderr, "ERROR: Mismatched values at entity %zu: int=%d (expected %d), float=%.1f (expected %.1f)\n",
-                i, *ival, (int)(i * 10), *fval, (float)(i * 0.5f));
+        const int *ival = (const int *)cecs_view_get(view_int, &w.components, &w.entities, es[i]);
+        if (*ival != ((int)i * 10)) {
+            fprintf(stderr, "ERROR: Mismatched int value at entity %zu: int=%d (expected %d)\n",
+                i, *ival, (int)(i * 10));
             assert(false && "Mismatched entity component values in world test");
             exit(EXIT_FAILURE);
+        }
+        if (i < 12) {
+            const float *fval = (const float *)cecs_view_get(view_float, &w.components, &w.entities, es[i]);
+            if (*fval != ((float)i * 0.5f)) {
+                fprintf(stderr, "ERROR: Mismatched float value at entity %zu: float=%.1f (expected %.1f)\n",
+                    i, *fval, (float)(i * 0.5f));
+                assert(false && "Mismatched entity component values in world test");
+                exit(EXIT_FAILURE);
+            }
         }
     }
     cecs_world_release_view(&w, &view_float);
     cecs_world_release_view(&w, &view_int);
 
     cecs_world_components_destroy(&w.components, &allocator);
-    cecs_entity_storage_destroy(&w.entity_storage, &allocator);
+    cecs_entity_storage_destroy(&w.entities, &allocator);
 
 
     // cleanup

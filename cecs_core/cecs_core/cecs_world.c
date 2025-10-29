@@ -23,6 +23,7 @@ cecs_component_type cecs_world_register_component(
     case cecs_component_storage_type_none:
         cecs_unreachable();
     case cecs_component_storage_type_sparse_set:
+        // HACK: default to initial capacity of 16 components
         storage = cecs_component_storage_create_sparse_set(allocator, 16ull, component_size);
         break;
     default:
