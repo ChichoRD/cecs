@@ -1,7 +1,7 @@
 #ifndef CECS_WORLD_COMPONENTS_H
 #define CECS_WORLD_COMPONENTS_H
 
-#include "world/cecs_registry.h" 
+#include "cecs_registry.h" 
 
 typedef struct cecs_world_components {
     cecs_dynarray registries;
@@ -17,6 +17,8 @@ inline cecs_world_components cecs_world_components_create_with_capacity(cecs_all
         .registries = cecs_dynarray_create_with_capacity(allocator, component_types_capacity, sizeof(cecs_registry)),
     };
 }
+void cecs_world_components_destroy(cecs_world_components *const components, cecs_allocator *const allocator);
+
 inline size_t cecs_world_components_count(const cecs_world_components *const components) {
     return cecs_dynarray_count(&components->registries);
 }

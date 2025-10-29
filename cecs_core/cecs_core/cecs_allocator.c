@@ -168,6 +168,31 @@ void cecs_allocator_destroy(cecs_allocator *allocator) {
     }
 }
 
+cecs_allocator cecs_allocator_alloc_bump_view_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment) {
+    void *const allocation = cecs_allocator_alloc_aligned(allocator, size, alignment);
+    const cecs_memory_block block = {
+        .memory_start = (uint8_t *)allocation,
+        .memory_end = (uint8_t *)allocation + size,
+        .reserved = size
+    };
+    return cecs_allocator_create_from(
+        (cecs_internal_allocator){ .bump = cecs_bump_allocator_from_view(cecs_bump_view_allocator_create(block)) },
+        cecs_internal_allocator_type_bump
+    );
+}
+cecs_allocator cecs_allocator_alloc_bump_view(cecs_allocator *allocator, const size_t size) {
+    void *const allocation = cecs_allocator_alloc(allocator, size);
+    const cecs_memory_block block = {
+        .memory_start = (uint8_t *)allocation,
+        .memory_end = (uint8_t *)allocation + size,
+        .reserved = size
+    };
+    return cecs_allocator_create_from(
+        (cecs_internal_allocator){ .bump = cecs_bump_allocator_from_view(cecs_bump_view_allocator_create(block)) },
+        cecs_internal_allocator_type_bump
+    );
+}
+
 extern inline const cecs_bump_allocator *cecs_allocator_bump(const cecs_allocator *allocator);
 extern inline cecs_bump_allocator *cecs_allocator_bump_mut(cecs_allocator *allocator);
 extern inline const cecs_arena_allocator *cecs_allocator_arena(const cecs_allocator *allocator);

@@ -9,6 +9,7 @@
 #include <cecs_core/world/cecs_entity_storage.h>
 #include <cecs_core/world/cecs_registry.h>
 #include <cecs_core/world/group/cecs_sparse_set_group.h>
+#include <cecs_core/cecs_world.h>
 
 #include <stdio.h>
 #include <stddef.h>
@@ -2257,46 +2258,22 @@ void test_component_storage(cecs_allocator *allocator) {
     // Future: test_component_storage_other_types(allocator);
 }
 
-
-int main(void) {
-    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
-
-    test_dynarray(&allocator);
-    // cecs_allocator_reset(&allocator);
+void test_sparse_set_group(cecs_allocator *allocator) {
+    printf("\n=== Testing Sparse Set Group ===\n");
     
-    test_sparse_set(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_flatset(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_flatset_simd(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_flatmap(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_flatmap_simd(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_entity(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_entity_storage(&allocator);
-    // cecs_allocator_reset(&allocator);
-    
-    test_component_storage(&allocator);
-    // cecs_allocator_reset(&allocator);
-
-    printf("\n=== All tests completed successfully ===\n");
-
-    cecs_registry s0 = cecs_registry_create((cecs_component_registry){cecs_component_storage_create_sparse_set(
-        &allocator, 16, sizeof(int)
-    )});
-    cecs_registry s1 = cecs_registry_create((cecs_component_registry){cecs_component_storage_create_sparse_set(
-        &allocator, 16, sizeof(int)
-    )});
-    cecs_entity_storage egen = cecs_entity_storage_create_with_capacity(&allocator, 16);
+    cecs_registry s0 = cecs_registry_create(cecs_component_registry_create(
+        cecs_component_storage_create_sparse_set(
+            allocator, 16, sizeof(int)
+        ),
+        sizeof(int), NULL
+    ));
+    cecs_registry s1 = cecs_registry_create(cecs_component_registry_create(
+        cecs_component_storage_create_sparse_set(
+            allocator, 16, sizeof(int)
+        ),
+        sizeof(int), NULL
+    ));
+    cecs_entity_storage egen = cecs_entity_storage_create_with_capacity(allocator, 16);
     cecs_sparse_set_group group = cecs_sparse_set_group_create();
 
     cecs_component_registry *rs[2] = {0};
@@ -2305,15 +2282,15 @@ int main(void) {
 
     cecs_entity es[14] = {0};
     for (size_t i = 0; i < 14; ++i) {
-        es[i] = cecs_entity_storage_alloc_entity(&egen, &allocator);
+        es[i] = cecs_entity_storage_alloc_entity(&egen, allocator);
         int *val0 = (int*)cecs_component_storage_insert_expect(
-            &rs[0]->storage, &allocator, cecs_entity_index(es[i]), sizeof(int)
+            &rs[0]->storage, allocator, cecs_entity_index(es[i]), sizeof(int)
         );
         *val0 = (int)(i * 10);
     }
     for (size_t i = 0; i < 7; ++i) {
         int *val1 = (int*)cecs_component_storage_insert_expect(
-            &rs[1]->storage, &allocator, cecs_entity_index(es[i]), sizeof(int)
+            &rs[1]->storage, allocator, cecs_entity_index(es[i]), sizeof(int)
         );
         *val1 = (int)(i * 100);
         cecs_sparse_set_group_push_ungrouped(&group, rs[1], es[i]);
@@ -2351,13 +2328,105 @@ int main(void) {
         }
     }
 
-    cecs_entity_storage_destroy(&egen, &allocator);
+    cecs_entity_storage_destroy(&egen, allocator);
 
     cecs_registry_release_mut(&s1, &l1);
     cecs_registry_release_mut(&s0, &l0);
 
-    cecs_registry_destroy(&s1, &allocator, sizeof(int));
-    cecs_registry_destroy(&s0, &allocator, sizeof(int));
+    cecs_registry_destroy(&s1, allocator, sizeof(int));
+    cecs_registry_destroy(&s0, allocator, sizeof(int));
+
+    printf("Sparse Set Group test executed in main().\n");
+    printf("=== Sparse Set Group tests completed ===\n");
+}
+void test_component_group(cecs_allocator *allocator) {
+    test_sparse_set_group(allocator);
+}
+
+int main(void) {
+    cecs_allocator allocator = cecs_allocator_create_bump_virtual(256);
+
+    test_dynarray(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_sparse_set(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_flatset(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_flatset_simd(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_flatmap(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_flatmap_simd(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_entity(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_entity_storage(&allocator);
+    // cecs_allocator_reset(&allocator);
+    
+    test_component_storage(&allocator);
+    // cecs_allocator_reset(&allocator);
+
+    test_component_group(&allocator);
+
+    printf("\n=== All tests completed successfully ===\n");
+
+    cecs_world w = (cecs_world){
+        .entity_storage = cecs_entity_storage_create(),
+        .components = cecs_world_components_create(),
+    };
+
+    const cecs_component_type component_int =
+        cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(int));
+    const cecs_component_type component_float =
+        cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(float));
+
+    cecs_allocator allocator_int = cecs_allocator_alloc_bump_view(&allocator, 1024 * sizeof(int));
+    cecs_allocator allocator_float = cecs_allocator_alloc_bump_view(&allocator, 1024 * sizeof(float));
+    cecs_view_alloc view_alloc_int = cecs_world_acquire_view_alloc_from(&w, &allocator_int, component_int);
+    cecs_view_alloc view_alloc_float = cecs_world_acquire_view_alloc_from(&w, &allocator_float, component_float);
+
+    cecs_entity es[24];
+    for (size_t i = 0; i < 24; ++i) {
+        es[i] = cecs_world_alloc_entity(&w, &allocator);
+        int *ival = (int *)cecs_view_alloc_insert_expect(&view_alloc_int, &w.components, &w.entity_storage, es[i]);
+        *ival = ((int)i * 10);
+        float *fval = (float *)cecs_view_alloc_insert_expect(&view_alloc_float, &w.components, &w.entity_storage, es[i]);
+        *fval = ((float)i * 0.5f);
+    }
+
+    cecs_bump_allocator *bump = cecs_allocator_bump_mut(&allocator);
+    cecs_bump_allocator_reset_to(bump, allocator_float.allocator.bump.view.block.memory_start, bump->view.next);
+    cecs_bump_allocator_reset_to(bump, allocator_int.allocator.bump.view.block.memory_start, bump->view.next);
+
+    cecs_view_alloc_release(&view_alloc_float, &w.components);
+    cecs_view_alloc_release(&view_alloc_int, &w.components);
+
+
+    cecs_view view_int = cecs_world_acquire_view(&w, component_int);
+    cecs_view view_float = cecs_world_acquire_view(&w, component_float);
+    for (size_t i = 0; i < 24; ++i) {
+        const int *ival = (const int *)cecs_view_get(view_int, &w.components, &w.entity_storage, es[i]);
+        const float *fval = (const float *)cecs_view_get(view_float, &w.components, &w.entity_storage, es[i]);
+        if (*ival != ((int)i * 10) || *fval != ((float)i * 0.5f)) {
+            fprintf(stderr, "ERROR: Mismatched values at entity %zu: int=%d (expected %d), float=%.1f (expected %.1f)\n",
+                i, *ival, (int)(i * 10), *fval, (float)(i * 0.5f));
+            assert(false && "Mismatched entity component values in world test");
+            exit(EXIT_FAILURE);
+        }
+    }
+    cecs_world_release_view(&w, &view_float);
+    cecs_world_release_view(&w, &view_int);
+
+    cecs_world_components_destroy(&w.components, &allocator);
+    cecs_entity_storage_destroy(&w.entity_storage, &allocator);
+
 
     // cleanup
     cecs_allocator_destroy(&allocator);

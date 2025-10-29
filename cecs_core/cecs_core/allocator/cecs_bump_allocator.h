@@ -65,6 +65,11 @@ typedef struct cecs_bump_allocator {
     cecs_bump_view_allocator view;
 } cecs_bump_allocator;
 
+inline cecs_bump_allocator cecs_bump_allocator_from_view(cecs_bump_view_allocator view) {
+    return (cecs_bump_allocator){
+        .view = view
+    };
+}
 cecs_bump_allocator cecs_bump_allocator_create_alloc(const size_t block_size);
 cecs_bump_allocator cecs_bump_allocator_create_virtual(const size_t page_count);
 

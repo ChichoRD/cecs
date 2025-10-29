@@ -64,4 +64,8 @@ inline cecs_implicit_arena_allocator *cecs_allocator_implicit_arena_mut(cecs_all
     return &allocator->allocator.implicit_arena;
 }
 
+cecs_allocator cecs_allocator_alloc_bump_view(cecs_allocator *allocator, const size_t size);
+cecs_allocator cecs_allocator_alloc_bump_view_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment);
+
+
 #endif

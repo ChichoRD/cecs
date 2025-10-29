@@ -153,7 +153,7 @@ cecs_noreturn inline void cecs_unimplemented_fail(const char *const message) {
 #endif
 
     (void)message;
-    cecs_exit_failure();
+    cecs_fail();
 }
 
 #undef CECS_COMPILER_NONE

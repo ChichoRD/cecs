@@ -16,7 +16,7 @@ const void *cecs_view_unchecked_get(const cecs_view_unchecked view, const cecs_w
     return cecs_component_storage_get(&registry->storage, cecs_entity_index(stored_entity), registry->component_size);
 }
 void *cecs_view_unchecked_get_mut(const cecs_view_unchecked view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity) {
-    const cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
+    cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
     const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
 
     return cecs_component_storage_get_mut(&registry->storage, cecs_entity_index(stored_entity), registry->component_size);
@@ -40,7 +40,7 @@ bool cecs_view_unchecked_try_get(
 bool cecs_view_unchecked_try_get_mut(
     const cecs_view_unchecked view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity, void **const out_component
 ) {
-    const cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
+    cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
     const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
     
     const size_t index = cecs_entity_index(stored_entity);
@@ -73,7 +73,7 @@ void *cecs_view_unchecked_get_or_insert(
 void *cecs_view_unchecked_insert_expect(
     const cecs_view_unchecked view, cecs_allocator *const allocator, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 ){
-    cecs_unimplemented_fail("TODO: component groups!");
+    // cecs_unimplemented_fail("// TODO: component groups! (commented out for now to allow testing)");
     cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
     const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
 
@@ -160,7 +160,7 @@ bool cecs_view_mut_try_get(
     cecs_view_mut_expect_valid_or_exit(view);
     return cecs_view_unchecked_try_get(view.view, components, entities, entity, out_component);
 }
-void *cecs_view_mut_try_get_mut(
+bool cecs_view_mut_try_get_mut(
     const cecs_view_mut view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity, void **const out_component
 ) {
     cecs_view_mut_expect_valid_or_exit(view);

@@ -69,8 +69,9 @@ project(cecs_fiddle_test C)
         "${CECS_CORE_SRC_DIRECTORY}/world/cecs_entity_storage.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/registry/cecs_component_storage.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/registry/component_storage/cecs_sparse_set_storage.c"
-        # "${CECS_CORE_SRC_DIRECTORY}/world/cecs_system.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/cecs_registry.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_world_components.c"
+        "${CECS_CORE_SRC_DIRECTORY}/world/cecs_view.c"
         "${CECS_CORE_SRC_DIRECTORY}/world/group/cecs_sparse_set_group.c"
         "${CECS_CORE_SRC_DIRECTORY}/cecs_world.c"
     )

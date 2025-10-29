@@ -3,6 +3,7 @@
 
 #include "world/cecs_entity_storage.h"
 #include "world/cecs_world_components.h"
+#include "world/cecs_view.h"
 
 typedef struct cecs_world {
     cecs_entity_storage entity_storage;
@@ -17,20 +18,39 @@ inline void cecs_world_free_entity(cecs_world *const world, const cecs_entity en
     cecs_entity_storage_free_entity(&world->entity_storage, entity);
 }
 
-// FIXME: unimplemented
 cecs_component_type cecs_world_register_component(
     cecs_world *const world,
     cecs_allocator *const allocator,
-    const cecs_component_storage_value storage_type
+    const cecs_component_storage_value storage_type,
+    const size_t component_size
 );
 
-// FIXME: unimplemented
-void *cecs_world_insert_component(
+cecs_view cecs_world_acquire_view(
+    const cecs_world *const world,
+    const cecs_component_type component
+);
+cecs_view_mut cecs_world_acquire_view_mut(
+    cecs_world *const world,
+    const cecs_component_type component
+);
+// TODO: parameters maybe, user alloc? partitioned alloc?
+cecs_view_alloc cecs_world_acquire_view_alloc_from(
     cecs_world *const world,
     cecs_allocator *const allocator,
-    const cecs_entity entity,
-    const cecs_component_type component_type,
-    const size_t component_size
+    const cecs_component_type component
+);
+
+void cecs_world_release_view(
+    cecs_world *const world,
+    cecs_view *const view
+);
+void cecs_world_release_view_mut(
+    cecs_world *const world,
+    cecs_view_mut *const view
+);
+void cecs_world_release_view_alloc(
+    cecs_world *const world,
+    cecs_view_alloc *const view
 );
 
 #endif

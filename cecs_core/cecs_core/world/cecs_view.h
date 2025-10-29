@@ -109,7 +109,7 @@ void *cecs_view_mut_get_mut(const cecs_view_mut view, cecs_world_components *con
 bool cecs_view_mut_try_get(
     const cecs_view_mut view, const cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity, const void **const out_component
 );
-void *cecs_view_mut_try_get_mut(
+bool cecs_view_mut_try_get_mut(
     const cecs_view_mut view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity, void **const out_component
 );
 
