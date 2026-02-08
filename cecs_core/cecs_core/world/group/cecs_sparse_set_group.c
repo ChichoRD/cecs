@@ -126,6 +126,7 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
     return length;
 }
 
+// TODO: be able to indicate reserve requirement
 static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped_range(
     cecs_sparse_set_group *group,
     cecs_component_registry **const registries,

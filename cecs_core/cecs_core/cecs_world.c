@@ -13,7 +13,7 @@ cecs_component_type cecs_world_register_component(
 ) {
     const size_t registry_index = cecs_world_components_count(&world->components);
     cecs_assert_or_exit(
-        registry_index <= UINT32_MAX, // TODO: replace with CECS_COMPONENT_ID_MAX when defined
+        registry_index <= CECS_COMPONENT_TYPE_ID_TYPE_MAX,
         "fatal error: exceeded maximum number of component types supported by cecs_world_register_component"
     );
 

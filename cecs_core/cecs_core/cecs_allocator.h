@@ -18,6 +18,8 @@ typedef enum cecs_internal_allocator_type {
     cecs_internal_allocator_type_implicit_arena,
 } cecs_internal_allocator_type;
 
+// TODO: establish policy for NULL free
+// TODO: establish policy for zero-sized allocations
 typedef struct cecs_allocator {
     cecs_internal_allocator allocator;
     cecs_internal_allocator_type type;

@@ -2410,6 +2410,8 @@ int main(void) {
     cecs_bump_allocator_reset_to(bump, allocator_float.allocator.bump.view.next, allocator_float.allocator.bump.view.block.memory_end);
     // cecs_bump_allocator_reset_to(bump, allocator_int.allocator.bump.view.next, bump->view.next);
 
+    // cecs_world_release_view_alloc(&w, &view_alloc_float);
+    // cecs_world_release_view_alloc(&w, &view_alloc_int);
     cecs_view_alloc_release(&view_alloc_float, &w.components);
     cecs_view_alloc_release(&view_alloc_int, &w.components);
 

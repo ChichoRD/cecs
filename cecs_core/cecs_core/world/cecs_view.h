@@ -142,6 +142,7 @@ void cecs_view_alloc_release(cecs_view_alloc *const view, cecs_world_components 
 void *cecs_view_alloc_get_or_insert(
     cecs_view_alloc *const view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 );
+// TODO: change API to insert_many at once
 void *cecs_view_alloc_insert_expect(
     cecs_view_alloc *const view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 );
