@@ -1,3 +1,5 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_component.c` is deprecated."
+
 #include <assert.h>
 #include <memory.h>
 #include <stddef.h>

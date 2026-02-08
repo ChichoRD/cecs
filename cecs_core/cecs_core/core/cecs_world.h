@@ -1,6 +1,8 @@
 #ifndef CECS_WORLD_H
 #define CECS_WORLD_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_world.h` is deprecated. Use `cecs_core/cecs_world.h` instead."
+
 #include <assert.h>
 #include <stdbool.h>
 #include "../containers/cecs_arena.h"

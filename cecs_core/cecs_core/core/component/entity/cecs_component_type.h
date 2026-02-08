@@ -1,6 +1,10 @@
 #ifndef CECS_COMPONENT_TYPE_H
 #define CECS_COMPONENT_TYPE_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/component/cecs_component_type.h` is deprecated." \
+         "Use `cecs_core/world/registry/cecs_component.h` instead."
+
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>

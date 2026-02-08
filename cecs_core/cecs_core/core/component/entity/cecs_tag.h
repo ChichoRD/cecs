@@ -1,3 +1,5 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/component/entity/cecs_tag.h` is deprecated."
+
 #ifndef CECS_TAG_H
 #define CECS_TAG_H
 

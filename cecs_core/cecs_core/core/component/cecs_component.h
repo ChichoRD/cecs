@@ -1,6 +1,8 @@
 #ifndef CECS_COMPONENT_H
 #define CECS_COMPONENT_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_component.h` is deprecated. Use `cecs_core/world/registry/cecs_component.h` instead."
+
 // TODO: strided copy
 
 #include <stdint.h>

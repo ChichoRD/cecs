@@ -1,6 +1,8 @@
 #ifndef CECS_COMPONENT_ITERATOR_H
 #define CECS_COMPONENT_ITERATOR_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/component/cecs_component_iterator.h` is deprecated."
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "../../types/cecs_macro_utils.h"

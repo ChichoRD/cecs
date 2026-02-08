@@ -1,3 +1,5 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/component/entity/cecs_game_component.h` is deprecated."
+
 #ifndef CECS_GAME_COMPONENT_H
 #define CECS_GAME_COMPONENT_H
 

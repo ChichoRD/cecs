@@ -1,6 +1,9 @@
 #ifndef CECS_COMPONENT_STORAGE_H
 #define CECS_COMPONENT_STORAGE_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_component_storage.h` is deprecated."
+         "Use `cecs_core/world/registry/cecs_component_storage.h` instead."
+
 #include <assert.h>
 #include <stdlib.h>
 #include "../../containers/cecs_dynamic_array.h"

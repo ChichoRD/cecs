@@ -1,3 +1,6 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/component/entity/cecs_entity.c` is deprecated." \
+         "Use `cecs_core/world/cecs_entity.c` instead."
+
 #include <stdlib.h>
 
 #include "cecs_entity.h"

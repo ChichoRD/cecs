@@ -1,3 +1,5 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/component/cecs_component_iterator.c` is deprecated."
+
 
 #include <stdlib.h>
 

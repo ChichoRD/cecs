@@ -1,6 +1,8 @@
 #ifndef CECS_RELATION_H
 #define CECS_RELATION_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_relation.h` is deprecated."
+
 #include <stdint.h>
 #include "../containers/cecs_flatmap.h"
 #include "component/entity/cecs_entity.h"

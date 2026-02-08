@@ -1,3 +1,6 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_component_storage.c` is deprecated." \
+         "Use `cecs_core/world/registry/cecs_component_storage.c` instead."
+
 #include <memory.h>
 #include <stdarg.h>
 #include "cecs_component_storage.h"

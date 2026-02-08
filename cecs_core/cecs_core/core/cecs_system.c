@@ -1,3 +1,6 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_system.c` is deprecated."
+
+
 #include <stdlib.h>
 #include <memory.h>
 

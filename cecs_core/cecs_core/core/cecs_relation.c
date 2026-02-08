@@ -1,3 +1,6 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_relation.c` is deprecated."
+
+
 #include "cecs_relation.h"
 
 cecs_world_relations cecs_world_relations_create(size_t entity_capacity) {

@@ -1,3 +1,6 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_resource.c` is deprecated."
+
+
 #include <string.h>
 #include <assert.h>
 

@@ -1,6 +1,8 @@
 #ifndef CECS_RESOURCE_H
 #define CECS_RESOURCE_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_resource.h` is deprecated."
+
 #include <stdint.h>
 #include "../../containers/cecs_arena.h"
 #include "../../containers/cecs_displaced_set.h"

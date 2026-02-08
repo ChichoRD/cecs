@@ -1,6 +1,9 @@
 #ifndef CECS_ENTITY_H
 #define CECS_ENTITY_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/component/entity/cecs_entity.h` is deprecated." \
+         "Use `cecs_core/world/cecs_entity.h` instead."
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "../../../containers/cecs_sparse_set.h"

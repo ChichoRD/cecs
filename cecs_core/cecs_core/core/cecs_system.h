@@ -1,6 +1,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_system.h` is deprecated."
+
 #include <stdbool.h>
 #include "../containers/cecs_union.h"
 #include "component/cecs_component_iterator.h"

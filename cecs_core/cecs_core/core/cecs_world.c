@@ -1,3 +1,6 @@
+#warning "[CECS DEPRECATED] `cecs_core/core/cecs_world.c` is deprecated. Use `cecs_core/cecs_world.c` instead."
+
+
 #include <memory.h>
 #include "cecs_world.h"
 
