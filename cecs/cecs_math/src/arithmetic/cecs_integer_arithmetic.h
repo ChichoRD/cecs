@@ -5,8 +5,14 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <intrin.h>
+
+#if CECS_COMPILER == CECS_COMPILER_MASK_MSVC
+#include <intrin.h>
+#else
 #include <lzcntintrin.h>
 #include <bmiintrin.h>
+#endif
+
 #include <memory.h>
 
 #define CECS_UINT16_BITS_LOG2 4
@@ -42,9 +48,17 @@ static_assert(
 );
 extern const uint8_t cecs_size_t_bits;
 
+// TODO: ifndef
+#if CECS_COMPILER & (CECS_COMPILER_MASK_CLANG | CECS_COMPILER_MASK_GCC)
 #define CECS_LZCNT_U64 _lzcnt_u64
 #define CECS_LZCNT_U32 _lzcnt_u32
 #define CECS_LZCNT_U16 __lzcnt16
+#else
+#define CECS_LZCNT_U64 _lzcnt_u64
+#define CECS_LZCNT_U32 _lzcnt_u32
+#define CECS_LZCNT_U16(n) (CECS_LZCNT_U32((uint32_t)(n)) - 16u)
+#endif
+
 // FIXME: conditional definition of CECS_LZCNT_U8 based on whether __lzcnt8 is available
 static inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n) {
     return (uint_fast8_t)CECS_LZCNT_U64(n);
@@ -74,9 +88,16 @@ static inline uint_fast8_t cecs_lzcnt(const size_t n) {
 #endif
 }
 
+// TODO: ifndef
+#if CECS_COMPILER & (CECS_COMPILER_MASK_CLANG | CECS_COMPILER_MASK_GCC)
 #define CECS_TZCNT_U64 __tzcnt_u64
 #define CECS_TZCNT_U32 __tzcnt_u32
 #define CECS_TZCNT_U16 __tzcnt_u16
+#else
+#define CECS_TZCNT_U64 _tzcnt_u64
+#define CECS_TZCNT_U32 _tzcnt_u32
+#define CECS_TZCNT_U16 _tzcnt_u16
+#endif
 static inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n) {
     return (uint_fast8_t)CECS_TZCNT_U64(n);
 }

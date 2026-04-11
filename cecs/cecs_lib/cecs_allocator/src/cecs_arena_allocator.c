@@ -31,10 +31,10 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
     // TODO: maybe if we pick last block's size we can double it
     const size_t new_blocks_size = cecs_max(cecs_bump_allocator_capacity(&allocator->bumps[allocator->current_bump - 1]), size);
     if (allocator->current_bump == allocator->bump_capacity) {
-        const size_t new_blocks_capacity = allocator->bump_capacity << 1;
-        assert(
-            new_blocks_capacity <= CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX
-            && "fatal error: new_blocks_capacity must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
+        const size_t new_blocks_capacity = allocator->bump_capacity << 1ull;
+        cecs_debugbreak_fail_unless(
+            new_blocks_capacity <= CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
+            "fatal error: new_blocks_capacity must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
         );
 
         cecs_bump_allocator *const new_bumps = cecs_realloc_expect(
@@ -49,7 +49,7 @@ void *cecs_arena_allocator_alloc_aligned_advance(cecs_arena_allocator *allocator
         }
 
         allocator->bumps = new_bumps;
-        allocator->bump_capacity = new_blocks_capacity;
+        allocator->bump_capacity = (cecs_arena_allocator_bump_usize)new_blocks_capacity;
         return cecs_bump_allocator_alloc_aligned_expect(cecs_arena_allocator_current_bump_mut(allocator), size, alignment);
     } else if (allocator->current_bump < allocator->bump_capacity) {
         cecs_bump_allocator *const current_bump = &allocator->bumps[allocator->current_bump];

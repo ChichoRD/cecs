@@ -32,7 +32,6 @@ inline void cecs_unreachable(void) {
     __assume(0);
 #endif
 }
-
 inline void cecs_debugbreak_unreachable(const char *const message) {
 #if !NDEBUG || CECS_ERROR_PRINTS_STDERR
     fprintf(stderr, CECS_COLORCODE_RED "CECS ERROR!" CECS_COLORCODE_RESET " %s\n", message);

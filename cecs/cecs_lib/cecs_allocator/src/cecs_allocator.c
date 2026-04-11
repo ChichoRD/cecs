@@ -23,14 +23,30 @@ cecs_allocator cecs_allocator_create_bump_virtual(const size_t page_count) {
     );
 }
 cecs_allocator cecs_allocator_create_arena(size_t bump_size, size_t bump_capacity) {
+    // static_assert(
+    //     sizeof(size_t) <= sizeof(cecs_arena_allocator_bump_usize),
+    //     "static error: bump_capacity argument of cecs_allocator_create_arena cannot be safely cast to cecs_arena_allocator_bump_usize"
+    // );
+    cecs_debugbreak_fail_unless(
+        bump_capacity <= (size_t)CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
+        "fatal error: bump_capacity argument of cecs_allocator_create_arena must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
+    );
     return cecs_allocator_create_from(
-        (cecs_internal_allocator){ .arena = cecs_arena_allocator_create(bump_size, bump_capacity) },
+        (cecs_internal_allocator){ .arena = cecs_arena_allocator_create(bump_size, (cecs_arena_allocator_bump_usize)bump_capacity) },
         cecs_internal_allocator_type_arena
     );
 }
 cecs_allocator cecs_allocator_create_implicit_arena(size_t bump_size, size_t bump_capacity) {
+    // static_assert(
+    //     sizeof(size_t) <= sizeof(cecs_arena_allocator_bump_usize),
+    //     "static error: bump_capacity argument of cecs_allocator_create_implicit_arena cannot be safely cast to cecs_arena_allocator_bump_usize"
+    // );
+    cecs_debugbreak_fail_unless(
+        bump_capacity <= (size_t)CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
+        "fatal error: bump_capacity argument of cecs_allocator_create_implicit_arena must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
+    );
     return cecs_allocator_create_from(
-        (cecs_internal_allocator){ .implicit_arena = cecs_implicit_arena_allocator_create(bump_size, bump_capacity) },
+        (cecs_internal_allocator){ .implicit_arena = cecs_implicit_arena_allocator_create(bump_size, (cecs_arena_allocator_bump_usize)bump_capacity) },
         cecs_internal_allocator_type_implicit_arena
     );
 }
@@ -42,6 +58,7 @@ void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size,
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
+        return NULL;
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_alloc_aligned_expect(&allocator->allocator.bump, size, alignment);
     case cecs_internal_allocator_type_arena:
@@ -50,6 +67,7 @@ void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size,
         return cecs_implicit_arena_allocator_alloc_aligned(&allocator->allocator.implicit_arena, size, alignment);
     default:
         cecs_unreachable();
+        return NULL;
     }
 }
 
@@ -59,6 +77,7 @@ void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
+        return NULL;
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_alloc_expect(&allocator->allocator.bump, size);
     case cecs_internal_allocator_type_arena:
@@ -67,6 +86,7 @@ void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
         return cecs_implicit_arena_allocator_alloc(&allocator->allocator.implicit_arena, size);
     default:
         cecs_unreachable();
+        return NULL;
     }
 }
 
@@ -78,6 +98,7 @@ void *cecs_allocator_realloc_aligned(
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
+        return NULL;
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_realloc_aligned_expect(&allocator->allocator.bump, block, block_size, new_size, alignment);
     case cecs_internal_allocator_type_arena:
@@ -88,6 +109,7 @@ void *cecs_allocator_realloc_aligned(
         );
     default:
         cecs_unreachable();
+        return NULL;
     }
 }
 
@@ -97,6 +119,7 @@ void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
+        return NULL;
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_realloc_expect(&allocator->allocator.bump, block, block_size, new_size);
     case cecs_internal_allocator_type_arena:
@@ -107,6 +130,7 @@ void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_
         );
     default:
         cecs_unreachable();
+        return NULL;
     }
 }
 
@@ -116,6 +140,7 @@ void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t bl
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
+        break;
     case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_free(&allocator->allocator.bump, block, block_size);
         break;

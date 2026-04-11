@@ -192,7 +192,7 @@ void cecs_memory_block_unmap_expect(cecs_memory_block *block) {
 }
 
 size_t cecs_max_alignment_from_size(const size_t size) {
-    const size_t alignment = 1 << cecs_log2(size);
+    const size_t alignment = 1ull << cecs_log2(size);
     return cecs_min(alignment, sizeof(uintmax_t));
 }
 

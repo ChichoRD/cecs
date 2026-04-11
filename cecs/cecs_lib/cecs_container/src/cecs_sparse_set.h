@@ -53,10 +53,20 @@ typedef struct cecs_dense_set {
     cecs_dynarray sparse_from_dense;
 } cecs_dense_set;
 inline cecs_sparse_set_usize cecs_dense_set_capacity(const cecs_dense_set *set) {
-    return cecs_dynarray_capacity(&set->values);
+    const size_t values_capacity = cecs_dynarray_capacity(&set->values);
+    cecs_debugbreak_fail_unless(
+        values_capacity <= (size_t)CECS_SPARSE_SET_USIZE_TYPE_MAX,
+        "fatal error: cecs_dense_set_capacity cannot be greater than CECS_SPARSE_SET_USIZE_TYPE_MAX"
+    );
+    return (cecs_sparse_set_usize)values_capacity;
 }
 inline cecs_sparse_set_usize cecs_dense_set_count(const cecs_dense_set *set) {
-    return cecs_dynarray_count(&set->values);
+    const size_t values_count = cecs_dynarray_count(&set->values);
+    cecs_debugbreak_fail_unless(
+        values_count <= (size_t)CECS_SPARSE_SET_USIZE_TYPE_MAX,
+        "fatal error: cecs_dense_set_count cannot be greater than CECS_SPARSE_SET_USIZE_TYPE_MAX"
+    );
+    return (cecs_sparse_set_usize)values_count;
 }
 
 typedef struct cecs_sparse_set {

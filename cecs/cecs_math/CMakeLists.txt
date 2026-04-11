@@ -19,8 +19,11 @@ project(
     FetchContent_MakeAvailable(cecs_compile_options cecs_meta)
     add_library(${PROJECT_NAME})
     target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_meta)
-    enable_c_compiler_flag_if_supported(FLAG "-mlzcnt" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
 
+    if (NOT MSVC)
+        enable_c_compiler_flag_if_supported(FLAG "-mlzcnt" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
+    endif()
+    
     target_sources(
         ${PROJECT_NAME}
         PRIVATE
