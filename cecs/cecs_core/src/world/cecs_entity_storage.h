@@ -5,6 +5,7 @@
 #include <cecs_dynarray.h>
 #include <cecs_error.h>
 
+// TODO: add identifier allocator structure to reuse the same structure for component storage, group storage free lists and entity storage free list
 typedef struct cecs_entity_storage {
     cecs_dynarray entities;
     cecs_entity next_free;
