@@ -18,7 +18,7 @@ cecs_group_type cecs_group_storage_register_group(
     const size_t group_components_count
 ) {
     const size_t group_index = cecs_dynarray_count(&storage->descriptors);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         group_index <= CECS_GROUP_TYPE_ID_TYPE_MAX,
         "fatal error: exceeded maximum number of group types supported by cecs_group_storage_register_group"
     );

@@ -8,7 +8,7 @@
 extern inline bool cecs_raw_alloction_check(const cecs_raw_alloction allocation);
 extern inline void *cecs_raw_alloction_look(const cecs_raw_alloction allocation);
 void *cecs_raw_alloction_expect(const cecs_raw_alloction allocation) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_raw_alloction_check(allocation),
         "fatal error: allocation failed"
     );

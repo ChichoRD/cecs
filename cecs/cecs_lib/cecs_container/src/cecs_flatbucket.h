@@ -48,28 +48,28 @@ inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket bucket) {
 
 // Bucket value access functions
 inline const void *cecs_flatbucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size, const size_t offset) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < CECS_FLATBUCKET8_MAX_COUNT,
         "error: cecs_flatbucket_get_value_unchecked called with out of bounds index"
     );
     return &bucket->values[index * value_size + offset];
 }
 inline void *cecs_flatbucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size, const size_t offset) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < CECS_FLATBUCKET8_MAX_COUNT,
         "error: cecs_flatbucket_get_value_mut_unchecked called with out of bounds index"
     );
     return &bucket->values[index * value_size + offset];
 }
 inline const void *cecs_flatbucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size, const size_t offset) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < cecs_flatbucket_get_count(*bucket),
         "error: cecs_flatbucket_get_value called with out of bounds index"
     );
     return &bucket->values[index * value_size + offset];
 }
 inline void *cecs_flatbucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size, const size_t offset) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < cecs_flatbucket_get_count(*bucket),
         "error: cecs_flatbucket_get_value_mut called with out of bounds index"
     );

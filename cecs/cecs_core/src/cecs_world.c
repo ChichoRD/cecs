@@ -12,12 +12,12 @@ cecs_component_type cecs_world_register_component(
     const size_t component_size
 ) {
     const size_t registry_index = cecs_world_components_count(&world->components);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         registry_index <= CECS_COMPONENT_TYPE_ID_TYPE_MAX,
         "fatal error: exceeded maximum number of component types supported by cecs_world_register_component"
     );
 
-    cecs_assert_or_exit(storage_type != cecs_component_storage_type_none, "fatal error: cecs_world_register_component was called with storage_type 'none'");
+    cecs_debugbreak_fail_unless(storage_type != cecs_component_storage_type_none, "fatal error: cecs_world_register_component was called with storage_type 'none'");
     cecs_component_storage storage;
     switch (storage_type) {
     case cecs_component_storage_type_none:

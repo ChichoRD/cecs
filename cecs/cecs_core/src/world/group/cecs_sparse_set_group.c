@@ -12,7 +12,7 @@ static void cecs_sparse_set_group_insert_within(
     const size_t entity_index,
     const size_t component_size
 ) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         !cecs_exclusive_range_is_empty(group->free_grouped_range),
         "fatal error: cecs_sparse_set_group_insert_available called when there were no available grouped slots"
     );
@@ -23,7 +23,7 @@ static void cecs_sparse_set_group_insert_within(
         const size_t set_capacity = cecs_sparse_set_value_capacity(set);
         const size_t set_count = cecs_sparse_set_value_count(set);
         if (set_capacity <= set_count) {
-            cecs_assert_or_exit(set_capacity == set_count, "fatal error: capacity is strictly less than count, that behaviour is illegal");
+            cecs_debugbreak_fail_unless(set_capacity == set_count, "fatal error: capacity is strictly less than count, that behaviour is illegal");
             cecs_unimplemented_fail(
                 "unimplemented error: cecs_sparse_set_group_insert_available called when sparse set is at full capacity"
             );
@@ -69,7 +69,7 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
     const size_t count,
     const size_t component_size
 ) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_exclusive_range_is_empty(group->free_grouped_range),
         "fatal error: cecs_sparse_set_group_reserve_grouped_range called when there were available grouped slots"
     );
@@ -136,7 +136,7 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
     const size_t count,
     const size_t component_size
 ) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_exclusive_range_is_empty(group->free_grouped_range),
         "fatal error: cecs_sparse_set_group_reserve_grouped_range called when there were available grouped slots"
     );
@@ -172,8 +172,8 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
             cecs_array *const keys_array = &set->values.sparse_from_dense.array;
             const size_t initial_size = cecs_array_count(values_array);
             const size_t temp_size = initial_size + length;
-            cecs_assert_or_exit(initial_size == cecs_array_count(keys_array), "fatal error: values and keys arrays are out of sync");
-            cecs_assert_or_exit(length <= initial_size, "fatal error: length to move is larger than the array size");
+            cecs_debugbreak_fail_unless(initial_size == cecs_array_count(keys_array), "fatal error: values and keys arrays are out of sync");
+            cecs_debugbreak_fail_unless(length <= initial_size, "fatal error: length to move is larger than the array size");
 
             void *const value_insert = cecs_array_insert_many(values_array, insertion_start, length, component_size);
             size_t *const key_insert = cecs_array_insert_many(keys_array, insertion_start, length, sizeof(size_t));
@@ -236,7 +236,7 @@ cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
 
     const bool in_grouped_range = cecs_exclusive_range_contains(group->free_grouped_range, insert_key);
     const bool in_ungrouped_range = cecs_exclusive_range_contains(group->free_ungrouped_range, insert_key);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         in_grouped_range || in_ungrouped_range,
         "fatal error: cecs_sparse_set_group_insert called with an entity that is not in either the grouped or ungrouped free ranges"
     );
@@ -278,7 +278,7 @@ void cecs_sparse_set_group_push_ungrouped(
     const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&registry->storage);
     const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
     const cecs_dense_index *const insert_index = cecs_sparse_set_get_index(&sparse_set_storage->set, insert_key);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         insert_index->value == cecs_sparse_set_value_count(&sparse_set_storage->set) - 1,
         "fatal error: cecs_sparse_set_group_push_ungrouped called for a component that was not the last to be added to a storage"
     );

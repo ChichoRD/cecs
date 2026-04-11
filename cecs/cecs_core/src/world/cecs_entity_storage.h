@@ -47,7 +47,7 @@ inline size_t cecs_entity_storage_used_count(const cecs_entity_storage *storage)
 }
 
 inline cecs_entity cecs_entity_storage_peek_entity(const cecs_entity_storage *storage, const size_t index) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < cecs_entity_storage_total_count(storage),
         "error: cecs_entity_storage_peek_entity called with out of bounds index"
     );

@@ -6,15 +6,15 @@
 
 extern inline cecs_bump_view_allocator cecs_bump_view_allocator_create(const cecs_memory_block block);
 void *cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment) {
-    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
-    cecs_assert_or_exit(cecs_is_pow2(alignment), "fatal error: alignment is not a power of 2");
+    cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_debugbreak_fail_unless(cecs_is_pow2(alignment), "fatal error: alignment is not a power of 2");
 
     static_assert(sizeof(size_t) == sizeof(uintptr_t), "fatal error: size_t is not the same size as uintptr_t");
     uint8_t *const aligned = cecs_aligned_ptr_mut(allocator->next, alignment);
     uint8_t *const next = aligned + size;
 
     if (cecs_expect_not(next > allocator->block.memory_end)) {
-        cecs_assert_or_exit(
+        cecs_debugbreak_fail_unless(
             next <= allocator->block.memory_start + allocator->block.reserved,
             "fatal error: allocator is out of memory"
         );
@@ -41,12 +41,12 @@ void *cecs_bump_view_allocator_alloc_expect(cecs_bump_view_allocator *allocator,
 void *cecs_bump_view_allocator_realloc_aligned_expect(
     cecs_bump_view_allocator *allocator, void *const block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
-    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
-    cecs_assert_or_exit(cecs_is_pow2(alignment), "fatal error: alignment is not a power of 2");
+    cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_debugbreak_fail_unless(cecs_is_pow2(alignment), "fatal error: alignment is not a power of 2");
 
     uint8_t *const old_block = (uint8_t *)block;
     if (old_block + block_size == allocator->next) {
-        cecs_assert_or_exit(
+        cecs_debugbreak_fail_unless(
             cecs_is_aligned_to_pow2((size_t)old_block, alignment),
             "fatal error: block is not aligned to alignment"
         );
@@ -56,7 +56,7 @@ void *cecs_bump_view_allocator_realloc_aligned_expect(
             allocator->next = next;
             return old_block;
         } else {
-            cecs_assert_or_exit(
+            cecs_debugbreak_fail_unless(
                 next <= allocator->block.memory_start + allocator->block.reserved,
                 "fatal error: allocator is out of memory"
             );
@@ -103,7 +103,7 @@ extern inline size_t cecs_bump_view_allocator_capacity(const cecs_bump_view_allo
 extern inline size_t cecs_bump_view_allocator_used(const cecs_bump_view_allocator *allocator);
 extern inline ptrdiff_t cecs_bump_view_allocator_available(const cecs_bump_view_allocator *allocator);
 ptrdiff_t cecs_bump_view_allocator_available_aligned(const cecs_bump_view_allocator *allocator, const size_t alignment) {
-    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");
     const uint8_t *const aligned = cecs_aligned_ptr(allocator->next, alignment);
     return (ptrdiff_t)((allocator->block.memory_start + allocator->block.reserved) - aligned);
 }

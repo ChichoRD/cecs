@@ -10,7 +10,7 @@ extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);
 extern inline cecs_dynarray cecs_dynarray_create(void);
 
 void *cecs_array_push(cecs_array *arr, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used < arr->values_capacity,
         "error: attempted to push to full cecs_array"
     );
@@ -19,7 +19,7 @@ void *cecs_array_push(cecs_array *arr, const size_t value_size) {
     return element;
 }
 void *cecs_array_push_many(cecs_array *arr, const size_t count, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used + count <= arr->values_capacity,
         "error: attempted to push many to cecs_array exceeding its capacity"
     );
@@ -35,11 +35,11 @@ void *cecs_array_push_many_copy(cecs_array *arr, const void *values, const size_
 void *cecs_array_extend(cecs_array *arr, const size_t start_index_inclusive, const size_t end_index_exclusive, const size_t value_size) {
     const size_t extend_count = end_index_exclusive - start_index_inclusive;
     if (cecs_expect_not(start_index_inclusive > end_index_exclusive)) {
-        cecs_assert_and_fail("error: attempted to extend cecs_array with start index greater than end index");
+        cecs_debugbreak_fail_message("error: attempted to extend cecs_array with start index greater than end index");
     } else if (cecs_expect_not(end_index_exclusive > arr->values_used)) {
-        cecs_assert_and_fail("error: attempted to extend cecs_array with end index greater than count");
+        cecs_debugbreak_fail_message("error: attempted to extend cecs_array with end index greater than count");
     } else if (cecs_expect_not(arr->values_used + extend_count > arr->values_capacity)) {
-        cecs_assert_and_fail("error: attempted to extend cecs_array exceeding its capacity");
+        cecs_debugbreak_fail_message("error: attempted to extend cecs_array exceeding its capacity");
     }
     
     void *const extension_destination = arr->values + arr->values_used * value_size;
@@ -56,9 +56,9 @@ void *cecs_array_extend(cecs_array *arr, const size_t start_index_inclusive, con
 }
 void *cecs_array_insert(cecs_array *arr, const size_t index, const size_t value_size) {
     if (cecs_expect_not(index > arr->values_used)) {
-        cecs_assert_and_fail("error: attempted to insert in cecs_array with end index greater than count");
+        cecs_debugbreak_fail_message("error: attempted to insert in cecs_array with end index greater than count");
     } else if (cecs_expect_not(arr->values_used + 1 > arr->values_capacity)) {
-        cecs_assert_and_fail("error: attempted to insert in cecs_array exceeding its capacity");
+        cecs_debugbreak_fail_message("error: attempted to insert in cecs_array exceeding its capacity");
     }
 
     uint8_t *const insertion_start = arr->values + index * value_size;
@@ -75,9 +75,9 @@ void *cecs_array_insert(cecs_array *arr, const size_t index, const size_t value_
 }
 void *cecs_array_insert_many(cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
     if (cecs_expect_not(index > arr->values_used)) {
-        cecs_assert_and_fail("error: attempted to insert in cecs_array with end index greater than count");
+        cecs_debugbreak_fail_message("error: attempted to insert in cecs_array with end index greater than count");
     } else if (cecs_expect_not(arr->values_used + count > arr->values_capacity)) {
-        cecs_assert_and_fail("error: attempted to insert in cecs_array exceeding its capacity");
+        cecs_debugbreak_fail_message("error: attempted to insert in cecs_array exceeding its capacity");
     }
 
     uint8_t *const insertion_start = arr->values + index * value_size;
@@ -98,21 +98,21 @@ void *cecs_array_insert_many_copy(cecs_array *arr, const size_t index, const voi
 }
 
 void cecs_array_pop(cecs_array *arr) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used > 0,
         "error: attempted to pop from empty cecs_array"
     );
     --arr->values_used;
 }
 void cecs_array_truncate(cecs_array *arr, const size_t new_count) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         new_count <= arr->values_used,
         "error: attempted to truncate cecs_array to a larger count"
     );
     arr->values_used = new_count;
 }
 void cecs_array_swap_last_pop(cecs_array *arr, const size_t index, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used > 0,
         "error: attempted to swap-last-pop from empty cecs_array"
     );
@@ -136,7 +136,7 @@ void cecs_array_swap_last_pop(cecs_array *arr, const size_t index, const size_t 
 }
 
 void cecs_array_remove(cecs_array *arr, const size_t index, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < arr->values_used,
         "error: attempted to remove from cecs_array with out-of-bounds index"
     );
@@ -150,7 +150,7 @@ void cecs_array_remove(cecs_array *arr, const size_t index, const size_t value_s
     --arr->values_used;
 }
 void cecs_array_remove_many(cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index + count <= arr->values_used,
         "error: attempted to remove from cecs_array with out-of-bounds index"
     );
@@ -165,7 +165,7 @@ void cecs_array_remove_many(cecs_array *arr, const size_t index, const size_t co
 }
 
 extern inline void *cecs_array_get_ptr(const cecs_array *arr, const size_t index, const size_t size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < arr->values_used,
         "error: attempted to get element from cecs_array with out-of-bounds index"
     );
@@ -178,7 +178,7 @@ void *cecs_array_get_mut(cecs_array *arr, const size_t index, const size_t size)
     return cecs_array_get_ptr(arr, index, size);
 }
 extern inline void *cecs_array_get_range_ptr(const cecs_array *arr, const size_t index, const size_t count, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index + count <= arr->values_used,
         "error: attempted to get range from cecs_array with out-of-bounds range"
     );
@@ -228,7 +228,7 @@ void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const si
         );
         arr->array.values_capacity = values_new_capacity;
     } else if (cecs_expect_not(values_new_capacity < arr->array.values_capacity)) {
-        cecs_assert_and_fail("fatal error: attempted to grow dynamic array to smaller capacity");
+        cecs_debugbreak_fail_message("fatal error: attempted to grow dynamic array to smaller capacity");
     }
 }
 void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
@@ -237,7 +237,7 @@ void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t v
 
 void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
     if (cecs_expect_not(values_new_capacity < arr->array.values_used)) {
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to shrink dynamic array to smaller capacity than used."
             "Use cecs_dynarray_truncate() to truncate the array before shrinking."
         );
@@ -251,7 +251,7 @@ void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const siz
         );
         arr->array.values_capacity = values_new_capacity;
     } else if (cecs_expect_not(values_new_capacity > arr->array.values_capacity)) {
-        cecs_assert_and_fail("fatal error: attempted to shrink dynamic array to a capacity larger or equal than current capacity");
+        cecs_debugbreak_fail_message("fatal error: attempted to shrink dynamic array to a capacity larger or equal than current capacity");
     }
 }
 void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {

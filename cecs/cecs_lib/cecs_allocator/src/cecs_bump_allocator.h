@@ -34,9 +34,9 @@ inline uint8_t *cecs_bump_view_allocator_snapshot(cecs_bump_view_allocator *allo
     return allocator->next;
 }
 inline void cecs_bump_view_allocator_reset_to(cecs_bump_view_allocator *allocator, uint8_t *const snapshot, uint8_t *const end_snapshot) {
-    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
-    cecs_assert_or_exit(end_snapshot == allocator->next, "fatal error: end snapshot does not match current allocator state");
-    cecs_assert_or_exit(allocator->block.memory_start <= snapshot && snapshot <= allocator->block.memory_end, "fatal error: snapshot is out of bounds");
+    cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_debugbreak_fail_unless(end_snapshot == allocator->next, "fatal error: end snapshot does not match current allocator state");
+    cecs_debugbreak_fail_unless(allocator->block.memory_start <= snapshot && snapshot <= allocator->block.memory_end, "fatal error: snapshot is out of bounds");
     allocator->next = snapshot;
 }
 inline void cecs_bump_view_allocator_reset(cecs_bump_view_allocator *allocator) {
@@ -50,11 +50,11 @@ inline size_t cecs_bump_view_allocator_capacity(const cecs_bump_view_allocator *
     return allocator->block.reserved;
 }
 inline size_t cecs_bump_view_allocator_used(const cecs_bump_view_allocator *allocator) {
-    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");
     return (size_t)(allocator->next - allocator->block.memory_start);
 }
 inline ptrdiff_t cecs_bump_view_allocator_available(const cecs_bump_view_allocator *allocator) {
-    cecs_assert_or_exit(allocator->next != NULL, "fatal error: allocator is empty");
+    cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");
     return (ptrdiff_t)((allocator->block.memory_start + allocator->block.reserved) - allocator->next);
 }
 ptrdiff_t cecs_bump_view_allocator_available_aligned(const cecs_bump_view_allocator *allocator, const size_t alignment);

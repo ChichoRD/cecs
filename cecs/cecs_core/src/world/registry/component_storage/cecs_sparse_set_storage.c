@@ -15,7 +15,7 @@ extern inline size_t cecs_sparse_set_storage_map_offset(const cecs_sparse_set_st
 }
 extern inline size_t cecs_sparse_set_storage_map_key(const cecs_sparse_set_storage *storage, const size_t key) {
     const size_t offset = cecs_sparse_set_storage_map_offset(storage);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         key >= offset,
         "error: cecs_sparse_set_storage_map_key called with key in skipped range"
     );
@@ -39,7 +39,7 @@ void *cecs_sparse_set_storage_get_mut(cecs_sparse_set_storage *storage, const si
 
 
 static void cecs_sparse_set_storage_ensure_key_page(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key_page) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         key_page < storage->skipped_key_pages,
         "error: cecs_sparse_set_storage_ensure_key_page called with key_page less or equal than skipped_key_pages"
     );

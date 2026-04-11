@@ -49,7 +49,7 @@ inline bool cecs_view_is_valid(const cecs_view view) {
     return cecs_rwlock_borrow_acquired(view.borrow);
 }
 inline void cecs_view_expect_valid_or_exit(const cecs_view view) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_view_is_valid(view),
         "error: cecs_view_expect_valid_or_exit was called with an invalid view"
     );
@@ -84,7 +84,7 @@ inline bool cecs_view_mut_is_valid(const cecs_view_mut view) {
     return cecs_rwlock_borrow_mut_acquired(view.borrow);
 }
 inline void cecs_view_mut_expect_valid_or_exit(const cecs_view_mut view) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_view_mut_is_valid(view),
         "error: cecs_view_mut_expect_valid_or_exit was called with an invalid view"
     );

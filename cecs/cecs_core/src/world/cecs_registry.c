@@ -29,7 +29,7 @@ bool cecs_registry_acquire_mut_seq(cecs_registry *const registry, cecs_component
         *out_registry = NULL;
         return false;
     } else {
-        cecs_assert_or_exit(
+        cecs_debugbreak_fail_unless(
             registry->access.shared_access_count == 0ull,
             "fatal error: cecs_registry_acquire_mut_seq called when there were active shared accesses"
         );
@@ -68,11 +68,11 @@ cecs_rwlock_borrow_mut cecs_registry_acquire_mut_or_exit(cecs_registry *const re
 }
 
 void cecs_registry_release_seq(cecs_registry *const registry) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         registry->access.shared_access_count > 0ull,
         "error: cecs_registry_release_seq called when there were no active shared accesses"
     );
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         registry->access.last_access_type == cecs_registry_access_type_immutable,
         "error: cecs_registry_release_seq called when the last access type was not immutable"
     );
@@ -82,7 +82,7 @@ void cecs_registry_release_seq(cecs_registry *const registry) {
     }
 }
 void cecs_registry_release_mut_seq(cecs_registry *const registry) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         registry->access.last_access_type == cecs_registry_access_type_mutable,
         "error: cecs_registry_release_mut_seq called when the last access type was not mutable"
     );

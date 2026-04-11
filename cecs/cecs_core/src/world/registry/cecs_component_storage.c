@@ -24,7 +24,7 @@ void cecs_component_storage_clear(cecs_component_storage *const storage, cecs_al
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to clear cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -33,7 +33,7 @@ void cecs_component_storage_clear(cecs_component_storage *const storage, cecs_al
         );
         break;
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to clear cecs_component_storage of unsupported type"
         );
     }
@@ -43,7 +43,7 @@ void cecs_component_storage_destroy(cecs_component_storage *const storage, cecs_
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to destroy cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -54,7 +54,7 @@ void cecs_component_storage_destroy(cecs_component_storage *const storage, cecs_
         );
         break;
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to destroy cecs_component_storage of unsupported type"
         );
     }
@@ -65,7 +65,7 @@ const void *cecs_component_storage_get(const cecs_component_storage *const stora
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to get from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -75,7 +75,7 @@ const void *cecs_component_storage_get(const cecs_component_storage *const stora
             component_size
         );
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to get from cecs_component_storage of unsupported type"
         );
     }
@@ -85,7 +85,7 @@ void *cecs_component_storage_get_mut(cecs_component_storage *const storage, cons
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to get_mut from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -95,7 +95,7 @@ void *cecs_component_storage_get_mut(cecs_component_storage *const storage, cons
             component_size
         );
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to get_mut from cecs_component_storage of unsupported type"
         );
     }
@@ -106,7 +106,7 @@ void *cecs_component_storage_get_or_insert(cecs_component_storage *const storage
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to get_or_insert from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -117,7 +117,7 @@ void *cecs_component_storage_get_or_insert(cecs_component_storage *const storage
             component_size
         );
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to get_or_insert from cecs_component_storage of unsupported type"
         );
     }
@@ -127,7 +127,7 @@ void *cecs_component_storage_insert_expect(cecs_component_storage *const storage
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to insert_expect into cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -138,7 +138,7 @@ void *cecs_component_storage_insert_expect(cecs_component_storage *const storage
             component_size
         );
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to insert_expect into cecs_component_storage of unsupported type"
         );
     }
@@ -149,7 +149,7 @@ bool cecs_component_storage_remove(cecs_component_storage *const storage, cecs_a
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to remove from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -160,7 +160,7 @@ bool cecs_component_storage_remove(cecs_component_storage *const storage, cecs_a
             component_size
         );
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to remove from cecs_component_storage of unsupported type"
         );
     }
@@ -170,7 +170,7 @@ void cecs_component_storage_remove_expect(cecs_component_storage *const storage,
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to remove_expect from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -182,7 +182,7 @@ void cecs_component_storage_remove_expect(cecs_component_storage *const storage,
         );
         break;
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to remove_expect from cecs_component_storage of unsupported type"
         );
     }
@@ -194,7 +194,7 @@ bool cecs_component_storage_contains(const cecs_component_storage *const storage
     cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
     switch (storage->type) {
     case cecs_component_storage_type_none:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to check contains on cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
@@ -203,7 +203,7 @@ bool cecs_component_storage_contains(const cecs_component_storage *const storage
             key
         );
     default:
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: attempted to check contains on cecs_component_storage of unsupported type"
         );
     }

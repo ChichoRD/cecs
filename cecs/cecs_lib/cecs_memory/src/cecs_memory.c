@@ -83,7 +83,7 @@ cecs_raw_memory_block cecs_memory_block_map(const size_t size) {
 }
 cecs_memory_block cecs_memory_block_map_expect(const size_t size) {
     cecs_raw_memory_block block = cecs_memory_block_map(size);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_memory_block_is_valid(&block),
         "error: cecs_memory_block_reserve_expect failed to reserve memory"
     );
@@ -95,11 +95,11 @@ cecs_memory_block cecs_memory_block_map_expect(const size_t size) {
 }
 
 bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size, uint8_t *const commit_start) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         block->memory_start + block->reserved >= commit_start + size,
         "error: cecs_memory_block_commit called with out of bounds commit_start and size"
     );
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         commit_start <= block->memory_end,
         "error: cecs_memory_block_commit called with memory range more than already committed memory"
     );
@@ -116,18 +116,18 @@ bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size,
     }
 }
 void cecs_memory_block_commit_expect(cecs_memory_block *block, const size_t size, uint8_t *const commit_start) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_memory_block_commit(block, size, commit_start),
         "error: cecs_memory_block_commit_expect failed to commit memory"
     );
 }
 
 bool cecs_memory_block_decommit(cecs_memory_block *block, const size_t size, uint8_t *const decommit_end) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         decommit_end >= block->memory_end,
         "error: cecs_memory_block_uncommit called with memory range less than the block's committed memory"
     );
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         decommit_end <= block->memory_start + block->reserved,
         "error: cecs_memory_block_uncommit called with out of bounds decommit_start and size"
     );
@@ -145,7 +145,7 @@ bool cecs_memory_block_decommit(cecs_memory_block *block, const size_t size, uin
     }
 }
 void cecs_memory_block_decommit_expect(cecs_memory_block *block, const size_t size, uint8_t *const decommit_end) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_memory_block_decommit(block, size, decommit_end),
         "error: cecs_memory_block_decommit_expect failed to decommit memory"
     );
@@ -165,7 +165,7 @@ bool cecs_memory_block_unmap_raw(cecs_raw_memory_block *block) {
     }
 }
 void cecs_memory_block_unmap_raw_expect(cecs_raw_memory_block *block) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_memory_block_unmap_raw(block),
         "error: cecs_memory_block_unmap_raw_expect failed to unmap memory"
     );
@@ -185,7 +185,7 @@ bool cecs_memory_block_unmap(cecs_memory_block *block) {
     }
 }
 void cecs_memory_block_unmap_expect(cecs_memory_block *block) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_memory_block_unmap(block),
         "error: cecs_memory_block_unmap_expect failed to unmap memory"
     );

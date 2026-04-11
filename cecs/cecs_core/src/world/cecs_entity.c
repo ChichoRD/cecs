@@ -28,7 +28,7 @@ extern inline cecs_entity cecs_entity_unset_free(const cecs_entity entity);
 
 cecs_entity cecs_entity_from_value(const cecs_entity_value value) {
     const cecs_entity entity = cecs_entity_from_value_unchecked(value);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         !cecs_entity_is_illegal(entity),
         "error: cecs_entity_from_value called with illegal entity value"
     );
@@ -42,11 +42,11 @@ extern inline cecs_entity cecs_entity_create_unchecked(const size_t index, const
     );
 }
 cecs_entity cecs_entity_create(const size_t index, const cecs_entity_meta_flag flags, const uint_fast8_t generation) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index <= (size_t)CECS_ENTITY_INDEX_BITS_MASK,
         "error: cecs_entity_create called with out of bounds index"
     );
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         generation <= (uint_fast8_t)(CECS_ENTITY_GENERATION_BITS_MASK >> CECS_ENTITY_GENERATION_BITS_OFFSET),
         "error: cecs_entity_create called with out of bounds generation"
     );

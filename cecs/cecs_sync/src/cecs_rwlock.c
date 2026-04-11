@@ -8,7 +8,7 @@
 
 
 static inline cecs_rwlock_borrow cecs_rwlock_borrow_from_count(const cecs_rwlock_value count) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         count != 0ull,
         "fatal error: attempted to create a cecs_rwlock_borrow with an invalid count of zero new shared references"
     );
@@ -46,11 +46,11 @@ extern inline void cecs_rwlock_reset(cecs_rwlock *const lock);
 static void cecs_rwlock_acquire_overflow_check(cecs_rwlock *const lock, const cecs_rwlock_value new_readers) {
     if (cecs_expect_not(new_readers == CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK)) {
         atomic_fetch_sub_explicit(&lock->state, 1ull, memory_order_release);
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: cecs_rwlock_acquire failed to acquire read lock because the maximum number of concurrent readers has been reached"
         );
     } else if (cecs_expect_not(new_readers >= CECS_RWLOCK_VALUE_IMMUTABLE_ACQUIRE_FATAL_MAX)) {
-        cecs_assert_and_fail(
+        cecs_debugbreak_fail_message(
             "fatal error: cecs_rwlock_acquire failed to acquire read lock because after the lock was mutably acquired, "
             "the maximum number of tries for the readers to acquire the lock has been reached"
         );
@@ -78,12 +78,12 @@ cecs_rwlock_borrow cecs_rwlock_acquire_or_exit(cecs_rwlock *const lock) {
     const cecs_rwlock_borrow borrow = cecs_rwlock_acquire(lock);
     if (cecs_expect_not(!cecs_rwlock_borrow_acquired(borrow))) {
         if (cecs_rwlock_borrow_is_mutably_locked(borrow)) {
-            cecs_assert_and_fail(
+            cecs_debugbreak_fail_message(
                 "error: failed to acquire cecs_rwlock read lock, "
                 "lock is mutably locked by another thread"
             );
         } else {
-            cecs_assert_and_fail(
+            cecs_debugbreak_fail_message(
                 "error: failed to acquire cecs_rwlock read lock due to an unknown error"
             );
         }
@@ -94,17 +94,17 @@ cecs_rwlock_borrow_mut cecs_rwlock_acquire_mut_or_exit(cecs_rwlock *const lock) 
     const cecs_rwlock_borrow_mut borrow = cecs_rwlock_acquire_mut(lock);
     if (cecs_expect_not(!cecs_rwlock_borrow_mut_acquired(borrow))) {
         if (cecs_rwlock_borrow_mut_is_immutably_locked(borrow)) {
-            cecs_assert_and_fail(
+            cecs_debugbreak_fail_message(
                 "error: failed to acquire cecs_rwlock write lock, "
                 "lock is immutably locked by other threads"
             );
         } else if (cecs_rwlock_borrow_mut_is_mutably_locked(borrow)) {
-            cecs_assert_and_fail(
+            cecs_debugbreak_fail_message(
                 "error: failed to acquire cecs_rwlock write lock, "
                 "lock is mutably locked by another thread"
             );
         } else {
-            cecs_assert_and_fail(
+            cecs_debugbreak_fail_message(
                 "error: failed to acquire cecs_rwlock write lock due to an unknown error"
             );
         }
@@ -113,7 +113,7 @@ cecs_rwlock_borrow_mut cecs_rwlock_acquire_mut_or_exit(cecs_rwlock *const lock) 
 }
 
 void cecs_rwlock_release(cecs_rwlock *const lock, cecs_rwlock_borrow *const borrow) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_rwlock_borrow_acquired(*borrow),
         "error: attempted to release a cecs_rwlock read lock that was not successfully acquired"
     );
@@ -123,7 +123,7 @@ void cecs_rwlock_release(cecs_rwlock *const lock, cecs_rwlock_borrow *const borr
     (void)previous_count;
 }
 void cecs_rwlock_release_mut(cecs_rwlock *const lock, cecs_rwlock_borrow_mut *const borrow) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_rwlock_borrow_mut_acquired(*borrow),
         "error: attempted to release a cecs_rwlock write lock that was not successfully acquired"
     );

@@ -30,14 +30,14 @@ void cecs_component_storage_remove_expect(cecs_component_storage *const storage,
 bool cecs_component_storage_contains(const cecs_component_storage *const storage, const size_t key, const size_t component_size);
 
 inline const cecs_sparse_set_storage *cecs_component_storage_sparse_set(const cecs_component_storage *const storage) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         storage->type == cecs_component_storage_type_sparse_set,
         "fatal error: attempted to access cecs_component_storage as cecs_sparse_set_storage when it is of a different type"
     );
     return &storage->storage.sparse_set;
 }
 inline cecs_sparse_set_storage *cecs_component_storage_sparse_set_mut(cecs_component_storage *const storage) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         storage->type == cecs_component_storage_type_sparse_set,
         "fatal error: attempted to access cecs_component_storage as cecs_sparse_set_storage when it is of a different type"
     );

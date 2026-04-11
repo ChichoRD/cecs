@@ -51,28 +51,28 @@ const void *cecs_array_get_range(const cecs_array *arr, const size_t index, cons
 void *cecs_array_get_range_mut(cecs_array *arr, const size_t index, const size_t count, const size_t value_size);
 
 static inline const void *cecs_array_first(const cecs_array *arr) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used > 0,
         "error: attempted to get first element of empty cecs_array"
     );
     return arr->values;
 }
 static inline void *cecs_array_first_mut(cecs_array *arr) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used > 0,
         "error: attempted to get first element of empty cecs_array"
     );
     return arr->values;
 }
 static inline const void *cecs_array_last(const cecs_array *arr, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used > 0,
         "error: attempted to get last element of empty cecs_array"
     );
     return arr->values + ((arr->values_used - 1) * value_size);
 }
 static inline void *cecs_array_last_mut(cecs_array *arr, const size_t value_size) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         arr->values_used > 0,
         "error: attempted to get last element of empty cecs_array"
     );

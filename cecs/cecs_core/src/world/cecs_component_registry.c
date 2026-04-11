@@ -35,7 +35,7 @@ extern inline cecs_component_registry_userdata cecs_component_registry_userdata_
 extern inline cecs_component_registry_groups cecs_component_registry_groups_create(void);
 cecs_component_registry_groups cecs_component_registry_groups_create_with_capacity(cecs_allocator *const allocator, const size_t capacity) {
     // HACK: enusre non-zero capacity, else call cecs_flatset_create(void)
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         capacity > 0ull,
         "error: cecs_component_registry_groups_create_with_capacity called with zero capacity"
     );
@@ -58,7 +58,7 @@ extern inline cecs_component_registry cecs_component_registry_create(
 
 extern inline bool cecs_component_registry_has_userdata(const cecs_component_registry *const registry);
 void *cecs_component_registry_set_userdata(cecs_component_registry *const registry, void *const userdata) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_component_registry_userdata_is_empty(registry->userdata),
         "error: cecs_component_registry_set_userdata called on registry that already has userdata set"
     );
@@ -78,7 +78,7 @@ bool cecs_component_registry_unset_userdata(cecs_component_registry *const regis
 void *cecs_component_registry_unset_userdata_expect(cecs_component_registry *const registry) {
     void *userdata;
     const bool unset_success = cecs_component_registry_unset_userdata(registry, &userdata);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         unset_success,
         "error: cecs_component_registry_unset_userdata_expect called on registry with no userdata set"
     );
@@ -86,14 +86,14 @@ void *cecs_component_registry_unset_userdata_expect(cecs_component_registry *con
 }
 
 const void *cecs_component_registry_get_userdata(const cecs_component_registry *const registry) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_component_registry_has_userdata(registry),
         "error: cecs_component_registry_get_userdata called on registry with no userdata set"
     );
     return registry->userdata.data;
 }
 void *cecs_component_registry_get_userdata_mut(cecs_component_registry *const registry) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         cecs_component_registry_has_userdata(registry),
         "error: cecs_component_registry_get_userdata_mut called on registry with no userdata set"
     );

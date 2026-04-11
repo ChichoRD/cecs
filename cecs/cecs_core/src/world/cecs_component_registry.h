@@ -21,7 +21,7 @@ inline cecs_component_registry_userdata cecs_component_registry_userdata_create_
     return cecs_component_registry_userdata_create_unchecked(NULL);
 }
 inline cecs_component_registry_userdata cecs_component_registry_userdata_create_with(void *const data) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         data != NULL,
         "error: cecs_component_registry_userdata_create_with called with NULL data"
     );

@@ -37,8 +37,8 @@ cecs_allocator cecs_allocator_create_implicit_arena(size_t bump_size, size_t bum
 
 #define CECS_ALLOCATOR_TYPE_MAX cecs_internal_allocator_type_implicit_arena
 void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size, const size_t alignment) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to alloc_aligned from an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc_aligned");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to alloc_aligned from an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc_aligned");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
@@ -54,8 +54,8 @@ void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size,
 }
 
 void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to alloc from an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to alloc from an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
@@ -73,8 +73,8 @@ void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
 void *cecs_allocator_realloc_aligned(
     cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size, const size_t alignment
 ) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to realloc_aligned from an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc_aligned");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to realloc_aligned from an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc_aligned");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
@@ -92,8 +92,8 @@ void *cecs_allocator_realloc_aligned(
 }
 
 void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_t block_size, const size_t new_size) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to realloc from an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to realloc from an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
@@ -111,8 +111,8 @@ void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_
 }
 
 void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t block_size) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to free from an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to free");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to free from an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to free");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
@@ -131,8 +131,8 @@ void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t bl
 }
 
 void cecs_allocator_reset(cecs_allocator *allocator) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to reset an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to reset");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to reset an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to reset");
     switch (allocator->type) {
     case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_reset(&allocator->allocator.bump);
@@ -149,8 +149,8 @@ void cecs_allocator_reset(cecs_allocator *allocator) {
 }
 
 void cecs_allocator_destroy(cecs_allocator *allocator) {
-    cecs_assert_or_exit(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to destroy an allocator of type 'none'");
-    cecs_assert_or_exit(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to destroy");
+    cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to destroy an allocator of type 'none'");
+    cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to destroy");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();

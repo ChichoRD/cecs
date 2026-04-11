@@ -12,7 +12,7 @@ extern inline size_t cecs_entity_storage_used_count(const cecs_entity_storage *s
 extern inline cecs_entity cecs_entity_storage_peek_entity(const cecs_entity_storage *storage, const size_t index);
 cecs_entity cecs_entity_storage_get_entity(const cecs_entity_storage *storage, const size_t index) {
     const cecs_entity entity = cecs_entity_storage_peek_entity(storage, index);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         !cecs_entity_is_free(entity),
         "error: cecs_entity_storage_get_entity called for a free entity"
     );
@@ -21,14 +21,14 @@ cecs_entity cecs_entity_storage_get_entity(const cecs_entity_storage *storage, c
 cecs_entity cecs_entity_storage_get_entity_exact(const cecs_entity_storage *storage, const cecs_entity entity) {
     const size_t index = cecs_entity_index(entity);
     const cecs_entity stored_entity = cecs_entity_storage_get_entity(storage, index);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         stored_entity.value == entity.value,
         "error: cecs_entity_storage_get_entity_exact called with mismatched entity"
     );
     return stored_entity;
 }
 static inline cecs_entity *cecs_entity_storage_peek_entity_mut(cecs_entity_storage *storage, const size_t index) {
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         index < cecs_entity_storage_total_count(storage),
         "error: cecs_entity_storage_peek_entity_mut called with out of bounds index"
     );
@@ -37,11 +37,11 @@ static inline cecs_entity *cecs_entity_storage_peek_entity_mut(cecs_entity_stora
 static inline cecs_entity *cecs_entity_storage_get_entity_exact_mut(cecs_entity_storage *storage, const cecs_entity entity) {
     const size_t index = cecs_entity_index(entity);
     cecs_entity *const stored_entity = cecs_entity_storage_peek_entity_mut(storage, index);
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         !cecs_entity_is_free(*stored_entity),
         "error: cecs_entity_storage_get_entity_exact_mut called for a free entity"
     );
-    cecs_assert_or_exit(
+    cecs_debugbreak_fail_unless(
         stored_entity->value == entity.value,
         "error: cecs_entity_storage_get_entity_exact_mut called with mismatched entity"
     );

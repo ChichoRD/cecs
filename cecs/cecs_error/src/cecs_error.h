@@ -33,13 +33,13 @@ inline void cecs_unreachable(void) {
 #endif
 }
 
-inline void cecs_assert_unreachable(const char *const message) {
+inline void cecs_debugbreak_unreachable(const char *const message) {
 #if !NDEBUG || CECS_ERROR_PRINTS_STDERR
     fprintf(stderr, CECS_COLORCODE_RED "CECS ERROR!" CECS_COLORCODE_RESET " %s\n", message);
 #endif
 
     (void)message;
-    assert(false && "fatal error: unreachable code reached");
+    assert(false && "[cecs] fatal error: unreachable code reached");
     cecs_unreachable();
 }
 
@@ -83,40 +83,40 @@ cecs_noreturn inline void cecs_exit_success(void) {
 cecs_noreturn inline void cecs_exit_failure(void) {
     exit(EXIT_FAILURE);
 }
-cecs_noreturn inline void cecs_fail(void) {
-    assert(false && "fatal error: fail and exit called");
+cecs_noreturn inline void cecs_debugbreak_fail(void) {
+    assert(false && "[cecs] fatal error: fail and exit called");
     cecs_exit_failure();
 }
 
-cecs_noreturn inline void cecs_assert_and_fail(const char *const message) {
+cecs_noreturn inline void cecs_debugbreak_fail_message(const char *const message) {
 #if !NDEBUG || CECS_ERROR_PRINTS_STDERR
-    fprintf(stderr, CECS_COLORCODE_RED "CECS ERROR!" CECS_COLORCODE_RESET " %s\n", message);
+    fprintf(stderr, CECS_COLORCODE_RED "[cecs] error:" CECS_COLORCODE_RESET " %s\n", message);
 #endif
 
     (void)message;
-    cecs_fail();
+    cecs_debugbreak_fail();
 }
 
-inline void cecs_fail_exit_if(const bool condition) {
+inline void cecs_debugbreak_fail_if(const bool condition, const char *const message) {
     if (cecs_expect_not(condition)) {
-        cecs_fail();
+        cecs_debugbreak_fail_message(message);
     }
     cecs_expect_never(condition);
 }
-inline void cecs_assert_or_exit(const bool condition, const char *const message) {
+inline void cecs_debugbreak_fail_unless(const bool condition, const char *const message) {
     if (cecs_expect_not(!condition)) {
-        cecs_assert_and_fail(message);
+        cecs_debugbreak_fail_message(message);
     }
     cecs_expect_always(condition);
 }
 
 cecs_noreturn inline void cecs_unimplemented_fail(const char *const message) {
 #if !NDEBUG || CECS_ERROR_PRINTS_STDERR
-    fprintf(stderr, CECS_COLORCODE_YELLOW "CECS UNIMPLEMENTED!" CECS_COLORCODE_RESET " %s\n", message);
+    fprintf(stderr, CECS_COLORCODE_YELLOW "[cecs] unimplemented error:" CECS_COLORCODE_RESET " %s\n", message);
 #endif
 
     (void)message;
-    cecs_fail();
+    cecs_debugbreak_fail();
 }
 
 #endif
