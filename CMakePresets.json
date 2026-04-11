@@ -1,0 +1,371 @@
+{
+    "version": 9,
+    "configurePresets": [
+        {
+            "name": "default",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_STANDARD": "11",
+                "CMAKE_C_STANDARD_REQUIRED": "ON",
+                "CMAKE_C_EXTENSIONS": "OFF",
+
+                "CMAKE_CXX_STANDARD": "14",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/${presetName}",
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/bin/${presetName}",
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE": "${sourceDir}/bin/${presetName}",
+
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/lib/bin/${presetName}",
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/lib/bin/${presetName}",
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE": "${sourceDir}/lib/bin/${presetName}",
+
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/lib/bin/${presetName}",
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/lib/bin/${presetName}",
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE": "${sourceDir}/lib/bin/${presetName}",
+
+                "CMAKE_VS_DEBUGGER_WORKING_DIRECTORY": "${sourceDir}/bin/${presetName}"
+            }
+        },
+
+        {
+            "name": "x64",
+            "hidden": true,
+            "inherits": "default",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "x86",
+            "hidden": true,
+            "inherits": "default",
+            "architecture": {
+                "value": "Win32",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "debug",
+            "hidden": true,
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_DEBUG_POSTFIX": "_d"
+            }
+        },
+        {
+            "name": "release",
+            "hidden": true,
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        
+
+        {
+            "name": "debug-x64",
+            "inherits": ["debug", "x64"]
+        },
+        {
+            "name": "release-x64",
+            "inherits": ["release", "x64"]
+        },
+        {
+            "name": "debug-x86",
+            "inherits": ["debug", "x86"]
+        },
+        {
+            "name": "release-x86",
+            "inherits": ["release", "x86"]
+        },
+
+
+        {
+            "name": "clang",
+            "hidden": true,
+            "inherits": "default",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        },
+
+        {
+            "name": "clang-debug-x64",
+            "inherits": ["clang", "debug-x64"]
+        },
+        {
+            "name": "clang-release-x64",
+            "inherits": ["clang", "release-x64"]
+        },
+        {
+            "name": "clang-debug-x86",
+            "inherits": ["clang", "debug-x86"],
+            "cacheVariables": {
+                "CMAKE_C_FLAGS_INIT": "-m32",
+                "CMAKE_CXX_FLAGS_INIT": "-m32"
+            }
+        },
+        {
+            "name": "clang-release-x86",
+            "inherits": ["clang", "release-x86"],
+            "cacheVariables": {
+                "CMAKE_C_FLAGS_INIT": "-m32",
+                "CMAKE_CXX_FLAGS_INIT": "-m32"
+            }
+        },
+
+        {
+            "name": "msvc",
+            "hidden": true,
+            "inherits": "default",
+            "generator": "Visual Studio 17 2022",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+                "CMAKE_DEBUG_POSTFIX": "_d"
+            }
+        },
+
+        {
+            "name": "msvc-x64",
+            "inherits": ["msvc", "x64"],
+            "architecture": {
+                "value": "x64",
+                "strategy": "set"
+            },
+            "toolset": {
+                "value": "host=x64",
+                "strategy": "set"
+            }
+        },
+        {
+            "name": "msvc-x86",
+            "inherits": ["msvc", "x86"],
+            "architecture": {
+                "value": "Win32",
+                "strategy": "set"
+            },
+            "toolset": {
+                "value": "host=x86",
+                "strategy": "set"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "hidden": true,
+            "jobs": 8
+        },
+
+        {
+            "name": "debug",
+            "inherits": "default",
+            "hidden": true,
+            "configuration": "Debug",
+            "cleanFirst": false
+        },
+        {
+            "name": "release",
+            "inherits": "default",
+            "hidden": true,
+            "configuration": "Release",
+            "cleanFirst": false
+        },
+
+        {
+            "name": "debug-x64",
+            "inherits": "debug",
+            "configurePreset": "debug-x64"
+        },
+        {
+            "name": "release-x64",
+            "inherits": "release",
+            "configurePreset": "release-x64"
+        },
+        {
+            "name": "debug-x86",
+            "inherits": "debug",
+            "configurePreset": "debug-x86"
+        },
+        {
+            "name": "release-x86",
+            "inherits": "release",
+            "configurePreset": "release-x86"
+        },
+
+
+        {
+            "name": "clang-debug-x64",
+            "configurePreset": "clang-debug-x64",
+            "inherits": "debug-x64"
+        },
+        {
+            "name": "clang-release-x64",
+            "configurePreset": "clang-release-x64",
+            "inherits": "release-x64"
+        },
+        {
+            "name": "clang-debug-x86",
+            "configurePreset": "clang-debug-x86",
+            "inherits": "debug-x86"
+        },
+        {
+            "name": "clang-release-x86",
+            "configurePreset": "clang-release-x86",
+            "inherits": "release-x86"
+        },
+
+        {
+            "name": "msvc-x64",
+            "configurePreset": "msvc-x64"
+        },
+        {
+            "name": "msvc-x86",
+            "configurePreset": "msvc-x86"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "debug-x64",
+            "steps": [
+                {
+                    "name": "debug-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "debug-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "release-x64",
+            "steps": [
+                {
+                    "name": "release-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "release-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "debug-x86",
+            "steps": [
+                {
+                    "name": "debug-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "debug-x86",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "release-x86",
+            "steps": [
+                {
+                    "name": "release-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "release-x86",
+                    "type": "build"
+                }
+            ]
+        },
+
+
+        {
+            "name": "clang-debug-x64",
+            "steps": [
+                {
+                    "name": "clang-debug-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "clang-debug-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "clang-release-x64",
+            "steps": [
+                {
+                    "name": "clang-release-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "clang-release-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "clang-debug-x86",
+            "steps": [
+                {
+                    "name": "clang-debug-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "clang-debug-x86",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "clang-release-x86",
+            "steps": [
+                {
+                    "name": "clang-release-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "clang-release-x86",
+                    "type": "build"
+                }
+            ]
+        },
+
+        {
+            "name": "msvc-x64",
+            "steps": [
+                {
+                    "name": "msvc-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "msvc-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "msvc-x86",
+            "steps": [
+                {
+                    "name": "msvc-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "msvc-x86",
+                    "type": "build"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+#ifndef CECS_CONSOLE_COLORCODE_H
+#define CECS_CONSOLE_COLORCODE_H
+
+
+#ifndef CECS_COLORCODE_RESET
+#define CECS_COLORCODE_RESET "\x1B[0m"
+#endif
+#ifndef CECS_COLORCODE_RED
+#define CECS_COLORCODE_RED "\x1B[31m"
+#endif
+#ifndef CECS_COLORCODE_GREEN
+#define CECS_COLORCODE_GREEN "\x1B[32m"
+#endif
+#ifndef CECS_COLORCODE_YELLOW
+#define CECS_COLORCODE_YELLOW "\x1B[33m"
+#endif
+#ifndef CECS_COLORCODE_BLUE
+#define CECS_COLORCODE_BLUE "\x1B[34m"
+#endif
+#ifndef CECS_COLORCODE_MAGENTA
+#define CECS_COLORCODE_MAGENTA "\x1B[35m"
+#endif
+#ifndef CECS_COLORCODE_CYAN
+#define CECS_COLORCODE_CYAN "\x1B[36m"
+#endif
+#ifndef CECS_COLORCODE_WHITE
+#define CECS_COLORCODE_WHITE "\x1B[37m"
+#endif
+
+#endif
