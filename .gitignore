@@ -1,14 +1,24 @@
 # vscode
-.vs/
-.vscode/
+.vs/*
+.vscode/*
 
 # cmake
-build/
-out/
-CMakeUserPresets.json
+**/build/*
+**/out/*
+**/CMakeUserPresets.json
+
+**/lib/*
+**/bin/*
+
+**/*.lib
+**/*.dll
+**/*.exe
+**/*.obj
+**/*.a
+**/*.so
+**/*.o
+
 
 # visual studio
-x64/
-x86/
-*.vcxproj*
-*.sln
+**/*.vcxproj*
+**/*.sln
