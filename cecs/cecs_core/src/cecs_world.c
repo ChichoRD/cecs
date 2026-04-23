@@ -38,14 +38,14 @@ cecs_component_type cecs_world_register_component(
     (void)storage;
     (void)registry;
     // *registry = cecs_registry_create(cecs_component_registry_create(storage, component_size, NULL));
-    return (cecs_component_type){
-        .id = (uint32_t)registry_index,
-        .storage_type = storage_type,
-    };
+    // return (cecs_component_type){
+    //     .id = (uint32_t)registry_index,
+    //     .storage_type = storage_type,
+    // };
 }
 
+extern cecs_registry *cecs_world_components_get_registry_ptr(const cecs_world_components *const components, const size_t index);
 cecs_view cecs_world_acquire_view(const cecs_world *const world, const cecs_component_type component) {
-    extern cecs_registry *cecs_world_components_get_registry_ptr(const cecs_world_components *const components, const size_t index);
     cecs_registry *const registry = cecs_world_components_get_registry_ptr(&world->components, component.id);
     const cecs_component_registry *unused;
     return cecs_view_create(
@@ -79,5 +79,7 @@ void cecs_world_release_view_mut(cecs_world *const world, cecs_view_mut *const v
 
 void cecs_world_release_view_alloc(cecs_world *const world, cecs_view_alloc *const view) {
     cecs_unimplemented_fail("TODO: if user acquired this view with a partition of our allocator we should try to merge the remaining free space back");
-    cecs_view_alloc_release(view, &world->components);
+    (void)world;
+    (void)view;
+    // cecs_view_alloc_release(view, &world->components);
 }

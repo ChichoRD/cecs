@@ -119,7 +119,7 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
 
                 // Update the index of the moved key to point to the new dense index
                 cecs_dense_index *const moved_index = cecs_sparse_set_get_index_mut(set, moved_key);
-                moved_index->value = to_index;
+                moved_index->value = (cecs_sparse_set_usize)to_index;
 
                 // Update the sparse-to-dense mapping
                 *moved_key_ptr = moved_key; // stays the same
@@ -170,8 +170,13 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
     //     return 0u;
     // }
 
-    const cecs_dense_index take_start = cecs_dense_index_create_valid(take_range.range.end);
-    const cecs_dense_index take_end = cecs_dense_index_create_valid(take_start.value + length);
+    cecs_debugbreak_fail_unless(
+        sizeof(take_range.range.end) <= sizeof(cecs_sparse_set_usize)
+        || take_range.range.end <= (size_t)CECS_SPARSE_SET_USIZE_TYPE_MAX,
+        "fatal error: take_range.range.end cannot be represented in the index type of the sparse set"
+    );
+    const cecs_dense_index take_start = cecs_dense_index_create_valid((cecs_sparse_set_usize)take_range.range.end);
+    const cecs_dense_index take_end = cecs_dense_index_create_valid(take_start.value + (cecs_sparse_set_usize)length);
     for (size_t i = 0; i < count; ++i) {
         cecs_component_registry *const registry = registries[i];
         cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&registry->storage);
@@ -218,12 +223,12 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
             
             for (size_t j = 0; j < length; ++j) {
                 const size_t moved_key = key_insert[j];
-                *cecs_sparse_set_get_index_mut(set, moved_key) = cecs_dense_index_create_valid(insertion_start + j);
+                *cecs_sparse_set_get_index_mut(set, moved_key) = cecs_dense_index_create_valid((cecs_sparse_set_usize)(insertion_start + j));
             }
             for (size_t j = insertion_start + length; j < take_start.value; ++j) {
-                const size_t moved_key = *cecs_sparse_set_get_sparse_key_by_index(set, cecs_dense_index_create_valid(j));
+                const size_t moved_key = *cecs_sparse_set_get_sparse_key_by_index(set, cecs_dense_index_create_valid((cecs_sparse_set_usize)j));
                 cecs_dense_index *const index = cecs_sparse_set_get_index_mut(set, moved_key);
-                *index = cecs_dense_index_create_valid(index->value + length);
+                *index = cecs_dense_index_create_valid(index->value + (cecs_sparse_set_usize)length);
             }
         }
     }

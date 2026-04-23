@@ -110,16 +110,19 @@ void *cecs_component_registry_get_or_set_userdata(cecs_component_registry *const
 
 void cecs_component_registry_insert_group(cecs_component_registry *const registry, cecs_allocator *const allocator, const cecs_group_type group) {
     cecs_unimplemented_fail("unimplemented error: cecs_component_registry_insert_group is not yet implemented");
+    (void)registry;
+    (void)allocator;
+    (void)group;
     // static_assert(false, "// TODO: implement cecs_component_registry_insert_group");
-    cecs_component_registry_group_type group_type = {
-        .id = (cecs_component_registry_group_id)group.id,
-    };
-    cecs_component_registry_group_type *inserted_group = (cecs_component_registry_group_type *)cecs_flatset_insert_expect(
-        &registry->groups.group_types,
-        allocator,
-        group_type.id,
-        sizeof(cecs_component_registry_group_type),
-        0
-    );
-    (void)inserted_group;
+    // cecs_component_registry_group_type group_type = {
+    //     .id = (cecs_component_registry_group_id)group.id,
+    // };
+    // cecs_component_registry_group_type *inserted_group = (cecs_component_registry_group_type *)cecs_flatset_insert_expect(
+    //     &registry->groups.group_types,
+    //     allocator,
+    //     group_type.id,
+    //     sizeof(cecs_component_registry_group_type),
+    //     0
+    // );
+    // (void)inserted_group;
 }

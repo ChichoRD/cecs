@@ -65,10 +65,15 @@ void *cecs_view_unchecked_get_or_insert(
     const cecs_view_unchecked view, cecs_allocator *const allocator, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 ) {
     cecs_unimplemented_fail("TODO: component groups!");
-    cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
-    const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
+    (void)view;
+    (void)allocator;
+    (void)components;
+    (void)entities;
+    (void)entity;
+    // cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
+    // const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
 
-    return cecs_component_storage_get_or_insert(&registry->storage, allocator, cecs_entity_index(stored_entity), registry->component_size);
+    // return cecs_component_storage_get_or_insert(&registry->storage, allocator, cecs_entity_index(stored_entity), registry->component_size);
 }
 void *cecs_view_unchecked_insert_expect(
     const cecs_view_unchecked view, cecs_allocator *const allocator, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
@@ -84,19 +89,29 @@ bool cecs_view_unchecked_remove(
     const cecs_view_unchecked view, cecs_allocator *const allocator, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 ) {
     cecs_unimplemented_fail("TODO: component groups!");
-    cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
-    const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
+    (void)view;
+    (void)allocator;
+    (void)components;
+    (void)entities;
+    (void)entity;
+    // cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
+    // const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
 
-    return cecs_component_storage_remove(&registry->storage, allocator, cecs_entity_index(stored_entity), registry->component_size);
+    // return cecs_component_storage_remove(&registry->storage, allocator, cecs_entity_index(stored_entity), registry->component_size);
 }
 void cecs_view_unchecked_remove_expect(
     const cecs_view_unchecked view, cecs_allocator *const allocator, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 ) {
     cecs_unimplemented_fail("TODO: component groups!");
-    cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
-    const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
+    (void)view;
+    (void)allocator;
+    (void)components;
+    (void)entities;
+    (void)entity;
+    // cecs_component_registry *const registry = cecs_view_unchecked_registry_mut(view, components);
+    // const cecs_entity stored_entity = cecs_entity_storage_get_entity_exact(entities, entity);
 
-    cecs_component_storage_remove_expect(&registry->storage, allocator, cecs_entity_index(stored_entity), registry->component_size);
+    // cecs_component_storage_remove_expect(&registry->storage, allocator, cecs_entity_index(stored_entity), registry->component_size);
 }
 
 extern inline bool cecs_view_is_valid(const cecs_view view);
