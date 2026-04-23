@@ -122,6 +122,41 @@
         },
 
         {
+            "name": "gcc",
+            "hidden": true,
+            "inherits": "default",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "gcc-debug-x64",
+            "inherits": ["gcc", "debug-x64"]
+        },
+        {
+            "name": "gcc-release-x64",
+            "inherits": ["gcc", "release-x64"]
+        },
+        {
+            "name": "gcc-debug-x86",
+            "inherits": ["gcc", "debug-x86"],
+            "cacheVariables": {
+                "CMAKE_C_FLAGS_INIT": "-m32",
+                "CMAKE_CXX_FLAGS_INIT": "-m32"
+            }
+        },
+        {
+            "name": "gcc-release-x86",
+            "inherits": ["gcc", "release-x86"],
+            "cacheVariables": {
+                "CMAKE_C_FLAGS_INIT": "-m32",
+                "CMAKE_CXX_FLAGS_INIT": "-m32"
+            }
+        },
+
+        {
             "name": "msvc",
             "hidden": true,
             "inherits": "default",
@@ -221,6 +256,27 @@
         {
             "name": "clang-release-x86",
             "configurePreset": "clang-release-x86",
+            "inherits": "release-x86"
+        },
+
+        {
+            "name": "gcc-debug-x64",
+            "configurePreset": "gcc-debug-x64",
+            "inherits": "debug-x64"
+        },
+        {
+            "name": "gcc-release-x64",
+            "configurePreset": "gcc-release-x64",
+            "inherits": "release-x64"
+        },
+        {
+            "name": "gcc-debug-x86",
+            "configurePreset": "gcc-debug-x86",
+            "inherits": "debug-x86"
+        },
+        {
+            "name": "gcc-release-x86",
+            "configurePreset": "gcc-release-x86",
             "inherits": "release-x86"
         },
 
@@ -336,6 +392,59 @@
                 },
                 {
                     "name": "clang-release-x86",
+                    "type": "build"
+                }
+            ]
+        },
+
+        {
+            "name": "gcc-debug-x64",
+            "steps": [
+                {
+                    "name": "gcc-debug-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "gcc-debug-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "gcc-release-x64",
+            "steps": [
+                {
+                    "name": "gcc-release-x64",
+                    "type": "configure"
+                },
+                {
+                    "name": "gcc-release-x64",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "gcc-debug-x86",
+            "steps": [
+                {
+                    "name": "gcc-debug-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "gcc-debug-x86",
+                    "type": "build"
+                }
+            ]
+        },
+        {
+            "name": "gcc-release-x86",
+            "steps": [
+                {
+                    "name": "gcc-release-x86",
+                    "type": "configure"
+                },
+                {
+                    "name": "gcc-release-x86",
                     "type": "build"
                 }
             ]
