@@ -271,9 +271,9 @@ void test_flatset(cecs_allocator *allocator) {
         pair *inserted = cecs_flatset_insert_expect(&set, allocator, i, sizeof(pair), offsetof(pair, hash));
         inserted->hash = i;
         inserted->value = (int)i * 100;
-        if (cecs_flatbucket_get_count(*cecs_flatset_get_bucket(&set, 0, sizeof(pair))) != i) {
+        if (cecs_flatbucket_get_count(cecs_flatset_get_bucket(&set, 0, sizeof(pair), offsetof(pair, hash))) != i) {
             fprintf(stderr, "ERROR: Bucket count mismatch after insert %zu: expected %zu, got %hu\n", 
-                    i, i, cecs_flatbucket_get_count(*cecs_flatset_get_bucket(&set, 0, sizeof(pair))));
+                    i, i, cecs_flatbucket_get_count(cecs_flatset_get_bucket(&set, 0, sizeof(pair), offsetof(pair, hash))));
             assert(false && "Bucket count mismatch");
             exit(EXIT_FAILURE);
         }
@@ -290,6 +290,7 @@ void test_flatset(cecs_allocator *allocator) {
     }
     printf("Reached 75%% load factor: count=%zu, capacity=%zu\n", 
            cecs_flatset_count(&set), cecs_flatset_capacity(&set));
+
     
     // Test 2: Trigger upward reallocation (insert one more to exceed 80%)
     printf("\n--- Test 2: Trigger upward reallocation ---\n");
@@ -373,6 +374,7 @@ void test_flatset(cecs_allocator *allocator) {
     for (size_t i = 0; i < 2; ++i) {
         pair *inserted = cecs_flatset_find_or_insert(&set, allocator, new_pairs[i].hash, sizeof(pair), offsetof(pair, hash));
         *inserted = new_pairs[i];
+        
         if (cecs_flatset_count(&set) != count_before_new + i + 1) {
             fprintf(stderr, "ERROR: Count mismatch after find_or_insert new value %zu\n", i);
             assert(false && "Count mismatch after find_or_insert");
@@ -507,54 +509,54 @@ void test_flatset_simd(cecs_allocator *allocator) {
     float total_weight_sum_simd = 0.0f;
     uint32_t total_flags_or_simd = 0;
     
-    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+         const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
         
-        // SIMD-style processing: always process all 8 elements - memory is always valid and initialized
-        for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_MAX_COUNT; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, i, sizeof(test_value));
-            // Process all 8 elements - memory is always valid and initialized
-            total_data_sum_simd += value->data;
-            total_weight_sum_simd += value->weight;
-            total_flags_or_simd |= value->flags;
+         // SIMD-style processing: always process all 8 elements - memory is always valid and initialized
+         for (uint_fast8_t i = 0; i < CECS_FLATBUCKET8_MAX_COUNT; ++i) {
+             const test_value *value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, i, sizeof(test_value));
+             // Process all 8 elements - memory is always valid and initialized
+             total_data_sum_simd += value->data;
+             total_weight_sum_simd += value->weight;
+             total_flags_or_simd |= value->flags;
+         }
+        
+         printf("Bucket %zu SIMD (unchecked): data_sum=%d, weight_sum=%.1f, flags_or=%u (processed all 8 elements)\n",
+             bucket_idx, total_data_sum_simd, total_weight_sum_simd, total_flags_or_simd);
         }
+    
+        printf("Total SIMD results: data_sum=%d, weight_sum=%.1f, flags_or=%u\n",
+            total_data_sum_simd, total_weight_sum_simd, total_flags_or_simd);
+    
+        // Test 3: Selective traversal using checked access - only process actual contained elements
+        printf("\n--- Test 3: Selective traversal using checked access ---\n");
+        int total_data_sum_selective = 0;
+        float total_weight_sum_selective = 0.0f;
+        uint32_t total_flags_or_selective = 0;
+    
+        for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
+         const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
+         uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
-        printf("Bucket %zu SIMD (unchecked): data_sum=%d, weight_sum=%.1f, flags_or=%u (processed all 8 elements)\n",
-               bucket_idx, total_data_sum_simd, total_weight_sum_simd, total_flags_or_simd);
-    }
-    
-    printf("Total SIMD results: data_sum=%d, weight_sum=%.1f, flags_or=%u\n",
-           total_data_sum_simd, total_weight_sum_simd, total_flags_or_simd);
-    
-    // Test 3: Selective traversal using checked access - only process actual contained elements
-    printf("\n--- Test 3: Selective traversal using checked access ---\n");
-    int total_data_sum_selective = 0;
-    float total_weight_sum_selective = 0.0f;
-    uint32_t total_flags_or_selective = 0;
-    
-    for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+         // Only process contained elements using checked access
+         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
+             const test_value *value = (const test_value *)cecs_flatset_bucket_get_value(bucket, i, sizeof(test_value));
+             total_data_sum_selective += value->data;
+             total_weight_sum_selective += value->weight;
+             total_flags_or_selective |= value->flags;
+         }
         
-        // Only process contained elements using checked access
-        for (uint_fast8_t i = 0; i < bucket_count; ++i) {
-            const test_value *value = (const test_value *)cecs_flatset_bucket_get_value(bucket, i, sizeof(test_value));
-            total_data_sum_selective += value->data;
-            total_weight_sum_selective += value->weight;
-            total_flags_or_selective |= value->flags;
+         printf("Bucket %zu selective (checked): data_sum=%d, weight_sum=%.1f, flags_or=%u (processed %u elements)\n",
+             bucket_idx, total_data_sum_selective, total_weight_sum_selective, total_flags_or_selective, bucket_count);
         }
-        
-        printf("Bucket %zu selective (checked): data_sum=%d, weight_sum=%.1f, flags_or=%u (processed %u elements)\n",
-               bucket_idx, total_data_sum_selective, total_weight_sum_selective, total_flags_or_selective, bucket_count);
-    }
     
-    printf("Total selective results: data_sum=%d, weight_sum=%.1f, flags_or=%u\n",
-           total_data_sum_selective, total_weight_sum_selective, total_flags_or_selective);
+        printf("Total selective results: data_sum=%d, weight_sum=%.1f, flags_or=%u\n",
+            total_data_sum_selective, total_weight_sum_selective, total_flags_or_selective);
     
     // Test 4: SIMD intrinsics test for integer data
     printf("\n--- Test 4: SIMD intrinsics for integer operations ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
         
         // Load 8 integer values using unchecked access
         int data_array[8];
@@ -595,7 +597,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
     // Test 5: SIMD intrinsics test for float data
     printf("\n--- Test 5: SIMD intrinsics for float operations ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
         
         // Use SIMD gather to load 8 float values directly with stride
         const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
@@ -641,7 +643,7 @@ void test_flatset_simd(cecs_allocator *allocator) {
     // Test 5b: SIMD gather for integer data as well
     printf("\n--- Test 5b: SIMD gather for integer operations ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
+        const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
         
         // Use SIMD gather to load 8 integer values directly with stride
         const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
@@ -690,8 +692,8 @@ void test_flatset_simd(cecs_allocator *allocator) {
     size_t total_matches_simd = 0;
     
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+           const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
+           uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
         // Use SIMD gather to load 8 data values directly
         const test_value *base_value = (const test_value *)cecs_flatset_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
@@ -755,8 +757,8 @@ void test_flatset_simd(cecs_allocator *allocator) {
     // Test 8: Bucket-wise SIMD aggregations with gather intrinsics
     printf("\n--- Test 8: Bucket-wise SIMD aggregations with gather intrinsics ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatset_bucket_count(&set); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        const cecs_flatbucket bucket = cecs_flatset_get_bucket(&set, bucket_idx, sizeof(test_value), offsetof(test_value, hash));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
         if (bucket_count == 0) continue;
         
@@ -844,7 +846,7 @@ void test_flatmap(cecs_allocator *allocator) {
         snprintf(inserted->name, sizeof(inserted->name), "item_%zu", i);
         
         // Verify the key is stored correctly
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, 0, sizeof(test_data));
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, 0, sizeof(test_data));
         const cecs_flatmap_hash *key = cecs_flatmap_bucket_get_key(bucket, (uint_fast8_t)(i - 1));
         if (*key != i) {
             fprintf(stderr, "ERROR: Key mismatch after insert %zu: expected %zu, got %zu\n", i, i, *key);
@@ -852,9 +854,9 @@ void test_flatmap(cecs_allocator *allocator) {
             exit(EXIT_FAILURE);
         }
         
-        if (cecs_flatbucket_get_count(*bucket) != i) {
+        if (cecs_flatbucket_get_count(bucket) != i) {
             fprintf(stderr, "ERROR: Bucket count mismatch after insert %zu: expected %zu, got %hu\n", 
-                    i, i, cecs_flatbucket_get_count(*cecs_flatmap_get_bucket(&map, 0, sizeof(test_data))));
+                    i, i, cecs_flatbucket_get_count(bucket));
             assert(false && "Bucket count mismatch");
             exit(EXIT_FAILURE);
         }
@@ -968,8 +970,8 @@ void test_flatmap(cecs_allocator *allocator) {
     // Test 6: Key verification through bucket access
     printf("\n--- Test 6: Key verification through bucket access ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_data));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_data));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
         printf("Bucket %zu contents (%u elements):\n", bucket_idx, bucket_count);
         for (uint_fast8_t i = 0; i < bucket_count; ++i) {
@@ -1107,7 +1109,7 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     uint32_t total_flags_or_simd = 0;
     
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
         
         // SIMD-style processing: always process all 8 elements using unchecked access
         size_t bucket_key_sum = 0;
@@ -1146,8 +1148,8 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     uint32_t total_flags_or_selective = 0;
     
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
         size_t bucket_key_sum = 0;
         int bucket_data_sum = 0;
@@ -1180,7 +1182,7 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     // Test 4: SIMD gather for keys and values
     printf("\n--- Test 4: SIMD gather for keys and values ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
         
         // Gather 8 keys using unchecked access
         size_t key_array[8];
@@ -1226,7 +1228,7 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     // Test 5: SIMD gather for float weights using strided access
     printf("\n--- Test 5: SIMD gather for float weights ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
         
         // Use SIMD gather to load 8 float weights directly with stride
         const test_value *base_value = (const test_value *)cecs_flatmap_bucket_get_value_unchecked(bucket, 0, sizeof(test_value));
@@ -1274,8 +1276,8 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     size_t total_key_matches_simd = 0;
     
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
         // Load 8 keys using unchecked access (keys are size_t, need to handle properly)
         size_t key_array[8];
@@ -1320,8 +1322,8 @@ void test_flatmap_simd(cecs_allocator *allocator) {
     // Test 7: Emulated SIMD operations with validity masks for key-value pairs
     printf("\n--- Test 7: Emulated SIMD operations with validity masks ---\n");
     for (size_t bucket_idx = 0; bucket_idx < cecs_flatmap_bucket_count(&map); ++bucket_idx) {
-        const cecs_flatbucket *bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
-        uint_fast8_t bucket_count = cecs_flatbucket_get_count(*bucket);
+        const cecs_flatbucket bucket = cecs_flatmap_get_bucket(&map, bucket_idx, sizeof(test_value));
+        uint_fast8_t bucket_count = cecs_flatbucket_get_count(bucket);
         
         // Create validity mask for contained elements
         uint8_t valid_mask = (1 << bucket_count) - 1;
