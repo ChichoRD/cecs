@@ -70,11 +70,11 @@ static inline cecs_flatbucket cecs_flatmap_get_bucket(const cecs_flatmap *set, c
         exit(EXIT_FAILURE);
     }
     return (cecs_flatbucket){
-        .hash_from_index8_u7 = (uint64_t *)(set->allocation
+        .hash_from_index8_u7 = (const uint64_t *)(set->allocation
             + value_size * set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
             + sizeof(cecs_flatmap_hash) * set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
             + sizeof(cecs_flatbucket) * bucket_index),
-        .hashes = (cecs_flatmap_hash *)(set->allocation
+        .hashes = (const cecs_flatmap_hash *)(set->allocation
             + value_size * set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
             + sizeof(cecs_flatmap_hash) * bucket_index * CECS_FLATBUCKET8_MAX_COUNT),
         .values = set->allocation

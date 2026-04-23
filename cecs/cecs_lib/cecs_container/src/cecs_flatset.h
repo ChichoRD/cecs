@@ -62,10 +62,10 @@ static inline cecs_flatbucket cecs_flatset_get_bucket(
     }
 
     return (cecs_flatbucket){
-        .hash_from_index8_u7 = (uint64_t *)(set->allocation
-            + value_size + set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
+        .hash_from_index8_u7 = (const uint64_t *)(set->allocation
+            + value_size * set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
             + sizeof(cecs_flatbucket) * bucket_index),
-        .hashes = (cecs_flatbucket_hash *)(set->allocation
+        .hashes = (const cecs_flatbucket_hash *)(set->allocation
             + value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT
             + hash_offset),
         .values = set->allocation
@@ -84,7 +84,7 @@ static inline cecs_flatbucket_mut cecs_flatset_get_bucket_mut(
     }
     return (cecs_flatbucket_mut) {
         .hash_from_index8_u7 = (uint64_t *)(set->allocation
-            + value_size + set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
+            + value_size * set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
             + sizeof(cecs_flatbucket) * bucket_index),
         .hashes = (cecs_flatbucket_hash *)(set->allocation
             + value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT
