@@ -114,6 +114,7 @@ void cecs_flatset_extend(
             void *const destination_value = cecs_flatset_find_or_insert(
                 destination,
                 allocator,
+                // TODO: use pre-computed field from bucket
                 *(const cecs_flatset_hash *)(source_value + hash_offset),
                 value_size,
                 hash_offset

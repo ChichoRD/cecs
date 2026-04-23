@@ -182,6 +182,7 @@ uint_fast8_t cecs_flatbucket_find_hash_index(
         } else {
             return CECS_FLATBUCKET8_MAX_COUNT;
         }
+        // TODO: establish policy of ONLY UNIQUE LOW HASH per bucket to prune this branch. cecs_is_pow2(index_mark) must return true, i.e. only one bit set
     } else {        
         for (uint_fast8_t i = first_index; i < bucket_value_count; i++) {
             const cecs_flatbucket_hash *stored_hash = cecs_flatbucket_get_hash(bucket, i, hash_stride);
