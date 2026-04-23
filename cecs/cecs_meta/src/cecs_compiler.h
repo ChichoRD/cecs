@@ -69,7 +69,30 @@
 #undef cecs_compiler_backend_msvc
 
 
-// TODO: add __STDC_VERSION__ constants for each C standard version, and use them to conditionally compile code that requires specific C standard versions. For example, if a feature requires C11, we can check if __STDC_VERSION__ >= 201112L before using that feature. This will help ensure that our code is portable and can be compiled with different C standard versions.
+#ifndef CECS_STDC89
+#define CECS_STDC89 198900L
+#endif
+#ifndef CECS_STDC99
+#define CECS_STDC99 199901L
+#endif
+#ifndef CECS_STDC11
+#define CECS_STDC11 201112L
+#endif
+#ifndef CECS_STDC17
+#define CECS_STDC17 201710L
+#endif
+#ifndef CECS_STDC23
+#define CECS_STDC23 202311L
+#endif
+
+#ifndef CECS_STDC_VERSION
+#ifndef __STDC_VERSION__
+#pragma message ( "[cecs_meta] warning: __STDC_VERSION__ is not defined, 'CECS_STDC_VERSION' will be defined as CECS_STDC89" )
+#define CECS_STDC_VERSION CECS_STDC89
+#else
+#define CECS_STDC_VERSION __STDC_VERSION__
+#endif
+#endif
 
 
 #endif

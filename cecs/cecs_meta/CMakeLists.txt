@@ -15,6 +15,10 @@ project(
     add_library(${PROJECT_NAME} INTERFACE)
     target_link_libraries(${PROJECT_NAME} INTERFACE cecs_compile_options)
 
+    if (MSVC)
+        enable_c_compiler_flag_if_supported(FLAG "/Zc:__STDC__" VISIBILITY INTERFACE REQUIRED)
+    endif()
+
     target_sources(
         ${PROJECT_NAME}
         INTERFACE
@@ -25,4 +29,5 @@ project(
                 src/cecs_compiler.h
                 src/cecs_attribute.h
                 src/cecs_console_colorcode.h
+                src/cecs_type_traits.h
     )

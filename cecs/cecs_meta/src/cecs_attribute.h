@@ -5,9 +5,9 @@
 
 
 #ifndef cecs_noreturn
-#if __STDC_VERSION__ >= 202311L
+#if CECS_STDC_VERSION >= CECS_STDC23
 #define cecs_noreturn [[noreturn]]
-#elif __STDC_VERSION__ >= 201112L
+#elif CECS_STDC_VERSION >= CECS_STDC11
 #define cecs_noreturn _Noreturn
 #else
 #define cecs_noreturn 

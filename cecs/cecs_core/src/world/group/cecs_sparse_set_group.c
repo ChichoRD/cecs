@@ -5,6 +5,7 @@
 
 // extern inline cecs_sparse_set_group cecs_sparse_set_group_create(void);
 
+extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
 static void cecs_sparse_set_group_insert_within(
     cecs_sparse_set_group *group,
     cecs_component_registry **const registries,
@@ -35,8 +36,14 @@ static void cecs_sparse_set_group_insert_within(
             // Swap the dense values
             if (insert_dense_index != insert_index->value) {
                 // Get the key of the value currently at the insert index
-                extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
-                size_t *const swapped_key_ptr = cecs_sparse_set_get_sparse_key_by_index_mut(set, cecs_dense_index_create_valid(insert_dense_index));
+                cecs_debugbreak_fail_unless(
+                    sizeof(insert_dense_index) <= sizeof(cecs_sparse_set_usize)
+                    || insert_dense_index <= (size_t)CECS_SPARSE_SET_USIZE_TYPE_MAX,
+                    "fatal error: insert_dense_index cannot be represented in the index type of the sparse set"
+                );
+                size_t *const swapped_key_ptr = cecs_sparse_set_get_sparse_key_by_index_mut(set, cecs_dense_index_create_valid(
+                    (cecs_sparse_set_usize)insert_dense_index
+                ));
                 const size_t swapped_key = *swapped_key_ptr;
 
                 // Update the index of the swapped key to point to the new dense index
@@ -100,8 +107,14 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
                 const size_t to_index = group->free_grouped_range.range.end + j;
 
                 // Get the key of the value at from_index
-                extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
-                size_t *const moved_key_ptr = cecs_sparse_set_get_sparse_key_by_index_mut(set, cecs_dense_index_create_valid(from_index));
+                cecs_debugbreak_fail_unless(
+                    sizeof(from_index) <= sizeof(cecs_sparse_set_usize)
+                    || from_index <= (size_t)CECS_SPARSE_SET_USIZE_TYPE_MAX,
+                    "fatal error: from_index cannot be represented in the index type of the sparse set"
+                );
+                size_t *const moved_key_ptr = cecs_sparse_set_get_sparse_key_by_index_mut(set, cecs_dense_index_create_valid(
+                    (cecs_sparse_set_usize)from_index
+                ));
                 const size_t moved_key = *moved_key_ptr;
 
                 // Update the index of the moved key to point to the new dense index
@@ -113,7 +126,9 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
 
                 // Swap the dense values
                 void *const from_value_ptr = cecs_sparse_set_get_value_mut(set, moved_key, component_size);
-                void *const to_value_ptr = cecs_sparse_set_get_value_by_index_mut(set, cecs_dense_index_create_valid(to_index), component_size);
+                void *const to_value_ptr = cecs_sparse_set_get_value_by_index_mut(set, cecs_dense_index_create_valid(
+                    (cecs_sparse_set_usize)to_index
+                ), component_size);
                 uint8_t *const temp_buffer =
                     (uint8_t *)cecs_sparse_set_get_value_by_index_mut(set, cecs_dense_index_create_valid(0), component_size)
                     + (component_size * set_count);

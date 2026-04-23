@@ -4,13 +4,14 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdatomic.h>
+#include <limits.h>
 
 
 #ifndef CECS_RWLOCK_VALUE_TYPE
-#define CECS_RWLOCK_VALUE_TYPE_DEFAULT uint32_t
+#define CECS_RWLOCK_VALUE_TYPE_DEFAULT size_t
 #define CECS_RWLOCK_VALUE_TYPE CECS_RWLOCK_VALUE_TYPE_DEFAULT
 
-#define CECS_RWLOCK_VALUE_TYPE_BITS_LOG2 5ull
+#define CECS_RWLOCK_VALUE_TYPE_BITS_LOG2 6ull
 #endif
 
 #ifndef CECS_RWLOCK_VALUE_TYPE_BITS_LOG2 
@@ -24,7 +25,7 @@ static_assert(
 
 typedef CECS_RWLOCK_VALUE_TYPE cecs_rwlock_value;
 static_assert(
-    sizeof(cecs_rwlock_value) * 8 == CECS_RWLOCK_VALUE_TYPE_BITS,
+    sizeof(cecs_rwlock_value) * CHAR_BIT == CECS_RWLOCK_VALUE_TYPE_BITS,
     "error: CECS_RWLOCK_VALUE_TYPE_BITS does not match the size of CECS_RWLOCK_VALUE_TYPE"
 );
 typedef struct cecs_rwlock_borrow {
@@ -45,7 +46,7 @@ void cecs_rwlock_borrow_mut_release(cecs_rwlock_borrow_mut *borrow);
 // TODO: maybe rename to atomic_cell since it is not a 'traditional' blocking rwlock
 // source: https://docs.rs/atomic_refcell/latest/atomic_refcell/
 typedef struct cecs_rwlock {
-    _Atomic cecs_rwlock_value state;
+    _Atomic(cecs_rwlock_value) state;
 } cecs_rwlock;
 inline void cecs_rwlock_reset(cecs_rwlock *const lock) {
     atomic_store(&lock->state, 0ull);

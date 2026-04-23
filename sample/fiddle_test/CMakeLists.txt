@@ -14,16 +14,12 @@ project(
         SOURCE_DIR ${CECS_SOURCE_DIR}/cecs/cecs_compile_options
     )
     FetchContent_Declare(
-        cecs_lib
-        SOURCE_DIR ${CECS_SOURCE_DIR}/cecs/cecs_lib
-    )
-    FetchContent_Declare(
         cecs_core
         SOURCE_DIR ${CECS_SOURCE_DIR}/cecs/cecs_core
     )
-    FetchContent_MakeAvailable(cecs_compile_options cecs_lib cecs_core)
+    FetchContent_MakeAvailable(cecs_compile_options cecs_core)
     add_executable(${PROJECT_NAME})
-    target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_lib cecs_core)
+    target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_core)
 
     if (NOT MSVC)
         enable_c_compiler_flag_if_supported(FLAG "-mlzcnt" TARGET ${PROJECT_NAME} REQUIRED)

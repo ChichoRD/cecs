@@ -1,8 +1,18 @@
 #include "cecs_rwlock.h"
+#include <assert.h>
+#include <limits.h>
 #include <cecs_error.h>
 #include <relations/cecs_ordering.h>
 
-#define CECS_RWLOCK_VALUE_MAX ((1ull << CECS_RWLOCK_VALUE_TYPE_BITS) - 1ull)
+static_assert(
+    sizeof(UINT64_MAX) * CHAR_BIT == 64u,
+    "error: expected UINT64_MAX to be 64 bits, but it is not, "
+    "which means the implementation of cecs_rwlock may not work correctly because it relies on the assumption "
+    "that a 64-bit unsigned integer can be used to represent the state of the lock "
+    "with a certain number of bits for the reader count and a bit for the mutable lock"
+);
+// #define CECS_RWLOCK_VALUE_MAX ((1ull << CECS_RWLOCK_VALUE_TYPE_BITS) - 1ull)
+#define CECS_RWLOCK_VALUE_MAX (UINT64_MAX >> (64ull - CECS_RWLOCK_VALUE_TYPE_BITS))
 #define CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK (~((cecs_rwlock_value)(CECS_RWLOCK_VALUE_MAX >> 1ull)))
 #define CECS_RWLOCK_VALUE_IMMUTABLE_ACQUIRE_FATAL_MAX (CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK | (CECS_RWLOCK_VALUE_MUTABLE_LOCK_MASK >> 1ull))
 

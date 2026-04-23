@@ -12,21 +12,24 @@ typedef cecs_flatbucket_hash_low cecs_flatset_hash_low;
 typedef cecs_flatbucket_hash_low_fast cecs_flatset_hash_low_fast;
 
 // Bucket value access functions
-inline const void *cecs_flatset_bucket_get_value_unchecked(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    return cecs_flatbucket_get_value_unchecked(bucket, index, value_size, 0);
+inline const void *cecs_flatset_bucket_get_value_unchecked(const cecs_flatbucket bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_unchecked(bucket, index, value_size);
 }
-inline void *cecs_flatset_bucket_get_value_mut_unchecked(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    return cecs_flatbucket_get_value_mut_unchecked(bucket, index, value_size, 0);
+inline void *cecs_flatset_bucket_get_value_mut_unchecked(const cecs_flatbucket_mut bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_mut_unchecked(bucket, index, value_size);
 }
-inline const void *cecs_flatset_bucket_get_value(const cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    return cecs_flatbucket_get_value(bucket, index, value_size, 0);
+inline const void *cecs_flatset_bucket_get_value(const cecs_flatbucket bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value(bucket, index, value_size);
 }
-inline void *cecs_flatset_bucket_get_value_mut(cecs_flatbucket *bucket, const uint_fast8_t index, const size_t value_size) {
-    return cecs_flatbucket_get_value_mut(bucket, index, value_size, 0);
+inline void *cecs_flatset_bucket_get_value_mut(const cecs_flatbucket_mut bucket, const uint_fast8_t index, const size_t value_size) {
+    return cecs_flatbucket_get_value_mut(bucket, index, value_size);
 }
 
 typedef struct cecs_flatset {
-    cecs_flatbucket *buckets;
+    // cecs_flatbucket *buckets;
+    // {{([hash], value), ([hash],    value), ...}, [hash,    hash,   ...], {ctl,   ctl,    ...}}
+    // {{([u64],  size),  ([u64],     size),  ...}, [u64,     u64,    ...], {u7u1,  u7u1,   ...}}
+    unsigned char *allocation;
     size_t bucket_count;
     size_t values_count;
 } cecs_flatset;
@@ -41,26 +44,54 @@ static inline size_t cecs_flatset_count(const cecs_flatset *set) {
 static inline size_t cecs_flatset_bucket_count(const cecs_flatset *set) {
     return set->bucket_count;
 }
-
-static inline size_t cecs_flatset_bucket_size(const size_t value_size) {
-    return sizeof(cecs_flatbucket) + (value_size << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+static inline size_t cecs_flatset_allocation_size(const size_t value_size, const size_t bucket_count) {
+    return value_size * bucket_count * CECS_FLATBUCKET8_MAX_COUNT
+        + sizeof(cecs_flatbucket) * bucket_count;
 }
 
 // Set bucket access functions
-static inline const cecs_flatbucket *cecs_flatset_get_bucket(const cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
+static inline cecs_flatbucket cecs_flatset_get_bucket(
+    const cecs_flatset *set,
+    const size_t bucket_index,
+    const size_t value_size,
+    const size_t hash_offset
+) {
     if (bucket_index >= set->bucket_count) {
         assert(false && "error: cecs_flatset_get_bucket called with out of bounds bucket index");
         exit(EXIT_FAILURE);
     }
-    return (const cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index);
-    // static_assert(false, "FIXME: alignment");
+
+    return (cecs_flatbucket){
+        .hash_from_index8_u7 = (uint64_t *)(set->allocation
+            + value_size + set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
+            + sizeof(cecs_flatbucket) * bucket_index),
+        .hashes = (cecs_flatbucket_hash *)(set->allocation
+            + value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT
+            + hash_offset),
+        .values = set->allocation
+            + value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT
+    };
 }
-static inline cecs_flatbucket *cecs_flatset_get_bucket_mut(cecs_flatset *set, const size_t bucket_index, const size_t value_size) {
+static inline cecs_flatbucket_mut cecs_flatset_get_bucket_mut(
+    cecs_flatset *set,
+    const size_t bucket_index,
+    const size_t value_size,
+    const size_t hash_offset
+) {
     if (bucket_index >= set->bucket_count) {
         assert(false && "error: cecs_flatset_get_bucket_mut called with out of bounds bucket index");
         exit(EXIT_FAILURE);
     }
-    return (cecs_flatbucket *)(((uint8_t *)set->buckets) + cecs_flatset_bucket_size(value_size) * bucket_index);
+    return (cecs_flatbucket_mut) {
+        .hash_from_index8_u7 = (uint64_t *)(set->allocation
+            + value_size + set->bucket_count * CECS_FLATBUCKET8_MAX_COUNT
+            + sizeof(cecs_flatbucket) * bucket_index),
+        .hashes = (cecs_flatbucket_hash *)(set->allocation
+            + value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT
+            + hash_offset),
+        .values = set->allocation
+            + value_size * bucket_index * CECS_FLATBUCKET8_MAX_COUNT
+    };
 }
 
 // Set creation and destruction functions
@@ -132,7 +163,7 @@ bool cecs_flatset_find_bucket(
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    const cecs_flatbucket **out_bucket,
+    cecs_flatbucket *out_bucket,
     uint_fast8_t *out_index
 );
 bool cecs_flatset_find_bucket_mut(
@@ -140,16 +171,16 @@ bool cecs_flatset_find_bucket_mut(
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset,
-    cecs_flatbucket **out_bucket,
+    cecs_flatbucket_mut *out_bucket,
     uint_fast8_t *out_index
 );
-cecs_flatbucket *cecs_flatset_find_insert_bucket_expect(
+cecs_flatbucket_mut cecs_flatset_find_insert_bucket_expect(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
     const size_t hash_offset
 );
-cecs_flatbucket *cecs_flatset_find_insert_bucket(
+cecs_flatbucket_mut cecs_flatset_find_insert_bucket(
     cecs_flatset *set,
     const cecs_flatset_hash hash,
     const size_t value_size,
@@ -160,7 +191,7 @@ cecs_flatbucket *cecs_flatset_find_insert_bucket(
 // Set insertion functions
 void *cecs_flatset_insert_into_bucket_expect(
     cecs_flatset *set,
-    cecs_flatbucket *bucket,
+    const cecs_flatbucket_mut bucket,
     const cecs_flatset_hash hash,
     const size_t value_size
 );
@@ -188,14 +219,14 @@ void *cecs_flatset_find_or_insert(
 // Set removal functions
 void cecs_flatset_remove_from_bucket_stable_expect(
     cecs_flatset *set,
-    cecs_flatbucket *bucket,
+    const cecs_flatbucket_mut bucket,
     const uint_fast8_t index,
     const size_t value_size
 );
 void cecs_flatset_remove_from_bucket_expect(
     cecs_flatset *set,
     cecs_allocator *allocator,
-    cecs_flatbucket *bucket,
+    const cecs_flatbucket_mut bucket,
     const uint_fast8_t index,
     const size_t value_size,
     const size_t hash_offset

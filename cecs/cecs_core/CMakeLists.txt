@@ -32,7 +32,14 @@ project(
 
     add_library(${PROJECT_NAME})
     add_library(cecs ALIAS ${PROJECT_NAME})
-    target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_meta cecs_error cecs_lib PUBLIC cecs_sync)
+    target_link_libraries(
+        ${PROJECT_NAME}
+        PRIVATE
+            cecs_compile_options cecs_meta cecs_error
+        PUBLIC
+            cecs_lib # XXX: linking targets link automatically to cecs_libs too
+            cecs_sync
+    )
 
     target_sources(
         ${PROJECT_NAME}
