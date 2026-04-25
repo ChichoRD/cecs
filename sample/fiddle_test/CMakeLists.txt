@@ -22,9 +22,9 @@ project(
     target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_core)
 
     if (NOT MSVC)
-        enable_c_compiler_flag_if_supported(FLAG "-mlzcnt" TARGET ${PROJECT_NAME} REQUIRED)
-        enable_c_compiler_flag_if_supported(FLAG "-mavx" TARGET ${PROJECT_NAME} REQUIRED)
-        enable_c_compiler_flag_if_supported(FLAG "-mavx2" TARGET ${PROJECT_NAME} REQUIRED)
+        cecs_add_c_compiler_option(OPTION "-mlzcnt" TARGET ${PROJECT_NAME} REQUIRED)
+        cecs_add_c_compiler_option(OPTION "-mavx" TARGET ${PROJECT_NAME} REQUIRED)
+        cecs_add_c_compiler_option(OPTION "-mavx2" TARGET ${PROJECT_NAME} REQUIRED)
     endif()
 
     target_sources(

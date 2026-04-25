@@ -21,7 +21,7 @@ project(
     target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_meta)
 
     if (NOT MSVC)
-        enable_c_compiler_flag_if_supported(FLAG "-mlzcnt" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
+        cecs_add_c_compiler_option(OPTION "-mlzcnt" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
     endif()
     
     target_sources(

@@ -28,7 +28,7 @@ project(
     add_library(${PROJECT_NAME})
     target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_meta cecs_error cecs_math)
     if (MSVC)
-        enable_c_compiler_flag_if_supported(FLAG "/experimental:c11atomics" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
+        cecs_add_c_compiler_option(OPTION "/experimental:c11atomics" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
     endif()
 
     target_sources(

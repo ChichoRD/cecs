@@ -16,7 +16,7 @@ project(
     target_link_libraries(${PROJECT_NAME} INTERFACE cecs_compile_options)
 
     if (MSVC)
-        enable_c_compiler_flag_if_supported(FLAG "/Zc:__STDC__" VISIBILITY INTERFACE REQUIRED)
+        cecs_add_c_compiler_option(OPTION "/Zc:__STDC__" VISIBILITY INTERFACE REQUIRED)
     endif()
 
     target_sources(
