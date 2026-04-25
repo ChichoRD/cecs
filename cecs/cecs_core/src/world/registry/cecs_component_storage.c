@@ -7,6 +7,9 @@ extern inline cecs_component_storage cecs_component_storage_create_from(const ce
     };
 }
 
+extern inline const cecs_sparse_set_storage *cecs_component_storage_sparse_set(const cecs_component_storage *const storage);
+extern inline cecs_sparse_set_storage *cecs_component_storage_sparse_set_mut(cecs_component_storage *const storage);
+
 cecs_component_storage cecs_component_storage_create_sparse_set(cecs_allocator *const allocator, const size_t component_capacity, const size_t component_size) {
     return cecs_component_storage_create_from(
         (cecs_internal_component_storage){

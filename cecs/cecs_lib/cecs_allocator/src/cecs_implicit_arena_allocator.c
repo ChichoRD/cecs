@@ -1,6 +1,8 @@
 #include "cecs_implicit_arena_allocator.h"
 #include <memory.h>
 
+extern inline cecs_implicit_arena_allocator cecs_implicit_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity);
+
 static inline void cecs_implicit_arena_allocator_node_swap_lt(
     cecs_implicit_arena_allocator_node *a,
     cecs_implicit_arena_allocator_node *b

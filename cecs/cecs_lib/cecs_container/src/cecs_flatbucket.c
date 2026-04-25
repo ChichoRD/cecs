@@ -24,7 +24,7 @@ extern inline const cecs_flatbucket_hash *cecs_flatbucket_get_hash(const cecs_fl
 extern inline cecs_flatbucket_hash *cecs_flatbucket_get_hash_mut(const cecs_flatbucket_mut bucket, const uint_fast8_t index, const size_t stride);
 
 
-inline cecs_flatbucket cecs_flatbucket_from(const cecs_flatbucket_mut bucket);
+extern inline cecs_flatbucket cecs_flatbucket_from(const cecs_flatbucket_mut bucket);
 extern inline uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket);
 extern inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket);
 

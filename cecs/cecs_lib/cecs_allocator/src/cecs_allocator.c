@@ -1,6 +1,6 @@
 #include "cecs_allocator.h"
 
-inline cecs_allocator cecs_allocator_create_from(
+static inline cecs_allocator cecs_allocator_create_from(
     const cecs_internal_allocator allocator,
     const cecs_internal_allocator_type type
 ) {

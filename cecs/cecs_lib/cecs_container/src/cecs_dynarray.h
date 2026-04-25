@@ -18,11 +18,11 @@ inline size_t cecs_array_capacity(const cecs_array *arr) {
     return arr->values_capacity;
 }
 
-inline cecs_array cecs_array_create(void *const values, const size_t count) {
+inline cecs_array cecs_array_create(void *const values, const size_t capacity) {
     return (cecs_array) {
         .values = (uint8_t *)values,
         .values_used = 0,
-        .values_capacity = count
+        .values_capacity = capacity
     };
 }
 

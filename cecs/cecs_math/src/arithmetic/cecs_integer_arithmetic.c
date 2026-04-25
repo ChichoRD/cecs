@@ -77,6 +77,14 @@ uint32_t cecs_mark_dynamic_bit_runs_u32(uint32_t n, uint_fast8_t run_length) {
     return n;
 }
 
+extern inline uint64_t cecs_mark_2bit_runs_u64(uint64_t n);
+extern inline uint32_t cecs_mark_2bit_runs_u32(uint32_t n);
+extern inline uint64_t cecs_mark_4bit_runs_u64(uint64_t n);
+extern inline uint32_t cecs_mark_4bit_runs_u32(uint32_t n);
+
+extern inline uint64_t cecs_mark_8bit_runs_u64(uint64_t n);
+extern inline uint32_t cecs_mark_8bit_runs_u32(uint32_t n);
+
 extern inline uint64_t cecs_mark_bit_runs_u64(const uint64_t n, const uint_fast8_t run_length);
 extern inline uint32_t cecs_mark_bit_runs_u32(const uint32_t n, const uint_fast8_t run_length);
 
@@ -103,6 +111,8 @@ extern inline uint8_t cecs_gather_lsn8_u4(const uint32_t vec);
 extern inline uint16_t cecs_gather_msnh15_u4(const uint64_t vec);
 extern inline uint16_t cecs_gather_lsnh15_u4(const uint64_t vec);
 
+extern inline uint8_t cecs_gather_msbhp8_u7(const uint64_t vec);
+
 extern inline uint64_t cecs_scatter_msb8_u1(const uint8_t vec);
 extern inline uint64_t cecs_scatter_lsb8_u1(const uint8_t vec);
 
@@ -121,3 +131,6 @@ extern inline uint_fast8_t cecs_mark_pattern_nibbles8_u4(const uint32_t vec, con
 
 extern inline uint16_t cecs_mark_zero_nibblesh15_u4(const uint64_t vec);
 extern inline uint_fast8_t cecs_first_zero_nibblesh15_u4(const uint64_t vec);
+
+extern inline uint8_t cecs_mark_zero_byteshp8_u7(const uint64_t vec);
+extern inline uint8_t cecs_mark_pattern_byteshp8_u7(const uint64_t vec, const uint8_t pattern);

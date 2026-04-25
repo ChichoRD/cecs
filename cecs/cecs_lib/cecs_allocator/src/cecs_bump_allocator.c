@@ -4,6 +4,23 @@
 #include <arithmetic/cecs_integer_arithmetic.h>
 #include <relations/cecs_ordering.h>
 
+extern inline cecs_bump_allocator cecs_bump_allocator_from_view(cecs_bump_view_allocator view);
+extern inline void *cecs_bump_allocator_alloc_aligned_expect(cecs_bump_allocator *allocator, const size_t size, const size_t alignment);
+extern inline void *cecs_bump_allocator_alloc_expect(cecs_bump_allocator *allocator, const size_t size);
+
+extern inline void *cecs_bump_allocator_realloc_aligned_expect(
+    cecs_bump_allocator *allocator, void *const block, const size_t block_size, const size_t new_size, const size_t alignment
+);
+extern inline void *cecs_bump_allocator_realloc_expect(
+    cecs_bump_allocator *allocator, void *const block, const size_t block_size, const size_t new_size
+);
+
+extern void cecs_bump_allocator_free(cecs_bump_allocator *allocator, void *const block, const size_t block_size);
+extern inline uint8_t *cecs_bump_allocator_snapshot(cecs_bump_allocator *allocator);
+extern inline void cecs_bump_allocator_reset_to(cecs_bump_allocator *allocator, uint8_t *const snapshot, uint8_t *const end_snapshot);
+extern inline void cecs_bump_allocator_reset(cecs_bump_allocator *allocator);
+extern inline void cecs_bump_allocator_destroy(cecs_bump_allocator *allocator);
+
 extern inline cecs_bump_view_allocator cecs_bump_view_allocator_create(const cecs_memory_block block);
 void *cecs_bump_view_allocator_alloc_aligned_expect(cecs_bump_view_allocator *allocator, const size_t size, const size_t alignment) {
     cecs_debugbreak_fail_unless(allocator->next != NULL, "fatal error: allocator is empty");

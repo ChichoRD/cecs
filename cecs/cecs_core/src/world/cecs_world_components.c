@@ -12,7 +12,7 @@ void cecs_world_components_destroy(cecs_world_components *const components, cecs
     cecs_dynarray_destroy(&components->registries, allocator, sizeof(cecs_registry));
 }
 
-inline size_t cecs_world_components_count(const cecs_world_components *const components);
+extern inline size_t cecs_world_components_count(const cecs_world_components *const components);
 extern inline cecs_registry *cecs_world_components_push_registry(cecs_world_components *const components, cecs_allocator *const allocator);
 
 extern void *cecs_dynarray_get_ptr(const cecs_dynarray *arr, const size_t index, const size_t size);

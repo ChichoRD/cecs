@@ -6,6 +6,10 @@
 #include <relations/cecs_ordering.h>
 #include <string.h>
 
+extern inline size_t cecs_array_count(const cecs_array *arr);
+extern inline size_t cecs_array_capacity(const cecs_array *arr);
+extern inline cecs_array cecs_array_create(void *const values, const size_t capacity);
+
 extern inline size_t cecs_dynarray_count(const cecs_dynarray *arr);
 extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);
 extern inline cecs_dynarray cecs_dynarray_create(void);

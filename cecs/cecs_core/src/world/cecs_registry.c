@@ -2,6 +2,7 @@
 
 extern inline cecs_registry cecs_registry_create(const cecs_component_registry registry);
 
+extern inline void cecs_registry_destroy(cecs_registry *const registry, cecs_allocator *const allocator, const size_t component_size);
 extern inline const cecs_component_registry *cecs_registry_get_unchecked(const cecs_registry *const registry);
 extern inline cecs_component_registry *cecs_registry_get_mut_unchecked(cecs_registry *const registry);
 
