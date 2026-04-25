@@ -5,20 +5,20 @@
 # cmake
 **/build/*
 **/out/*
-**/CMakeUserPresets.json
+**CMakeUserPresets.json
 
 **/lib/*
 **/bin/*
 
-**/*.lib
-**/*.dll
-**/*.exe
-**/*.obj
-**/*.a
-**/*.so
-**/*.o
+**.lib
+**.dll
+**.exe
+**.obj
+**.a
+**.so
+**.o
 
 
 # visual studio
-**/*.vcxproj*
-**/*.sln
+**.vcxproj*
+**.sln

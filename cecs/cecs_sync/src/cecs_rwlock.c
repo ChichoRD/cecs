@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <cecs_error.h>
+#include <cecs_type_traits.h>
 #include <relations/cecs_ordering.h>
 
 static_assert(
@@ -127,7 +128,10 @@ void cecs_rwlock_release(cecs_rwlock *const lock, cecs_rwlock_borrow *const borr
         cecs_rwlock_borrow_acquired(*borrow),
         "error: attempted to release a cecs_rwlock read lock that was not successfully acquired"
     );
-    // BUG: msvc, atomic_fetch_sub_explicit(size_t *, size_t, memory_order) expects size_t *, not cecs_rwlock_value *, and cecs_rwlock_value may not be the same type as size_t (it is uint32_t by default)
+    static_assert(
+        CECS_IS_SAME_TYPE(cecs_rwlock_value, size_t),
+        "static error: CECS_RWLOCK_VALUE_TYPE must be the same type as size_t for the atomic_fetch_sub_explicit call in cecs_rwlock_release to work correctly on MSVC"
+    );
     const size_t sub = cecs_min(borrow->new_shared_ref_count, 1ull);
     const size_t previous_count = atomic_fetch_sub_explicit(&lock->state, sub, memory_order_release);
     cecs_rwlock_borrow_release(borrow);
@@ -138,7 +142,10 @@ void cecs_rwlock_release_mut(cecs_rwlock *const lock, cecs_rwlock_borrow_mut *co
         cecs_rwlock_borrow_mut_acquired(*borrow),
         "error: attempted to release a cecs_rwlock write lock that was not successfully acquired"
     );
-    // BUG: msvc, atomic_store_explicit(size_t *, size_t, memory_order) expects size_t *, not cecs_rwlock_value *, and cecs_rwlock_value may not be the same type as size_t (it is uint32_t by default)
+    static_assert(
+        CECS_IS_SAME_TYPE(cecs_rwlock_value, size_t),
+        "static error: CECS_RWLOCK_VALUE_TYPE must be the same type as size_t for the atomic_store_explicit call in cecs_rwlock_release_mut to work correctly on MSVC"
+    );
     atomic_store_explicit(&lock->state, borrow->previous_ref_count, memory_order_release);
     cecs_rwlock_borrow_mut_release(borrow);
 }

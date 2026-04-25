@@ -11,7 +11,7 @@
 #endif
 
 #if CECS_STDC_VERSION >= CECS_STDC11
-#define CECS_IS_SAME_TYPE_LR(type1, type2) _Generic(( (type1){0} ), \
+#define CECS_IS_SAME_TYPE_LR(type1, type2) _Generic(( *((type1*)0) ), \
     type2: 1, \
     default: 0 \
 ) 
