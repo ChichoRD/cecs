@@ -20,7 +20,7 @@ typedef struct cecs_implicit_arena_allocator {
 inline cecs_implicit_arena_allocator cecs_implicit_arena_allocator_create(const size_t block_size, const cecs_arena_allocator_bump_usize blocks_capacity) {
     return (cecs_implicit_arena_allocator){
         .arena = cecs_arena_allocator_create(block_size, blocks_capacity),
-        .largest_free_blocks = {0},
+        .largest_free_blocks = {{0}},
         .generic_free_block = {
             .next = NULL,
             .next_size = 0

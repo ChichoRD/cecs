@@ -4,6 +4,7 @@
 #include "cecs_dynarray.h"
 #include <cecs_error.h>
 #include <relations/cecs_ordering.h>
+#include <string.h>
 
 extern inline size_t cecs_dynarray_count(const cecs_dynarray *arr);
 extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);

@@ -1,5 +1,6 @@
 #include "cecs_entity.h"
 #include <cecs_error.h>
+#include <stdint.h>
 
 extern inline cecs_entity cecs_entity_from_value_unchecked(const cecs_entity_value value);
 
@@ -46,9 +47,16 @@ cecs_entity cecs_entity_create(const size_t index, const cecs_entity_meta_flag f
         index <= (size_t)CECS_ENTITY_INDEX_BITS_MASK,
         "error: cecs_entity_create called with out of bounds index"
     );
+
+#ifndef CECS_ENTITY_GENERATION_MAX
+#define CECS_ENTITY_GENERATION_MAX (CECS_ENTITY_GENERATION_BITS_MASK >> CECS_ENTITY_GENERATION_BITS_OFFSET)
+#endif
+#if (CECS_ENTITY_GENERATION_MAX) < UINT_FAST8_MAX
     cecs_debugbreak_fail_unless(
-        generation <= (uint_fast8_t)(CECS_ENTITY_GENERATION_BITS_MASK >> CECS_ENTITY_GENERATION_BITS_OFFSET),
+        generation <= (uint_fast8_t)(CECS_ENTITY_GENERATION_MAX),
         "error: cecs_entity_create called with out of bounds generation"
     );
+#endif
+#undef CECS_ENTITY_GENERATION_MAX
     return cecs_entity_create_unchecked(index, flags, generation);
 }

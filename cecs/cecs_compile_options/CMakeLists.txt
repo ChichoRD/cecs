@@ -71,16 +71,20 @@ endfunction(cecs_add_sanitizer_compile_options)
 function(cecs_add_default_compile_options)
     include(CMakeParseArguments)
     set(options SANITIZE)
-    set(oneValueArgs)
+    set(oneValueArgs STDC)
     set(multiValueArgs)
     cmake_parse_arguments(
         ARG_ADD_DEFAULT_OPTIONS
         "${options}" "${oneValueArgs}" "${multiValueArgs}"
         ${ARGN}
     )
+    if (NOT ARG_ADD_DEFAULT_OPTIONS_STDC)
+        message(FATAL_ERROR "STDC argument is required for cecs_add_default_compile_options. e.g. `cecs_add_default_compile_options(STDC c_std_11)`")
+    endif()
+    set(stdc "${ARG_ADD_DEFAULT_OPTIONS_STDC}")
     set(sanitize "${ARG_ADD_DEFAULT_OPTIONS_SANITIZE}")
 
-
+    target_compile_features(${PROJECT_NAME} INTERFACE ${stdc})
     if (MSVC)
         cecs_add_c_compiler_option(OPTION "/W4" VISIBILITY INTERFACE)
         cecs_add_c_compiler_option(OPTION "/WX" VISIBILITY INTERFACE)
@@ -102,7 +106,10 @@ project(cecs_compile_options)
     # TODO: lto in release
     # target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
     
-    cecs_add_default_compile_options(SANITIZE)
+    cecs_add_default_compile_options(
+        STDC c_std_11
+        SANITIZE
+    )
 
     
 

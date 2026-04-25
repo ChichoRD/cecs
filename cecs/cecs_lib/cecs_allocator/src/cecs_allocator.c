@@ -179,6 +179,7 @@ void cecs_allocator_destroy(cecs_allocator *allocator) {
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
         cecs_unreachable();
+        break;
     case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_destroy(&allocator->allocator.bump);
         break;

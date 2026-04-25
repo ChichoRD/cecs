@@ -21,7 +21,10 @@ project(
     target_link_libraries(${PROJECT_NAME} PRIVATE cecs_compile_options cecs_meta)
 
     if (NOT MSVC)
+        # required for: lzcnt
         cecs_add_c_compiler_option(OPTION "-mlzcnt" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
+        # required for: tzcnt
+        cecs_add_c_compiler_option(OPTION "-mbmi" TARGET ${PROJECT_NAME} VISIBILITY PUBLIC REQUIRED)
     endif()
     
     target_sources(
