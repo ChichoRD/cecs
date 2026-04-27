@@ -33,16 +33,14 @@ cecs_component_type cecs_world_register_component(
         );
     }
     cecs_registry *const registry = cecs_world_components_push_registry(&world->components, allocator);
-    cecs_unimplemented_fail(
-        "unimplemented error: signature of 'cecs_component_registry_create' changed to support groups but we still cannot provide groups at the time of registry creation, cecs_world_register_component needs to be updated to handle this change"
+    *registry = cecs_registry_create(
+        cecs_component_registry_create(storage, /* FIXME: decide default group creation */ cecs_component_registry_groups_create(), component_size, NULL)
     );
-    (void)storage;
-    (void)registry;
-    // *registry = cecs_registry_create(cecs_component_registry_create(storage, component_size, NULL));
-    // return (cecs_component_type){
-    //     .id = (uint32_t)registry_index,
-    //     .storage_type = storage_type,
-    // };
+    // TODO: standardize identifiers
+    return (cecs_component_type){
+        .id = (uint32_t)registry_index,
+        .storage_type = storage_type,
+    };
 }
 
 extern cecs_registry *cecs_world_components_get_registry_ptr(const cecs_world_components *const components, const size_t index);

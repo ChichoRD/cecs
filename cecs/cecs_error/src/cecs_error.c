@@ -1,7 +1,7 @@
 #include "cecs_error.h"
 
-extern inline void cecs_unreachable(void);
-extern inline void cecs_debugbreak_unreachable(const char *const message);
+cecs_noreturn extern inline void cecs_unreachable(void);
+cecs_noreturn extern inline void cecs_debugbreak_unreachable(const char *const message);
 
 extern inline bool cecs_expect(const bool condition);
 extern inline bool cecs_expect_not(const bool condition);
