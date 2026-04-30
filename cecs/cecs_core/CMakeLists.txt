@@ -48,6 +48,7 @@ project(
 
             src/world/registry/component_storage/cecs_sparse_set_storage.c
             src/world/registry/cecs_component_storage.c
+            src/world/registry/cecs_identifier_allocator.c
 
             src/world/cecs_component_registry.c
             src/world/cecs_entity_storage.c
@@ -67,6 +68,7 @@ project(
 
                 src/world/registry/component_storage/cecs_sparse_set_storage.h
                 src/world/registry/cecs_component_storage.h
+                src/world/registry/cecs_identifier_allocator.h
 
                 src/world/cecs_component_registry.h
                 src/world/cecs_entity_storage.h
