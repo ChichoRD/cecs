@@ -14,20 +14,23 @@ extern inline size_t cecs_dynarray_count(const cecs_dynarray *arr);
 extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);
 extern inline cecs_dynarray cecs_dynarray_create(void);
 
-void *cecs_array_push(cecs_array *arr, const size_t value_size) {
-    cecs_debugbreak_fail_unless(
-        arr->values_used < arr->values_capacity,
-        "error: attempted to push to full cecs_array"
+void cecs_array_reserve_exact(cecs_array *arr, const size_t additional_capacity) {
+    const size_t current_capacity = cecs_array_capacity(arr);
+    const size_t requested_capacity = cecs_array_count(arr) + additional_capacity;
+    cecs_debugbreak_fail_if(
+        current_capacity < requested_capacity,
+        "error: array could not reserve enough capacity for requested additional capacity"
     );
+}
+
+void *cecs_array_push(cecs_array *arr, const size_t value_size) {
+    cecs_array_reserve_exact(arr, 1ull);
     void *const element = arr->values + arr->values_used * value_size;
     ++arr->values_used;
     return element;
 }
 void *cecs_array_push_many(cecs_array *arr, const size_t count, const size_t value_size) {
-    cecs_debugbreak_fail_unless(
-        arr->values_used + count <= arr->values_capacity,
-        "error: attempted to push many to cecs_array exceeding its capacity"
-    );
+    cecs_array_reserve_exact(arr, count);
     void *const elements = arr->values + arr->values_used * value_size;
     arr->values_used += count;
     return elements;
@@ -222,22 +225,22 @@ void cecs_dynarray_destroy(cecs_dynarray *arr, cecs_allocator *a, const size_t v
     arr->array.values_capacity = 0;
 }
 
-void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
-    if (values_new_capacity > arr->array.values_capacity) {
+void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const size_t additional_capacity, const size_t value_size) {
+    const size_t current_capacity = cecs_dynarray_capacity(arr);
+    const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
+    if (current_capacity < requested_capacity) {
         arr->array.values = cecs_allocator_realloc_aligned(
             a,
             arr->array.values,
-            value_size * arr->array.values_capacity,
-            value_size * values_new_capacity,
-            cecs_max_alignment_from_size(value_size)
+            value_size * current_capacity,
+            value_size * requested_capacity,
+            cecs_max_alignment_from_size(value_size) // TODO: ask for aignment
         );
-        arr->array.values_capacity = values_new_capacity;
-    } else if (cecs_expect_not(values_new_capacity < arr->array.values_capacity)) {
-        cecs_debugbreak_fail_message("fatal error: attempted to grow dynamic array to smaller capacity");
+        arr->array.values_capacity = requested_capacity;
     }
 }
-void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t values_new_capacity, const size_t value_size) {
-    cecs_dynarray_reserve_exact(arr, a, cecs_max(values_new_capacity, arr->array.values_capacity << 1), value_size);
+void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t additional_capacity, const size_t value_size) {
+    cecs_dynarray_reserve_exact(arr, a, cecs_max(additional_capacity, cecs_dynarray_count(arr) << 1ull), value_size);
 }
 
 void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
@@ -262,22 +265,16 @@ void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const siz
 void cecs_dynarray_shrink(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
     cecs_dynarray_shrink_exact(arr, a, cecs_max(values_new_capacity, arr->array.values_used), value_size);
 }
+void cecs_dynarray_shrink_to_fit(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
+    cecs_dynarray_shrink_exact(arr, a, arr->array.values_used, value_size);
+}
 
 void *cecs_dynarray_push(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
-    const size_t capacity = cecs_dynarray_capacity(arr);
-    const size_t new_count = cecs_dynarray_count(arr) + 1;
-    if (new_count > capacity) {
-        cecs_dynarray_reserve(arr, a, new_count, value_size);
-    }
+    cecs_dynarray_reserve(arr, a, 1ull, value_size);
     return cecs_array_push(&arr->array, value_size);
 }
 void *cecs_dynarray_push_many(cecs_dynarray *arr, cecs_allocator *a, const size_t count, const size_t value_size) {
-    const size_t current_count = cecs_dynarray_count(arr);
-    const size_t capacity = cecs_dynarray_capacity(arr);
-    const size_t new_count = current_count + count;
-    if (new_count > capacity) {
-        cecs_dynarray_reserve(arr, a, new_count, value_size);
-    }
+    cecs_dynarray_reserve(arr, a, count, value_size);
     return cecs_array_push_many(&arr->array, count, value_size);
 }
 void *cecs_dynarray_push_many_copy(cecs_dynarray *arr, cecs_allocator *a, const void *values, const size_t count, const size_t value_size) {
@@ -286,71 +283,41 @@ void *cecs_dynarray_push_many_copy(cecs_dynarray *arr, cecs_allocator *a, const 
 }
 
 void *cecs_dynarray_extend(cecs_dynarray *arr, cecs_allocator *a, const size_t start_index_inclusive, const size_t end_index_exclusive, const size_t value_size) {
-    const size_t capacity = cecs_dynarray_capacity(arr);
-    const size_t extend_count = end_index_exclusive - start_index_inclusive;
-    const size_t new_count = cecs_dynarray_count(arr) + extend_count;
-    if (new_count > capacity) {
-        cecs_dynarray_reserve(arr, a, new_count, value_size);
-    }
+    cecs_debugbreak_fail_unless(
+        start_index_inclusive <= end_index_exclusive,
+        "error: attempted to extend cecs_dynarray with start index greater than end index"
+    );
+    cecs_dynarray_reserve(arr, a, end_index_exclusive - start_index_inclusive, value_size);
     return cecs_array_extend(&arr->array, start_index_inclusive, end_index_exclusive, value_size);
 }
 void *cecs_dynarray_insert(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t value_size) {
-    const size_t capacity = cecs_dynarray_capacity(arr);
-    const size_t new_count = cecs_dynarray_count(arr) + 1;
-    if (new_count > capacity) {
-        cecs_dynarray_reserve(arr, a, new_count, value_size);
-    }
+    cecs_dynarray_reserve(arr, a, 1ull, value_size);
     return cecs_array_insert(&arr->array, index, value_size);
 }
 void *cecs_dynarray_insert_many(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t count, const size_t value_size) {
-    const size_t capacity = cecs_dynarray_capacity(arr);
-    const size_t new_count = cecs_dynarray_count(arr) + count;
-    if (new_count > capacity) {
-        cecs_dynarray_reserve(arr, a, new_count, value_size);
-    }
+    cecs_dynarray_reserve(arr, a, count, value_size);
     return cecs_array_insert_many(&arr->array, index, count, value_size);
 }
-void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size)
-{
+void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size) {
     void *const elements = cecs_dynarray_insert_many(arr, a, index, count, value_size);
     return memcpy(elements, values, count * value_size);
 }
 
-void cecs_dynarray_pop(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size) {
+void cecs_dynarray_pop(cecs_dynarray *arr, const size_t value_size) {
     cecs_array_pop(&arr->array);
-    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
-    if (cecs_dynarray_count(arr) < half_capacity) {
-        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
-    }
 }
-void cecs_dynarray_truncate(cecs_dynarray *arr, cecs_allocator *a, const size_t new_count, const size_t value_size) {
+void cecs_dynarray_truncate(cecs_dynarray *arr, const size_t new_count, const size_t value_size) {
     cecs_array_truncate(&arr->array, new_count);
-    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
-    if (cecs_dynarray_count(arr) < half_capacity) {
-        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
-    }
 }
-void cecs_dynarray_swap_last_pop(cecs_dynarray* arr, cecs_allocator* a, const size_t index, const size_t value_size) {
+void cecs_dynarray_swap_last_pop(cecs_dynarray* arr, const size_t index, const size_t value_size) {
     cecs_array_swap_last_pop(&arr->array, index, value_size);
-    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
-    if (cecs_dynarray_count(arr) < half_capacity) {
-        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
-    }
 }
 
-void cecs_dynarray_remove(cecs_dynarray* arr, cecs_allocator* a, const size_t index, const size_t value_size) {
+void cecs_dynarray_remove(cecs_dynarray* arr, const size_t index, const size_t value_size) {
     cecs_array_remove(&arr->array, index, value_size);
-    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
-    if (cecs_dynarray_count(arr) < half_capacity) {
-        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
-    }
 }
-void cecs_dynarray_remove_many(cecs_dynarray* arr, cecs_allocator* a, const size_t index, const size_t count, const size_t value_size) {
+void cecs_dynarray_remove_many(cecs_dynarray* arr, const size_t index, const size_t count, const size_t value_size) {
     cecs_array_remove_many(&arr->array, index, count, value_size);
-    const size_t half_capacity = cecs_dynarray_capacity(arr) >> 1;
-    if (cecs_dynarray_count(arr) < half_capacity) {
-        cecs_dynarray_shrink_exact(arr, a, half_capacity, value_size);
-    }
 }
 
 extern inline void *cecs_dynarray_get_ptr(const cecs_dynarray *arr, const size_t index, const size_t size) {
