@@ -102,13 +102,13 @@ void test_dynarray(cecs_allocator *allocator) {
     printf("\n--- Test 6: Removal operations ---\n");
     printf("Before removal: count=%zu\n", cecs_dynarray_count(&arr));
     
-    cecs_dynarray_remove(&arr, allocator, 10, sizeof(int));
+    cecs_dynarray_remove(&arr, 10, sizeof(int));
     printf("Removed index 10, new count: %zu\n", cecs_dynarray_count(&arr));
     
-    cecs_dynarray_remove_many(&arr, allocator, 5, 3, sizeof(int));
+    cecs_dynarray_remove_many(&arr, 5, 3, sizeof(int));
     printf("Removed 3 elements starting at index 5, new count: %zu\n", cecs_dynarray_count(&arr));
     
-    cecs_dynarray_swap_last_pop(&arr, allocator, 2, sizeof(int));
+    cecs_dynarray_swap_last_pop(&arr, 2, sizeof(int));
     printf("Swap-last-pop index 2, new count: %zu\n", cecs_dynarray_count(&arr));
 
     // Test 7: Final state verification
@@ -205,7 +205,7 @@ void test_sparse_set(cecs_allocator *allocator) {
     printf("Before removals: count=%u\n", cecs_sparse_set_value_count(&set));
     
     for (size_t i = 0; i < 4; ++i) {
-        if (cecs_sparse_set_remove(&set, allocator, test_keys[i], sizeof(int))) {
+        if (cecs_sparse_set_remove(&set, test_keys[i], sizeof(int))) {
             printf("Removed key=%zu (count: %u)\n", test_keys[i], cecs_sparse_set_value_count(&set));
         } else {
             printf("Failed to remove key=%zu\n", test_keys[i]);
@@ -214,7 +214,7 @@ void test_sparse_set(cecs_allocator *allocator) {
 
     // Test failed removals
     for (size_t i = 0; i < 2; ++i) {
-        if (cecs_sparse_set_remove(&set, allocator, missing_keys[i], sizeof(int))) {
+        if (cecs_sparse_set_remove(&set, missing_keys[i], sizeof(int))) {
             printf("Removed key=%zu (unexpected)\n", missing_keys[i]);
         } else {
             printf("Failed to remove key=%zu (expected)\n", missing_keys[i]);

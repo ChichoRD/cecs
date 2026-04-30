@@ -23,6 +23,10 @@ extern inline const void *cecs_sparse_set_get_value(const cecs_sparse_set *set, 
 extern inline void *cecs_sparse_set_get_value_mut(cecs_sparse_set *set, const size_t key, const size_t value_size);
 extern inline size_t *cecs_sparse_set_get_sparse_key_mut(cecs_sparse_set *set, const size_t key);
 
+static inline cecs_dynarray cecs_dense_set_keys_mut(cecs_dense_set *set) {
+    return cecs_dynarray_create_from_parts(set->sparse_from_dense, cecs_dense_set_count(set), cecs_dense_set_capacity(set));
+}
+
 extern inline const void *cecs_sparse_set_get_value_by_index(const cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size);
 extern inline void *cecs_sparse_set_get_value_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size);
 extern inline const size_t *cecs_sparse_set_get_sparse_key_by_index(const cecs_sparse_set *set, const cecs_dense_index index);
@@ -31,39 +35,46 @@ extern inline size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_se
         assert(false && "fatal error: cecs_sparse_set_get_sparse_key_by_index_mut called with invalid index");
         exit(EXIT_FAILURE);
     }
-    return cecs_dynarray_get_mut(&set->values.sparse_from_dense, index.value, sizeof(size_t));
+    return cecs_dense_set_get_sparse_key_mut(&set->values, index.value);
 }
 
 cecs_dense_set cecs_dense_set_create(void) {
     return (cecs_dense_set){
         .values = cecs_dynarray_create(),
-        .sparse_from_dense = cecs_dynarray_create(),
+        .sparse_from_dense = NULL,
     };
 }
 cecs_dense_set cecs_dense_set_create_with_capacity(cecs_allocator *allocator, const size_t capacity, const size_t value_size) {
     return (cecs_dense_set){
         .values = cecs_dynarray_create_with_capacity(allocator, capacity, value_size),
-        .sparse_from_dense = cecs_dynarray_create_with_capacity(allocator, capacity, sizeof(size_t)),
+        .sparse_from_dense = cecs_allocator_alloc_aligned(allocator, sizeof(cecs_sparse_index) * capacity, cecs_max_alignment_from_size(sizeof(cecs_sparse_index))),
     };
 }
 void cecs_dense_set_destroy(cecs_dense_set *set, cecs_allocator *allocator, const size_t value_size) {
+    if (set->sparse_from_dense != NULL) {
+        cecs_allocator_free(allocator, set->sparse_from_dense, sizeof(cecs_sparse_index) * cecs_dense_set_capacity(set));
+        set->sparse_from_dense = NULL;
+    }
     cecs_dynarray_destroy(&set->values, allocator, value_size);
-    cecs_dynarray_destroy(&set->sparse_from_dense, allocator, sizeof(size_t));
 }
 
 
 void *cecs_dense_set_push_key(cecs_dense_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
-    size_t *sparse_key = cecs_dynarray_push(&set->sparse_from_dense, allocator, sizeof(size_t));
+    cecs_dynarray keys = cecs_dense_set_keys_mut(set);
+    cecs_sparse_index *sparse_key = cecs_dynarray_push(&keys, allocator, sizeof(cecs_sparse_index));
     *sparse_key = key;
+
+    set->sparse_from_dense = (cecs_sparse_index *)keys.array.values;
     return cecs_dynarray_push(&set->values, allocator, value_size);
 }
-void cecs_dense_set_swap_last_pop(cecs_dense_set *set, cecs_allocator *allocator, const size_t index, const size_t value_size) {
-    cecs_dynarray_swap_last_pop(&set->values, allocator, index, value_size);
-    cecs_dynarray_swap_last_pop(&set->sparse_from_dense, allocator, index, sizeof(size_t));
+void cecs_dense_set_swap_last_pop(cecs_dense_set *set, const size_t index, const size_t value_size) {
+    cecs_dynarray keys = cecs_dense_set_keys_mut(set);
+    cecs_dynarray_swap_last_pop(&set->values, index, value_size);
+    cecs_dynarray_swap_last_pop(&keys, index, sizeof(cecs_sparse_index));
+    set->sparse_from_dense = (cecs_sparse_index *)keys.array.values;
 }
 void cecs_dense_set_clear(cecs_dense_set *set) {
     cecs_dynarray_clear(&set->values);
-    cecs_dynarray_clear(&set->sparse_from_dense);
 }
 
 
@@ -93,12 +104,14 @@ void cecs_sparse_set_destroy(cecs_sparse_set *set, cecs_allocator *allocator, co
 }
 
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
+    cecs_unimplemented_fail("// FIXME: dynarray reserve api change");
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
         cecs_dynarray_reserve(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
     }
 }
 void cecs_sparse_set_reserve_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
+    cecs_unimplemented_fail("// FIXME: dynarray reserve api change");
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
         cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
@@ -117,6 +130,7 @@ void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *a
     }
 }
 void cecs_sparse_set_upsize_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
+    cecs_unimplemented_fail("// FIXME: dynarray reserve api change");
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
         const size_t needed_capacity = range_size - current_size;
@@ -159,13 +173,13 @@ void *cecs_sparse_set_get_or_insert(cecs_sparse_set *set, cecs_allocator *alloca
     }
 }
 
-void cecs_sparse_set_remove_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
-    if (!cecs_sparse_set_remove(set, allocator, key, value_size)) {
+void cecs_sparse_set_remove_expect(cecs_sparse_set *set, const size_t key, const size_t value_size) {
+    if (!cecs_sparse_set_remove(set, key, value_size)) {
         assert(false && "fatal error: cecs_sparse_set_remove_expect called with non-existent key");
         exit(EXIT_FAILURE);
     }
 }
-bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size) {
+bool cecs_sparse_set_remove(cecs_sparse_set *set, const size_t key, const size_t value_size) {
     if (key >= cecs_sparse_set_sparse_range_size(set)) {
         return false;
     }
@@ -174,7 +188,7 @@ bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, con
     cecs_dense_index *const swapped_index = cecs_sparse_set_get_index_mut(set, last_value_key);
     cecs_dense_index *const invalid_index = cecs_sparse_set_get_index_mut(set, key);
     if (cecs_dense_index_is_valid(*invalid_index)) {
-        cecs_dense_set_swap_last_pop(&set->values, allocator, invalid_index->value, value_size);
+        cecs_dense_set_swap_last_pop(&set->values, invalid_index->value, value_size);
         *swapped_index = *invalid_index;
         *invalid_index = cecs_dense_index_create_invalid();
         return true;

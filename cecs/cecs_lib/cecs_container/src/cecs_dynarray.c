@@ -69,8 +69,8 @@ void *cecs_array_insert(cecs_array *arr, const size_t index, const size_t value_
         cecs_debugbreak_fail_message("error: attempted to insert in cecs_array exceeding its capacity");
     }
 
-    uint8_t *const insertion_start = arr->values + index * value_size;
-    uint8_t *const insertion_end = insertion_start + value_size;
+    unsigned char *const insertion_start = arr->values + index * value_size;
+    unsigned char *const insertion_end = insertion_start + value_size;
     const size_t move_count = arr->values_used - index;
     const size_t move_size = move_count * value_size;
     if (move_count <= 1) {
@@ -88,8 +88,8 @@ void *cecs_array_insert_many(cecs_array *arr, const size_t index, const size_t c
         cecs_debugbreak_fail_message("error: attempted to insert in cecs_array exceeding its capacity");
     }
 
-    uint8_t *const insertion_start = arr->values + index * value_size;
-    uint8_t *const insertion_end = insertion_start + count * value_size;
+    unsigned char *const insertion_start = arr->values + index * value_size;
+    unsigned char *const insertion_end = insertion_start + count * value_size;
     const size_t move_count = arr->values_used - index;
     const size_t move_size = move_count * value_size;
     if (move_count <= count) {
@@ -200,10 +200,10 @@ void *cecs_array_get_range_mut(cecs_array *arr, const size_t index, const size_t
 }
 
 
-// static inline const uint8_t *cecs_dynarray_values(const cecs_dynarray *arr) {
+// static inline const unsigned char *cecs_dynarray_values(const cecs_dynarray *arr) {
 //     return arr->array.values;
 // }
-// static inline uint8_t *cecs_dynarray_values_mut(cecs_dynarray *arr) {
+// static inline unsigned char *cecs_dynarray_values_mut(cecs_dynarray *arr) {
 //     return arr->array.values;
 // }
 cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator *a, const size_t values_capacity, const size_t value_size) {
@@ -303,10 +303,10 @@ void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, cons
     return memcpy(elements, values, count * value_size);
 }
 
-void cecs_dynarray_pop(cecs_dynarray *arr, const size_t value_size) {
+void cecs_dynarray_pop(cecs_dynarray *arr) {
     cecs_array_pop(&arr->array);
 }
-void cecs_dynarray_truncate(cecs_dynarray *arr, const size_t new_count, const size_t value_size) {
+void cecs_dynarray_truncate(cecs_dynarray *arr, const size_t new_count) {
     cecs_array_truncate(&arr->array, new_count);
 }
 void cecs_dynarray_swap_last_pop(cecs_dynarray* arr, const size_t index, const size_t value_size) {

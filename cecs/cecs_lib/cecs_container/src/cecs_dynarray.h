@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 typedef struct cecs_array {
-    uint8_t *values;
+    unsigned char *values;
     size_t values_used;
     size_t values_capacity;
 } cecs_array;
@@ -19,8 +19,12 @@ inline size_t cecs_array_capacity(const cecs_array *arr) {
 }
 
 inline cecs_array cecs_array_create(void *const values, const size_t capacity) {
+    cecs_debugbreak_fail_unless(
+        values != NULL || capacity == 0,
+        "error: attempted to create cecs_array with non-null values pointer but zero capacity"
+    );
     return (cecs_array) {
-        .values = (uint8_t *)values,
+        .values = (unsigned char *)values,
         .values_used = 0,
         .values_capacity = capacity
     };
@@ -99,6 +103,23 @@ inline cecs_dynarray cecs_dynarray_create(void) {
         .array = cecs_array_create(NULL, 0)
     };
 }
+inline cecs_dynarray cecs_dynarray_create_from_parts(void *const values, const size_t values_used, const size_t values_capacity) {
+    cecs_debugbreak_fail_unless(
+        values_used <= values_capacity,
+        "error: attempted to create cecs_dynarray with values_used greater than values_capacity"
+    );
+    cecs_debugbreak_fail_unless(
+        values != NULL || values_capacity == 0,
+        "error: attempted to create cecs_dynarray with non-null values pointer but zero values_capacity"
+    );
+    return (cecs_dynarray) {
+        .array = (cecs_array) {
+            .values = (unsigned char *)values,
+            .values_used = values_used,
+            .values_capacity = values_capacity
+        }
+    };
+}
 cecs_dynarray cecs_dynarray_create_with_capacity(cecs_allocator *a, const size_t values_capacity, const size_t value_size);
 void cecs_dynarray_destroy(cecs_dynarray *arr, cecs_allocator *a, const size_t value_size);
 
@@ -117,8 +138,8 @@ void *cecs_dynarray_insert(cecs_dynarray *arr, cecs_allocator *a, const size_t i
 void *cecs_dynarray_insert_many(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const size_t count, const size_t value_size);
 void *cecs_dynarray_insert_many_copy(cecs_dynarray *arr, cecs_allocator *a, const size_t index, const void *values, const size_t count, const size_t value_size);
 
-void cecs_dynarray_pop(cecs_dynarray *arr, const size_t value_size);
-void cecs_dynarray_truncate(cecs_dynarray *arr, const size_t new_count, const size_t value_size);
+void cecs_dynarray_pop(cecs_dynarray *arr);
+void cecs_dynarray_truncate(cecs_dynarray *arr, const size_t new_count);
 void cecs_dynarray_swap_last_pop(cecs_dynarray *arr, const size_t index, const size_t value_size);
 
 void cecs_dynarray_remove(cecs_dynarray *arr, const size_t index, const size_t value_size);

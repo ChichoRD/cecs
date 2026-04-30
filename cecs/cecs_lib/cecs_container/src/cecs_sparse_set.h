@@ -48,9 +48,13 @@ static inline cecs_dense_index cecs_dense_index_create_invalid(void) {
 }
 
 
+// typedef struct cecs_sparse_index {
+//     cecs_sparse_set_usize value;
+// } cecs_sparse_index;
+typedef size_t cecs_sparse_index;
 typedef struct cecs_dense_set {
     cecs_dynarray values;
-    cecs_dynarray sparse_from_dense;
+    cecs_sparse_index *sparse_from_dense;
 } cecs_dense_set;
 inline cecs_sparse_set_usize cecs_dense_set_capacity(const cecs_dense_set *set) {
     const size_t values_capacity = cecs_dynarray_capacity(&set->values);
@@ -67,6 +71,20 @@ inline cecs_sparse_set_usize cecs_dense_set_count(const cecs_dense_set *set) {
         "fatal error: cecs_dense_set_count cannot be greater than CECS_SPARSE_SET_USIZE_TYPE_MAX"
     );
     return (cecs_sparse_set_usize)values_count;
+}
+inline const cecs_sparse_index *cecs_dense_set_get_sparse_key(const cecs_dense_set *set, const size_t dense_index) {
+    cecs_debugbreak_fail_unless(
+        dense_index < cecs_dense_set_count(set),
+        "fatal error: cecs_dense_set_get_sparse_key called with out of bounds dense_index"
+    );
+    return set->sparse_from_dense + dense_index;
+}
+inline cecs_sparse_index *cecs_dense_set_get_sparse_key_mut(cecs_dense_set *set, const size_t dense_index) {
+    cecs_debugbreak_fail_unless(
+        dense_index < cecs_dense_set_count(set),
+        "fatal error: cecs_dense_set_get_sparse_key_mut called with out of bounds dense_index"
+    );
+    return set->sparse_from_dense + dense_index;
 }
 
 typedef struct cecs_sparse_set {
@@ -132,7 +150,7 @@ inline size_t *cecs_sparse_set_get_sparse_key_mut(cecs_sparse_set *set, const si
         assert(false && "fatal error: cecs_sparse_set_get_sparse_key_mut called with invalid index");
         exit(EXIT_FAILURE);
     }
-    return cecs_dynarray_get_mut(&set->values.sparse_from_dense, index.value, sizeof(size_t));
+    return cecs_dense_set_get_sparse_key_mut(&set->values, index.value);
 }
 
 inline const void *cecs_sparse_set_get_value_by_index(const cecs_sparse_set *set, const cecs_dense_index index, const size_t value_size) {
@@ -154,7 +172,11 @@ inline const size_t *cecs_sparse_set_get_sparse_key_by_index(const cecs_sparse_s
         assert(false && "fatal error: cecs_sparse_set_get_sparse_key_by_index called with invalid index");
         exit(EXIT_FAILURE);
     }
-    return cecs_dynarray_get(&set->values.sparse_from_dense, index.value, sizeof(size_t));
+    cecs_debugbreak_fail_unless(
+        index.value < cecs_dense_set_count(&set->values),
+        "fatal error: cecs_sparse_set_get_sparse_key_by_index found index with out of bounds value"
+    );
+    return cecs_dense_set_get_sparse_key(&set->values, index.value);
 }
 
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size);
@@ -166,8 +188,8 @@ void *cecs_sparse_set_insert_within_expect(cecs_sparse_set *set, cecs_allocator 
 void *cecs_sparse_set_insert_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
 void *cecs_sparse_set_get_or_insert(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
 
-void cecs_sparse_set_remove_expect(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
-bool cecs_sparse_set_remove(cecs_sparse_set *set, cecs_allocator *allocator, const size_t key, const size_t value_size);
+void cecs_sparse_set_remove_expect(cecs_sparse_set *set, const size_t key, const size_t value_size);
+bool cecs_sparse_set_remove(cecs_sparse_set *set, const size_t key, const size_t value_size);
 void cecs_sparse_set_clear(cecs_sparse_set *set);
 
 #endif
