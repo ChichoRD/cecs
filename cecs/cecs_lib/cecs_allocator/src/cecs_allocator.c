@@ -57,8 +57,10 @@ void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size,
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc_aligned");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to alloc_aligned from an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_alloc_aligned_expect(&allocator->allocator.bump, size, alignment);
     case cecs_internal_allocator_type_arena:
@@ -66,8 +68,10 @@ void *cecs_allocator_alloc_aligned(cecs_allocator *allocator, const size_t size,
     case cecs_internal_allocator_type_implicit_arena:
         return cecs_implicit_arena_allocator_alloc_aligned(&allocator->allocator.implicit_arena, size, alignment);
     default:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to alloc_aligned\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
@@ -76,8 +80,10 @@ void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to alloc");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to alloc from an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_alloc_expect(&allocator->allocator.bump, size);
     case cecs_internal_allocator_type_arena:
@@ -85,8 +91,10 @@ void *cecs_allocator_alloc(cecs_allocator *allocator, const size_t size) {
     case cecs_internal_allocator_type_implicit_arena:
         return cecs_implicit_arena_allocator_alloc(&allocator->allocator.implicit_arena, size);
     default:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to alloc\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
@@ -97,8 +105,10 @@ void *cecs_allocator_realloc_aligned(
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc_aligned");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to realloc_aligned from an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_realloc_aligned_expect(&allocator->allocator.bump, block, block_size, new_size, alignment);
     case cecs_internal_allocator_type_arena:
@@ -108,8 +118,10 @@ void *cecs_allocator_realloc_aligned(
             &allocator->allocator.implicit_arena, block, block_size, new_size, alignment
         );
     default:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to realloc_aligned\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
@@ -118,8 +130,10 @@ void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to realloc");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to realloc from an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
     case cecs_internal_allocator_type_bump:
         return cecs_bump_allocator_realloc_expect(&allocator->allocator.bump, block, block_size, new_size);
     case cecs_internal_allocator_type_arena:
@@ -129,8 +143,10 @@ void *cecs_allocator_realloc(cecs_allocator *allocator, void *block, const size_
             &allocator->allocator.implicit_arena, block, block_size, new_size
         );
     default:
-        cecs_unreachable();
-        return NULL;
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to realloc\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
@@ -139,7 +155,10 @@ void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t bl
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to free");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
-        cecs_unreachable();
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to free from an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
         break;
     case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_free(&allocator->allocator.bump, block, block_size);
@@ -151,7 +170,10 @@ void cecs_allocator_free(cecs_allocator *allocator, void *block, const size_t bl
         cecs_implicit_arena_allocator_free(&allocator->allocator.implicit_arena, block, block_size);
         break;
     default:
-        cecs_unreachable();
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to free\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
@@ -159,6 +181,12 @@ void cecs_allocator_reset(cecs_allocator *allocator) {
     cecs_debugbreak_fail_unless(allocator->type != cecs_internal_allocator_type_none, "fatal error: attempted to reset an allocator of type 'none'");
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to reset");
     switch (allocator->type) {
+    case cecs_internal_allocator_type_none:
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to reset an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
+        break;
     case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_reset(&allocator->allocator.bump);
         break;
@@ -169,7 +197,10 @@ void cecs_allocator_reset(cecs_allocator *allocator) {
         cecs_implicit_arena_allocator_reset(&allocator->allocator.implicit_arena);
         break;
     default:
-        cecs_unreachable();
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to reset\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
@@ -178,7 +209,10 @@ void cecs_allocator_destroy(cecs_allocator *allocator) {
     cecs_debugbreak_fail_unless(allocator->type <= CECS_ALLOCATOR_TYPE_MAX, "fatal error: invalid allocator type in call to destroy");
     switch (allocator->type) {
     case cecs_internal_allocator_type_none:
-        cecs_unreachable();
+        cecs_debugbreak_unreachable(
+            "fatal error: attempted to destroy an allocator of type 'none'\n"
+            "note: no function should ever be called on an allocator of type 'none', so this likely indicates a logic error where an allocator was not properly initialized or was destroyed before use"
+        );
         break;
     case cecs_internal_allocator_type_bump:
         cecs_bump_allocator_destroy(&allocator->allocator.bump);
@@ -190,7 +224,10 @@ void cecs_allocator_destroy(cecs_allocator *allocator) {
         cecs_implicit_arena_allocator_destroy(&allocator->allocator.implicit_arena);
         break;
     default:
-        cecs_unreachable();
+        cecs_debugbreak_unreachable(
+            "fatal error: invalid allocator type in call to destroy\n"
+            "note: this likely indicates memory corruption or a logic error where the allocator's type was improperly modified"
+        );
     }
 }
 
