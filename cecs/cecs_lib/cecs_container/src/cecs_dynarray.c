@@ -13,6 +13,7 @@ extern inline cecs_array cecs_array_create(void *const values, const size_t capa
 extern inline size_t cecs_dynarray_count(const cecs_dynarray *arr);
 extern inline size_t cecs_dynarray_capacity(const cecs_dynarray *arr);
 extern inline cecs_dynarray cecs_dynarray_create(void);
+extern inline cecs_dynarray cecs_dynarray_create_from_parts(void *const values, const size_t values_used, const size_t values_capacity);
 
 void cecs_array_reserve_exact(cecs_array *arr, const size_t additional_capacity) {
     const size_t current_capacity = cecs_array_capacity(arr);

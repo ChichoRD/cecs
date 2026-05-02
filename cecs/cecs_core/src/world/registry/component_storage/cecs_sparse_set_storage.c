@@ -94,18 +94,18 @@ void *cecs_sparse_set_storage_insert_expect(cecs_sparse_set_storage *storage, ce
     }
 }
 
-bool cecs_sparse_set_storage_remove(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key, const size_t value_size) {
+bool cecs_sparse_set_storage_remove(cecs_sparse_set_storage *storage, const size_t key, const size_t value_size) {
     const size_t key_offset = cecs_sparse_set_storage_map_offset(storage);
     if (key < key_offset) {
         return false;
     } else {
         const size_t mapped_key = key - key_offset;
-        return cecs_sparse_set_remove(&storage->set, allocator, mapped_key, value_size);
+        return cecs_sparse_set_remove(&storage->set, mapped_key, value_size);
     }
 }
-void cecs_sparse_set_storage_remove_expect(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key, const size_t value_size) {
+void cecs_sparse_set_storage_remove_expect(cecs_sparse_set_storage *storage, const size_t key, const size_t value_size) {
     const size_t mapped_key = cecs_sparse_set_storage_map_key(storage, key);
-    cecs_sparse_set_remove_expect(&storage->set, allocator, mapped_key, value_size);
+    cecs_sparse_set_remove_expect(&storage->set, mapped_key, value_size);
 }
 
 bool cecs_sparse_set_storage_contains(const cecs_sparse_set_storage *storage, const size_t key) {

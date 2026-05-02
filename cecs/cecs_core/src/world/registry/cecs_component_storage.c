@@ -156,9 +156,9 @@ bool cecs_component_storage_remove(cecs_component_storage *const storage, cecs_a
             "fatal error: attempted to remove from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
+        (void)allocator;
         return cecs_sparse_set_storage_remove(
             &storage->storage.sparse_set,
-            allocator,
             key,
             component_size
         );
@@ -177,9 +177,9 @@ void cecs_component_storage_remove_expect(cecs_component_storage *const storage,
             "fatal error: attempted to remove_expect from cecs_component_storage of type 'none'"
         );
     case cecs_component_storage_type_sparse_set:
+        (void)allocator;
         cecs_sparse_set_storage_remove_expect(
             &storage->storage.sparse_set,
-            allocator,
             key,
             component_size
         );

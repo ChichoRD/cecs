@@ -39,8 +39,8 @@ void *cecs_sparse_set_storage_get_mut(cecs_sparse_set_storage *storage, const si
 void *cecs_sparse_set_storage_get_or_insert(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key, const size_t value_size);
 void *cecs_sparse_set_storage_insert_expect(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key, const size_t value_size);
 
-bool cecs_sparse_set_storage_remove(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key, const size_t value_size);
-void cecs_sparse_set_storage_remove_expect(cecs_sparse_set_storage *storage, cecs_allocator *allocator, const size_t key, const size_t value_size);
+bool cecs_sparse_set_storage_remove(cecs_sparse_set_storage *const storage, const size_t key, const size_t value_size);
+void cecs_sparse_set_storage_remove_expect(cecs_sparse_set_storage *const storage, const size_t key, const size_t value_size);
 
 bool cecs_sparse_set_storage_contains(const cecs_sparse_set_storage *storage, const size_t key);
 

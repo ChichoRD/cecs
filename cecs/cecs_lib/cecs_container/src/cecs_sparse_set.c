@@ -5,6 +5,9 @@ const cecs_dense_index cecs_dense_index_invalid = {.value = CECS_SPARSE_SET_USIZ
 extern inline bool cecs_dense_index_is_valid(const cecs_dense_index index);
 extern inline cecs_sparse_set_usize cecs_dense_set_count(const cecs_dense_set *set);
 extern inline cecs_sparse_set_usize cecs_dense_set_capacity(const cecs_dense_set *set);
+extern inline const cecs_sparse_index *cecs_dense_set_get_sparse_key(const cecs_dense_set *set, const size_t dense_index);
+extern inline cecs_sparse_index *cecs_dense_set_get_sparse_key_mut(cecs_dense_set *set, const size_t dense_index);
+
 extern inline cecs_dense_index cecs_dense_index_create_unchecked(const cecs_sparse_set_usize index);
 extern inline cecs_dense_index cecs_dense_index_create_valid(const cecs_sparse_set_usize index);
 extern inline cecs_dense_index cecs_dense_index_create_invalid(void);

@@ -65,14 +65,38 @@ typedef struct cecs_identifier {
 #ifndef CECS_IDENTIFIER_INDEX_TYPE
 #define CECS_IDENTIFIER_INDEX_TYPE_DEFAULT size_t
 #define CECS_IDENTIFIER_INDEX_TYPE CECS_IDENTIFIER_INDEX_TYPE_DEFAULT
+#define CECS_IDENTIFIER_INDEX_TYPE_MAX SIZE_MAX
 #endif
 #ifndef CECS_IDENTIFIER_META_TYPE
 #define CECS_IDENTIFIER_META_TYPE_DEFAULT uint16_t
 #define CECS_IDENTIFIER_META_TYPE CECS_IDENTIFIER_META_TYPE_DEFAULT
+#define CECS_IDENTIFIER_META_TYPE_MAX UINT16_MAX
+#endif
+
+#ifndef CECS_IDENTIFIER_INDEX_TYPE
+#error "static error: CECS_IDENTIFIER_INDEX_TYPE must be defined"
+#endif
+#ifndef CECS_IDENTIFIER_META_TYPE
+#error "static error: CECS_IDENTIFIER_META_TYPE must be defined"
+#endif
+#ifndef CECS_IDENTIFIER_INDEX_TYPE_MAX
+#error "static error: CECS_IDENTIFIER_INDEX_TYPE_MAX must be defined"
+#endif
+#ifndef CECS_IDENTIFIER_META_TYPE_MAX
+#error "static error: CECS_IDENTIFIER_META_TYPE_MAX must be defined"
 #endif
 
 typedef CECS_IDENTIFIER_INDEX_TYPE cecs_identifier_index;
 typedef CECS_IDENTIFIER_META_TYPE cecs_identifier_meta;
+
+static_assert(
+    (cecs_identifier_index)(~((cecs_identifier_index)0u)) == CECS_IDENTIFIER_INDEX_TYPE_MAX,
+    "static error: CECS_IDENTIFIER_INDEX_TYPE_MAX does not match the maximum value of cecs_identifier_index"
+);
+static_assert(
+    (cecs_identifier_meta)(~((cecs_identifier_meta)0u)) == CECS_IDENTIFIER_META_TYPE_MAX,
+    "static error: CECS_IDENTIFIER_META_TYPE_MAX does not match the maximum value of cecs_identifier_meta"
+);
 
 static_assert(
     CECS_IDENTIFIER_INDEX_BITS <= sizeof(cecs_identifier_index) * CHAR_BIT,

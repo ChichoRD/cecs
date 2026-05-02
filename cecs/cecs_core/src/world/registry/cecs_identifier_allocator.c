@@ -1,4 +1,5 @@
 #include "cecs_identifier_allocator.h"
+#include <cecs_type_traits.h>
 #include <cecs_error.h>
 #include <stdint.h>
 
@@ -12,16 +13,20 @@ cecs_identifier cecs_identifier_create_unchecked(const cecs_identifier_index ind
     );
 }
 cecs_identifier cecs_identifier_create(const cecs_identifier_index index, const cecs_identifier_meta meta) {
+#if (CECS_IDENTIFIER_INDEX_BITS_MASK >> CECS_IDENTIFIER_INDEX_BITS_OFFSET) < CECS_IDENTIFIER_INDEX_TYPE_MAX
     cecs_debugbreak_fail_unless(
-        (CECS_IDENTIFIER_INDEX_BITS <= sizeof(cecs_identifier_index) * CHAR_BIT)
-        || (index <= (cecs_identifier_index)(CECS_IDENTIFIER_INDEX_BITS_MASK >> CECS_IDENTIFIER_INDEX_BITS_OFFSET)),
+        index <= (cecs_identifier_index)(CECS_IDENTIFIER_INDEX_BITS_MASK >> CECS_IDENTIFIER_INDEX_BITS_OFFSET),
         "error: cecs_identifier_create called with out of bounds index"
     );
+#endif
+
+#if (CECS_IDENTIFIER_META_BITS_MASK >> CECS_IDENTIFIER_META_BITS_OFFSET) < CECS_IDENTIFIER_META_TYPE_MAX
     cecs_debugbreak_fail_unless(
-        (CECS_IDENTIFIER_META_BITS <= sizeof(cecs_identifier_meta) * CHAR_BIT)
-        || (meta <= (cecs_identifier_meta)(CECS_IDENTIFIER_META_BITS_MASK >> CECS_IDENTIFIER_META_BITS_OFFSET)),
+        meta <= (cecs_identifier_meta)(CECS_IDENTIFIER_META_BITS_MASK >> CECS_IDENTIFIER_META_BITS_OFFSET),
         "error: cecs_identifier_create called with out of bounds meta"
     );
+#endif
+
     return cecs_identifier_create_unchecked(index, meta);
 }
 
