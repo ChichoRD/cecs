@@ -107,17 +107,17 @@ void cecs_sparse_set_destroy(cecs_sparse_set *set, cecs_allocator *allocator, co
 }
 
 void cecs_sparse_set_reserve_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
-    cecs_unimplemented_fail("// FIXME: dynarray reserve api change");
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
-        cecs_dynarray_reserve(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
+        const size_t needed_capacity = range_size - current_size;
+        cecs_dynarray_reserve(&set->dense_from_sparse, allocator, needed_capacity, sizeof(cecs_dense_index));
     }
 }
 void cecs_sparse_set_reserve_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
-    cecs_unimplemented_fail("// FIXME: dynarray reserve api change");
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
-        cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
+        const size_t needed_capacity = range_size - current_size;
+        cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, needed_capacity, sizeof(cecs_dense_index));
     }
 }
 void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
@@ -133,11 +133,10 @@ void cecs_sparse_set_upsize_sparse_range(cecs_sparse_set *set, cecs_allocator *a
     }
 }
 void cecs_sparse_set_upsize_sparse_range_exact(cecs_sparse_set *set, cecs_allocator *allocator, const size_t range_size) {
-    cecs_unimplemented_fail("// FIXME: dynarray reserve api change");
     const size_t current_size = cecs_sparse_set_sparse_range_size(set);
     if (range_size > current_size) {
         const size_t needed_capacity = range_size - current_size;
-        cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, range_size, sizeof(cecs_dense_index));
+        cecs_dynarray_reserve_exact(&set->dense_from_sparse, allocator, needed_capacity, sizeof(cecs_dense_index));
         void *const inserted_keys = cecs_array_push_many(&set->dense_from_sparse.array, needed_capacity, sizeof(cecs_dense_index));
         memset(
             inserted_keys,
