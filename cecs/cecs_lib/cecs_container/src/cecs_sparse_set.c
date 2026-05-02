@@ -26,7 +26,7 @@ extern inline const void *cecs_sparse_set_get_value(const cecs_sparse_set *set, 
 extern inline void *cecs_sparse_set_get_value_mut(cecs_sparse_set *set, const size_t key, const size_t value_size);
 extern inline size_t *cecs_sparse_set_get_sparse_key_mut(cecs_sparse_set *set, const size_t key);
 
-static inline cecs_dynarray cecs_dense_set_keys_mut(cecs_dense_set *set) {
+extern inline cecs_dynarray cecs_dense_set_keys_mut(cecs_dense_set *set) {
     return cecs_dynarray_create_from_parts(set->sparse_from_dense, cecs_dense_set_count(set), cecs_dense_set_capacity(set));
 }
 

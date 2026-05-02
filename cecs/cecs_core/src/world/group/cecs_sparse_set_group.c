@@ -145,13 +145,13 @@ size_t cecs_sparse_set_group_reserve_grouped_range_owning(
 }
 
 // TODO: be able to indicate reserve requirement
+extern cecs_dynarray cecs_dense_set_keys_mut(cecs_dense_set *set);
 static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped_range(
     cecs_sparse_set_group *group,
     cecs_component_registry **const registries,
     const size_t count,
     const size_t component_size
 ) {
-    (void)component_size;
     cecs_debugbreak_fail_unless(
         cecs_exclusive_range_is_empty(group->free_grouped_range),
         "fatal error: cecs_sparse_set_group_reserve_grouped_range called when there were available grouped slots"
@@ -178,7 +178,6 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
     );
     const cecs_dense_index take_start = cecs_dense_index_create_valid((cecs_sparse_set_usize)take_range.range.end);
     const cecs_dense_index take_end = cecs_dense_index_create_valid(take_start.value + (cecs_sparse_set_usize)length);
-    (void)take_end;
     for (size_t i = 0; i < count; ++i) {
         cecs_component_registry *const registry = registries[i];
         cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set_mut(&registry->storage);
@@ -190,51 +189,50 @@ static cecs_sparse_set_group_insert_result cecs_sparse_set_group_reserve_grouped
                 "unimplemented error: cecs_sparse_set_group_reserve_grouped_range called when sparse set does not have enough capacity"
             );
         } else {
-            cecs_unimplemented_fail(
-                "unimplemented error: cecs_sparse_set_group_reserve_grouped_range needs to be adapted to new sparse_set implementation"
-            );
-            // cecs_array *const values_array = &set->values.values.array;
-            // cecs_array *const keys_array = &set->values.sparse_from_dense.array;
-            // const size_t initial_size = cecs_array_count(values_array);
-            // const size_t temp_size = initial_size + length;
-            // cecs_debugbreak_fail_unless(initial_size == cecs_array_count(keys_array), "fatal error: values and keys arrays are out of sync");
-            // cecs_debugbreak_fail_unless(length <= initial_size, "fatal error: length to move is larger than the array size");
+            cecs_array *const values_array = &set->values.values.array;
+            cecs_array keys_array = cecs_dense_set_keys_mut(&set->values).array;
+            const size_t initial_size = cecs_array_count(values_array);
+            const size_t temp_size = initial_size + length;
+            cecs_debugbreak_fail_unless(initial_size == cecs_array_count(&keys_array), "fatal error: values and keys arrays are out of sync");
+            cecs_debugbreak_fail_unless(length <= initial_size, "fatal error: length to move is larger than the array size");
 
-            // void *const value_insert = cecs_array_insert_many(values_array, insertion_start, length, component_size);
-            // size_t *const key_insert = cecs_array_insert_many(keys_array, insertion_start, length, sizeof(size_t));
+            void *const value_insert = cecs_array_insert_many(values_array, insertion_start, length, component_size);
+            size_t *const key_insert = cecs_array_insert_many(&keys_array, insertion_start, length, sizeof(size_t));
+            set->values.sparse_from_dense = (cecs_sparse_index *)keys_array.values;
 
-            // extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
-            // uint8_t *const value_take_start = cecs_sparse_set_get_value_by_index_mut(set, take_start, component_size);
-            // size_t *const key_take_start = cecs_sparse_set_get_sparse_key_by_index_mut(set, take_start);
-            // memmove(value_insert, value_take_start, component_size * length);
-            // memmove(key_insert, key_take_start, sizeof(size_t) * length);
+            extern size_t *cecs_sparse_set_get_sparse_key_by_index_mut(cecs_sparse_set *set, const cecs_dense_index index);
+            uint8_t *const value_take_start = cecs_sparse_set_get_value_by_index_mut(set, take_start, component_size);
+            size_t *const key_take_start = cecs_sparse_set_get_sparse_key_by_index_mut(set, take_start);
+            memmove(value_insert, value_take_start, component_size * length);
+            memmove(key_insert, key_take_start, sizeof(size_t) * length);
 
-            // if (take_end.value < temp_size) {
-            //     const size_t move_count = temp_size - take_end.value;
-            //     memmove(
-            //         value_take_start,
-            //         cecs_sparse_set_get_value_by_index_mut(set, take_end, component_size),
-            //         component_size * move_count
-            //     );
-            //     memmove(
-            //         key_take_start,
-            //         cecs_sparse_set_get_sparse_key_by_index_mut(set, take_end),
-            //         sizeof(size_t) * move_count
-            //     );
-            // }
+            if (take_end.value < temp_size) {
+                const size_t move_count = temp_size - take_end.value;
+                memmove(
+                    value_take_start,
+                    cecs_sparse_set_get_value_by_index_mut(set, take_end, component_size),
+                    component_size * move_count
+                );
+                memmove(
+                    key_take_start,
+                    cecs_sparse_set_get_sparse_key_by_index_mut(set, take_end),
+                    sizeof(size_t) * move_count
+                );
+            }
 
-            // cecs_array_truncate(values_array, initial_size);
-            // cecs_array_truncate(keys_array, initial_size);
-            
-            // for (size_t j = 0; j < length; ++j) {
-            //     const size_t moved_key = key_insert[j];
-            //     *cecs_sparse_set_get_index_mut(set, moved_key) = cecs_dense_index_create_valid((cecs_sparse_set_usize)(insertion_start + j));
-            // }
-            // for (size_t j = insertion_start + length; j < take_start.value; ++j) {
-            //     const size_t moved_key = *cecs_sparse_set_get_sparse_key_by_index(set, cecs_dense_index_create_valid((cecs_sparse_set_usize)j));
-            //     cecs_dense_index *const index = cecs_sparse_set_get_index_mut(set, moved_key);
-            //     *index = cecs_dense_index_create_valid(index->value + (cecs_sparse_set_usize)length);
-            // }
+            cecs_array_truncate(values_array, initial_size);
+            cecs_array_truncate(&keys_array, initial_size);
+            set->values.sparse_from_dense = (cecs_sparse_index *)keys_array.values;
+
+            for (size_t j = 0; j < length; ++j) {
+                const size_t moved_key = key_insert[j];
+                *cecs_sparse_set_get_index_mut(set, moved_key) = cecs_dense_index_create_valid((cecs_sparse_set_usize)(insertion_start + j));
+            }
+            for (size_t j = insertion_start + length; j < take_start.value; ++j) {
+                const size_t moved_key = *cecs_sparse_set_get_sparse_key_by_index(set, cecs_dense_index_create_valid((cecs_sparse_set_usize)j));
+                cecs_dense_index *const index = cecs_sparse_set_get_index_mut(set, moved_key);
+                *index = cecs_dense_index_create_valid(index->value + (cecs_sparse_set_usize)length);
+            }
         }
     }
     // Update the ranges

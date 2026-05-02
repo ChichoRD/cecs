@@ -241,7 +241,10 @@ void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const si
     }
 }
 void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t additional_capacity, const size_t value_size) {
-    cecs_dynarray_reserve_exact(arr, a, cecs_max(additional_capacity, cecs_dynarray_count(arr) << 1ull), value_size);
+    const size_t current_size = cecs_dynarray_count(arr);
+    // const size_t heuristic = current_size + (current_size >> 1ull); // heuristic to grow by 1.5x
+    const size_t heuristic = current_size << 1ull; // heuristic to grow by 2x
+    cecs_dynarray_reserve_exact(arr, a, cecs_max(additional_capacity, heuristic), value_size);
 }
 
 void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {
