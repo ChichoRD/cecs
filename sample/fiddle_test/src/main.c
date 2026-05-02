@@ -2394,10 +2394,12 @@ int main(void) {
     for (size_t i = 0; i < 24; ++i) {
         es[i] = cecs_world_alloc_entity(&w, &allocator);
     }
-    cecs_allocator allocator_int = cecs_allocator_alloc_bump_view(&allocator, 128 * sizeof(int));
-    cecs_allocator allocator_float = cecs_allocator_alloc_bump_view(&allocator, 128 * sizeof(float));
-    cecs_view_alloc view_alloc_int = cecs_world_acquire_view_alloc_from(&w, &allocator_int, component_int);
-    cecs_view_alloc view_alloc_float = cecs_world_acquire_view_alloc_from(&w, &allocator_float, component_float);
+    cecs_view_alloc view_alloc_int = cecs_world_acquire_view_alloc(
+        &w, cecs_allocator_alloc_bump_view(&allocator, 128 * sizeof(int)), component_int
+    );
+    cecs_view_alloc view_alloc_float = cecs_world_acquire_view_alloc(
+        &w, cecs_allocator_alloc_bump_view(&allocator, 128 * sizeof(float)), component_float
+    );
 
     for (size_t i = 0; i < 24; ++i) {
         int *ival = (int *)cecs_view_alloc_insert_expect(&view_alloc_int, &w.components, &w.entities, es[i]);
@@ -2409,7 +2411,11 @@ int main(void) {
     }
 
     cecs_bump_allocator *bump = cecs_allocator_bump_mut(&allocator);
-    cecs_bump_allocator_reset_to(bump, allocator_float.allocator.bump.view.next, allocator_float.allocator.bump.view.block.memory_end);
+    cecs_bump_allocator_reset_to(
+        bump,
+        view_alloc_float.allocator.allocator.bump.view.next,
+        view_alloc_float.allocator.allocator.bump.view.block.memory_end
+    );
     // cecs_bump_allocator_reset_to(bump, allocator_int.allocator.bump.view.next, bump->view.next);
 
     // cecs_world_release_view_alloc(&w, &view_alloc_float);

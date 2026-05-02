@@ -35,11 +35,13 @@ cecs_view_mut cecs_world_acquire_view_mut(
     const cecs_component_type component
 );
 // TODO: parameters maybe, user alloc? partitioned alloc?
-cecs_view_alloc cecs_world_acquire_view_alloc_from(
+cecs_view_alloc cecs_world_acquire_view_alloc_take(
     cecs_world *const world,
     cecs_allocator *const allocator,
     const cecs_component_type component
 );
+cecs_view_alloc cecs_world_acquire_view_alloc(cecs_world *const world, const cecs_allocator allocator, const cecs_component_type component);
+
 
 void cecs_world_release_view(
     cecs_world *const world,

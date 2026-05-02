@@ -136,7 +136,8 @@ inline void cecs_view_alloc_expect_valid_or_exit(const cecs_view_alloc *const vi
     cecs_view_mut_expect_valid_or_exit(view->view);
 }
 
-cecs_view_alloc cecs_view_alloc_create(cecs_allocator *const allocator, cecs_view_mut *const view);
+cecs_view_alloc cecs_view_alloc_create_take(cecs_allocator *const allocator, cecs_view_mut *const view);
+cecs_view_alloc cecs_view_alloc_create(const cecs_allocator allocator, cecs_view_mut *const view);
 void cecs_view_alloc_release(cecs_view_alloc *const view, cecs_world_components *const components);
 
 void *cecs_view_alloc_get_or_insert(

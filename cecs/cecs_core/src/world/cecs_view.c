@@ -193,13 +193,21 @@ extern inline cecs_view_mut *cecs_view_alloc_view_mut(cecs_view_alloc *const vie
 extern inline bool cecs_view_alloc_is_valid(const cecs_view_alloc *const view);
 extern inline void cecs_view_alloc_expect_valid_or_exit(const cecs_view_alloc *const view);
 
-cecs_view_alloc cecs_view_alloc_create(cecs_allocator *const allocator, cecs_view_mut *const view) {
+cecs_view_alloc cecs_view_alloc_create_take(cecs_allocator *const allocator, cecs_view_mut *const view) {
     cecs_view_alloc view_alloc = (cecs_view_alloc) {
         .allocator = *allocator,
         .view = *view,
     };
     allocator->type = cecs_internal_allocator_type_none;
-    cecs_rwlock_borrow_mut_release(&view->borrow);
+    cecs_rwlock_borrow_mut_release(&view->borrow); // BUG: why do we release the view
+    return view_alloc;
+}
+cecs_view_alloc cecs_view_alloc_create(const cecs_allocator allocator, cecs_view_mut *const view) {
+    cecs_view_alloc view_alloc = (cecs_view_alloc) {
+        .allocator = allocator,
+        .view = *view,
+    };
+    cecs_rwlock_borrow_mut_release(&view->borrow); // BUG: why do we release the view
     return view_alloc;
 }
 
