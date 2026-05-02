@@ -230,21 +230,33 @@ void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const si
     const size_t current_capacity = cecs_dynarray_capacity(arr);
     const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
     if (current_capacity < requested_capacity) {
+        const size_t new_capacity = requested_capacity;
         arr->array.values = cecs_allocator_realloc_aligned(
             a,
             arr->array.values,
             value_size * current_capacity,
-            value_size * requested_capacity,
-            cecs_max_alignment_from_size(value_size) // TODO: ask for aignment
+            value_size * new_capacity,
+            cecs_max_alignment_from_size(value_size) // TODO: ask for alignment
         );
-        arr->array.values_capacity = requested_capacity;
+        arr->array.values_capacity = new_capacity;
     }
 }
 void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t additional_capacity, const size_t value_size) {
-    const size_t current_size = cecs_dynarray_count(arr);
-    // const size_t heuristic = current_size + (current_size >> 1ull); // heuristic to grow by 1.5x
-    const size_t heuristic = current_size << 1ull; // heuristic to grow by 2x
-    cecs_dynarray_reserve_exact(arr, a, cecs_max(additional_capacity, heuristic), value_size);
+    const size_t current_capacity = cecs_dynarray_capacity(arr);
+    const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
+    if (current_capacity < requested_capacity) {
+        // const size_t heuristic_capacity = current_capacity + (current_capacity >> 1ull);    // x1.5 amortized growth factor
+        const size_t heuristic_capacity = current_capacity << 1ull;                         // x2.0 amortized growth factor
+        const size_t new_capacity = cecs_max(heuristic_capacity, requested_capacity);
+        arr->array.values = cecs_allocator_realloc_aligned(
+            a,
+            arr->array.values,
+            value_size * current_capacity,
+            value_size * new_capacity,
+            cecs_max_alignment_from_size(value_size) // TODO: ask for alignment
+        );
+        arr->array.values_capacity = new_capacity;
+    }
 }
 
 void cecs_dynarray_shrink_exact(cecs_dynarray *arr, cecs_allocator *a, const size_t values_new_capacity, const size_t value_size) {

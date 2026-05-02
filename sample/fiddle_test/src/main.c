@@ -2444,6 +2444,22 @@ int main(void) {
     cecs_world_components_destroy(&w.components, &allocator);
     cecs_entity_storage_destroy(&w.entities, &allocator);
 
+    // // print allocator stats - 5b1d391bb68360a1ea0fe21913442fd98c48730a
+    // printf("\nallocator: \n\ttotal capacity: %zu bytes, \n\ttotal allocated: %zu bytes, \n\ttotal free: %zu bytes\n",
+    //     cecs_bump_allocator_capacity(&allocator.allocator.bump),
+    //     cecs_bump_allocator_used(&allocator.allocator.bump),
+    //     cecs_bump_allocator_available(&allocator.allocator.bump)
+    // );
+    // // x1.5 amortized growth factor:
+    // // allocator: 
+    // //     total capacity: 1048576 bytes, 
+    // //     total allocated: 206152 bytes, 
+    // //     total free: 842424 bytes
+    // // x2.0 amortized growth factor:
+    // // allocator: 
+    // //     total capacity: 1048576 bytes, 
+    // //     total allocated: 206088 bytes, 
+    // //     total free: 842488 bytes
 
     // cleanup
     cecs_allocator_destroy(&allocator);
