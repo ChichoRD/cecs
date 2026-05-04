@@ -2,6 +2,7 @@
 #include <cecs_type_traits.h>
 #include <cecs_error.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 cecs_identifier cecs_identifier_from_value(const cecs_identifier_value value) {
     return (cecs_identifier){ .value = value };
@@ -30,6 +31,12 @@ cecs_identifier cecs_identifier_create(const cecs_identifier_index index, const 
     return cecs_identifier_create_unchecked(index, meta);
 }
 
+static inline bool cecs_identifier_is_free(const cecs_identifier identifier, const size_t expected_index) {
+    return cecs_identifier_index_of(identifier) != expected_index;
+}
+static inline bool cecs_identifier_is_used(const cecs_identifier identifier, const size_t expected_index) {
+    return cecs_identifier_index_of(identifier) == expected_index;
+}
 
 extern inline cecs_identifier_allocator cecs_identifier_allocator_create(void);
 extern inline cecs_identifier_allocator cecs_identifier_allocator_create_with_capacity(cecs_allocator *const allocator, const size_t initial_capacity);
@@ -57,18 +64,28 @@ static inline cecs_identifier *cecs_identifier_allocator_get_mut(cecs_identifier
     return identifier;
 }
 
-cecs_identifier cecs_identifier_allocator_get(const cecs_identifier_allocator *const storage, const size_t index) {
+
+cecs_identifier cecs_identifier_allocator_get_used(const cecs_identifier_allocator *const storage, const size_t index) {
     const cecs_identifier identifier = cecs_identifier_allocator_peek(storage, index);
-    const size_t identifier_index = cecs_identifier_index_of(identifier);
     cecs_debugbreak_fail_unless(
-        identifier_index == index,
-        "error: cecs_identifier_allocator_get called for a free identifier"
+        cecs_identifier_is_used(identifier, index),
+        "error: cecs_identifier_allocator_get_used called for a free identifier\n"
+        "note: use cecs_identifier_allocator_peek to get an identifier when it is not certain whether it is free or used"
+    );
+    return identifier;
+}
+cecs_identifier cecs_identifier_allocator_get_free(const cecs_identifier_allocator *const storage, const size_t index) {
+    const cecs_identifier identifier = cecs_identifier_allocator_peek(storage, index);
+    cecs_debugbreak_fail_unless(
+        cecs_identifier_is_free(identifier, index),
+        "error: cecs_identifier_allocator_get_free called for a used identifier\n"
+        "note: use cecs_identifier_allocator_peek to get an identifier when it is not certain whether it is free or used"
     );
     return identifier;
 }
 cecs_identifier cecs_identifier_allocator_get_exact(const cecs_identifier_allocator *const storage, const cecs_identifier identifier) {
     const size_t index = cecs_identifier_index_of(identifier);
-    const cecs_identifier stored_identifier = cecs_identifier_allocator_get(storage, index);
+    const cecs_identifier stored_identifier = cecs_identifier_allocator_peek(storage, index);
     cecs_debugbreak_fail_unless(
         stored_identifier.value == identifier.value,
         "error: cecs_identifier_allocator_get_exact called with mismatched identifier"

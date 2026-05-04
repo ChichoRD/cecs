@@ -186,8 +186,8 @@ inline cecs_identifier cecs_identifier_allocator_peek(const cecs_identifier_allo
     );
     return *((const cecs_identifier*)cecs_dynarray_get(&storage->identifiers, index, sizeof(cecs_identifier)));
 }
-// TODO: get_in_use?
-cecs_identifier cecs_identifier_allocator_get(const cecs_identifier_allocator *const storage, const size_t index);
+cecs_identifier cecs_identifier_allocator_get_used(const cecs_identifier_allocator *const storage, const size_t index);
+cecs_identifier cecs_identifier_allocator_get_free(const cecs_identifier_allocator *const storage, const size_t index);
 // TODO: see if we could have an identifier e not necessarily have the same index as identifiers[e] but only the same generation
 cecs_identifier cecs_identifier_allocator_get_exact(const cecs_identifier_allocator *const storage, const cecs_identifier identifier);
 
