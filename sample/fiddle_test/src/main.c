@@ -1428,10 +1428,10 @@ void test_entity(cecs_allocator *allocator) {
         const uint_fast8_t gen = 7;
         cecs_entity e = cecs_entity_create(idx, flags, gen);
         printf("Created entity: value=0x%016llX, index=%zu, flags=0x%02X, gen=%u\n",
-               (unsigned long long)e.value, cecs_entity_index(e), cecs_entity_meta_flags(e), (unsigned)cecs_entity_generation(e));
+               (unsigned long long)e.value, cecs_entity_index_of(e), cecs_entity_meta_flags(e), (unsigned)cecs_entity_generation_of(e));
 
-        if (cecs_entity_index(e) != idx) {
-            fprintf(stderr, "ERROR: index mismatch: expected %zu, got %zu\n", idx, cecs_entity_index(e));
+        if (cecs_entity_index_of(e) != idx) {
+            fprintf(stderr, "ERROR: index mismatch: expected %zu, got %zu\n", idx, cecs_entity_index_of(e));
             assert(false && "index mismatch");
             exit(EXIT_FAILURE);
         }
@@ -1440,14 +1440,14 @@ void test_entity(cecs_allocator *allocator) {
             assert(false && "flags mismatch");
             exit(EXIT_FAILURE);
         }
-        if (cecs_entity_generation(e) != gen) {
-            fprintf(stderr, "ERROR: generation mismatch: expected %u, got %u\n", (unsigned)gen, (unsigned)cecs_entity_generation(e));
+        if (cecs_entity_generation_of(e) != gen) {
+            fprintf(stderr, "ERROR: generation mismatch: expected %u, got %u\n", (unsigned)gen, (unsigned)cecs_entity_generation_of(e));
             assert(false && "generation mismatch");
             exit(EXIT_FAILURE);
         }
 
         // meta() packs gen in upper byte of meta, flags in lower byte
-        const uint_fast16_t meta = cecs_entity_meta(e);
+        const uint_fast16_t meta = cecs_entity_meta_of(e);
         const uint_fast16_t meta_expected = (uint_fast16_t)((((uint_fast16_t)gen) << flags_bits) | (uint_fast16_t)flags);
         if (meta != meta_expected) {
             fprintf(stderr, "ERROR: meta mismatch: expected 0x%04X, got 0x%04X\n", (unsigned)meta_expected, (unsigned)meta);
@@ -1460,18 +1460,20 @@ void test_entity(cecs_allocator *allocator) {
     // --- Test 2: Flag operations (set/unset, helpers) ---
     printf("\n--- Test 2: Flag operations ---\n");
     {
-        cecs_entity e = cecs_entity_create(42, 0, 0);
-        if (cecs_entity_is_free(e)) {
+        const size_t index = 42;
+        cecs_entity e = cecs_entity_create(index, 0, 0);
+        if (cecs_identifier_is_free(e, index)) {
             fprintf(stderr, "ERROR: entity should not start free\n");
             assert(false && "unexpected free flag");
             exit(EXIT_FAILURE);
         }
-        e = cecs_entity_set_free(e);
-        if (!cecs_entity_is_free(e)) {
-            fprintf(stderr, "ERROR: failed to set free flag\n");
-            assert(false && "failed to set free");
-            exit(EXIT_FAILURE);
-        }
+        // XXX: Deprecated test
+        // e = cecs_entity_set_free(e);
+        // if (!cecs_entity_is_free(e)) {
+        //     fprintf(stderr, "ERROR: failed to set free flag\n");
+        //     assert(false && "failed to set free");
+        //     exit(EXIT_FAILURE);
+        // }
         printf("Set free: value=0x%016llX, flags=0x%02X\n", (unsigned long long)e.value, cecs_entity_meta_flags(e));
 
         e = cecs_entity_set_illegal(e);
@@ -1482,12 +1484,13 @@ void test_entity(cecs_allocator *allocator) {
         }
         printf("Set illegal: value=0x%016llX, flags=0x%02X\n", (unsigned long long)e.value, cecs_entity_meta_flags(e));
 
-        e = cecs_entity_unset_free(e);
-        if (cecs_entity_is_free(e)) {
-            fprintf(stderr, "ERROR: failed to unset free flag\n");
-            assert(false && "failed to unset free");
-            exit(EXIT_FAILURE);
-        }
+        // XXX: Deprecated test
+        // e = cecs_entity_unset_free(e);
+        // if (cecs_entity_is_free(e)) {
+        //     fprintf(stderr, "ERROR: failed to unset free flag\n");
+        //     assert(false && "failed to unset free");
+        //     exit(EXIT_FAILURE);
+        // }
         e = cecs_entity_unset_illegal(e);
         if (cecs_entity_is_illegal(e)) {
             fprintf(stderr, "ERROR: failed to unset illegal flag\n");
@@ -1502,45 +1505,45 @@ void test_entity(cecs_allocator *allocator) {
     {
         cecs_entity e = cecs_entity_create(999, 0, 0);
         e = cecs_entity_set_generation(e, 10);
-        if (cecs_entity_generation(e) != 10) {
-            fprintf(stderr, "ERROR: set_generation expected 10, got %u\n", (unsigned)cecs_entity_generation(e));
+        if (cecs_entity_generation_of(e) != 10) {
+            fprintf(stderr, "ERROR: set_generation expected 10, got %u\n", (unsigned)cecs_entity_generation_of(e));
             assert(false && "set_generation failed");
             exit(EXIT_FAILURE);
         }
-        printf("Set generation to %u: value=0x%016llX\n", (unsigned)cecs_entity_generation(e), (unsigned long long)e.value);
+        printf("Set generation to %u: value=0x%016llX\n", (unsigned)cecs_entity_generation_of(e), (unsigned long long)e.value);
 
         cecs_entity e_add = cecs_entity_generation_add(e, 5);
         cecs_entity e_sub = cecs_entity_generation_sub(e_add, 5);
-        if (cecs_entity_generation(e_add) != (uint_fast8_t)(10 + 5)) {
-            fprintf(stderr, "ERROR: generation_add failed: expected %u, got %u\n", (unsigned)(10 + 5), (unsigned)cecs_entity_generation(e_add));
+        if (cecs_entity_generation_of(e_add) != (uint_fast8_t)(10 + 5)) {
+            fprintf(stderr, "ERROR: generation_add failed: expected %u, got %u\n", (unsigned)(10 + 5), (unsigned)cecs_entity_generation_of(e_add));
             assert(false && "generation_add failed");
             exit(EXIT_FAILURE);
         }
-        if (cecs_entity_generation(e_sub) != 10) {
-            fprintf(stderr, "ERROR: generation_sub failed: expected 10, got %u\n", (unsigned)cecs_entity_generation(e_sub));
+        if (cecs_entity_generation_of(e_sub) != 10) {
+            fprintf(stderr, "ERROR: generation_sub failed: expected 10, got %u\n", (unsigned)cecs_entity_generation_of(e_sub));
             assert(false && "generation_sub failed");
             exit(EXIT_FAILURE);
         }
-        printf("Add 5 -> gen=%u, then sub 5 -> gen=%u\n", (unsigned)cecs_entity_generation(e_add), (unsigned)cecs_entity_generation(e_sub));
+        printf("Add 5 -> gen=%u, then sub 5 -> gen=%u\n", (unsigned)cecs_entity_generation_of(e_add), (unsigned)cecs_entity_generation_of(e_sub));
 
-        if (cecs_entity_generation(cecs_entity_next_generation(e)) != (uint_fast8_t)(10 + 1)) {
+        if (cecs_entity_generation_of(cecs_entity_next_generation(e)) != (uint_fast8_t)(10 + 1)) {
             fprintf(stderr, "ERROR: next_generation failed\n");
             assert(false && "next_generation failed");
             exit(EXIT_FAILURE);
         }
-        if (cecs_entity_generation(cecs_entity_prev_generation(e)) != (uint_fast8_t)(10 - 1)) {
+        if (cecs_entity_generation_of(cecs_entity_prev_generation(e)) != (uint_fast8_t)(10 - 1)) {
             fprintf(stderr, "ERROR: prev_generation failed\n");
             assert(false && "prev_generation failed");
             exit(EXIT_FAILURE);
         }
         printf("next_generation=%u, prev_generation=%u\n",
-               (unsigned)cecs_entity_generation(cecs_entity_next_generation(e)),
-               (unsigned)cecs_entity_generation(cecs_entity_prev_generation(e)));
+               (unsigned)cecs_entity_generation_of(cecs_entity_next_generation(e)),
+               (unsigned)cecs_entity_generation_of(cecs_entity_prev_generation(e)));
 
         // Wrap-around behavior (modulo field width)
         cecs_entity e_max = cecs_entity_set_generation(e, max_generation);
         cecs_entity e_wrap = cecs_entity_next_generation(e_max);
-        uint_fast8_t wrapped = cecs_entity_generation(e_wrap);
+        uint_fast8_t wrapped = cecs_entity_generation_of(e_wrap);
         uint_fast8_t expected_wrap = (uint_fast8_t)((max_generation + 1) & (uint_fast8_t)((1u << gen_bits) - 1u));
         if (wrapped != expected_wrap) {
             fprintf(stderr, "ERROR: generation wrap mismatch: expected %u, got %u\n", (unsigned)expected_wrap, (unsigned)wrapped);
@@ -1558,9 +1561,9 @@ void test_entity(cecs_allocator *allocator) {
         for (size_t i = 0; i < sizeof(test_indices)/sizeof(test_indices[0]); ++i) {
             for (size_t j = 0; j < sizeof(test_gens)/sizeof(test_gens[0]); ++j) {
                 cecs_entity e = cecs_entity_create(test_indices[i], cecs_entity_meta_type_none, test_gens[j]);
-                size_t idx = cecs_entity_index(e);
-                uint_fast8_t gen = cecs_entity_generation(e);
-                bool free = cecs_entity_is_free(e);
+                size_t idx = cecs_entity_index_of(e);
+                uint_fast8_t gen = cecs_entity_generation_of(e);
+                bool free = cecs_identifier_is_free(e, idx);
                 printf("Index=%zu, Gen=%u -> read Index=%zu, Gen=%u, free=%d\n",
                        test_indices[i], (unsigned)test_gens[j], idx, (unsigned)gen, (int)free);
                 if (idx != test_indices[i] || gen != test_gens[j] || free) {
@@ -1646,26 +1649,27 @@ void test_entity(cecs_allocator *allocator) {
         for (size_t i = 0; i < 8; ++i) {
             size_t expected_index = (size_t)(1000 + i);
             uint_fast8_t expected_gen = (uint_fast8_t)((base_gen + 1) & (uint_fast8_t)((1u << gen_bits) - 1u));
-            if (cecs_entity_index(entities[i]) != expected_index) {
+            if (cecs_entity_index_of(entities[i]) != expected_index) {
                 fprintf(stderr, "ERROR: SIMD index mismatch at %zu: expected %zu, got %zu\n",
-                        i, expected_index, cecs_entity_index(entities[i]));
+                        i, expected_index, cecs_entity_index_of(entities[i]));
                 assert(false && "SIMD index mismatch");
                 exit(EXIT_FAILURE);
             }
-            if (cecs_entity_generation(entities[i]) != expected_gen) {
+            if (cecs_entity_generation_of(entities[i]) != expected_gen) {
                 fprintf(stderr, "ERROR: SIMD generation mismatch at %zu: expected %u, got %u\n",
-                        i, (unsigned)expected_gen, (unsigned)cecs_entity_generation(entities[i]));
+                        i, (unsigned)expected_gen, (unsigned)cecs_entity_generation_of(entities[i]));
                 assert(false && "SIMD generation mismatch");
                 exit(EXIT_FAILURE);
             }
-            if (cecs_entity_is_free(entities[i])) {
-                fprintf(stderr, "ERROR: SIMD flags lost at %zu\n", i);
-                assert(false && "SIMD flags mismatch");
-                exit(EXIT_FAILURE);
-            }
+            // XXX: Deprecated test
+            // if (cecs_entity_is_free(entities[i])) {
+            //     fprintf(stderr, "ERROR: SIMD flags lost at %zu\n", i);
+            //     assert(false && "SIMD flags mismatch");
+            //     exit(EXIT_FAILURE);
+            // }
             printf("SIMD[%zu]: value=0x%016llX, index=%zu, gen=%u, flags=0x%02X\n",
-                   i, (unsigned long long)entities[i].value, cecs_entity_index(entities[i]),
-                   (unsigned)cecs_entity_generation(entities[i]), cecs_entity_meta_flags(entities[i]));
+                   i, (unsigned long long)entities[i].value, cecs_entity_index_of(entities[i]),
+                   (unsigned)cecs_entity_generation_of(entities[i]), cecs_entity_meta_flags(entities[i]));
         }
     }
 
@@ -1675,7 +1679,7 @@ void test_entity(cecs_allocator *allocator) {
         // Fill all index bits with 1s and ensure reading index returns max_index
         cecs_entity_value val = (cecs_entity_value)index_mask | (((cecs_entity_value)max_generation) << (cecs_entity_value)gen_offset);
         cecs_entity e = cecs_entity_from_value_unchecked(val);
-        size_t idx = cecs_entity_index(e);
+        size_t idx = cecs_entity_index_of(e);
         if (idx != max_index) {
             fprintf(stderr, "ERROR: index mask integrity failed: expected %zu, got %zu\n", max_index, idx);
             assert(false && "index mask integrity failed");
@@ -1710,22 +1714,22 @@ void test_entity_storage(cecs_allocator *allocator) {
     cecs_entity e[5];
     for (size_t i = 0; i < 5; ++i) {
         e[i] = cecs_entity_storage_alloc_entity(&storage, allocator);
-        size_t idx = cecs_entity_index(e[i]);
+        size_t idx = cecs_entity_index_of(e[i]);
         printf("Allocated[%zu]: value=0x%016llX, index=%zu, gen=%u, free=%d\n",
-               i, (unsigned long long)e[i].value, idx, (unsigned)cecs_entity_generation(e[i]), (int)cecs_entity_is_free(e[i]));
-        if (idx != i || cecs_entity_is_free(e[i]) || cecs_entity_generation(e[i]) != 0) {
+               i, (unsigned long long)e[i].value, idx, (unsigned)cecs_entity_generation_of(e[i]), (int)cecs_identifier_is_free(e[i], idx));
+        if (idx != i || cecs_identifier_is_free(e[i], idx) || cecs_entity_generation_of(e[i]) != 0) {
             fprintf(stderr, "ERROR: allocation mismatch at %zu\n", i);
             assert(false && "allocation mismatch");
             exit(EXIT_FAILURE);
         }
         // Validate getters
-        cecs_entity by_index = cecs_entity_storage_get_entity(&storage, idx);
+        cecs_entity by_index = cecs_entity_storage_get_used(&storage, idx);
         if (by_index.value != e[i].value) {
             fprintf(stderr, "ERROR: get_entity mismatch at %zu\n", i);
             assert(false && "get_entity mismatch");
             exit(EXIT_FAILURE);
         }
-        cecs_entity exact = cecs_entity_storage_get_entity_exact(&storage, e[i]);
+        cecs_entity exact = cecs_entity_storage_get_exact(&storage, e[i]);
         if (exact.value != e[i].value) {
             fprintf(stderr, "ERROR: get_entity_exact mismatch at %zu\n", i);
             assert(false && "get_entity_exact mismatch");
@@ -1766,24 +1770,25 @@ void test_entity_storage(cecs_allocator *allocator) {
     size_t expected_reuse1[] = {1, 4, 2};
     for (size_t i = 0; i < 3; ++i) {
         cecs_entity r = cecs_entity_storage_alloc_entity(&storage, allocator);
-        size_t idx = cecs_entity_index(r);
-        uint_fast8_t gen = cecs_entity_generation(r);
+        size_t idx = cecs_entity_index_of(r);
+        uint_fast8_t gen = cecs_entity_generation_of(r);
         if (idx != expected_reuse1[i]) {
             fprintf(stderr, "ERROR: LIFO reuse mismatch: expected %zu, got %zu\n", expected_reuse1[i], idx);
             assert(false && "LIFO reuse mismatch");
             exit(EXIT_FAILURE);
         }
-        if (gen != (uint_fast8_t)(cecs_entity_generation(e[idx]) + 1)) {
+        if (gen != (uint_fast8_t)(cecs_entity_generation_of(e[idx]) + 1)) {
             fprintf(stderr, "ERROR: generation not incremented on reuse for index %zu: expected %u, got %u\n",
-                    idx, (unsigned)(cecs_entity_generation(e[idx]) + 1), (unsigned)gen);
+                    idx, (unsigned)(cecs_entity_generation_of(e[idx]) + 1), (unsigned)gen);
             assert(false && "generation not incremented on reuse");
             exit(EXIT_FAILURE);
         }
-        if (cecs_entity_is_free(r)) {
-            fprintf(stderr, "ERROR: reused entity has free flag set for index %zu\n", idx);
-            assert(false && "reused entity free flag set");
-            exit(EXIT_FAILURE);
-        }
+        // XXX: Deprecated test
+        // if (cecs_entity_is_free(r)) {
+        //     fprintf(stderr, "ERROR: reused entity has free flag set for index %zu\n", idx);
+        //     assert(false && "reused entity free flag set");
+        //     exit(EXIT_FAILURE);
+        // }
         printf("Reused -> index=%zu, gen=%u\n", idx, (unsigned)gen);
         e[idx] = r; // update latest entity for that index
     }
@@ -1807,21 +1812,21 @@ void test_entity_storage(cecs_allocator *allocator) {
     size_t expected_reuse2[] = {4, 3, 2, 1, 0};
     for (size_t i = 0; i < 5; ++i) {
         cecs_entity r = cecs_entity_storage_alloc_entity(&storage, allocator);
-        if (cecs_entity_index(r) != expected_reuse2[i]) {
-            fprintf(stderr, "ERROR: global LIFO reuse mismatch: expected %zu, got %zu\n", expected_reuse2[i], cecs_entity_index(r));
+        if (cecs_entity_index_of(r) != expected_reuse2[i]) {
+            fprintf(stderr, "ERROR: global LIFO reuse mismatch: expected %zu, got %zu\n", expected_reuse2[i], cecs_entity_index_of(r));
             assert(false && "global LIFO reuse mismatch");
             exit(EXIT_FAILURE);
         }
-        e[cecs_entity_index(r)] = r; // update holder
-        printf("Reused-all -> index=%zu, gen=%u\n", cecs_entity_index(r), (unsigned)cecs_entity_generation(r));
+        e[cecs_entity_index_of(r)] = r; // update holder
+        printf("Reused-all -> index=%zu, gen=%u\n", cecs_entity_index_of(r), (unsigned)cecs_entity_generation_of(r));
     }
 
     // --- Test 5: Append growth beyond reused slots ---
     printf("\n--- Test 5: Append growth beyond reused slots ---\n");
     size_t total_before = cecs_entity_storage_total_count(&storage);
     cecs_entity extra = cecs_entity_storage_alloc_entity(&storage, allocator);
-    if (cecs_entity_index(extra) != total_before) {
-        fprintf(stderr, "ERROR: append growth index mismatch: expected %zu, got %zu\n", total_before, cecs_entity_index(extra));
+    if (cecs_entity_index_of(extra) != total_before) {
+        fprintf(stderr, "ERROR: append growth index mismatch: expected %zu, got %zu\n", total_before, cecs_entity_index_of(extra));
         assert(false && "append growth index mismatch");
         exit(EXIT_FAILURE);
     }
@@ -1830,7 +1835,7 @@ void test_entity_storage(cecs_allocator *allocator) {
         assert(false && "total count append mismatch");
         exit(EXIT_FAILURE);
     }
-    printf("Append alloc -> index=%zu (total now %zu)\n", cecs_entity_index(extra), cecs_entity_storage_total_count(&storage));
+    printf("Append alloc -> index=%zu (total now %zu)\n", cecs_entity_index_of(extra), cecs_entity_storage_total_count(&storage));
 
     // --- Test 6: Generation wrap on a fresh storage (controlled) ---
     printf("\n--- Test 6: Generation wrap on fresh storage ---\n");
@@ -1838,21 +1843,21 @@ void test_entity_storage(cecs_allocator *allocator) {
     cecs_entity w = cecs_entity_storage_alloc_entity(&wrap, allocator); // index 0, gen 0
     const size_t gen_bits = (size_t)CECS_ENTITY_GENERATION_BITS; // number of generation bits (should be 8)
     const uint_fast8_t gen_mod = (uint_fast8_t)((1u << gen_bits) - 1u); // mask for wrap
-    const uint_fast8_t initial_gen = cecs_entity_generation(w);
+    const uint_fast8_t initial_gen = cecs_entity_generation_of(w);
     const size_t cycles = (size_t)gen_mod + 2; // wrap and two more
     for (size_t i = 1; i <= cycles; ++i) {
         // Free and immediately re-allocate to reuse the same slot
         cecs_entity_storage_free_entity(&wrap, w);
         w = cecs_entity_storage_alloc_entity(&wrap, allocator);
         uint_fast8_t expected = (uint_fast8_t)((initial_gen + i) & gen_mod);
-        if (cecs_entity_index(w) != 0 || cecs_entity_generation(w) != expected || cecs_entity_is_free(w)) {
+        if (cecs_entity_index_of(w) != 0 || cecs_entity_generation_of(w) != expected || cecs_identifier_is_free(w, 0)) {
             fprintf(stderr, "ERROR: wrap cycle %zu: idx=%zu gen=%u expected=%u free=%d\n",
-                    i, cecs_entity_index(w), (unsigned)cecs_entity_generation(w), (unsigned)expected, (int)cecs_entity_is_free(w));
+                    i, cecs_entity_index_of(w), (unsigned)cecs_entity_generation_of(w), (unsigned)expected, (int)cecs_identifier_is_free(w, 0));
             assert(false && "generation wrap mismatch");
             exit(EXIT_FAILURE);
         }
         if (i % 64 == 0 || i == cycles) {
-            printf("Wrap cycle %zu -> gen=%u\n", i, (unsigned)cecs_entity_generation(w));
+            printf("Wrap cycle %zu -> gen=%u\n", i, (unsigned)cecs_entity_generation_of(w));
         }
     }
 
@@ -2286,13 +2291,13 @@ void test_sparse_set_group(cecs_allocator *allocator) {
     for (size_t i = 0; i < 14; ++i) {
         es[i] = cecs_entity_storage_alloc_entity(&egen, allocator);
         int *val0 = (int*)cecs_component_storage_insert_expect(
-            &rs[0]->storage, allocator, cecs_entity_index(es[i]), sizeof(int)
+            &rs[0]->storage, allocator, cecs_entity_index_of(es[i]), sizeof(int)
         );
         *val0 = (int)(i * 10);
     }
     for (size_t i = 0; i < 7; ++i) {
         int *val1 = (int*)cecs_component_storage_insert_expect(
-            &rs[1]->storage, allocator, cecs_entity_index(es[i]), sizeof(int)
+            &rs[1]->storage, allocator, cecs_entity_index_of(es[i]), sizeof(int)
         );
         *val1 = (int)(i * 100);
         cecs_sparse_set_group_push_ungrouped(&group, rs[1], es[i]);
@@ -2308,11 +2313,11 @@ void test_sparse_set_group(cecs_allocator *allocator) {
 
     for (size_t i = 0; i < 14; ++i) {
         const int *val0 = (int*)cecs_component_storage_get(
-            &rs[0]->storage, cecs_entity_index(es[i]), sizeof(int)
+            &rs[0]->storage, cecs_entity_index_of(es[i]), sizeof(int)
         );
         if (i < 7) {
             const int *val1 = (int*)cecs_component_storage_get(
-                &rs[1]->storage, cecs_entity_index(es[i]), sizeof(int)
+                &rs[1]->storage, cecs_entity_index_of(es[i]), sizeof(int)
             );
             if (*val0 != (int)(i * 10) || *val1 != (int)(i * 100)) {
                 fprintf(stderr, "ERROR: Mismatched grouped values at entity %zu: val0=%d (expected %d), val1=%d (expected %d)\n",

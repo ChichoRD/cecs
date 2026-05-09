@@ -253,7 +253,7 @@ cecs_sparse_set_group_insert_result cecs_sparse_set_group_insert(
     const size_t component_size
 ) {
     const cecs_component_registry *const registry = registries[storage_index];
-    const size_t entity_index = cecs_entity_index(entity);
+    const size_t entity_index = cecs_entity_index_of(entity);
     const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&registry->storage);
     const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
 
@@ -297,7 +297,7 @@ void cecs_sparse_set_group_push_ungrouped(
     const cecs_component_registry *const registry,
     const cecs_entity entity
 ) {
-    const size_t entity_index = cecs_entity_index(entity);
+    const size_t entity_index = cecs_entity_index_of(entity);
     const cecs_sparse_set_storage *const sparse_set_storage = cecs_component_storage_sparse_set(&registry->storage);
     const size_t insert_key = cecs_sparse_set_storage_map_key(sparse_set_storage, entity_index);
     const cecs_dense_index *const insert_index = cecs_sparse_set_get_index(&sparse_set_storage->set, insert_key);
