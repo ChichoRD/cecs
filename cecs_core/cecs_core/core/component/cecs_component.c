@@ -32,7 +32,7 @@ void cecs_world_components_free(cecs_world_components* wc) {
     wc->discard = (cecs_component_discard){ 0 };
 }
 
-// FIXME: messed up with const qualifications
+// XXX: [DEPRECATED] FIXME: messed up with const qualifications
 cecs_optional_component_storage cecs_world_components_get_component_storage(cecs_world_components* wc, const cecs_component_id component_id) {
     return CECS_OPTION_MAP_REFERENCE_STRUCT(
         cecs_optional_element,

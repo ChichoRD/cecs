@@ -391,7 +391,7 @@ size_t cecs_world_clear_entity_range(cecs_world *w, cecs_entity_id_range range, 
         cecs_associated_component_storage storage = cecs_world_components_entity_iterator_current(&it);
 
         const size_t component_count = cecs_exclusive_range_length(range);
-        // BUG: we did notgrow the discard allocation enough
+        // XXX: [DEPRECATED] BUG: we did notgrow the discard allocation enough
         // think about what to do with the discard
         cecs_component_storage_remove_array(
             &storage.storage->storage,
@@ -473,7 +473,7 @@ size_t cecs_world_copy_entity_range_onto(cecs_world *w, cecs_entity_id_range des
             );
             source_components = contiguous_source_components;
         } else {
-            // FIXME: implement!
+            // XXX: [DEPRECATED] FIXME: implement!
             assert(false && "unimplemented");
             exit(EXIT_FAILURE);
         }

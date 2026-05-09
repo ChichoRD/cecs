@@ -6,9 +6,33 @@
 #include "linear/cecs_matrix.h"
 
 #include "../cecs_units.h"
+#include <float.h>
 
+inline void cecs_vec3_f32_orthonormal_basis_rh(
+    const cecs_vec3_f32 forward,
+    const cecs_vec3_f32 upwards,
+    cecs_vec3_f32 *const out_right,
+    cecs_vec3_f32 *const out_up,
+    cecs_vec3_f32 *const out_front
+) {
+    *out_front = cecs_vec3_f32_normalize(forward); 
+    *out_right = cecs_vec3_f32_normalize(cecs_vec3_f32_cross(*out_front, upwards));
+    *out_up = cecs_vec3_f32_cross(*out_right, *out_front);
+}
+inline void cecs_vec3_f32_orthonormal_basis_lh(
+    const cecs_vec3_f32 forward,
+    const cecs_vec3_f32 upwards,
+    cecs_vec3_f32 *const out_right,
+    cecs_vec3_f32 *const out_up,
+    cecs_vec3_f32 *const out_front
+) {
+    *out_front = cecs_vec3_f32_normalize(forward); 
+    *out_right = cecs_vec3_f32_normalize(cecs_vec3_f32_cross(upwards, *out_front));
+    *out_up = cecs_vec3_f32_cross(*out_front, *out_right);
+}
 
-inline cecs_versor_f32 cecs_versor_f32_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle) {
+inline cecs_versor_f32 cecs_versor_f32_axis_angle(const cecs_vec3_f32 axis, const cecs_radians_f32 angle)
+{
     const cecs_radians_f32 half_angle = angle * 0.5f;
     const float s = sinf(half_angle);
     return (cecs_versor_f32){
@@ -151,27 +175,131 @@ inline cecs_versor_packed_f32 cecs_versor_packed_f32_pack_look_z(const cecs_vec3
     };
 }
 
-// TODO: add right-handed versions of functions, currently assumes left-handed coordinate system with +z forward, +y up, +x right
-inline cecs_versor_f32 cecs_versor_f32_look_z_up(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
-    const cecs_vec3_f32 front = cecs_vec3_f32_normalize(forward); 
-    const cecs_vec3_f32 left = cecs_vec3_f32_normalize(cecs_vec3_f32_cross(upwards, front));
-    const cecs_vec3_f32 up = cecs_vec3_f32_cross(front, left);
+inline cecs_versor_f32 cecs_versor_f32_look_z_up_fast_lh(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    cecs_vec3_f32 right;
+    cecs_vec3_f32 up;
+    cecs_vec3_f32 front;
+    cecs_vec3_f32_orthonormal_basis_lh(forward, upwards, &right, &up, &front);
     
-    // BUG: assumes `trace > 0`, handle 4 branches of each principal component being the largest
-    const float k = sqrtf(1.0f + left.x + up.y + front.z) * 0.5f;
+    const float k = sqrtf(1.0f + right.x + up.y + front.z) * 0.5f;
     const float k4_rcp = 0.25f / k;
     return (cecs_versor_f32){
-        .r = k,
         .i = (up.z - front.y) * k4_rcp,
-        .j = (front.x - left.z) * k4_rcp,
-        .k = (left.y - up.x) * k4_rcp,
+        .j = (front.x - right.z) * k4_rcp,
+        .k = (right.y - up.x) * k4_rcp,
+        .r = k,
     };
 }
-inline cecs_quaternion_f32 cecs_quaternion_f32_look_z_up(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
-    const cecs_vec3_f32 front = cecs_vec3_f32_normalize(forward); 
-    const cecs_vec3_f32 left = cecs_vec3_f32_normalize(cecs_vec3_f32_cross(upwards, front));
-    const cecs_vec3_f32 up = cecs_vec3_f32_cross(front, left);
+inline cecs_versor_f32 cecs_versor_f32_look_z_up_fast_rh(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    cecs_vec3_f32 right;
+    cecs_vec3_f32 up;
+    cecs_vec3_f32 front;
+    cecs_vec3_f32_orthonormal_basis_rh(forward, upwards, &right, &up, &front);
     
+    const float k = sqrtf(1.0f + right.x + up.y + front.z) * 0.5f;
+    const float k4_rcp = 0.25f / k;
+    return (cecs_versor_f32){
+        .i = (up.z - front.y) * k4_rcp,
+        .j = (front.x - right.z) * k4_rcp,
+        .k = (right.y - up.x) * k4_rcp,
+        .r = k,
+    };
+}
+
+inline cecs_versor_f32 cecs_versor_f32_look_z_up_lh(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    cecs_vec3_f32 right;
+    cecs_vec3_f32 up;
+    cecs_vec3_f32 front;
+    cecs_vec3_f32_orthonormal_basis_lh(forward, upwards, &right, &up, &front);
+    
+    const float k = sqrtf(1.0f + right.x + up.y + front.z) * 0.5f;
+    if (k >= FLT_EPSILON) {
+        const float k4_rcp = 0.25f / k;
+        return (cecs_versor_f32){
+            .i = (up.z - front.y) * k4_rcp,
+            .j = (front.x - right.z) * k4_rcp,
+            .k = (right.y - up.x) * k4_rcp,
+            .r = k,
+        };
+    } else if (up.x > front.y && up.x > right.z) {
+        const float t = sqrtf(1.0f + right.x - up.y - front.z) * 0.5f;
+        const float t4_rcp = 0.25f / t;
+        return (cecs_versor_f32){
+            .i = (right.x - up.y - front.z) * t4_rcp,
+            .j = (right.y + up.x) * t4_rcp,
+            .k = (right.z + front.x) * t4_rcp,
+            .r = t,
+        };
+    } else if (front.y > right.z) {
+        const float t = sqrtf(1.0f - right.x + up.y - front.z) * 0.5f;
+        const float t4_rcp = 0.25f / t;
+        return (cecs_versor_f32){
+            .i = (front.x + right.z) * t4_rcp,
+            .j = (up.y - right.x - front.z) * t4_rcp,
+            .k = (front.z + up.x) * t4_rcp,
+            .r = t,
+        };
+    } else {
+        const float t = sqrtf(1.0f - right.x - up.y + front.z) * 0.5f;
+        const float t4_rcp = 0.25f / t;
+        return (cecs_versor_f32){
+            .i = (up.y + right.x - front.z) * t4_rcp,
+            .j = (front.y + up.x) * t4_rcp,
+            .k = (front.z - right.x - up.y) * t4_rcp,
+            .r = t,
+        };
+    }
+}
+inline cecs_versor_f32 cecs_versor_f32_look_z_up_rh(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    cecs_vec3_f32 right;
+    cecs_vec3_f32 up;
+    cecs_vec3_f32 front;
+    cecs_vec3_f32_orthonormal_basis_rh(forward, upwards, &right, &up, &front);
+    
+    const float k = sqrtf(1.0f + right.x + up.y + front.z) * 0.5f;
+    if (k >= FLT_EPSILON) {
+        const float k4_rcp = 0.25f / k;
+        return (cecs_versor_f32){
+            .i = (up.z - front.y) * k4_rcp,
+            .j = (front.x - right.z) * k4_rcp,
+            .k = (right.y - up.x) * k4_rcp,
+            .r = k,
+        };
+    } else if (up.x > front.y && up.x > right.z) {
+        const float t = sqrtf(1.0f + right.x - up.y - front.z) * 0.5f;
+        const float t4_rcp = 0.25f / t;
+        return (cecs_versor_f32){
+            .i = (right.x - up.y - front.z) * t4_rcp,
+            .j = (right.y + up.x) * t4_rcp,
+            .k = (right.z + front.x) * t4_rcp,
+            .r = t,
+        };
+    } else if (front.y > right.z) {
+        const float t = sqrtf(1.0f - right.x + up.y - front.z) * 0.5f;
+        const float t4_rcp = 0.25f / t;
+        return (cecs_versor_f32){
+            .i = (front.x + right.z) * t4_rcp,
+            .j = (up.y - right.x - front.z) * t4_rcp,
+            .k = (front.z + up.x) * t4_rcp,
+            .r = t,
+        };
+    } else {
+        const float t = sqrtf(1.0f - right.x - up.y + front.z) * 0.5f;
+        const float t4_rcp = 0.25f / t;
+        return (cecs_versor_f32){
+            .i = (up.y + right.x - front.z) * t4_rcp,
+            .j = (front.y + up.x) * t4_rcp,
+            .k = (front.z - right.x - up.y) * t4_rcp,
+            .r = t,
+        };
+    }
+}
+
+inline cecs_quaternion_f32 cecs_quaternion_f32_look_z_up_lh(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    cecs_vec3_f32 right;
+    cecs_vec3_f32 up;
+    cecs_vec3_f32 front;
+    cecs_vec3_f32_orthonormal_basis_lh(forward, upwards, &right, &up, &front);
     // const float k = sqrtf(1.0f + left.x + up.y + front.z) * 0.5f;
     // const float k4_rcp = 0.25f / k;
     // return (cecs_versor_f32){
@@ -183,10 +311,32 @@ inline cecs_quaternion_f32 cecs_quaternion_f32_look_z_up(const cecs_vec3_f32 for
 
     // *= k / 0.25
     return (cecs_quaternion_f32){
-        .r = (1.0f + left.x + up.y + front.z),
         .i = (up.z - front.y),
-        .j = (front.x - left.z),
-        .k = (left.y - up.x),
+        .j = (front.x - right.z),
+        .k = (right.y - up.x),
+        .r = (1.0f + right.x + up.y + front.z),
+    };
+}
+inline cecs_quaternion_f32 cecs_quaternion_f32_look_z_up_rh(const cecs_vec3_f32 forward, const cecs_vec3_f32 upwards) {
+    cecs_vec3_f32 right;
+    cecs_vec3_f32 up;
+    cecs_vec3_f32 front;
+    cecs_vec3_f32_orthonormal_basis_rh(forward, upwards, &right, &up, &front);
+    // const float k = sqrtf(1.0f + left.x + up.y + front.z) * 0.5f;
+    // const float k4_rcp = 0.25f / k;
+    // return (cecs_versor_f32){
+    //     .r = k,
+    //     .i = (up.z - front.y) * k4_rcp,
+    //     .j = (front.x - left.z) * k4_rcp,
+    //     .k = (left.y - up.x) * k4_rcp,
+    // };
+
+    // *= k / 0.25
+    return (cecs_quaternion_f32){
+        .i = (up.z - front.y),
+        .j = (front.x - right.z),
+        .k = (right.y - up.x),
+        .r = (1.0f + right.x + up.y + front.z),
     };
 }
 
