@@ -198,16 +198,22 @@ cecs_view_alloc cecs_view_alloc_create_take(cecs_allocator *const allocator, cec
         .allocator = *allocator,
         .view = *view,
     };
+    // XXX: since we are 'taking' (moving) ownership of the view's allocator, we are disabling the allocator in the view_alloc, 
+    // so we set it to none to avoid potential confusion about which allocator is valid in the view_alloc
+    // and to hopefully cause more obvious errors if the view_alloc's allocator is accidentally used after being moved from
     allocator->type = cecs_internal_allocator_type_none;
-    cecs_rwlock_borrow_mut_release(&view->borrow); // BUG: why do we release the view
+
+    // XXX: since we are 'taking' (moving) ownership of the view's mutex guard, 
+    // we need to release the mutable borrow on the mutex guard here to avoid potential double releases of the same borrow
+    // when both the view and the view_alloc are released or uses of a now invalid (moved) view
+    cecs_rwlock_borrow_mut_release(&view->borrow);
     return view_alloc;
 }
-cecs_view_alloc cecs_view_alloc_create(const cecs_allocator allocator, cecs_view_mut *const view) {
+cecs_view_alloc cecs_view_alloc_create(const cecs_allocator allocator, const cecs_view_mut view) {
     cecs_view_alloc view_alloc = (cecs_view_alloc) {
         .allocator = allocator,
-        .view = *view,
+        .view = view,
     };
-    cecs_rwlock_borrow_mut_release(&view->borrow); // BUG: why do we release the view
     return view_alloc;
 }
 

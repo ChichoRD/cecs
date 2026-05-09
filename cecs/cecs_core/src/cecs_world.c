@@ -68,10 +68,9 @@ cecs_view_alloc cecs_world_acquire_view_alloc_take(cecs_world *const world, cecs
     );
 }
 cecs_view_alloc cecs_world_acquire_view_alloc(cecs_world *const world, const cecs_allocator allocator, const cecs_component_type component) {
-    cecs_view_mut view = cecs_world_acquire_view_mut(world, component);
     return cecs_view_alloc_create(
         allocator,
-        &view
+        cecs_world_acquire_view_mut(world, component)
     );
 }
 
