@@ -2390,9 +2390,9 @@ int main(void) {
     };
 
     const cecs_component_type component_int =
-        cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(int));
+        cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(int), 16ull);
     const cecs_component_type component_float =
-        cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(float));
+        cecs_world_register_component(&w, &allocator, cecs_component_storage_type_sparse_set, sizeof(float), 16ull);
 
     // AHH! We are not so far from usable, view-view (no groups optimization) ecs! YAY!
     cecs_entity es[24];

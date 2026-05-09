@@ -49,7 +49,7 @@ static_assert(
 
 #define CECS_FLATBUCKET8_MAX_COUNT_LOG2 3ull
 #define CECS_FLATBUCKET8_MAX_COUNT (1ull << CECS_FLATBUCKET8_MAX_COUNT_LOG2)
-#define CECS_FLATBUCKET8_MAX_COUNT_MASK ((CECS_FLATBUCKET8_MAX_COUNT << 1ull) - 1ull)
+#define CECS_FLATBUCKET8_MAX_COUNT_MASK (((1ull << (CECS_FLATBUCKET8_MAX_COUNT_LOG2 + 1ull)) - 1ull))
 
 extern const uint_fast8_t cecs_flatbucket_max_count;
 cecs_flatbucket_hash_low_fast cecs_flatbucket_hash_low_get(const cecs_flatbucket_hash hash);

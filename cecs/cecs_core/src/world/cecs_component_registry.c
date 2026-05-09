@@ -34,15 +34,10 @@ extern inline cecs_component_registry_userdata cecs_component_registry_userdata_
 
 extern inline cecs_component_registry_groups cecs_component_registry_groups_create(void);
 cecs_component_registry_groups cecs_component_registry_groups_create_with_capacity(cecs_allocator *const allocator, const size_t capacity) {
-    // HACK: enusre non-zero capacity, else call cecs_flatset_create(void)
-    cecs_debugbreak_fail_unless(
-        capacity > 0ull,
-        "error: cecs_component_registry_groups_create_with_capacity called with zero capacity"
-    );
     return (cecs_component_registry_groups){
         .group_types = cecs_flatset_create_with_capacity(
             allocator,
-            ((capacity - 1ull) >> CECS_FLATBUCKET8_MAX_COUNT_LOG2) + 1ull,
+            ((capacity + (CECS_FLATBUCKET8_MAX_COUNT - 1ull)) >> CECS_FLATBUCKET8_MAX_COUNT_LOG2),
             sizeof(cecs_component_registry_group_type)
         ),
     };

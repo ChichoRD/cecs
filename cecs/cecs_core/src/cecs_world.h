@@ -23,7 +23,8 @@ cecs_component_type cecs_world_register_component(
     cecs_world *const world,
     cecs_allocator *const allocator,
     const cecs_component_storage_value storage_type,
-    const size_t component_size
+    const size_t component_size,
+    const size_t initial_capacity
 );
 
 cecs_view cecs_world_acquire_view(

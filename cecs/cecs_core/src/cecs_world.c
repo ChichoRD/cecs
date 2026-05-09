@@ -9,7 +9,8 @@ cecs_component_type cecs_world_register_component(
     cecs_world *const world,
     cecs_allocator *const allocator,
     const cecs_component_storage_value storage_type,
-    const size_t component_size
+    const size_t component_size,
+    const size_t initial_capacity
 ) {
     const size_t registry_index = cecs_world_components_count(&world->components);
     cecs_debugbreak_fail_unless(
@@ -24,8 +25,7 @@ cecs_component_type cecs_world_register_component(
         cecs_unreachable();
         break;
     case cecs_component_storage_type_sparse_set:
-        // HACK: default to initial capacity of 16 components
-        storage = cecs_component_storage_create_sparse_set(allocator, 16ull, component_size);
+        storage = cecs_component_storage_create_sparse_set(allocator, initial_capacity, component_size);
         break;
     default:
         cecs_unimplemented_fail(
