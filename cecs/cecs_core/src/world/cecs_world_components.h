@@ -32,5 +32,26 @@ inline cecs_registry *cecs_world_components_get_registry_mut(cecs_world_componen
     return (cecs_registry *)cecs_dynarray_get(&components->registries, index, sizeof(cecs_registry));
 }
 
+cecs_rwlock_borrow cecs_world_components_acquire_registry(
+    const cecs_world_components *const components,
+    const size_t index,
+    const cecs_component_registry **const out_registry
+);
+cecs_rwlock_borrow_mut cecs_world_components_acquire_registry_mut(
+    cecs_world_components *const components,
+    const size_t index,
+    cecs_component_registry **const out_registry
+);
+
+void cecs_world_components_release_registry(
+    const cecs_world_components *const components,
+    const size_t index,
+    cecs_rwlock_borrow *const borrow
+);
+void cecs_world_components_release_registry_mut(
+    cecs_world_components *const components,
+    const size_t index,
+    cecs_rwlock_borrow_mut *const borrow
+);
 
 #endif

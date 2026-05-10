@@ -1,6 +1,7 @@
 #ifndef CECS_ENTITY_H
 #define CECS_ENTITY_H
 
+// FIXME: cleanup!
 #include "registry/cecs_identifier.h"
 
 typedef cecs_identifier_value cecs_entity_value;

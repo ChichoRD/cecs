@@ -64,7 +64,7 @@ inline cecs_view cecs_view_create(const cecs_rwlock_borrow borrow, const cecs_co
     cecs_view_expect_valid_or_exit(view);
     return view;
 }
-void cecs_view_release(cecs_view *const view, cecs_world_components *const components);
+void cecs_view_release(cecs_view *const view, const cecs_world_components *const components);
 
 const cecs_component_registry *cecs_view_registry(const cecs_view view, const cecs_world_components *const components);
 
@@ -137,6 +137,8 @@ inline void cecs_view_alloc_expect_valid_or_exit(const cecs_view_alloc *const vi
 }
 
 cecs_view_alloc cecs_view_alloc_create_take(cecs_allocator *const allocator, cecs_view_mut *const view);
+// FIXME: name *_unchecked or *_implicit to signify that the caller must ensure the returned view is the sole owner
+// of the allocator and the view's mutex guard. No other reference must alias these resources!
 cecs_view_alloc cecs_view_alloc_create(const cecs_allocator allocator, const cecs_view_mut view);
 void cecs_view_alloc_release(cecs_view_alloc *const view, cecs_world_components *const components);
 

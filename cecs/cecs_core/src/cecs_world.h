@@ -41,11 +41,13 @@ cecs_view_alloc cecs_world_acquire_view_alloc_take(
     cecs_allocator *const allocator,
     const cecs_component_type component
 );
+// FIXME: name *_unchecked or *_implicit to signify that the caller must ensure the returned view is the sole owner
+// of the allocator and the view's mutex guard. No other reference must alias these resources!
 cecs_view_alloc cecs_world_acquire_view_alloc(cecs_world *const world, const cecs_allocator allocator, const cecs_component_type component);
 
 
 void cecs_world_release_view(
-    cecs_world *const world,
+    const cecs_world *const world,
     cecs_view *const view
 );
 void cecs_world_release_view_mut(

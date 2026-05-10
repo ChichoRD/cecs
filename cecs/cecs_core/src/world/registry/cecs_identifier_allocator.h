@@ -4,6 +4,8 @@
 #include "cecs_identifier.h"
 #include <cecs_dynarray.h>
 
+// FIXME: provide more versions of this allocator, one that supports "external" identifiers, maybe combine them into a tagged union
+// FIXME: maybe move this to its own folder with identifier and allocation related utilities
 // base on source: https://skypjack.github.io/2019-05-06-ecs-baf-part-3/
 typedef struct cecs_identifier_allocator {
     cecs_dynarray identifiers;

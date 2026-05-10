@@ -117,9 +117,8 @@ void cecs_view_unchecked_remove_expect(
 extern inline bool cecs_view_is_valid(const cecs_view view);
 extern inline void cecs_view_expect_valid_or_exit(const cecs_view view);
 extern inline cecs_view cecs_view_create(const cecs_rwlock_borrow borrow, const cecs_component_type component);
-void cecs_view_release(cecs_view *const view, cecs_world_components *const components) {
-    cecs_registry *registry = cecs_world_components_get_registry_mut(components, view->view.component.id);
-    cecs_registry_release(registry, &view->borrow);
+void cecs_view_release(cecs_view *const view, const cecs_world_components *const components) {
+    cecs_world_components_release_registry(components, view->view.component.id, &view->borrow);
 }
 
 const cecs_component_registry *cecs_view_registry(const cecs_view view, const cecs_world_components *const components) {
@@ -149,8 +148,7 @@ extern inline void cecs_view_mut_expect_valid_or_exit(const cecs_view_mut view);
 extern inline cecs_view_mut cecs_view_mut_create(const cecs_rwlock_borrow_mut borrow, const cecs_component_type component);
 
 void cecs_view_mut_release(cecs_view_mut *const view, cecs_world_components *const components) {
-    cecs_registry *const registry = cecs_world_components_get_registry_mut(components, view->view.component.id);
-    cecs_registry_release_mut(registry, &view->borrow);
+    cecs_world_components_release_registry_mut(components, view->view.component.id, &view->borrow);
 }
 
 cecs_component_registry *cecs_view_mut_registry(const cecs_view_mut view, cecs_world_components *const components) {

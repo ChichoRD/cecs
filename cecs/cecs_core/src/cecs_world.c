@@ -45,18 +45,16 @@ cecs_component_type cecs_world_register_component(
 
 extern cecs_registry *cecs_world_components_get_registry_ptr(const cecs_world_components *const components, const size_t index);
 cecs_view cecs_world_acquire_view(const cecs_world *const world, const cecs_component_type component) {
-    cecs_registry *const registry = cecs_world_components_get_registry_ptr(&world->components, component.id);
     const cecs_component_registry *unused;
     return cecs_view_create(
-        cecs_registry_acquire_or_exit(registry, &unused),
+        cecs_world_components_acquire_registry(&world->components, component.id, &unused),
         component
     );
 }
 cecs_view_mut cecs_world_acquire_view_mut(cecs_world *const world, const cecs_component_type component) {
-    cecs_registry *const registry = cecs_world_components_get_registry_mut(&world->components, component.id);
     cecs_component_registry *unused;
     return cecs_view_mut_create(
-        cecs_registry_acquire_mut_or_exit(registry, &unused),
+        cecs_world_components_acquire_registry_mut(&world->components, component.id, &unused),
         component
     );    
 }
@@ -74,7 +72,7 @@ cecs_view_alloc cecs_world_acquire_view_alloc(cecs_world *const world, const cec
     );
 }
 
-void cecs_world_release_view(cecs_world *const world, cecs_view *const view) {
+void cecs_world_release_view(const cecs_world *const world, cecs_view *const view) {
     cecs_view_release(view, &world->components);
 }
 

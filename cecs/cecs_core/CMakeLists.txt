@@ -59,6 +59,10 @@ project(
             src/world/cecs_view.c
             src/world/cecs_world_components.c
 
+            src/world/query/cecs_query_shared.c
+            src/world/cecs_query.c
+
+
             src/cecs_world.c
         PUBLIC
             FILE_SET ${PROJECT_NAME}_HEADERS
@@ -81,6 +85,20 @@ project(
                 src/world/cecs_system.h
                 src/world/cecs_view.h
                 src/world/cecs_world_components.h
+
+                
+                src/world/query/descriptor/cecs_query_common.h
+                src/world/query/descriptor/cecs_query_descriptor_shared.h
+                # src/world/query/descriptor/cecs_query_descriptor_partial.h
+                # src/world/query/descriptor/cecs_query_descriptor_exclusive.h
+                
+                src/world/query/cecs_query_descriptor.h
+                src/world/query/cecs_query_shared.h
+                # src/world/query/cecs_query_partial.h
+                # src/world/query/cecs_query_exclusive.h
+
+                src/world/cecs_query.h
+
 
                 src/cecs_world.h
 
