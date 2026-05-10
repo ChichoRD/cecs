@@ -28,9 +28,12 @@ static_assert(
     sizeof(cecs_rwlock_value) * CHAR_BIT == CECS_RWLOCK_VALUE_TYPE_BITS,
     "error: CECS_RWLOCK_VALUE_TYPE_BITS does not match the size of CECS_RWLOCK_VALUE_TYPE"
 );
+
+// TODO: allow creation of unacquired borrows for user initialization
 typedef struct cecs_rwlock_borrow {
     cecs_rwlock_value new_shared_ref_count;
 } cecs_rwlock_borrow;
+// TODO: allow creation of unacquired borrows for user initialization
 typedef struct cecs_rwlock_borrow_mut {
     cecs_rwlock_value previous_ref_count;
 } cecs_rwlock_borrow_mut;

@@ -9,6 +9,7 @@
 #include <world/cecs_entity_storage.h>
 #include <world/cecs_registry.h>
 #include <world/group/cecs_sparse_set_group.h>
+#include <world/cecs_query.h>
 #include <cecs_world.h>
 
 #include <stdio.h>
@@ -2451,6 +2452,51 @@ int main(void) {
     }
     cecs_world_release_view(&w, &view_float);
     cecs_world_release_view(&w, &view_int);
+
+
+    const cecs_query_descriptor query = cecs_query_descriptor_create_shared((cecs_query_descriptor_shared){
+        .sets = (cecs_query_descriptor_shared_set[]){{
+                .components = (cecs_component_type[]){component_int},
+                .component_count = 1,
+                .access = cecs_query_access_type_immutable,
+                .match = cecs_query_match_type_all
+            }, {
+                .components = (cecs_component_type[]){component_float},
+                .component_count = 1,
+                .access = cecs_query_access_type_mut,
+                .match = cecs_query_match_type_all
+            }
+        },
+        .set_count = 2
+    });
+    cecs_query_result result = cecs_query_result_create(
+        (cecs_view[1]){0}, (cecs_view_mut[1]){0}, NULL
+    );
+    cecs_query_acquire_mut(&w.components, &query, NULL, &result); {
+        const cecs_view view_int_q = result.view_buffer[0];
+        const cecs_view_mut view_float_q = result.view_mut_buffer[0];
+        for (size_t i = 0; i < 24; ++i) {
+            const int *ival = (const int *)cecs_view_get(view_int_q, &w.components, &w.entities, es[i]);
+            if (*ival != ((int)i * 10)) {
+                fprintf(stderr, "ERROR: Mismatched int value at entity %zu in query: int=%d (expected %d)\n",
+                    i, *ival, (int)(i * 10));
+                assert(false && "Mismatched entity component values in world query test");
+                exit(EXIT_FAILURE);
+            }
+            if (i < 12) {
+                float *fval = (float *)cecs_view_mut_get(view_float_q, &w.components, &w.entities, es[i]);
+                if (*fval != ((float)i * 0.5f)) {
+                    fprintf(stderr, "ERROR: Mismatched float value at entity %zu in query: float=%.1f (expected %.1f)\n",
+                        i, *fval, (float)(i * 0.5f));
+                    assert(false && "Mismatched entity component values in world query test");
+                    exit(EXIT_FAILURE);
+                }
+                // Mutate the float value to test mutability
+                *fval += 1.0f;
+            }
+        }
+    } cecs_query_release_mut(&w.components, &query, &result);
+
 
     cecs_world_components_destroy(&w.components, &allocator);
     cecs_entity_storage_destroy(&w.entities, &allocator);

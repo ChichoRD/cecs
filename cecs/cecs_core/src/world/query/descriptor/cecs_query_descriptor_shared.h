@@ -8,6 +8,7 @@ typedef struct cecs_query_descriptor_shared_set {
     cecs_component_type *components;
     size_t component_count;
     cecs_query_access_value access;
+    // FIXME: we ignore this in the implementations!
     cecs_query_match_value match;
 } cecs_query_descriptor_shared_set;
 

@@ -59,7 +59,9 @@ project(
             src/world/cecs_view.c
             src/world/cecs_world_components.c
 
+            src/world/query/descriptor/cecs_query_common.c
             src/world/query/cecs_query_shared.c
+            src/world/query/cecs_query_descriptor.c
             src/world/cecs_query.c
 
 

@@ -1,0 +1,3 @@
+#include "cecs_query_descriptor.h"
+
+extern inline cecs_query_descriptor cecs_query_descriptor_create_shared(const cecs_query_descriptor_shared descriptor);
