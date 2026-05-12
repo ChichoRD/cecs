@@ -81,7 +81,10 @@ void cecs_world_release_view_mut(cecs_world *const world, cecs_view_mut *const v
 }
 
 void cecs_world_release_view_alloc(cecs_world *const world, cecs_view_alloc *const view) {
-    cecs_unimplemented_fail("TODO: if user acquired this view with a partition of our allocator we should try to merge the remaining free space back");
+    cecs_unimplemented_fail(
+        "TODO: if user acquired this view with a partition of our allocator we should try to merge the remaining free space back."
+        "note: manually release the view with `cecs_view_alloc_release` for now, and then free the allocator if it was heap allocated"
+    );
     (void)world;
     (void)view;
     // cecs_view_alloc_release(view, &world->components);

@@ -16,10 +16,9 @@ extern inline cecs_dynarray cecs_dynarray_create(void);
 extern inline cecs_dynarray cecs_dynarray_create_from_parts(void *const values, const size_t values_used, const size_t values_capacity);
 
 void cecs_array_reserve_exact(cecs_array *arr, const size_t additional_capacity) {
-    const size_t current_capacity = cecs_array_capacity(arr);
-    const size_t requested_capacity = cecs_array_count(arr) + additional_capacity;
+    const size_t available_capacity = cecs_array_capacity(arr) - cecs_array_count(arr);
     cecs_debugbreak_fail_if(
-        current_capacity < requested_capacity,
+        available_capacity < additional_capacity,
         "error: array could not reserve enough capacity for requested additional capacity"
     );
 }
@@ -228,8 +227,9 @@ void cecs_dynarray_destroy(cecs_dynarray *arr, cecs_allocator *a, const size_t v
 
 void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const size_t additional_capacity, const size_t value_size) {
     const size_t current_capacity = cecs_dynarray_capacity(arr);
-    const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
-    if (current_capacity < requested_capacity) {
+    const size_t available_capacity = current_capacity - cecs_dynarray_count(arr);
+    if (available_capacity < additional_capacity) {
+        const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
         const size_t new_capacity = requested_capacity;
         arr->array.values = cecs_allocator_realloc_aligned(
             a,
@@ -243,8 +243,9 @@ void cecs_dynarray_reserve_exact(cecs_dynarray* arr, cecs_allocator* a, const si
 }
 void cecs_dynarray_reserve(cecs_dynarray* arr, cecs_allocator* a, const size_t additional_capacity, const size_t value_size) {
     const size_t current_capacity = cecs_dynarray_capacity(arr);
-    const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
-    if (current_capacity < requested_capacity) {
+    const size_t available_capacity = current_capacity - cecs_dynarray_count(arr);
+    if (available_capacity < additional_capacity) {
+        const size_t requested_capacity = cecs_dynarray_count(arr) + additional_capacity;
         // const size_t heuristic_capacity = current_capacity + (current_capacity >> 1ull);    // x1.5 amortized growth factor
         const size_t heuristic_capacity = current_capacity << 1ull;                         // x2.0 amortized growth factor
         const size_t new_capacity = cecs_max(heuristic_capacity, requested_capacity);
