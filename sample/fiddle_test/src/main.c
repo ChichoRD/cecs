@@ -8,9 +8,12 @@
 #include <world/cecs_entity.h>
 #include <world/cecs_entity_storage.h>
 #include <world/cecs_registry.h>
-#include <world/group/cecs_sparse_set_group.h>
-#include <world/cecs_query.h>
 #include <cecs_world.h>
+
+// NOTE: extension headers
+#include <group/cecs_sparse_set_group.h> // moved to extension
+#include <cecs_query.h> // moved to extension
+
 
 #include <stdio.h>
 #include <stddef.h>
@@ -2345,6 +2348,8 @@ void test_sparse_set_group(cecs_allocator *allocator) {
     cecs_registry_destroy(&s0, allocator, sizeof(int));
 
     printf("Sparse Set Group test executed in main().\n");
+    // (void)allocator;
+    // printf("\t"CECS_COLORCODE_YELLOW"NOTE: This test is skipped due to groups being moved to extenion functionality, now unsupported."CECS_COLORCODE_RESET"\n");
     printf("=== Sparse Set Group tests completed ===\n");
 }
 void test_component_group(cecs_allocator *allocator) {

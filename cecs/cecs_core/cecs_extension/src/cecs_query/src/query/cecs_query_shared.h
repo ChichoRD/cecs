@@ -1,7 +1,7 @@
 #ifndef CECS_QUERY_SHARED_H
 #define CECS_QUERY_SHARED_H
 
-#include "../cecs_world_components.h"
+#include <world/cecs_world_components.h>
 #include "descriptor/cecs_query_descriptor_shared.h"
 
 void cecs_query_shared_acquire(

@@ -1,8 +1,8 @@
 #ifndef CECS_QUERY_H
 #define CECS_QUERY_H
 
-#include "cecs_view.h"
-#include "cecs_world_components.h"
+#include <world/cecs_view.h>
+#include <world/cecs_world_components.h>
 #include "query/cecs_query_descriptor.h"
 
 void cecs_query_acquire(

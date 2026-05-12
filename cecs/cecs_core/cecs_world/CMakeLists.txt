@@ -45,8 +45,6 @@ project(
     target_sources(
         ${PROJECT_NAME}
         PRIVATE
-            src/world/group/cecs_sparse_set_group.c
-
             src/world/registry/component_storage/cecs_sparse_set_storage.c
             src/world/registry/cecs_component_storage.c
             src/world/registry/cecs_identifier.c
@@ -55,16 +53,9 @@ project(
             src/world/cecs_component_registry.c
             src/world/cecs_entity_storage.c
             src/world/cecs_entity.c
-            src/world/cecs_group_storage.c
             src/world/cecs_registry.c
             src/world/cecs_view.c
             src/world/cecs_world_components.c
-
-            src/world/query/descriptor/cecs_query_common.c
-            src/world/query/cecs_query_shared.c
-            src/world/query/cecs_query_descriptor.c
-            src/world/cecs_query.c
-
 
             src/cecs_world.c
         PUBLIC
@@ -72,8 +63,6 @@ project(
             TYPE HEADERS
             BASE_DIRS src
             FILES
-                src/world/group/cecs_sparse_set_group.h
-
                 src/world/registry/component_storage/cecs_sparse_set_storage.h
                 src/world/registry/cecs_component_storage.h
                 src/world/registry/cecs_identifier.h
@@ -82,26 +71,10 @@ project(
                 src/world/cecs_component_registry.h
                 src/world/cecs_entity_storage.h
                 src/world/cecs_entity.h
-                src/world/cecs_group_storage.h
-                src/world/cecs_group.h
                 src/world/cecs_registry.h
-                src/world/cecs_system.h
+                
                 src/world/cecs_view.h
                 src/world/cecs_world_components.h
-
-                
-                src/world/query/descriptor/cecs_query_common.h
-                src/world/query/descriptor/cecs_query_descriptor_shared.h
-                # src/world/query/descriptor/cecs_query_descriptor_partial.h
-                # src/world/query/descriptor/cecs_query_descriptor_exclusive.h
-                
-                src/world/query/cecs_query_descriptor.h
-                src/world/query/cecs_query_shared.h
-                # src/world/query/cecs_query_partial.h
-                # src/world/query/cecs_query_exclusive.h
-
-                src/world/cecs_query.h
-
 
                 src/cecs_world.h
 

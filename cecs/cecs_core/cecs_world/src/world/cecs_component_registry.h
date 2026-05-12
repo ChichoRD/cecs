@@ -1,7 +1,8 @@
 #ifndef CECS_COMPONENT_REGISTRY_H
 #define CECS_COMPONENT_REGISTRY_H
 
-#include "cecs_group.h"
+// HACK: we are able to remove the header inclusion despite storing 'groups' because storage is type-erased
+// #include "cecs_group.h"
 #include "registry/cecs_component_storage.h"
 #include <cecs_flatset.h>
 
@@ -44,6 +45,8 @@ cecs_component_registry_groups cecs_component_registry_groups_create_with_capaci
 typedef struct cecs_component_registry {
     cecs_component_storage storage;
     cecs_component_registry_userdata userdata;
+    // HACK: unused by cecs_world, only here for the cecs_group extension, 
+    // initialise this field with the result from `cecs_component_registry_groups_create` or `cecs_component_registry_groups_create_with_capacity` for now
     cecs_component_registry_groups groups;
     size_t component_size;
 } cecs_component_registry;
@@ -74,6 +77,7 @@ void *cecs_component_registry_get_userdata_mut(cecs_component_registry *const re
 void *cecs_component_registry_get_or_set_userdata(cecs_component_registry *const registry, void *const default_userdata);
 
 
-void cecs_component_registry_insert_group(cecs_component_registry *const registry, cecs_allocator *const allocator, const cecs_group_type group);
+// XXX: moved to extension
+// void cecs_component_registry_insert_group(cecs_component_registry *const registry, cecs_allocator *const allocator, const cecs_group_type group);
 
 #endif

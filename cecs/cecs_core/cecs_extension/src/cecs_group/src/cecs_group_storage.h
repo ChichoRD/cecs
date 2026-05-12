@@ -2,7 +2,7 @@
 #define CECS_GROUP_STORAGE_H
 
 #include "cecs_group.h"
-#include "registry/cecs_component.h"
+#include <world/registry/cecs_component.h>
 #include <cecs_dynarray.h>
 #include <cecs_flatset.h>
 

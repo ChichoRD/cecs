@@ -1,5 +1,5 @@
 #include "cecs_sparse_set_group.h"
-#include "../cecs_component_registry.h"
+#include <world/cecs_component_registry.h>
 
 #include <string.h>
 

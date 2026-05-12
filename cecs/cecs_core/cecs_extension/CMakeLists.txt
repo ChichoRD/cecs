@@ -18,11 +18,42 @@ project(
     target_sources(
         ${PROJECT_NAME}
         PRIVATE
-            # src/extension/cecs_extension.c
+            src/cecs_group/src/group/cecs_sparse_set_group.c
+            src/cecs_group/src/cecs_group_storage.c
+
+
+            src/cecs_query/src/query/descriptor/cecs_query_common.c
+            src/cecs_query/src/query/cecs_query_shared.c
+            src/cecs_query/src/query/cecs_query_descriptor.c
+            src/cecs_query/src/cecs_query.c
+
+
+            # src/cecs_system/src/cecs_system.c
         PUBLIC
             FILE_SET ${PROJECT_NAME}_HEADERS
             TYPE HEADERS
-            BASE_DIRS src
+            BASE_DIRS 
+                src/cecs_group/src
+                src/cecs_query/src
+                src/cecs_system/src
             FILES
-                # src/extension/cecs_extension.h
+                src/cecs_group/src/group/cecs_sparse_set_group.h
+                src/cecs_group/src/cecs_group_storage.h
+                src/cecs_group/src/cecs_group.h
+
+
+                src/cecs_query/src/query/descriptor/cecs_query_common.h
+                src/cecs_query/src/query/descriptor/cecs_query_descriptor_shared.h
+                # src/cecs_query/src/query/descriptor/cecs_query_descriptor_partial.h
+                # src/cecs_query/src/query/descriptor/cecs_query_descriptor_exclusive.h
+
+                src/cecs_query/src/query/cecs_query_descriptor.h
+                src/cecs_query/src/query/cecs_query_shared.h
+                # src/cecs_query/src/query/cecs_query_partial.h
+                # src/cecs_query/src/query/cecs_query_exclusive.h
+
+                src/cecs_query/src/cecs_query.h
+
+
+                src/cecs_system/src/cecs_system.h
     )

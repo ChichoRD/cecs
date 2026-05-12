@@ -2,7 +2,7 @@
 #define CECS_QUERY_COMMON_H
 
 #include <stdint.h>
-#include "../../cecs_view.h"
+#include <world/cecs_view.h>
 
 typedef enum cecs_query_access_type {
     cecs_query_access_type_immutable = 0,

@@ -2,7 +2,7 @@
 #define CECS_SPARSE_SET_GROUP_H
 
 #include <cecs_range.h>
-#include "../cecs_entity.h"
+#include <world/cecs_entity.h>
 
 typedef cecs_exclusive_range cecs_component_range;
 typedef struct cecs_sparse_set_group {
