@@ -6,7 +6,7 @@ project(
     DESCRIPTION "Standard library for CECS"
     LANGUAGES C
 )
-    option(CECS_CORE_BUILD_EXTENSION "Build the CECS core extension library (cecs_extension)" ON)
+    option(CECS_CORE_BUILD_EXTENSION "Build the CECS core extension library (cecs_extension)" OFF)
 
     include(FetchContent)
     FetchContent_Declare(

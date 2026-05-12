@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 
+# HACK: cecs_extennsion bundles all current extensions and provides a shortcut for linking with them
+# In the future, the extension directories can be easily split into per-extension library targets
 project(
     cecs_extension
     VERSION 0.1.0

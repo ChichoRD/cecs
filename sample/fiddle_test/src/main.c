@@ -11,8 +11,8 @@
 #include <cecs_world.h>
 
 // NOTE: extension headers
-#include <group/cecs_sparse_set_group.h> // moved to extension
-#include <cecs_query.h> // moved to extension
+// #include <group/cecs_sparse_set_group.h> // moved to extension
+// #include <cecs_query.h> // moved to extension
 
 
 #include <stdio.h>
@@ -2272,84 +2272,84 @@ void test_component_storage(cecs_allocator *allocator) {
 void test_sparse_set_group(cecs_allocator *allocator) {
     printf("\n=== Testing Sparse Set Group ===\n");
     
-    cecs_registry s0 = cecs_registry_create(cecs_component_registry_create(
-        cecs_component_storage_create_sparse_set(
-            allocator, 16, sizeof(int)
-        ),
-        cecs_component_registry_groups_create(), sizeof(int), NULL
-    ));
-    cecs_registry s1 = cecs_registry_create(cecs_component_registry_create(
-        cecs_component_storage_create_sparse_set(
-            allocator, 16, sizeof(int)
-        ),
-        cecs_component_registry_groups_create(), sizeof(int), NULL
-    ));
-    cecs_entity_storage egen = cecs_entity_storage_create_with_capacity(allocator, 16);
-    cecs_sparse_set_group group = cecs_sparse_set_group_create();
+    // cecs_registry s0 = cecs_registry_create(cecs_component_registry_create(
+    //     cecs_component_storage_create_sparse_set(
+    //         allocator, 16, sizeof(int)
+    //     ),
+    //     cecs_component_registry_groups_create(), sizeof(int), NULL
+    // ));
+    // cecs_registry s1 = cecs_registry_create(cecs_component_registry_create(
+    //     cecs_component_storage_create_sparse_set(
+    //         allocator, 16, sizeof(int)
+    //     ),
+    //     cecs_component_registry_groups_create(), sizeof(int), NULL
+    // ));
+    // cecs_entity_storage egen = cecs_entity_storage_create_with_capacity(allocator, 16);
+    // cecs_sparse_set_group group = cecs_sparse_set_group_create();
 
-    cecs_component_registry *rs[2] = {0};
-    cecs_rwlock_borrow_mut l0 = cecs_registry_acquire_mut_or_exit(&s0, &rs[0]);
-    cecs_rwlock_borrow_mut l1 = cecs_registry_acquire_mut_or_exit(&s1, &rs[1]);
+    // cecs_component_registry *rs[2] = {0};
+    // cecs_rwlock_borrow_mut l0 = cecs_registry_acquire_mut_or_exit(&s0, &rs[0]);
+    // cecs_rwlock_borrow_mut l1 = cecs_registry_acquire_mut_or_exit(&s1, &rs[1]);
 
-    cecs_entity es[14] = {0};
-    for (size_t i = 0; i < 14; ++i) {
-        es[i] = cecs_entity_storage_alloc_entity(&egen, allocator);
-        int *val0 = (int*)cecs_component_storage_insert_expect(
-            &rs[0]->storage, allocator, cecs_entity_index_of(es[i]), sizeof(int)
-        );
-        *val0 = (int)(i * 10);
-    }
-    for (size_t i = 0; i < 7; ++i) {
-        int *val1 = (int*)cecs_component_storage_insert_expect(
-            &rs[1]->storage, allocator, cecs_entity_index_of(es[i]), sizeof(int)
-        );
-        *val1 = (int)(i * 100);
-        cecs_sparse_set_group_push_ungrouped(&group, rs[1], es[i]);
-    }
-    for (size_t i = 0; i < 7; ++i) {
-        cecs_sparse_set_group_insert(&group, rs, 2, 1, es[i], sizeof(int));
-    }
+    // cecs_entity es[14] = {0};
+    // for (size_t i = 0; i < 14; ++i) {
+    //     es[i] = cecs_entity_storage_alloc_entity(&egen, allocator);
+    //     int *val0 = (int*)cecs_component_storage_insert_expect(
+    //         &rs[0]->storage, allocator, cecs_entity_index_of(es[i]), sizeof(int)
+    //     );
+    //     *val0 = (int)(i * 10);
+    // }
+    // for (size_t i = 0; i < 7; ++i) {
+    //     int *val1 = (int*)cecs_component_storage_insert_expect(
+    //         &rs[1]->storage, allocator, cecs_entity_index_of(es[i]), sizeof(int)
+    //     );
+    //     *val1 = (int)(i * 100);
+    //     cecs_sparse_set_group_push_ungrouped(&group, rs[1], es[i]);
+    // }
+    // for (size_t i = 0; i < 7; ++i) {
+    //     cecs_sparse_set_group_insert(&group, rs, 2, 1, es[i], sizeof(int));
+    // }
 
-    printf("Grouped free start: %zu, free end: %zu. Ungrouped free start: %zu, free end: %zu\n",
-        group.free_grouped_range.range.start, group.free_grouped_range.range.end,
-        group.free_ungrouped_range.range.start, group.free_ungrouped_range.range.end
-    );
+    // printf("Grouped free start: %zu, free end: %zu. Ungrouped free start: %zu, free end: %zu\n",
+    //     group.free_grouped_range.range.start, group.free_grouped_range.range.end,
+    //     group.free_ungrouped_range.range.start, group.free_ungrouped_range.range.end
+    // );
 
-    for (size_t i = 0; i < 14; ++i) {
-        const int *val0 = (int*)cecs_component_storage_get(
-            &rs[0]->storage, cecs_entity_index_of(es[i]), sizeof(int)
-        );
-        if (i < 7) {
-            const int *val1 = (int*)cecs_component_storage_get(
-                &rs[1]->storage, cecs_entity_index_of(es[i]), sizeof(int)
-            );
-            if (*val0 != (int)(i * 10) || *val1 != (int)(i * 100)) {
-                fprintf(stderr, "ERROR: Mismatched grouped values at entity %zu: val0=%d (expected %d), val1=%d (expected %d)\n",
-                    i, *val0, (int)(i * 10), *val1, (int)(i * 100));
-                assert(false && "Mismatched grouped values");
-                exit(EXIT_FAILURE);
-            }
-        } else {
-            if (*val0 != (int)(i * 10)) {
-                fprintf(stderr, "ERROR: Mismatched ungrouped value at entity %zu: val0=%d (expected %d)\n",
-                    i, *val0, (int)(i * 10));
-                assert(false && "Mismatched ungrouped value");
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
+    // for (size_t i = 0; i < 14; ++i) {
+    //     const int *val0 = (int*)cecs_component_storage_get(
+    //         &rs[0]->storage, cecs_entity_index_of(es[i]), sizeof(int)
+    //     );
+    //     if (i < 7) {
+    //         const int *val1 = (int*)cecs_component_storage_get(
+    //             &rs[1]->storage, cecs_entity_index_of(es[i]), sizeof(int)
+    //         );
+    //         if (*val0 != (int)(i * 10) || *val1 != (int)(i * 100)) {
+    //             fprintf(stderr, "ERROR: Mismatched grouped values at entity %zu: val0=%d (expected %d), val1=%d (expected %d)\n",
+    //                 i, *val0, (int)(i * 10), *val1, (int)(i * 100));
+    //             assert(false && "Mismatched grouped values");
+    //             exit(EXIT_FAILURE);
+    //         }
+    //     } else {
+    //         if (*val0 != (int)(i * 10)) {
+    //             fprintf(stderr, "ERROR: Mismatched ungrouped value at entity %zu: val0=%d (expected %d)\n",
+    //                 i, *val0, (int)(i * 10));
+    //             assert(false && "Mismatched ungrouped value");
+    //             exit(EXIT_FAILURE);
+    //         }
+    //     }
+    // }
 
-    cecs_entity_storage_destroy(&egen, allocator);
+    // cecs_entity_storage_destroy(&egen, allocator);
 
-    cecs_registry_release_mut(&s1, &l1);
-    cecs_registry_release_mut(&s0, &l0);
+    // cecs_registry_release_mut(&s1, &l1);
+    // cecs_registry_release_mut(&s0, &l0);
 
-    cecs_registry_destroy(&s1, allocator, sizeof(int));
-    cecs_registry_destroy(&s0, allocator, sizeof(int));
+    // cecs_registry_destroy(&s1, allocator, sizeof(int));
+    // cecs_registry_destroy(&s0, allocator, sizeof(int));
 
     printf("Sparse Set Group test executed in main().\n");
-    // (void)allocator;
-    // printf("\t"CECS_COLORCODE_YELLOW"NOTE: This test is skipped due to groups being moved to extenion functionality, now unsupported."CECS_COLORCODE_RESET"\n");
+    (void)allocator;
+    printf("\t"CECS_COLORCODE_YELLOW"NOTE: This test is skipped due to groups being moved to extenion functionality, now unsupported."CECS_COLORCODE_RESET"\n");
     printf("=== Sparse Set Group tests completed ===\n");
 }
 void test_component_group(cecs_allocator *allocator) {
@@ -2457,51 +2457,6 @@ int main(void) {
     }
     cecs_world_release_view(&w, &view_float);
     cecs_world_release_view(&w, &view_int);
-
-
-    const cecs_query_descriptor query = cecs_query_descriptor_create_shared((cecs_query_descriptor_shared){
-        .sets = (cecs_query_descriptor_shared_set[]){{
-                .components = (cecs_component_type[]){component_int},
-                .component_count = 1,
-                .access = cecs_query_access_type_immutable,
-                .match = cecs_query_match_type_all
-            }, {
-                .components = (cecs_component_type[]){component_float},
-                .component_count = 1,
-                .access = cecs_query_access_type_mut,
-                .match = cecs_query_match_type_all
-            }
-        },
-        .set_count = 2
-    });
-    cecs_query_result result = cecs_query_result_create(
-        (cecs_view[1]){0}, (cecs_view_mut[1]){0}, NULL
-    );
-    cecs_query_acquire_mut(&w.components, &query, NULL, &result); {
-        const cecs_view view_int_q = result.view_buffer[0];
-        const cecs_view_mut view_float_q = result.view_mut_buffer[0];
-        for (size_t i = 0; i < 24; ++i) {
-            const int *ival = (const int *)cecs_view_get(view_int_q, &w.components, &w.entities, es[i]);
-            if (*ival != ((int)i * 10)) {
-                fprintf(stderr, "ERROR: Mismatched int value at entity %zu in query: int=%d (expected %d)\n",
-                    i, *ival, (int)(i * 10));
-                assert(false && "Mismatched entity component values in world query test");
-                exit(EXIT_FAILURE);
-            }
-            if (i < 12) {
-                float *fval = (float *)cecs_view_mut_get(view_float_q, &w.components, &w.entities, es[i]);
-                if (*fval != ((float)i * 0.5f)) {
-                    fprintf(stderr, "ERROR: Mismatched float value at entity %zu in query: float=%.1f (expected %.1f)\n",
-                        i, *fval, (float)(i * 0.5f));
-                    assert(false && "Mismatched entity component values in world query test");
-                    exit(EXIT_FAILURE);
-                }
-                // Mutate the float value to test mutability
-                *fval += 1.0f;
-            }
-        }
-    } cecs_query_release_mut(&w.components, &query, &result);
-
 
     cecs_world_components_destroy(&w.components, &allocator);
     cecs_entity_storage_destroy(&w.entities, &allocator);
