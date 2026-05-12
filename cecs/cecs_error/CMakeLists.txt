@@ -23,10 +23,12 @@ project(
         ${PROJECT_NAME}
         PRIVATE
             src/cecs_error.c
+            src/cecs_warning.c
         PUBLIC
             FILE_SET ${PROJECT_NAME}_HEADERS
             TYPE HEADERS
             BASE_DIRS src
             FILES
                 src/cecs_error.h
+                src/cecs_warning.h
     )
