@@ -22,37 +22,37 @@
 #endif
 
 
-#ifndef cecs_compiler_backend_clang
+#ifndef CECS_COMPILER_BACKEND_CLANG
 #ifdef __clang__
-#define cecs_compiler_backend_clang CECS_COMPILER_MASK_CLANG
+#define CECS_COMPILER_BACKEND_CLANG CECS_COMPILER_MASK_CLANG
 #else
-#define cecs_compiler_backend_clang CECS_COMPILER_MASK_NONE
+#define CECS_COMPILER_BACKEND_CLANG CECS_COMPILER_MASK_NONE
 #endif
 #endif
 
-#ifndef cecs_compiler_backend_gcc
+#ifndef CECS_COMPILER_BACKEND_GCC
 #if defined(__GNUC__) || defined(__GNUG__)
-#define cecs_compiler_backend_gcc CECS_COMPILER_MASK_GCC
+#define CECS_COMPILER_BACKEND_GCC CECS_COMPILER_MASK_GCC
 #else
-#define cecs_compiler_backend_gcc CECS_COMPILER_MASK_NONE
+#define CECS_COMPILER_BACKEND_GCC CECS_COMPILER_MASK_NONE
 #endif
 #endif
 
-#ifndef cecs_compiler_backend_msvc
+#ifndef CECS_COMPILER_BACKEND_MSVC
 #ifdef _MSC_VER
-#define cecs_compiler_backend_msvc CECS_COMPILER_MASK_MSVC
+#define CECS_COMPILER_BACKEND_MSVC CECS_COMPILER_MASK_MSVC
 #else
-#define cecs_compiler_backend_msvc CECS_COMPILER_MASK_NONE
+#define CECS_COMPILER_BACKEND_MSVC CECS_COMPILER_MASK_NONE
 #endif
 #endif
 
 
-#define CECS_COMPILER_MASK (cecs_compiler_backend_clang | cecs_compiler_backend_gcc | cecs_compiler_backend_msvc)
-#if cecs_compiler_backend_clang == CECS_COMPILER_MASK_CLANG
+#define CECS_COMPILER_MASK (CECS_COMPILER_BACKEND_CLANG | CECS_COMPILER_BACKEND_GCC | CECS_COMPILER_BACKEND_MSVC)
+#if CECS_COMPILER_BACKEND_CLANG == CECS_COMPILER_MASK_CLANG
 #define CECS_COMPILER CECS_COMPILER_MASK_CLANG
-#elif cecs_compiler_backend_gcc == CECS_COMPILER_MASK_GCC
+#elif CECS_COMPILER_BACKEND_GCC == CECS_COMPILER_MASK_GCC
 #define CECS_COMPILER CECS_COMPILER_MASK_GCC
-#elif cecs_compiler_backend_msvc == CECS_COMPILER_MASK_MSVC
+#elif CECS_COMPILER_BACKEND_MSVC == CECS_COMPILER_MASK_MSVC
 #define CECS_COMPILER CECS_COMPILER_MASK_MSVC
 #else
 #define CECS_COMPILER CECS_COMPILER_MASK_NONE
@@ -62,11 +62,6 @@
 #if CECS_COMPILER == CECS_COMPILER_MASK_NONE
 #error "unsupported compiler, currently supported compilers are: clang, gcc, msvc"
 #endif
-
-
-#undef cecs_compiler_backend_clang
-#undef cecs_compiler_backend_gcc
-#undef cecs_compiler_backend_msvc
 
 
 #ifndef CECS_STDC89

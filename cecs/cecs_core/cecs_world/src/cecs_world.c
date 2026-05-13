@@ -1,5 +1,21 @@
 #include "cecs_world.h"
 
+extern inline cecs_world cecs_world_create(void);
+cecs_world cecs_world_create_with(
+    cecs_allocator *const allocator,
+    const size_t initial_entity_capacity,
+    const size_t initial_component_types_capacity
+) {
+    return (cecs_world){
+        .entities = cecs_entity_storage_create_with_capacity(allocator, initial_entity_capacity),
+        .components = cecs_world_components_create_with_capacity(allocator, initial_component_types_capacity),
+    };
+}
+
+void cecs_world_destroy(cecs_world *const world, cecs_allocator *const allocator) {
+    cecs_world_components_destroy(&world->components, allocator);
+    cecs_entity_storage_destroy(&world->entities, allocator);
+}
 
 extern inline cecs_entity cecs_world_alloc_entity(cecs_world *const world, cecs_allocator *const allocator);
 extern inline void cecs_world_free_entity(cecs_world *const world, const cecs_entity entity);
@@ -10,8 +26,8 @@ cecs_component_type cecs_world_register_component(
     cecs_allocator *const allocator,
     const cecs_component_storage_value storage_type,
     const size_t component_size,
-    const size_t initial_capacity
-) {
+    const size_t initial_capacity)
+{
     const size_t registry_index = cecs_world_components_count(&world->components);
     cecs_debugbreak_fail_unless(
         registry_index <= CECS_COMPONENT_TYPE_ID_TYPE_MAX,

@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.30)
 
 project(
-    fiddle_test
+    fiddle
     VERSION 0.1.0
     DESCRIPTION "Test for CECS"
     LANGUAGES C
 )
-    set(CECS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+    set(CECS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
     include(FetchContent)
     # FIXME: transitivity
     FetchContent_Declare(

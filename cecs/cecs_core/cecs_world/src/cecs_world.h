@@ -11,6 +11,21 @@ typedef struct cecs_world {
 } cecs_world;
 
 
+inline cecs_world cecs_world_create(void) {
+    return (cecs_world){
+        .entities = cecs_entity_storage_create(),
+        .components = cecs_world_components_create(),
+    };
+}
+// XXX: subject to change as world acquires more functionality, eg. systems, resources, etc.
+cecs_world cecs_world_create_with(
+    cecs_allocator *const allocator,
+    const size_t initial_entity_capacity,
+    const size_t initial_component_types_capacity
+);
+void cecs_world_destroy(cecs_world *const world, cecs_allocator *const allocator);
+
+
 inline cecs_entity cecs_world_alloc_entity(cecs_world *const world, cecs_allocator *const allocator) {
     return cecs_entity_storage_alloc_entity(&world->entities, allocator);
 }

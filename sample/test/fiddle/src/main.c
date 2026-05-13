@@ -2480,5 +2480,7 @@ int main(void) {
 
     // cleanup
     cecs_allocator_destroy(&allocator);
+
+    // BUG: run this test in x86
     return 0;
 }

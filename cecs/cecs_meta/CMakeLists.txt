@@ -27,6 +27,7 @@ project(
             BASE_DIRS src
             FILES
                 src/cecs_compiler.h
+                src/cecs_os.h
                 src/cecs_attribute.h
                 src/cecs_console_colorcode.h
                 src/cecs_type_traits.h

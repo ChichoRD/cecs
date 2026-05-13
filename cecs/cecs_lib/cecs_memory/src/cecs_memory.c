@@ -4,23 +4,18 @@
 #include <assert.h>
 
 #include <cecs_error.h>
+#include <cecs_os.h>
 #include <relations/cecs_ordering.h>
 #include <arithmetic/cecs_integer_arithmetic.h>
 
-#define CECS_MEMORY_OS_NONE 0
-#define CECS_MEMORY_OS_WINDOWS 1
-#define CECS_MEMORY_OS_UNIX 2
 
-
-#ifdef _WIN32
-#define CECS_MEMORY_OS CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
 #include <Windows.h>
 
 const cecs_raw_memory_block cecs_raw_memory_block_invalid = {0};
 const cecs_memory_block cecs_memory_block_invalid = {0};
 
-#elif defined(__unix__)
-#define CECS_MEMORY_OS CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -36,12 +31,8 @@ const cecs_memory_block cecs_memory_block_invalid = {
 };
 
 #else
-#define CECS_MEMORY_OS CECS_MEMORY_OS_NONE
-
-#endif
-
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_NONE
 #error "unsupported platform"
+
 #endif
 
 
@@ -49,11 +40,11 @@ extern inline size_t cecs_memory_block_committed_size(const cecs_memory_block bl
 extern inline size_t cecs_memory_block_uncommited_size(const cecs_memory_block block);
 
 size_t cecs_system_page_size(void) {
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     SYSTEM_INFO system_info;
     GetSystemInfo(&system_info);
     return (size_t)system_info.dwPageSize;
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     return (size_t)getpagesize();
 #endif
 }
@@ -62,17 +53,17 @@ extern inline size_t cecs_system_pages_size_for(const size_t bytes);
 
 
 bool cecs_memory_block_is_valid(const cecs_raw_memory_block *block) {
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     return block->memory_start != NULL;
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     return block->memory_start != MAP_FAILED;
 #endif
 }
 
 cecs_raw_memory_block cecs_memory_block_map(const size_t size) {
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     void *const memory = VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     void *const memory = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); 
 #endif
     return (cecs_raw_memory_block){
@@ -103,9 +94,9 @@ bool cecs_memory_block_commit(cecs_memory_block *const block, const size_t size,
         commit_start <= block->memory_end,
         "error: cecs_memory_block_commit called with memory range more than already committed memory"
     );
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     const bool success = VirtualAlloc(commit_start, size, MEM_COMMIT, PAGE_READWRITE) != NULL;
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     const bool success = mprotect(memory_commit_start, size, PROT_READ | PROT_WRITE) == 0;
 #endif
     if (cecs_expect(success)) {
@@ -132,9 +123,9 @@ bool cecs_memory_block_decommit(cecs_memory_block *block, const size_t size, uin
         "error: cecs_memory_block_uncommit called with out of bounds decommit_start and size"
     );
     uint8_t *const decommit_start = decommit_end - size;
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     const bool success = VirtualFree(decommit_start, size, MEM_DECOMMIT) != 0;
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     const bool success = mprotect(decommit_start, size, PROT_NONE) == 0;
 #endif
     if (cecs_expect(success)) {
@@ -152,9 +143,9 @@ void cecs_memory_block_decommit_expect(cecs_memory_block *block, const size_t si
 }
 
 bool cecs_memory_block_unmap_raw(cecs_raw_memory_block *block) {
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     const bool success = VirtualFree(block->memory_start, 0, MEM_RELEASE) != 0;
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     const bool success = munmap(block->memory_start, block->reserved) == 0;
 #endif
     if (cecs_expect(success)) {
@@ -172,9 +163,9 @@ void cecs_memory_block_unmap_raw_expect(cecs_raw_memory_block *block) {
 }
 
 bool cecs_memory_block_unmap(cecs_memory_block *block) {
-#if CECS_MEMORY_OS == CECS_MEMORY_OS_WINDOWS
+#if CECS_OS_MASK & CECS_OS_MASK_WINDOWS
     const bool success = VirtualFree(block->memory_start, 0, MEM_RELEASE) != 0;
-#elif CECS_MEMORY_OS == CECS_MEMORY_OS_UNIX
+#elif CECS_OS_MASK & CECS_OS_MASK_POSIX
     const bool success = munmap(block->memory_start, block->reserved) == 0;
 #endif
     if (cecs_expect(success)) {

@@ -23,8 +23,17 @@ project(
 )
     set(CECS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
     include(FetchContent)
+
+    # tests
     FetchContent_Declare(
-        fiddle_test
-        SOURCE_DIR ${CECS_SOURCE_DIR}/sample/fiddle_test
+        fiddle
+        SOURCE_DIR ${CECS_SOURCE_DIR}/sample/test/fiddle
     )
-    FetchContent_MakeAvailable(fiddle_test)
+    FetchContent_MakeAvailable(fiddle)
+
+    # games
+    FetchContent_Declare(
+        deckfencer
+        SOURCE_DIR ${CECS_SOURCE_DIR}/sample/game/deckfencer
+    )
+    FetchContent_MakeAvailable(deckfencer)
