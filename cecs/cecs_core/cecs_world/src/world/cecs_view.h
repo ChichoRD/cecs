@@ -68,7 +68,9 @@ void cecs_view_release(cecs_view *const view, const cecs_world_components *const
 
 const cecs_component_registry *cecs_view_registry(const cecs_view view, const cecs_world_components *const components);
 
+// FIXME: change *_get in most places to *_find to signify that the procedure might not just be a single pointer indirection
 const void *cecs_view_get(const cecs_view view, const cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity);
+// FIXME: change *_try_* to *_ok, I like that name better for fallible operations
 bool cecs_view_try_get(
     const cecs_view view, const cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity, const void **const out_component
 );

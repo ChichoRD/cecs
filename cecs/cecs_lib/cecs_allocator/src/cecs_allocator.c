@@ -23,32 +23,42 @@ cecs_allocator cecs_allocator_create_bump_virtual(const size_t page_count) {
     );
 }
 cecs_allocator cecs_allocator_create_arena(size_t bump_size, size_t bump_capacity) {
+    (void)bump_size;
+    (void)bump_capacity;
+    cecs_unimplemented_fail(
+        "// FIXME: untested, upgrade operations and implementation to support virtual memory or regular malloc"
+    );
     // static_assert(
     //     sizeof(size_t) <= sizeof(cecs_arena_allocator_bump_usize),
     //     "static error: bump_capacity argument of cecs_allocator_create_arena cannot be safely cast to cecs_arena_allocator_bump_usize"
     // );
-    cecs_debugbreak_fail_unless(
-        bump_capacity <= (size_t)CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
-        "fatal error: bump_capacity argument of cecs_allocator_create_arena must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
-    );
-    return cecs_allocator_create_from(
-        (cecs_internal_allocator){ .arena = cecs_arena_allocator_create(bump_size, (cecs_arena_allocator_bump_usize)bump_capacity) },
-        cecs_internal_allocator_type_arena
-    );
+    // cecs_debugbreak_fail_unless(
+    //     bump_capacity <= (size_t)CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
+    //     "fatal error: bump_capacity argument of cecs_allocator_create_arena must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
+    // );
+    // return cecs_allocator_create_from(
+    //     (cecs_internal_allocator){ .arena = cecs_arena_allocator_create(bump_size, (cecs_arena_allocator_bump_usize)bump_capacity) },
+    //     cecs_internal_allocator_type_arena
+    // );
 }
 cecs_allocator cecs_allocator_create_implicit_arena(size_t bump_size, size_t bump_capacity) {
+    (void)bump_size;
+    (void)bump_capacity;
+    cecs_unimplemented_fail(
+        "// FIXME: untested, upgrade operations and implementation to support virtual memory or regular malloc"
+    );
     // static_assert(
     //     sizeof(size_t) <= sizeof(cecs_arena_allocator_bump_usize),
     //     "static error: bump_capacity argument of cecs_allocator_create_implicit_arena cannot be safely cast to cecs_arena_allocator_bump_usize"
     // );
-    cecs_debugbreak_fail_unless(
-        bump_capacity <= (size_t)CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
-        "fatal error: bump_capacity argument of cecs_allocator_create_implicit_arena must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
-    );
-    return cecs_allocator_create_from(
-        (cecs_internal_allocator){ .implicit_arena = cecs_implicit_arena_allocator_create(bump_size, (cecs_arena_allocator_bump_usize)bump_capacity) },
-        cecs_internal_allocator_type_implicit_arena
-    );
+    // cecs_debugbreak_fail_unless(
+    //     bump_capacity <= (size_t)CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX,
+    //     "fatal error: bump_capacity argument of cecs_allocator_create_implicit_arena must be less than or equal to CECS_ARENA_ALLOCATOR_BUMP_USIZE_TYPE_MAX"
+    // );
+    // return cecs_allocator_create_from(
+    //     (cecs_internal_allocator){ .implicit_arena = cecs_implicit_arena_allocator_create(bump_size, (cecs_arena_allocator_bump_usize)bump_capacity) },
+    //     cecs_internal_allocator_type_implicit_arena
+    // );
 }
 
 #define CECS_ALLOCATOR_TYPE_MAX cecs_internal_allocator_type_implicit_arena
