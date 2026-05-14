@@ -28,11 +28,15 @@ static cecs_component_type component_block_turret_descriptor;
 static cecs_component_type component_live;
 static cecs_component_type component_hurtbox;
 
+static cecs_component_type component_hand;
+
 
 typedef cecs_vec2_f32 dckf_position2_f32;
 typedef cecs_vec2_f32 dckf_velocity2_f32;
+
+#define DCKF_INPUTBUFFER_NEXT_MAX UINT8_MAX
 typedef struct dckf_inputbuffer {
-    char keys[14];
+    char keys[6];
     // read <= write
     uint8_t key_next_read;
     uint8_t key_next_write;
@@ -61,6 +65,13 @@ typedef struct dckf_live {
 typedef struct dckf_hurtbox {
     uint8_t damage;
 } dckf_hurtbox;
+typedef enum dckf_hand_state { 
+    dckf_hand_state_none
+} dckf_hand_state;
+typedef uint8_t dckf_hand_state_value;
+typedef struct dckf_hand {
+    dckf_hand_state_value state;
+} dckf_hand;
 
 
 void dckf_init(cecs_world *const world, cecs_allocator *const allocator, void *const context);
@@ -85,14 +96,15 @@ int main(void) {
         .tv_nsec = 16 * 1000 * 1000, // 16ms
     };
     cecs_allocator render_alloc = cecs_allocator_alloc_bump_view(&alloc, render_game_stride * render_game_height * sizeof(char));
+    (void)render_alloc;
 
     while (running) {
         dckf_prerender(&w, &alloc, NULL);
         dckf_render(&w, &alloc, cecs_allocator_bump_mut(&render_alloc));
-        
+
         struct timespec remaining_frame_time = target_frame_time;
         while (nanosleep(&remaining_frame_time, &remaining_frame_time) != 0) { }
-        // nanosleep(&target_frame_time, NULL);
+        nanosleep(&target_frame_time, NULL);
 
         dckf_input(&w, &alloc, &running);
         dckf_update(&w, &alloc, &static_entity_from_position);
@@ -115,6 +127,7 @@ static void dckf_init_component_types(cecs_world *const world, cecs_allocator *c
                                 cecs_world_register_component(world, allocator, cecs_component_storage_type_sparse_set, sizeof(dckf_block_turret_descriptor),   8);
     component_live =            cecs_world_register_component(world, allocator, cecs_component_storage_type_sparse_set, sizeof(dckf_live),                      64);
     component_hurtbox =         cecs_world_register_component(world, allocator, cecs_component_storage_type_sparse_set, sizeof(dckf_hurtbox),                   32);
+    component_hand =            cecs_world_register_component(world, allocator, cecs_component_storage_type_sparse_set, sizeof(dckf_hand),                      1);
 }
 static void dckf_init_platform_create(cecs_world *const world, cecs_allocator *const allocator, cecs_flatmap *const static_entity_from_position) {
     cecs_view_alloc position_view_alloc = cecs_world_acquire_view_alloc(
@@ -196,22 +209,22 @@ static void dckf_init_platform_create(cecs_world *const world, cecs_allocator *c
 static void dckf_init_player_create(cecs_world *const world, cecs_allocator *const allocator) {
     cecs_view_alloc position_view_alloc = cecs_world_acquire_view_alloc(
         world,
-        cecs_allocator_alloc_bump_view(allocator, /*stub*/ 64 * sizeof(unsigned char)),
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_position2_f32) * 1ull),
         component_position
     );
     cecs_view_alloc velocity_view_alloc = cecs_world_acquire_view_alloc(
         world,
-        cecs_allocator_alloc_bump_view(allocator, /*stub*/ 64 * sizeof(unsigned char)),
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_velocity2_f32) * 1ull),
         component_velocity
     );
     cecs_view_alloc drawable_view_alloc = cecs_world_acquire_view_alloc(
         world,
-        cecs_allocator_alloc_bump_view(allocator, /*stub*/ 64 * sizeof(unsigned char)),
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_drawable) * 1ull),
         component_drawable
     );
     cecs_view_alloc inputbuffer_view_alloc = cecs_world_acquire_view_alloc(
         world,
-        cecs_allocator_alloc_bump_view(allocator, /*stub*/ 64 * sizeof(unsigned char)),
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_inputbuffer) * 1ull + 48ull),
         component_inputbuffer
     );
 
@@ -244,6 +257,56 @@ static void dckf_init_player_create(cecs_world *const world, cecs_allocator *con
     cecs_view_alloc_release(&drawable_view_alloc, &world->components);
     cecs_view_alloc_release(&inputbuffer_view_alloc, &world->components);
 }
+static void dckf_init_hand_create(cecs_world *const world, cecs_allocator *const allocator) {
+    cecs_view_alloc hand_view_alloc = cecs_world_acquire_view_alloc(
+        world,
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_hand) * 1ull + 63ull),
+        component_hand
+    );
+    cecs_view_alloc position_view_alloc = cecs_world_acquire_view_alloc(
+        world,
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_position2_f32) * 1ull),
+        component_position
+    );
+    cecs_view_alloc drawable_view_alloc = cecs_world_acquire_view_alloc(
+        world,
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_drawable) * 1ull),
+        component_drawable
+    );
+    cecs_view_alloc inputbuffer_view_alloc = cecs_world_acquire_view_alloc(
+        world,
+        cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_inputbuffer) * 1ull + 128ull),
+        component_inputbuffer
+    );
+
+    const cecs_entity hand = cecs_world_alloc_entity(world, allocator);
+    dckf_hand *const hand_component = cecs_view_alloc_insert_expect(&hand_view_alloc, &world->components, &world->entities, hand);
+    dckf_position2_f32 *const position = cecs_view_alloc_insert_expect(&position_view_alloc, &world->components, &world->entities, hand);
+    dckf_drawable *const drawable = cecs_view_alloc_insert_expect(&drawable_view_alloc, &world->components, &world->entities, hand);
+    dckf_inputbuffer *const inputbuffer = cecs_view_alloc_insert_expect(&inputbuffer_view_alloc, &world->components, &world->entities, hand);
+
+    *hand_component = (dckf_hand){
+        .state = dckf_hand_state_none,
+    };
+    *position = (dckf_position2_f32){
+        .x = 0.0f,
+        .y = 0.0f,
+    };
+    *drawable = (dckf_drawable){
+        .sprite = {'a', '\0'},
+        .sprite_length = 1,
+    };
+    *inputbuffer = (dckf_inputbuffer){
+        .keys = {0},
+        .key_next_read = 0,
+        .key_next_write = 0,
+    };
+
+    cecs_view_alloc_release(&hand_view_alloc, &world->components);
+    cecs_view_alloc_release(&position_view_alloc, &world->components);
+    cecs_view_alloc_release(&drawable_view_alloc, &world->components);
+    cecs_view_alloc_release(&inputbuffer_view_alloc, &world->components);
+}
 void dckf_init(cecs_world *const world, cecs_allocator *const allocator, void *const context) {
     cecs_flatmap *const static_entity_from_position = (cecs_flatmap *)context;
     printf("DeckFencer - Press 'q' to quit\n");
@@ -251,6 +314,7 @@ void dckf_init(cecs_world *const world, cecs_allocator *const allocator, void *c
     dckf_init_component_types(world, allocator);
     dckf_init_platform_create(world, allocator, static_entity_from_position);
     dckf_init_player_create(world, allocator);
+    dckf_init_hand_create(world, allocator);
 }
 void dckf_deinit(cecs_world *const world, cecs_allocator *const allocator, void *const context) {
     (void)world;
@@ -352,34 +416,53 @@ void dckf_render(const cecs_world *const world, cecs_allocator *const allocator,
     fputs("\x1b[0;0H\x1b[J", stdout);
     fflush(stdout);
     fwrite(render_buffer, sizeof(char), render_game_stride * render_game_height, stdout);
+
+    // // debug input buffers
+    // printf("\n\n");
+    // cecs_view view_inputbuffer = cecs_world_acquire_view(world, component_inputbuffer);
+    // const cecs_sparse_set_storage *const inputbuffer_storage = cecs_component_storage_sparse_set(&cecs_view_registry(view_inputbuffer, &world->components)->storage);
+    // for (size_t i = 0; i < cecs_sparse_set_value_count(&inputbuffer_storage->set); i++) {
+    //     const cecs_dense_index inputbuffer_index = cecs_dense_index_create_valid(i);
+    //     const dckf_inputbuffer *const inputbuffer = cecs_sparse_set_get_value_by_index(&inputbuffer_storage->set, inputbuffer_index, sizeof(dckf_inputbuffer));
+    //     printf("InputBuffer %zu: keys=[", i);
+    //     // for (size_t k = inputbuffer->key_next_read; k < inputbuffer->key_next_write; k++) {
+    //     //     printf("%c", inputbuffer->keys[k % (sizeof(inputbuffer->keys) / sizeof(char))]);
+    //     // }
+    //     for (size_t k = 0; k < sizeof(inputbuffer->keys) / sizeof(char); k++) {
+    //         printf("%c", inputbuffer->keys[k]);
+    //     }
+    //     printf("]\n");
+    // }
+    // cecs_view_release(&view_inputbuffer, &world->components);
 }
 
 
-static void dckf_input_gather(cecs_world *const world) {
+static void dckf_input_gather(cecs_world *const world, bool *const running) {
     cecs_view_mut view_inputbuffer = cecs_world_acquire_view_mut(world, component_inputbuffer);
     
     cecs_sparse_set_storage *const inputbuffer_storage = cecs_component_storage_sparse_set_mut(&cecs_view_mut_registry(
         view_inputbuffer, &world->components)->storage
     );
-    for (size_t i = 0; i < cecs_sparse_set_value_count(&inputbuffer_storage->set); i++) {
-        const cecs_dense_index inputbuffer_index = cecs_dense_index_create_valid(i);
-        dckf_inputbuffer *const inputbuffer = cecs_sparse_set_get_value_by_index_mut(&inputbuffer_storage->set, inputbuffer_index, sizeof(dckf_inputbuffer));
+    while (dckf_kbhit()) {
+        const int ch = dckf_getch();
+        if (ch == 'q' || ch == 'Q') {
+            *running = false;
+        }
 
-        size_t count = 0;
-        while (dckf_kbhit()) {
-            const int ch = dckf_getch();
-            inputbuffer->keys[inputbuffer->key_next_write % (sizeof(inputbuffer->keys) / sizeof(char))] = (char)ch;
-            ++count;
-            ++inputbuffer->key_next_write;
+        for (size_t i = 0; i < cecs_sparse_set_value_count(&inputbuffer_storage->set); i++) {
+            const cecs_dense_index inputbuffer_index = cecs_dense_index_create_valid(i);
+            dckf_inputbuffer *const inputbuffer = cecs_sparse_set_get_value_by_index_mut(&inputbuffer_storage->set, inputbuffer_index, sizeof(dckf_inputbuffer));
+            
+            const size_t end = inputbuffer->key_next_read + (sizeof(inputbuffer->keys) / sizeof(char));
+            if (inputbuffer->key_next_write < end) {
+                inputbuffer->keys[inputbuffer->key_next_write % (sizeof(inputbuffer->keys) / sizeof(char))] = (char)ch;
+                ++inputbuffer->key_next_write;
+            }
+            cecs_debugbreak_fail_unless(
+                inputbuffer->key_next_read <= inputbuffer->key_next_write,
+                "fatal error: failed to normalize inputbuffer indices after gathering input, key_next_read must be less than or equal to key_next_write"
+            );
         }
-        if (inputbuffer->key_next_write < inputbuffer->key_next_read) {
-            const size_t loops = count / (sizeof(inputbuffer->keys) / sizeof(char));
-            inputbuffer->key_next_read += (loops + 1ull) * (sizeof(inputbuffer->keys) / sizeof(char));
-        }
-        cecs_debugbreak_fail_unless(
-            inputbuffer->key_next_read <= inputbuffer->key_next_write,
-            "fatal error: failed to normalize inputbuffer indices after gathering input, key_next_read must be less than or equal to key_next_write"
-        );
     }
     cecs_view_mut_release(&view_inputbuffer, &world->components);
 }
@@ -387,13 +470,7 @@ void dckf_input(cecs_world *const world, cecs_allocator *const allocator, void *
     (void)world;
     (void)allocator;
     bool *const running = (bool *)context;
-    if (dckf_kbhit()) {
-        const int ch = dckf_getch();
-        if (ch == 'q' || ch == 'Q') {
-            *running = false;
-        }
-    }
-    dckf_input_gather(world);
+    dckf_input_gather(world, running);
 }
 
 static void dckf_update_velocity_input(cecs_world *const world) {
@@ -450,6 +527,12 @@ static void dckf_update_velocity_input(cecs_world *const world) {
                 }
                 ++inputbuffer->key_next_read;
             }
+            inputbuffer->key_next_read %= (sizeof(inputbuffer->keys) / sizeof(char));
+            inputbuffer->key_next_write %= (sizeof(inputbuffer->keys) / sizeof(char));
+            cecs_debugbreak_fail_unless(
+                inputbuffer->key_next_read <= inputbuffer->key_next_write,
+                "fatal error: failed to normalize inputbuffer indices after processing input, key_next_read must be less than or equal to key_next_write"
+            );
             ++updated_count;
         }
         ++i;
@@ -522,9 +605,133 @@ static void dckf_update_position_velocity(cecs_world *const world, const cecs_fl
     cecs_view_mut_release(&view_velocity, &world->components);
     cecs_view_release(&view_inputbuffer, &world->components);
 }
+static void dckf_update_hand_input(cecs_world *const world) {
+    cecs_view_mut view_hand = cecs_world_acquire_view_mut(world, component_hand);
+    cecs_view_mut view_inputbuffer = cecs_world_acquire_view_mut(world, component_inputbuffer);
+    cecs_view_mut view_position = cecs_world_acquire_view_mut(world, component_position);
+    cecs_view view_velocity_player = cecs_world_acquire_view(world, component_velocity);
+
+    // first identify player position
+    cecs_sparse_set_storage *const hand_storage = cecs_component_storage_sparse_set_mut(&cecs_view_mut_registry(
+        view_hand, &world->components)->storage
+    );
+    cecs_sparse_set_storage *const inputbuffer_storage = cecs_component_storage_sparse_set_mut(&cecs_view_mut_registry(
+        view_inputbuffer, &world->components)->storage
+    );
+    cecs_sparse_set_storage *const position_storage = cecs_component_storage_sparse_set_mut(&cecs_view_mut_registry(
+        view_position, &world->components)->storage
+    );
+    const cecs_sparse_set_storage *const velocity_player_storage = cecs_component_storage_sparse_set(&cecs_view_registry(
+        view_velocity_player, &world->components)->storage
+    );
+
+    const size_t hand_min_entity_count = cecs_min(
+        cecs_sparse_set_value_count(&hand_storage->set),
+        cecs_min(
+            cecs_sparse_set_value_count(&inputbuffer_storage->set),
+            cecs_sparse_set_value_count(&position_storage->set)
+        )
+    );
+    const size_t player_min_entity_count = cecs_min(
+        cecs_sparse_set_value_count(&inputbuffer_storage->set),
+        cecs_min(
+            cecs_sparse_set_value_count(&position_storage->set),
+            cecs_sparse_set_value_count(&velocity_player_storage->set)
+        )
+    );
+    const cecs_sparse_set *const velocity_player_lead = &velocity_player_storage->set;
+    size_t player_count = 0;
+    size_t i = 0;
+    dckf_position2_f32 player_position;
+    while (i < cecs_sparse_set_value_count(velocity_player_lead) && player_count < player_min_entity_count) {
+        const cecs_dense_index velocity_player_index = cecs_dense_index_create_valid(i);
+        const cecs_entity player_entity = cecs_entity_storage_get_used(
+            &world->entities,
+            *cecs_sparse_set_get_sparse_key_by_index(velocity_player_lead, velocity_player_index)
+        );
+        const size_t player_entity_index = cecs_entity_index_of(player_entity);
+
+        if (cecs_sparse_set_storage_contains(inputbuffer_storage, player_entity_index)
+            && cecs_sparse_set_storage_contains(position_storage, player_entity_index)
+        ) {
+            player_position = *(dckf_position2_f32 *)cecs_sparse_set_storage_get(position_storage, player_entity_index, sizeof(dckf_position2_f32));
+            ++player_count;
+        }
+    }
+    cecs_debugbreak_fail_unless(
+        player_count == 1,
+        "currently only supports exactly one player entity"
+    );
+
+    cecs_sparse_set *const hand_lead = &hand_storage->set;
+    size_t updated_count = 0;
+    i = 0;
+    while (i < cecs_sparse_set_value_count(hand_lead) && updated_count < hand_min_entity_count) {
+        const cecs_dense_index hand_index = cecs_dense_index_create_valid(i);
+        // dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(hand_lead, hand_index, sizeof(dckf_hand));
+        // (void)hand;
+        const cecs_entity hand_entity = cecs_entity_storage_get_used(
+            &world->entities,
+            *cecs_sparse_set_get_sparse_key_by_index(hand_lead, hand_index)
+        );
+        const size_t hand_entity_index = cecs_entity_index_of(hand_entity);
+
+        if (cecs_sparse_set_storage_contains(inputbuffer_storage, hand_entity_index)
+            && cecs_sparse_set_storage_contains(position_storage, hand_entity_index)
+        ) {
+            dckf_inputbuffer *const inputbuffer =
+                cecs_sparse_set_storage_get_mut(inputbuffer_storage, hand_entity_index, sizeof(dckf_inputbuffer));
+            dckf_position2_f32 *const position =
+                cecs_sparse_set_storage_get_mut(position_storage, hand_entity_index, sizeof(dckf_position2_f32));
+
+            while (inputbuffer->key_next_read < inputbuffer->key_next_write) {
+                const char key = inputbuffer->keys[inputbuffer->key_next_read % (sizeof(inputbuffer->keys) / sizeof(char))];
+                switch (key) {
+                    case 'i':
+                    case 'I':
+                        position->x = player_position.x;
+                        position->y = player_position.y - 1.0f;
+                        break;
+                    case 'j':
+                    case 'J':
+                        position->x = player_position.x - 1.0f;
+                        position->y = player_position.y;
+                        break;
+                    case 'k':
+                    case 'K':
+                        position->x = player_position.x;
+                        position->y = player_position.y + 1.0f;
+                        break;
+                    case 'l':
+                    case 'L':
+                        position->x = player_position.x + 1.0f;
+                        position->y = player_position.y;
+                        break;
+                }
+                ++inputbuffer->key_next_read;
+            }
+            inputbuffer->key_next_read %= (sizeof(inputbuffer->keys) / sizeof(char));
+            inputbuffer->key_next_write %= (sizeof(inputbuffer->keys) / sizeof(char));
+            cecs_debugbreak_fail_unless(
+                inputbuffer->key_next_read <= inputbuffer->key_next_write,
+                "fatal error: failed to normalize inputbuffer indices after processing hand input, key_next_read must be less than or equal to key_next_write"
+            );
+            ++updated_count;
+        }
+        ++i;
+    }
+
+    cecs_view_mut_release(&view_hand, &world->components);
+    cecs_view_mut_release(&view_inputbuffer, &world->components);
+    cecs_view_mut_release(&view_position, &world->components);
+    cecs_view_release(&view_velocity_player, &world->components);
+}
+
 void dckf_update(cecs_world *const world, cecs_allocator *const allocator, void *const context) {
     (void)allocator;
     const cecs_flatmap *const static_entity_from_position = (cecs_flatmap *)context;
     dckf_update_velocity_input(world);
     dckf_update_position_velocity(world, static_entity_from_position);
+    dckf_update_hand_input(world);
+    // dckf_update_hand_fencer(world);
 }

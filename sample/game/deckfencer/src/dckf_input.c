@@ -54,7 +54,7 @@ int dckf_kbhit() {
     FD_SET(0, &fds);
     return select(1, &fds, NULL, NULL, &tv) > 0;
 #elif CECS_OS_MASK & CECS_OS_MASK_WINDOWS
-    return kbhit();
+    return _kbhit();
 #endif
 }
 int dckf_getch() {
@@ -67,6 +67,6 @@ int dckf_getch() {
         return c;
     }
 #elif CECS_OS_MASK & CECS_OS_MASK_WINDOWS
-    return getch();
+    return _getch();
 #endif
 }
