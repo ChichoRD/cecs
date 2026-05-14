@@ -72,10 +72,16 @@ typedef enum dckf_hand_state {
     dckf_hand_state_below_left = (1 << 1),
     dckf_hand_state_below_center = (1 << 2),
     dckf_hand_state_below_right = (1 << 3),
-
-    // [...]
+    
+    dckf_hand_state_action = (1 << 4)
 } dckf_hand_state;
 typedef uint8_t dckf_hand_state_value;
+static const dckf_hand_state_value dckf_hand_state_mask_above = dckf_hand_state_above;
+static const dckf_hand_state_value dckf_hand_state_mask_below =
+    dckf_hand_state_below_left | dckf_hand_state_below_center | dckf_hand_state_below_right;
+static const dckf_hand_state_value dckf_hand_state_mask_position = dckf_hand_state_mask_above | dckf_hand_state_mask_below;
+static const dckf_hand_state_value dckf_hand_state_mask_action =
+    dckf_hand_state_action;
 typedef struct dckf_hand {
     dckf_hand_state_value state;
 } dckf_hand;
@@ -293,7 +299,7 @@ static void dckf_init_hand_create(cecs_world *const world, cecs_allocator *const
     dckf_inputbuffer *const inputbuffer = cecs_view_alloc_insert_expect(&inputbuffer_view_alloc, &world->components, &world->entities, hand);
 
     *hand_component = (dckf_hand){
-        .state = dckf_hand_state_none,
+        .state = dckf_hand_state_above,
     };
     *position = (dckf_position2_f32){
         .x = 0.0f,
@@ -675,6 +681,7 @@ static void dckf_update_hand_input(cecs_world *const world) {
     while (i < cecs_sparse_set_value_count(hand_lead) && updated_count < hand_min_entity_count) {
         const cecs_dense_index hand_index = cecs_dense_index_create_valid(i);
         dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(hand_lead, hand_index, sizeof(dckf_hand));
+        dckf_hand_state hand_action = hand->state & dckf_hand_state_mask_action;
         const cecs_entity hand_entity = cecs_entity_storage_get_used(
             &world->entities,
             *cecs_sparse_set_get_sparse_key_by_index(hand_lead, hand_index)
@@ -693,7 +700,7 @@ static void dckf_update_hand_input(cecs_world *const world) {
                         break;
                     case 'j':
                     case 'J':
-                        hand->state = dckf_hand_state_below_left;
+                        hand->state = dckf_hand_state_below_left ;
                         break;
                     case 'k':
                     case 'K':
@@ -703,9 +710,13 @@ static void dckf_update_hand_input(cecs_world *const world) {
                     case 'L':
                         hand->state = dckf_hand_state_below_right;
                         break;
+                    case ' ':
+                        hand_action = dckf_hand_state_action;
+                        break;
                 }
                 ++inputbuffer->key_next_read;
             }
+            hand->state |= hand_action;
             inputbuffer->key_next_read %= (sizeof(inputbuffer->keys) / sizeof(char));
             inputbuffer->key_next_write %= (sizeof(inputbuffer->keys) / sizeof(char));
             cecs_debugbreak_fail_unless(
@@ -764,7 +775,7 @@ static void dckf_update_hand_fencer(cecs_world *const world) {
             dckf_position2_f32 *const position =
                 cecs_sparse_set_storage_get_mut(position_storage, hand_entity_index, sizeof(dckf_position2_f32));
             
-            switch (hand->state) {
+            switch (hand->state & dckf_hand_state_mask_position) {
                 case dckf_hand_state_none:
                     break;
                 case dckf_hand_state_above:
@@ -795,11 +806,113 @@ static void dckf_update_hand_fencer(cecs_world *const world) {
     cecs_view_release(&view_velocity_player, &world->components);
     cecs_view_release(&view_inputbuffer, &world->components);
 }
+static void dckf_update_hand_action(cecs_world *const world, cecs_allocator *const allocator, cecs_flatmap *const static_entity_from_position) {
+    cecs_view_mut view_hand = cecs_world_acquire_view_mut(world, component_hand);
+    cecs_view_mut view_position = cecs_world_acquire_view_mut(world, component_position);
+    
+    cecs_sparse_set_storage *const hand_storage = cecs_component_storage_sparse_set_mut(&cecs_view_mut_registry(
+        view_hand, &world->components)->storage
+    );
+    const cecs_sparse_set_storage *const position_storage = cecs_component_storage_sparse_set(&cecs_view_mut_registry(
+        view_position, &world->components)->storage
+    );
+    const size_t min_entity_count = cecs_min(
+        cecs_sparse_set_value_count(&hand_storage->set),
+        cecs_sparse_set_value_count(&position_storage->set)
+    );
+    cecs_sparse_set *const hand_lead = &hand_storage->set;
+    size_t updated_count = 0;
+    size_t i = 0;
+    while (i < cecs_sparse_set_value_count(hand_lead) && updated_count < min_entity_count) {
+        const cecs_dense_index hand_index = cecs_dense_index_create_valid(i);
+        dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(hand_lead, hand_index, sizeof(dckf_hand));
+        const dckf_hand_state hand_action = hand->state & dckf_hand_state_mask_action;
+        const cecs_entity hand_entity = cecs_entity_storage_get_used(
+            &world->entities,
+            *cecs_sparse_set_get_sparse_key_by_index(hand_lead, hand_index)
+        );
+        const size_t hand_entity_index = cecs_entity_index_of(hand_entity);
+
+        if (hand_action == dckf_hand_state_action && cecs_sparse_set_storage_contains(position_storage, hand_entity_index)) {
+            hand->state &= ~dckf_hand_state_mask_action;
+            const dckf_position2_f32 *const position =
+                cecs_sparse_set_storage_get(position_storage, hand_entity_index, sizeof(dckf_position2_f32));
+            const size_t key = (size_t)position->x << 16 | (size_t)position->y;
+            
+            uint_fast8_t insert_index;
+            const cecs_flatbucket_mut insert_bucket =
+                cecs_flatmap_find_insert_bucket(static_entity_from_position, key, sizeof(cecs_entity), &insert_index);
+            if (insert_index >= cecs_flatbucket_get_count(cecs_flatbucket_from(insert_bucket))) {
+                const cecs_entity block_entity = cecs_world_alloc_entity(world, allocator);
+                cecs_view_alloc block_view_alloc = cecs_world_acquire_view_alloc(
+                    world,
+                    cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_block) * 1ull),
+                    component_block
+                );
+                cecs_allocator position_alloc = cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_position2_f32) * 1ull);
+                cecs_view_alloc position_view_alloc = cecs_view_alloc_create_take(
+                    &position_alloc,
+                    &view_position
+                );
+                cecs_view_alloc drawable_view_alloc = cecs_world_acquire_view_alloc(
+                    world,
+                    cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_drawable) * 1ull),
+                    component_drawable
+                );
+                cecs_view_alloc live_view_alloc = cecs_world_acquire_view_alloc(
+                    world,
+                    cecs_allocator_alloc_bump_view(allocator, sizeof(dckf_live) * 1ull),
+                    component_live
+                );
+                
+                dckf_block *const block = cecs_view_alloc_insert_expect(&block_view_alloc, &world->components, &world->entities, block_entity);
+                dckf_position2_f32 *const block_position = cecs_view_alloc_insert_expect(&position_view_alloc, &world->components, &world->entities, block_entity);
+                dckf_drawable *const block_drawable = cecs_view_alloc_insert_expect(&drawable_view_alloc, &world->components, &world->entities, block_entity);
+                dckf_live *const block_live = cecs_view_alloc_insert_expect(&live_view_alloc, &world->components, &world->entities, block_entity);
+                
+                *block = (dckf_block){0};
+                *block_position = (dckf_position2_f32){
+                    .x = position->x,
+                    .y = position->y,
+                };
+                *block_drawable = (dckf_drawable){
+                    .sprite = {'#', '\0'},
+                    .sprite_length = 1,
+                };
+                *block_live = (dckf_live){
+                    .hitpoints = 3,
+                };
+
+                cecs_entity * const inserted_entity = (cecs_entity *)cecs_flatmap_insert_into_bucket_expect(
+                    static_entity_from_position,
+                    insert_bucket,
+                    key,
+                    sizeof(cecs_entity)
+                );
+                *inserted_entity = block_entity;
+
+                cecs_view_alloc_release(&block_view_alloc, &world->components);
+                cecs_view_alloc_release(&position_view_alloc, &world->components);
+                cecs_view_alloc_release(&drawable_view_alloc, &world->components);
+                cecs_view_alloc_release(&live_view_alloc, &world->components);
+            }
+            ++updated_count;
+        }
+        ++i;
+    }
+
+    cecs_view_mut_release(&view_hand, &world->components);
+    if (cecs_view_mut_is_valid(view_position)) {
+        cecs_view_mut_release(&view_position, &world->components);
+    }
+}
+
 void dckf_update(cecs_world *const world, cecs_allocator *const allocator, void *const context) {
     (void)allocator;
-    const cecs_flatmap *const static_entity_from_position = (cecs_flatmap *)context;
+    cecs_flatmap *const static_entity_from_position = (cecs_flatmap *)context;
     dckf_update_velocity_input(world);
     dckf_update_position_velocity(world, static_entity_from_position);
     dckf_update_hand_input(world);
     dckf_update_hand_fencer(world);
+    dckf_update_hand_action(world, allocator, static_entity_from_position);
 }
