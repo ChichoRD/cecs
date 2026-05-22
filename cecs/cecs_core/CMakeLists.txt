@@ -6,7 +6,7 @@ project(
     DESCRIPTION "Standard library for CECS"
     LANGUAGES C
 )
-    option(CECS_CORE_BUILD_EXTENSION "Build the CECS core extension library (cecs_extension)" OFF)
+    option(CECS_CORE_BUILD_EXTENSION "Build the CECS core extension library (cecs_extension)" ON)
 
     include(FetchContent)
     FetchContent_Declare(
@@ -27,6 +27,7 @@ project(
     add_library(${PROJECT_NAME} INTERFACE)
     add_library(cecs ALIAS ${PROJECT_NAME})
     
+
     target_link_libraries(${PROJECT_NAME} INTERFACE cecs_world)
     if (${CECS_CORE_BUILD_EXTENSION})
         target_link_libraries(${PROJECT_NAME} INTERFACE cecs_extension)

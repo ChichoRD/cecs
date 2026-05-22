@@ -913,7 +913,9 @@ static void dckf_update_hand_action(cecs_world *const world, cecs_allocator *con
                     if (cecs_flatmap_find(static_entity_from_position, key, sizeof(cecs_entity), &found_entity)) {
                         const cecs_entity block_entity = *(const cecs_entity *)found_entity;
                         cecs_world_free_entity(world, block_entity);
-                        cecs_flatmap_remove(static_entity_from_position, key, sizeof(cecs_entity));
+
+                        // XXX: ? this worked before with simply `cecs_flatmap_remove`
+                        cecs_flatmap_find_remove_expect(static_entity_from_position, allocator, key, sizeof(cecs_entity));
                     }
                 }
                 ++updated_count;
