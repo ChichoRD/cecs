@@ -103,7 +103,8 @@ inline cecs_view_mut cecs_view_mut_create(const cecs_rwlock_borrow_mut borrow, c
 }
 void cecs_view_mut_release(cecs_view_mut *const view, cecs_world_components *const components);
 
-cecs_component_registry *cecs_view_mut_registry(const cecs_view_mut view, cecs_world_components *const components);
+const cecs_component_registry *cecs_view_mut_registry(const cecs_view_mut view, const cecs_world_components *const components);
+cecs_component_registry *cecs_view_mut_registry_mut(const cecs_view_mut view, cecs_world_components *const components);
 
 const void *cecs_view_mut_get(const cecs_view_mut view, const cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity);
 void *cecs_view_mut_get_mut(const cecs_view_mut view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity);
@@ -159,5 +160,16 @@ void cecs_view_alloc_remove_expect(
     cecs_view_alloc *const view, cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity
 );
 
+
+// XXX: naming cast? downcast? as?
+const cecs_sparse_set_storage *cecs_view_storage_sparse_set_expect(
+    const cecs_view view, const cecs_world_components *const components
+);
+const cecs_sparse_set_storage *cecs_view_mut_storage_sparse_set_expect(
+    const cecs_view_mut view, const cecs_world_components *const components
+);
+cecs_sparse_set_storage *cecs_view_mut_storage_sparse_set_mut_expect(
+    const cecs_view_mut view, cecs_world_components *const components
+);
 
 #endif

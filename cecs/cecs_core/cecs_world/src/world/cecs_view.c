@@ -151,12 +151,16 @@ void cecs_view_mut_release(cecs_view_mut *const view, cecs_world_components *con
     cecs_world_components_release_registry_mut(components, view->view.component.id, &view->borrow);
 }
 
-cecs_component_registry *cecs_view_mut_registry(const cecs_view_mut view, cecs_world_components *const components) {
+const cecs_component_registry *cecs_view_mut_registry(const cecs_view_mut view, const cecs_world_components *const components) {
     cecs_view_mut_expect_valid_or_exit(view);
-    cecs_registry *registry = cecs_world_components_get_registry_mut(components, view.view.component.id);
+    const cecs_registry *const registry = cecs_world_components_get_registry(components, view.view.component.id);
+    return cecs_registry_get_unchecked(registry);
+}
+cecs_component_registry *cecs_view_mut_registry_mut(const cecs_view_mut view, cecs_world_components *const components) {
+    cecs_view_mut_expect_valid_or_exit(view);
+    cecs_registry *const registry = cecs_world_components_get_registry_mut(components, view.view.component.id);
     return cecs_registry_get_mut_unchecked(registry);
 }
-
 
 const void *cecs_view_mut_get(const cecs_view_mut view, const cecs_world_components *const components, const cecs_entity_storage *const entities, const cecs_entity entity) {
     cecs_view_mut_expect_valid_or_exit(view);
@@ -243,4 +247,15 @@ void cecs_view_alloc_remove_expect(
 ) {
     cecs_view_alloc_expect_valid_or_exit(view);
     cecs_view_unchecked_remove_expect(view->view.view, &view->allocator, components, entities, entity);
+}
+
+
+const cecs_sparse_set_storage *cecs_view_storage_sparse_set_expect(const cecs_view view, const cecs_world_components *const components) {
+    return cecs_component_storage_sparse_set(&cecs_view_registry(view, components)->storage);
+}
+const cecs_sparse_set_storage *cecs_view_mut_storage_sparse_set_expect(const cecs_view_mut view, const cecs_world_components *const components) {
+    return cecs_component_storage_sparse_set(&cecs_view_mut_registry(view, components)->storage);
+}
+cecs_sparse_set_storage *cecs_view_mut_storage_sparse_set_mut_expect(const cecs_view_mut view, cecs_world_components *const components) {
+    return cecs_component_storage_sparse_set_mut(&cecs_view_mut_registry_mut(view, components)->storage);
 }
