@@ -28,6 +28,7 @@ bool cecs_component_storage_remove(cecs_component_storage *const storage, cecs_a
 void cecs_component_storage_remove_expect(cecs_component_storage *const storage, cecs_allocator *const allocator, const size_t key, const size_t component_size);
 
 bool cecs_component_storage_contains(const cecs_component_storage *const storage, const size_t key, const size_t component_size);
+size_t cecs_component_storage_count(const cecs_component_storage *const storage);
 
 inline const cecs_sparse_set_storage *cecs_component_storage_sparse_set(const cecs_component_storage *const storage) {
     cecs_debugbreak_fail_unless(

@@ -43,5 +43,12 @@ bool cecs_sparse_set_storage_remove(cecs_sparse_set_storage *const storage, cons
 void cecs_sparse_set_storage_remove_expect(cecs_sparse_set_storage *const storage, const size_t key, const size_t value_size);
 
 bool cecs_sparse_set_storage_contains(const cecs_sparse_set_storage *storage, const size_t key);
+inline size_t cecs_sparse_set_storage_count(const cecs_sparse_set_storage *const storage) {
+    static_assert(
+        sizeof(size_t) >= sizeof(cecs_sparse_set_usize),
+        "error: cecs_sparse_set_storage_count cannot be implemented because size_t is too small to represent the count of values in the underlying cecs_sparse_set"
+    );
+    return cecs_sparse_set_value_count(&storage->set);
+}
 
 #endif

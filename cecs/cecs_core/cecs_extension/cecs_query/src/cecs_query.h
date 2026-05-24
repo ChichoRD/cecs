@@ -12,6 +12,10 @@
 //     const cecs_view_alloc *views_alloc;
 // } cecs_query_views;
 typedef cecs_view_unchecked *cecs_query_views;
+typedef union cecs_query_registry {
+    const cecs_component_registry *registry;
+    cecs_component_registry *registry_mut;
+} cecs_query_registry;
 
 
 typedef enum cecs_query_access {
@@ -51,9 +55,14 @@ size_t cecs_query_term_find_storages_mut(
 );
 bool cecs_query_term_match(
     const cecs_query_match_value match,
-    const cecs_component_registry **const registries,
+    const cecs_component_registry *const *const registries,
     const size_t registry_count,
     const cecs_entity_index entity
+);
+size_t cecs_query_term_count_min(
+    const cecs_query_term term,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count
 );
 
 
@@ -70,7 +79,7 @@ size_t cecs_query_find_storages(
 size_t cecs_query_find_storages_mut(
     const cecs_query query,
     cecs_world_components *const components,
-    cecs_component_registry **const out_registries,
+    cecs_query_registry *const out_registries,
     const size_t out_registry_count
 );
 bool cecs_query_match(
@@ -78,6 +87,11 @@ bool cecs_query_match(
     const cecs_component_registry **const registries,
     const size_t registry_count,
     const cecs_entity_index entity
+);
+size_t cecs_query_count_min(
+    const cecs_query query,
+    const cecs_component_registry **const registries,
+    const size_t registry_count
 );
 
 #endif // CECS_QUERY_H

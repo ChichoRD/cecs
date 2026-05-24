@@ -211,3 +211,23 @@ bool cecs_component_storage_contains(const cecs_component_storage *const storage
         );
     }
 }
+
+size_t cecs_component_storage_count(const cecs_component_storage *const storage) {
+    cecs_expect_not(storage->type == cecs_component_storage_type_none);
+    cecs_expect_not(storage->type > CECS_COMPONENT_STORAGE_TYPE_MAX);
+    // const cecs_component_storage_type type = storage->type;
+    switch (storage->type) {
+    case cecs_component_storage_type_none:
+        cecs_debugbreak_fail_message(
+            "fatal error: attempted to count cecs_component_storage of type 'none'"
+        );
+    case cecs_component_storage_type_sparse_set:
+        return cecs_sparse_set_storage_count(
+            &storage->storage.sparse_set
+        );
+    default:
+        cecs_debugbreak_fail_message(
+            "fatal error: attempted to count cecs_component_storage of unsupported type"
+        );
+    }
+}

@@ -117,3 +117,5 @@ bool cecs_sparse_set_storage_contains(const cecs_sparse_set_storage *storage, co
         return cecs_sparse_set_contains(&storage->set, mapped_key);
     }
 }
+
+extern inline size_t cecs_sparse_set_storage_count(const cecs_sparse_set_storage *const storage);
