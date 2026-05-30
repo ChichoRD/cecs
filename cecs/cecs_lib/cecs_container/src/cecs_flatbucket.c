@@ -27,7 +27,10 @@ extern inline cecs_flatbucket_hash *cecs_flatbucket_get_hash_mut(const cecs_flat
 extern inline cecs_flatbucket cecs_flatbucket_from(const cecs_flatbucket_mut bucket);
 extern inline uint_fast8_t cecs_flatbucket_get_count(const cecs_flatbucket bucket);
 extern inline bool cecs_flatbucket_is_full(const cecs_flatbucket bucket);
-
+// extern inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket bucket);
+extern inline uint_fast8_t cecs_flatbucket_mut_get_count(const cecs_flatbucket_mut bucket);
+extern inline bool cecs_flatbucket_mut_is_full(const cecs_flatbucket_mut bucket);
+// extern inline bool cecs_flatbucket_mut_has_been_full(const cecs_flatbucket_mut bucket);
 
 static const uint64_t cecs_flabucket_hash_low_bitstride = CECS_FLATBUCKET8_HASH7_MAX_LOG2;
 static const uint64_t cecs_flabucket_hash_low_bit_start = CECS_FLATBUCKET8_MAX_COUNT;
@@ -73,14 +76,14 @@ inline void cecs_flatbucket_unset_been_full(const cecs_flatbucket_mut bucket) {
     (*bucket.hash_from_index8_u7) &= ~been_full_mask;
 }
 static inline void cecs_flatbucket_set_been_full_if_full(const cecs_flatbucket_mut bucket) {
-    (*bucket.hash_from_index8_u7) |= cecs_flatbucket_get_count(cecs_flatbucket_from(bucket)) << (CECS_FLATBUCKET8_MAX_COUNT_LOG2 + 1ull);
+    (*bucket.hash_from_index8_u7) |= cecs_flatbucket_mut_get_count(bucket) << (CECS_FLATBUCKET8_MAX_COUNT_LOG2 + 1ull);
 }
 inline void cecs_flatbucket_unset_been_full_if_not_full(const cecs_flatbucket_mut bucket) {
-    (*bucket.hash_from_index8_u7) &= cecs_flatbucket_get_count(cecs_flatbucket_from(bucket)) << (CECS_FLATBUCKET8_MAX_COUNT_LOG2 + 1ull);
+    (*bucket.hash_from_index8_u7) &= cecs_flatbucket_mut_get_count(bucket) << (CECS_FLATBUCKET8_MAX_COUNT_LOG2 + 1ull);
 }
 
 static inline void *cecs_flatbucket_push(const cecs_flatbucket_mut bucket, const size_t value_size) {
-    const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(cecs_flatbucket_from(bucket));
+    const uint_fast8_t bucket_value_count = cecs_flatbucket_mut_get_count(bucket);
     if (bucket_value_count > cecs_flatbucket_max_count) {
         assert(false && "error: cecs_flatbucket_push called with full bucket");
         exit(EXIT_FAILURE);
@@ -95,13 +98,12 @@ void *cecs_flatbucket_insert_expect(
     const cecs_flatbucket_hash_low hash7,
     const size_t value_size
 ) {
-    const cecs_flatbucket bucket = cecs_flatbucket_from(bucket_mut);
-    if (cecs_flatbucket_is_full(bucket)) {
+    if (cecs_flatbucket_mut_is_full(bucket_mut)) {
         assert(false && "error: cecs_flatbucket_insert_expect called with full bucket");
         exit(EXIT_FAILURE);
     }
     
-    const uint_fast8_t bucket_value_count = cecs_flatbucket_get_count(bucket);
+    const uint_fast8_t bucket_value_count = cecs_flatbucket_mut_get_count(bucket_mut);
     if (index != bucket_value_count) {
         assert(false && "error: cecs_flatbucket_insert_expect called with already occupied hash_low");
         exit(EXIT_FAILURE);

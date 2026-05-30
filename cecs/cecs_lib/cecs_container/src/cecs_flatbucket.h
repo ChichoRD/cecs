@@ -80,6 +80,22 @@ inline bool cecs_flatbucket_has_been_full(const cecs_flatbucket bucket) {
     static const uint64_t been_full_mask = 0x80ull;
     return (*bucket.hash_from_index8_u7) & been_full_mask;
 }
+inline uint_fast8_t cecs_flatbucket_mut_get_count(const cecs_flatbucket_mut bucket) {
+    static_assert(
+        CECS_FLATBUCKET8_MAX_COUNT_MASK <= UINT_FAST8_MAX,
+        "static error: value masked with CECS_FLATBUCKET8_MAX_COUNT_MASK must fit within uint_fast8_t"
+    );
+    static const uint64_t count_mask = CECS_FLATBUCKET8_MAX_COUNT_MASK;
+    return (uint_fast8_t)((*bucket.hash_from_index8_u7) & count_mask);
+}
+inline bool cecs_flatbucket_mut_is_full(const cecs_flatbucket_mut bucket) {
+    static const uint64_t full_mask = (1ull << CECS_FLATBUCKET8_MAX_COUNT_LOG2);
+    return (*bucket.hash_from_index8_u7) & full_mask;
+}
+inline bool cecs_flatbucket_mut_has_been_full(const cecs_flatbucket_mut bucket) {
+    static const uint64_t been_full_mask = 0x80ull;
+    return (*bucket.hash_from_index8_u7) & been_full_mask;
+}
 
 // Bucket value access functions
 inline const void *cecs_flatbucket_get_value_unchecked(const cecs_flatbucket bucket, const uint_fast8_t index, const size_t value_size) {
