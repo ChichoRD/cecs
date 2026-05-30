@@ -21,6 +21,10 @@ extern inline size_t cecs_sparse_set_storage_map_key(const cecs_sparse_set_stora
     );
     return key - offset;
 }
+extern inline size_t cecs_sparse_set_storage_map_key_inverse(const cecs_sparse_set_storage *storage, const size_t key_mapped) {
+    const size_t offset = cecs_sparse_set_storage_map_offset(storage);
+    return key_mapped + offset;
+}
 
 extern inline cecs_sparse_set_storage cecs_sparse_set_storage_create(void);
 extern inline cecs_sparse_set_storage cecs_sparse_set_storage_create_with_capacity(cecs_allocator *allocator, const size_t capacity, const size_t value_size);

@@ -10,6 +10,7 @@ typedef struct cecs_sparse_set_storage {
 
 size_t cecs_sparse_set_storage_map_offset(const cecs_sparse_set_storage *storage);
 size_t cecs_sparse_set_storage_map_key(const cecs_sparse_set_storage *storage, const size_t key);
+size_t cecs_sparse_set_storage_map_key_inverse(const cecs_sparse_set_storage *storage, const size_t key_mapped);
 
 inline cecs_sparse_set_storage cecs_sparse_set_storage_create(void) {
     return (cecs_sparse_set_storage){

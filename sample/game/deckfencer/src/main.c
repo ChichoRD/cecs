@@ -571,14 +571,14 @@ static void dckf_update_position_velocity(cecs_world *const world, const cecs_fl
     );
     const size_t min_entity_count = cecs_query_count_min_mut(query, registries, registry_count);
 
-    cecs_sparse_set *const position_lead = &cecs_view_mut_storage_sparse_set_mut_expect(view_position, &world->components)->set;
+    cecs_sparse_set_storage *const position_lead = cecs_view_mut_storage_sparse_set_mut_expect(view_position, &world->components);
     cecs_sparse_set_storage *const velocity_storage = cecs_view_mut_storage_sparse_set_mut_expect(view_velocity, &world->components);
     const cecs_sparse_set_storage *const inputbuffer_storage = cecs_view_storage_sparse_set_expect(view_inputbuffer, &world->components);
     size_t updated_count = 0;
     size_t i = 0;
-    while (i < cecs_sparse_set_value_count(position_lead) && updated_count < min_entity_count) {
+    while (i < cecs_sparse_set_storage_count(position_lead) && updated_count < min_entity_count) {
         const cecs_dense_index position_index = cecs_dense_index_create_valid(i);
-        dckf_position2_f32 *const position = cecs_sparse_set_get_value_by_index_mut(position_lead, position_index, sizeof(dckf_position2_f32));
+        dckf_position2_f32 *const position = cecs_sparse_set_get_value_by_index_mut(&position_lead->set, position_index, sizeof(dckf_position2_f32));
         const cecs_entity_index entity = cecs_entity_index_from_storage_sparse_set(position_lead, &world->entities, position_index);
         
         if (cecs_sparse_set_storage_contains(velocity_storage, entity)) {
