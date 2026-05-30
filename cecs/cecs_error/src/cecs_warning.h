@@ -11,6 +11,7 @@
 
 #if !NDEBUG || CECS_WARNING_PRINTS_STDERR
 #include <stdio.h>
+#include <stdarg.h>
 #include <cecs_console_colorcode.h>
 
 #endif
@@ -23,6 +24,23 @@ inline void cecs_warning(const char *const message) {
 
     (void)message;
 }
-
+#if !NDEBUG || CECS_WARNING_PRINTS_STDERR
+inline void cecs_warning_vformat(const char *const format, va_list args) {
+    fprintf(stderr, CECS_COLORCODE_YELLOW "[cecs] warning:" CECS_COLORCODE_RESET " ");
+    vfprintf(stderr, format, args);
+    
+    (void)format;
+}
+#endif
+inline void cecs_warning_format(const char *const format, ...) {
+#if !NDEBUG || CECS_WARNING_PRINTS_STDERR
+    va_list args;
+    va_start(args, format);
+    cecs_warning_vformat(format, args);
+    va_end(args);
+#else
+    (void)format;
+#endif
+}
 
 #endif
