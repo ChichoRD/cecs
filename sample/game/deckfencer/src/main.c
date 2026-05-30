@@ -557,13 +557,20 @@ static void dckf_update_position_velocity(cecs_world *const world, const cecs_fl
 
 
     cecs_query_registry registries[3];
-    const cecs_query query = {
-        .terms = (cecs_query_term[]){
-            { .views = (cecs_query_views){ view_position.view, view_velocity.view }, .view_count = 2, .access = cecs_query_access_mut, .match = cecs_query_match_type_all },
-            { .views = (cecs_query_views){ view_inputbuffer.view }, .view_count = 1, .access = cecs_query_access_shared, .match = cecs_query_match_type_all }
+    // const cecs_query query = {
+    //     .terms = (cecs_query_term[]){
+    //         { .views = (cecs_query_views){ view_position.view, view_velocity.view }, .view_count = 2, .access = cecs_query_access_mut, .match = cecs_query_match_type_all },
+    //         { .views = (cecs_query_views){ view_inputbuffer.view }, .view_count = 1, .access = cecs_query_access_shared, .match = cecs_query_match_type_all }
+    //     },
+    //     .term_count = 2,
+    // };
+    const cecs_query query = cecs_query_create(
+        (cecs_query_term[]){
+            cecs_query_term_create((cecs_query_views){ view_position.view, view_velocity.view }, 2, cecs_query_access_mut, cecs_query_match_type_all),
+            cecs_query_term_create((cecs_query_views){ view_inputbuffer.view }, 1, cecs_query_access_shared, cecs_query_match_type_all)
         },
-        .term_count = 2,
-    };
+        2
+    );
     const size_t registry_count = cecs_query_find_storages_mut(query, &world->components, registries, 3);
     cecs_debugbreak_fail_unless(
         registry_count == sizeof(registries) / sizeof(registries[0]),

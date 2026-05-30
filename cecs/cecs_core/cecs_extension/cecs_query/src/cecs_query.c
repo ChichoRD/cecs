@@ -57,7 +57,7 @@ size_t cecs_query_term_count_min_mut(
     size_t min = SIZE_MAX;
     for (size_t i = 0; i < term.view_count && i < registry_count; i++) {
         const cecs_component_registry *registry;
-        // XXX: optimizer will hoist this branch
+        // HACK: optimizer will hoist this branch
         if (term.access >= cecs_query_access_mut) {
             registry = registries[i].registry_mut;
         } else {
@@ -71,12 +71,36 @@ size_t cecs_query_term_count_min_mut(
     return min;
 }
 
+extern inline cecs_query_term cecs_query_term_create(
+    cecs_query_view *const views,
+    const size_t view_count,
+    const cecs_query_access access,
+    const cecs_query_match_type match
+);
+
+cecs_query_term cecs_query_term_acquire(
+    const cecs_query_term_descriptor descriptor,
+    const cecs_world_components *const components,
+    cecs_query_view *const out_views,
+    const size_t out_view_count
+) {
+    (void)descriptor;
+    (void)components;
+    (void)out_views;
+    (void)out_view_count;
+    cecs_unimplemented_fail("cecs_query_term_acquire is not implemented yet");
+}
+cecs_query_term cecs_query_term_release(cecs_query_term *const term) {
+    (void)term;
+    cecs_unimplemented_fail("cecs_query_term_release is not implemented yet");
+}
+
 size_t cecs_query_term_find_storages(
-    const cecs_query_term term, 
+    const cecs_query_term term,
     const cecs_world_components *const components,
     const cecs_component_registry **const out_registries,
-    const size_t out_registry_count
-) {
+    const size_t out_registry_count)
+{
     static_assert(
         cecs_query_access_shared <= cecs_query_access_mut,
         "static error: cecs_query_term_find_storages requires that the value of cecs_query_access_mut is greater than the value of cecs_query_access_shared"
@@ -140,7 +164,7 @@ bool cecs_query_term_match_slice(
     return cecs_query_term_match(match, registries + slice.start_inclusive, slice.end_exclusive - slice.start_inclusive, entity);
 }
 
-
+extern inline cecs_query cecs_query_create(cecs_query_term *const terms, const size_t term_count);
 size_t cecs_query_find_storages(
     const cecs_query query,
     const cecs_world_components *const components,

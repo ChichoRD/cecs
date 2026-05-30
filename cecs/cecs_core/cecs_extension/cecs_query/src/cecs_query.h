@@ -5,35 +5,7 @@
 #include <world/cecs_entity.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-// typedef union cecs_query_views {
-//     const cecs_view *views;
-//     const cecs_view_mut *views_mut;
-//     const cecs_view_alloc *views_alloc;
-// } cecs_query_views;
-typedef cecs_view_unchecked cecs_query_view;
-typedef cecs_query_view cecs_query_views[];
-typedef union cecs_query_registry {
-    const cecs_component_registry *registry;
-    cecs_component_registry *registry_mut;
-} cecs_query_registry;
-
-
-typedef enum cecs_query_access {
-    cecs_query_access_shared = 0,
-    cecs_query_access_mut,
-    // cecs_query_access_alloc,
-} cecs_query_access;
-typedef uint8_t cecs_query_access_value;
-
-typedef enum cecs_query_match_type {
-    cecs_query_match_type_all = 0,
-    cecs_query_match_type_any,
-    cecs_query_match_type_none_of,
-    // [...]
-} cecs_query_match_type;
-typedef uint8_t cecs_query_match_value;
-
+#include "query/cecs_query_descriptor.h"
 
 typedef struct cecs_query_term {
     cecs_query_view *views;
@@ -41,6 +13,27 @@ typedef struct cecs_query_term {
     cecs_query_access_value access;
     cecs_query_match_value match;
 } cecs_query_term;
+inline cecs_query_term cecs_query_term_create(
+    cecs_query_view *const views,
+    const size_t view_count,
+    const cecs_query_access access,
+    const cecs_query_match_type match
+) {
+    return (cecs_query_term){
+        .views = views,
+        .view_count = view_count,
+        .access = (cecs_query_access_value)access,
+        .match = (cecs_query_match_value)match
+    };
+}
+cecs_query_term cecs_query_term_acquire(
+    const cecs_query_term_descriptor descriptor,
+    const cecs_world_components *const components,
+    // FIXME: if query (terms) can own the views, they need to store the borrow too
+    cecs_query_view *const out_views,
+    const size_t out_view_count
+);
+cecs_query_term cecs_query_term_release(cecs_query_term *const term);
 
 size_t cecs_query_term_find_storages(
     const cecs_query_term term,
@@ -88,6 +81,13 @@ typedef struct cecs_query {
     cecs_query_term *terms;
     size_t term_count;
 } cecs_query;
+inline cecs_query cecs_query_create(cecs_query_term *const terms, const size_t term_count) {
+    return (cecs_query){
+        .terms = terms,
+        .term_count = term_count
+    };
+} 
+
 size_t cecs_query_find_storages(
     const cecs_query query,
     const cecs_world_components *const components,

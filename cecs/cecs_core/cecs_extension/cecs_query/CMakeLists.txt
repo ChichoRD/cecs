@@ -31,6 +31,7 @@ project(
     target_sources(
         ${PROJECT_NAME}
         INTERFACE
+            src/query/cecs_query_descriptor.c
             src/cecs_query.c
             src/cecs_iter.c
         PUBLIC
@@ -39,6 +40,7 @@ project(
             BASE_DIRS 
                 src
             FILES
+                src/query/cecs_query_descriptor.h
                 src/cecs_query.h
                 src/cecs_iter.h
     )
