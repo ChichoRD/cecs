@@ -379,21 +379,17 @@ static void dckf_render_game(const cecs_world *const world, char *const render_b
         cecs_sparse_set_value_count(&position_storage->set)
     );
 
-    const cecs_sparse_set *drawable_lead = &drawable_storage->set;
+    const cecs_sparse_set_storage *drawable_lead = drawable_storage;
     size_t drawn_count = 0;
     size_t i = 0;
-    while (i < cecs_sparse_set_value_count(drawable_lead) && drawn_count < min_entity_count) {
+    while (i < cecs_sparse_set_value_count(&drawable_lead->set) && drawn_count < min_entity_count) {
         const cecs_dense_index drawable_index = cecs_dense_index_create_valid(i);
-        const dckf_drawable *const drawable = cecs_sparse_set_get_value_by_index(drawable_lead, drawable_index, sizeof(dckf_drawable));
-        const cecs_entity entity = cecs_entity_storage_get_used(
-            &world->entities,
-            *cecs_sparse_set_get_sparse_key_by_index(drawable_lead, drawable_index)
-        );
-        const size_t entity_index = cecs_entity_index_of(entity);
+        const dckf_drawable *const drawable = cecs_sparse_set_get_value_by_index(&drawable_lead->set, drawable_index, sizeof(dckf_drawable));
+        const cecs_entity_index entity = cecs_entity_index_from_storage_sparse_set(drawable_lead, &world->entities, drawable_index);
 
-        if (cecs_sparse_set_storage_contains(position_storage, entity_index)) {
+        if (cecs_sparse_set_storage_contains(position_storage, entity)) {
             const dckf_position2_f32 *const position =
-                cecs_sparse_set_storage_get(position_storage, cecs_entity_index_of(entity), sizeof(dckf_position2_f32));
+                cecs_sparse_set_storage_get(position_storage, entity, sizeof(dckf_position2_f32));
 
             const uint8_t x = (uint8_t)position->x;
             const uint8_t y = (uint8_t)position->y;
@@ -498,21 +494,17 @@ static void dckf_update_velocity_input(cecs_world *const world) {
         cecs_sparse_set_value_count(&velocity_storage->set)
     );
 
-    cecs_sparse_set *const inputbuffer_lead = &inputbuffer_storage->set;
+    cecs_sparse_set_storage *const inputbuffer_lead = inputbuffer_storage;
     size_t updated_count = 0;
     size_t i = 0;
-    while (i < cecs_sparse_set_value_count(inputbuffer_lead) && updated_count < min_entity_count) {
+    while (i < cecs_sparse_set_value_count(&inputbuffer_lead->set) && updated_count < min_entity_count) {
         const cecs_dense_index inputbuffer_index = cecs_dense_index_create_valid(i);
-        dckf_inputbuffer *const inputbuffer = cecs_sparse_set_get_value_by_index_mut(inputbuffer_lead, inputbuffer_index, sizeof(dckf_inputbuffer));
-        const cecs_entity entity = cecs_entity_storage_get_used(
-            &world->entities,
-            *cecs_sparse_set_get_sparse_key_by_index(inputbuffer_lead, inputbuffer_index)
-        );
-        const size_t entity_index = cecs_entity_index_of(entity);
+        dckf_inputbuffer *const inputbuffer = cecs_sparse_set_get_value_by_index_mut(&inputbuffer_lead->set, inputbuffer_index, sizeof(dckf_inputbuffer));
+        const cecs_entity_index entity = cecs_entity_index_from_storage_sparse_set(inputbuffer_lead, &world->entities, inputbuffer_index);
 
-        if (cecs_sparse_set_storage_contains(velocity_storage, entity_index)) {
+        if (cecs_sparse_set_storage_contains(velocity_storage, entity)) {
             dckf_velocity2_f32 *const velocity =
-                cecs_sparse_set_storage_get_mut(velocity_storage, entity_index, sizeof(dckf_velocity2_f32));
+                cecs_sparse_set_storage_get_mut(velocity_storage, entity, sizeof(dckf_velocity2_f32));
             
             while (inputbuffer->key_next_read < inputbuffer->key_next_write) {
                 const char key = inputbuffer->keys[inputbuffer->key_next_read % (sizeof(inputbuffer->keys) / sizeof(char))];
@@ -572,9 +564,12 @@ static void dckf_update_position_velocity(cecs_world *const world, const cecs_fl
         2
     );
     const size_t registry_count = cecs_query_find_storages_mut(query, &world->components, registries, 3);
-    cecs_debugbreak_fail_unless(
+    cecs_debugbreak_fail_unless_format(
         registry_count == sizeof(registries) / sizeof(registries[0]),
-        "failed to find storages for position, velocity, and inputbuffer components for update_position_velocity system"
+        "failed to find storages for position, velocity, and inputbuffer components for update_position_velocity system\n"
+        "note: found %zu storages, expected %zu storages\n",
+        registry_count,
+        sizeof(registries) / sizeof(registries[0])
     );
     const size_t min_entity_count = cecs_query_count_min_mut(query, registries, registry_count);
 
@@ -634,17 +629,14 @@ static cecs_entity dckf_find_fencer(
             cecs_sparse_set_value_count(&velocity_storage->set)
         )
     );
-    const cecs_sparse_set *const velocity_lead = &velocity_storage->set;
+    const cecs_sparse_set_storage *const velocity_lead = velocity_storage;
     size_t player_count = 0;
     size_t i = 0;
     cecs_entity player_entity;
-    while (i < cecs_sparse_set_value_count(velocity_lead) && player_count < min_entity_count) {
+    while (i < cecs_sparse_set_value_count(&velocity_lead->set) && player_count < min_entity_count) {
         const cecs_dense_index velocity_index = cecs_dense_index_create_valid(i);
-        const cecs_entity entity = cecs_entity_storage_get_used(
-            entities,
-            *cecs_sparse_set_get_sparse_key_by_index(velocity_lead, velocity_index)
-        );
-        const size_t entity_index = cecs_entity_index_of(entity);
+        const cecs_entity entity = cecs_entity_from_storage_sparse_set(velocity_lead, entities, velocity_index);
+        const cecs_entity_index entity_index = cecs_entity_index_of(entity);
 
         if (cecs_sparse_set_storage_contains(inputbuffer_storage, entity_index)
             && cecs_sparse_set_storage_contains(position_storage, entity_index)
@@ -673,22 +665,18 @@ static void dckf_update_hand_input(cecs_world *const world) {
         cecs_sparse_set_value_count(&inputbuffer_storage->set)
     );
 
-    cecs_sparse_set *const hand_lead = &hand_storage->set;
+    cecs_sparse_set_storage *const hand_lead = hand_storage;
     size_t updated_count = 0;
     size_t i = 0;
-    while (i < cecs_sparse_set_value_count(hand_lead) && updated_count < hand_min_entity_count) {
+    while (i < cecs_sparse_set_value_count(&hand_lead->set) && updated_count < hand_min_entity_count) {
         const cecs_dense_index hand_index = cecs_dense_index_create_valid(i);
-        dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(hand_lead, hand_index, sizeof(dckf_hand));
+        dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(&hand_lead->set, hand_index, sizeof(dckf_hand));
         dckf_hand_state hand_action = hand->state & dckf_hand_state_mask_action;
-        const cecs_entity hand_entity = cecs_entity_storage_get_used(
-            &world->entities,
-            *cecs_sparse_set_get_sparse_key_by_index(hand_lead, hand_index)
-        );
-        const size_t hand_entity_index = cecs_entity_index_of(hand_entity);
-
-        if (cecs_sparse_set_storage_contains(inputbuffer_storage, hand_entity_index)) {
+        const cecs_entity_index hand_entity = cecs_entity_index_from_storage_sparse_set(hand_lead, &world->entities, hand_index);
+        
+        if (cecs_sparse_set_storage_contains(inputbuffer_storage, hand_entity)) {
             dckf_inputbuffer *const inputbuffer =
-                cecs_sparse_set_storage_get_mut(inputbuffer_storage, hand_entity_index, sizeof(dckf_inputbuffer));
+                cecs_sparse_set_storage_get_mut(inputbuffer_storage, hand_entity, sizeof(dckf_inputbuffer));
             while (inputbuffer->key_next_read < inputbuffer->key_next_write) {
                 const char key = inputbuffer->keys[inputbuffer->key_next_read % (sizeof(inputbuffer->keys) / sizeof(char))];
                 switch (key) {
@@ -758,21 +746,17 @@ static void dckf_update_hand_fencer(cecs_world *const world) {
         cecs_sparse_set_value_count(&hand_storage->set),
         cecs_sparse_set_value_count(&position_storage->set)
     );
-    const cecs_sparse_set *const hand_lead = &hand_storage->set;
+    const cecs_sparse_set_storage *const hand_lead = hand_storage;
     size_t updated_count = 0;
     size_t i = 0;
-    while (i < cecs_sparse_set_value_count(hand_lead) && updated_count < min_entity_count) {
+    while (i < cecs_sparse_set_value_count(&hand_lead->set) && updated_count < min_entity_count) {
         const cecs_dense_index hand_index = cecs_dense_index_create_valid(i);
-        const dckf_hand *const hand = cecs_sparse_set_get_value_by_index(hand_lead, hand_index, sizeof(dckf_hand));
-        const cecs_entity hand_entity = cecs_entity_storage_get_used(
-            &world->entities,
-            *cecs_sparse_set_get_sparse_key_by_index(hand_lead, hand_index)
-        );
-        const size_t hand_entity_index = cecs_entity_index_of(hand_entity);
+        const dckf_hand *const hand = cecs_sparse_set_get_value_by_index(&hand_lead->set, hand_index, sizeof(dckf_hand));
+        const cecs_entity_index hand_entity = cecs_entity_index_from_storage_sparse_set(hand_lead, &world->entities, hand_index);
 
-        if (cecs_sparse_set_storage_contains(position_storage, hand_entity_index)) {
+        if (cecs_sparse_set_storage_contains(position_storage, hand_entity)) {
             dckf_position2_f32 *const position =
-                cecs_sparse_set_storage_get_mut(position_storage, hand_entity_index, sizeof(dckf_position2_f32));
+                cecs_sparse_set_storage_get_mut(position_storage, hand_entity, sizeof(dckf_position2_f32));
             
             switch (hand->state & dckf_hand_state_mask_position) {
                 case dckf_hand_state_none:
@@ -813,29 +797,25 @@ static void dckf_update_hand_action(cecs_world *const world, cecs_allocator *con
         cecs_sparse_set_value_count(&hand_storage->set),
         cecs_sparse_set_value_count(&position_storage->set)
     );
-    cecs_sparse_set *const hand_lead = &hand_storage->set;
+    cecs_sparse_set_storage *const hand_lead = hand_storage;
     size_t updated_count = 0;
     size_t i = 0;
-    while (i < cecs_sparse_set_value_count(hand_lead) && updated_count < min_entity_count) {
+    while (i < cecs_sparse_set_value_count(&hand_lead->set) && updated_count < min_entity_count) {
         const cecs_dense_index hand_index = cecs_dense_index_create_valid(i);
-        dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(hand_lead, hand_index, sizeof(dckf_hand));
+        dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(&hand_lead->set, hand_index, sizeof(dckf_hand));
         const dckf_hand_state hand_action = hand->state & dckf_hand_state_mask_action;
         const dckf_hand_state hand_position = hand->state & dckf_hand_state_mask_position;
         hand->state &= ~dckf_hand_state_mask_action;
 
-        const cecs_entity hand_entity = cecs_entity_storage_get_used(
-            &world->entities,
-            *cecs_sparse_set_get_sparse_key_by_index(hand_lead, hand_index)
-        );
-        const size_t hand_entity_index = cecs_entity_index_of(hand_entity);
+        const cecs_entity_index hand_entity = cecs_entity_index_from_storage_sparse_set(hand_lead, &world->entities, hand_index);
 
         if (hand_action == dckf_hand_state_action) {
             if (
                 hand_position != dckf_hand_state_above
-                && cecs_sparse_set_storage_contains(position_storage, hand_entity_index)
+                && cecs_sparse_set_storage_contains(position_storage, hand_entity)
             ) {
                 const dckf_position2_f32 *const position =
-                    cecs_sparse_set_storage_get(position_storage, hand_entity_index, sizeof(dckf_position2_f32));
+                    cecs_sparse_set_storage_get(position_storage, hand_entity, sizeof(dckf_position2_f32));
                 const size_t key = (size_t)position->x << 16 | (size_t)position->y;
                 
                 uint_fast8_t insert_index;
@@ -897,9 +877,9 @@ static void dckf_update_hand_action(cecs_world *const world, cecs_allocator *con
                 }
                 ++updated_count;
             } else if (hand_position == dckf_hand_state_above) {
-                if (cecs_sparse_set_storage_contains(position_storage, hand_entity_index)) {
+                if (cecs_sparse_set_storage_contains(position_storage, hand_entity)) {
                     const dckf_position2_f32 *const position =
-                    cecs_sparse_set_storage_get(position_storage, hand_entity_index, sizeof(dckf_position2_f32));
+                    cecs_sparse_set_storage_get(position_storage, hand_entity, sizeof(dckf_position2_f32));
                     const size_t key = (size_t)position->x << 16 | (size_t)position->y;
                     
                     const void *found_entity;
