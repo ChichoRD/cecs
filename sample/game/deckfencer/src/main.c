@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <cecs_query.h>
+#include <cecs_iter.h>
 
 #define RENDER_GAME_WIDTH 18ull
 #define RENDER_GAME_HEIGHT 12ull
@@ -553,39 +555,42 @@ static void dckf_update_position_velocity(cecs_world *const world, const cecs_fl
     cecs_view_mut view_velocity = cecs_world_acquire_view_mut(world, component_velocity);
     cecs_view view_inputbuffer = cecs_world_acquire_view(world, component_inputbuffer);
 
-    cecs_sparse_set_storage *const position_storage = cecs_view_mut_storage_sparse_set_mut_expect(view_position, &world->components);
+
+    cecs_query_registry registries[3];
+    const cecs_query query = {
+        .terms = (cecs_query_term[]){
+            { .views = (cecs_query_views){ view_position.view, view_velocity.view }, .view_count = 2, .access = cecs_query_access_mut, .match = cecs_query_match_type_all },
+            { .views = (cecs_query_views){ view_inputbuffer.view }, .view_count = 1, .access = cecs_query_access_shared, .match = cecs_query_match_type_all }
+        },
+        .term_count = 2,
+    };
+    const size_t registry_count = cecs_query_find_storages_mut(query, &world->components, registries, 3);
+    cecs_debugbreak_fail_unless(
+        registry_count == sizeof(registries) / sizeof(registries[0]),
+        "failed to find storages for position, velocity, and inputbuffer components for update_position_velocity system"
+    );
+    const size_t min_entity_count = cecs_query_count_min_mut(query, registries, registry_count);
+
+    cecs_sparse_set *const position_lead = &cecs_view_mut_storage_sparse_set_mut_expect(view_position, &world->components)->set;
     cecs_sparse_set_storage *const velocity_storage = cecs_view_mut_storage_sparse_set_mut_expect(view_velocity, &world->components);
-    const cecs_sparse_set_storage *const inputbuffer_storage = cecs_component_storage_sparse_set(&cecs_view_registry(
-        view_inputbuffer, &world->components)->storage
-    );
-
-    const size_t min_entity_count = cecs_min(
-        cecs_sparse_set_value_count(&position_storage->set),
-        cecs_sparse_set_value_count(&velocity_storage->set)
-    );
-
-    cecs_sparse_set *const position_lead = &position_storage->set;
+    const cecs_sparse_set_storage *const inputbuffer_storage = cecs_view_storage_sparse_set_expect(view_inputbuffer, &world->components);
     size_t updated_count = 0;
     size_t i = 0;
     while (i < cecs_sparse_set_value_count(position_lead) && updated_count < min_entity_count) {
         const cecs_dense_index position_index = cecs_dense_index_create_valid(i);
         dckf_position2_f32 *const position = cecs_sparse_set_get_value_by_index_mut(position_lead, position_index, sizeof(dckf_position2_f32));
-        const cecs_entity entity = cecs_entity_storage_get_used(
-            &world->entities,
-            *cecs_sparse_set_get_sparse_key_by_index(position_lead, position_index)
-        );
-        const size_t entity_index = cecs_entity_index_of(entity);
-
-        if (cecs_sparse_set_storage_contains(velocity_storage, entity_index)) {
+        const cecs_entity_index entity = cecs_entity_index_from_storage_sparse_set(position_lead, &world->entities, position_index);
+        
+        if (cecs_sparse_set_storage_contains(velocity_storage, entity)) {
             dckf_velocity2_f32 *const velocity =
-                cecs_sparse_set_storage_get_mut(velocity_storage, entity_index, sizeof(dckf_velocity2_f32));
+                cecs_sparse_set_storage_get_mut(velocity_storage, entity, sizeof(dckf_velocity2_f32));
             
             const dckf_position2_f32 previous_position = *position;
             position->x += velocity->x;
             position->y += velocity->y;
 
             // player case
-            if (cecs_sparse_set_storage_contains(inputbuffer_storage, entity_index)) {
+            if (cecs_sparse_set_storage_contains(inputbuffer_storage, entity)) {
                 velocity->x = 0.0f;
                 velocity->y = 0.0f;
 
@@ -721,22 +726,27 @@ static void dckf_update_hand_fencer(cecs_world *const world) {
     cecs_view view_hand = cecs_world_acquire_view(world, component_hand);
     cecs_view_mut view_position = cecs_world_acquire_view_mut(world, component_position);
     
-    cecs_view view_velocity_player = cecs_world_acquire_view(world, component_velocity);
-    cecs_view view_inputbuffer = cecs_world_acquire_view(world, component_inputbuffer);
     const cecs_sparse_set_storage *const hand_storage = cecs_view_storage_sparse_set_expect(view_hand, &world->components);
     cecs_sparse_set_storage *const position_storage = cecs_view_mut_storage_sparse_set_mut_expect(view_position, &world->components);
+    
 
-    const cecs_entity fencer = dckf_find_fencer(
-        &world->entities,
-        cecs_component_storage_sparse_set(&cecs_view_registry(view_inputbuffer, &world->components)->storage),
-        cecs_component_storage_sparse_set(&cecs_view_mut_registry(view_position, &world->components)->storage),
-        cecs_component_storage_sparse_set(&cecs_view_registry(view_velocity_player, &world->components)->storage)
-    );
-    const dckf_position2_f32 fencer_position = *(const dckf_position2_f32 *)cecs_sparse_set_storage_get(
-        position_storage,
-        cecs_entity_index_of(fencer),
-        sizeof(dckf_position2_f32)
-    );
+    cecs_view view_velocity_player = cecs_world_acquire_view(world, component_velocity);
+    cecs_view view_inputbuffer = cecs_world_acquire_view(world, component_inputbuffer);
+        const cecs_entity fencer = dckf_find_fencer(
+            &world->entities,
+            cecs_view_storage_sparse_set_expect(view_inputbuffer, &world->components),
+            position_storage,
+            cecs_view_storage_sparse_set_expect(view_velocity_player, &world->components)
+        );
+        const dckf_position2_f32 fencer_position = *(const dckf_position2_f32 *)cecs_sparse_set_storage_get(
+            position_storage,
+            cecs_entity_index_of(fencer),
+            sizeof(dckf_position2_f32)
+        );
+    cecs_view_release(&view_velocity_player, &world->components);
+    cecs_view_release(&view_inputbuffer, &world->components);
+    
+
     const size_t min_entity_count = cecs_min(
         cecs_sparse_set_value_count(&hand_storage->set),
         cecs_sparse_set_value_count(&position_storage->set)
@@ -785,8 +795,6 @@ static void dckf_update_hand_fencer(cecs_world *const world) {
     cecs_view_release(&view_hand, &world->components);
     cecs_view_mut_release(&view_position, &world->components);
 
-    cecs_view_release(&view_velocity_player, &world->components);
-    cecs_view_release(&view_inputbuffer, &world->components);
 }
 static void dckf_update_hand_action(cecs_world *const world, cecs_allocator *const allocator, cecs_flatmap *const static_entity_from_position) {
     cecs_view_mut view_hand = cecs_world_acquire_view_mut(world, component_hand);

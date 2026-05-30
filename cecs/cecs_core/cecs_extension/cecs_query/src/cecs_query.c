@@ -49,6 +49,27 @@ size_t cecs_query_term_count_min(const cecs_query_term term, const cecs_componen
     }
     return min;
 }
+size_t cecs_query_term_count_min_mut(
+    const cecs_query_term term,
+    const cecs_query_registry *const registries,
+    const size_t registry_count
+) {
+    size_t min = SIZE_MAX;
+    for (size_t i = 0; i < term.view_count && i < registry_count; i++) {
+        const cecs_component_registry *registry;
+        // XXX: optimizer will hoist this branch
+        if (term.access >= cecs_query_access_mut) {
+            registry = registries[i].registry_mut;
+        } else {
+            registry = registries[i].registry;
+        }
+        const size_t count = cecs_component_storage_count(&registry->storage);
+        if (count < min) {
+            min = count;
+        }
+    }
+    return min;
+}
 
 size_t cecs_query_term_find_storages(
     const cecs_query_term term, 
@@ -101,6 +122,24 @@ size_t cecs_query_term_find_storages_mut(
     return storages_max;
 }
 
+bool cecs_query_term_match_slice(
+    const cecs_query_match_value match,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count,
+    const cecs_entity_index entity,
+    const cecs_query_term_slice slice
+) {
+    cecs_debugbreak_fail_unless(
+        slice.start_inclusive <= slice.end_exclusive,
+        "invalid query term match slice: start_inclusive must be less than or equal to end_exclusive"
+    );
+    cecs_debugbreak_fail_unless(
+        slice.end_exclusive <= registry_count,
+        "invalid query term match slice: end_exclusive must be less than or equal to registry_count"
+    );
+    return cecs_query_term_match(match, registries + slice.start_inclusive, slice.end_exclusive - slice.start_inclusive, entity);
+}
+
 
 size_t cecs_query_find_storages(
     const cecs_query query,
@@ -129,7 +168,7 @@ size_t cecs_query_find_storages_mut(
     for (size_t i = 0; i < query.term_count; ++i) {
         const cecs_query_term term = query.terms[i];
         size_t found_count;
-        if (term.access == cecs_query_access_mut) {
+        if (term.access >= cecs_query_access_mut) {
             found_count = cecs_query_term_find_storages_mut(term, components, &out_registries[out_offset].registry_mut, out_count);
         } else {
             found_count = cecs_query_term_find_storages(term, components, &out_registries[out_offset].registry, out_count);
@@ -142,7 +181,7 @@ size_t cecs_query_find_storages_mut(
 
 bool cecs_query_match(
     const cecs_query query,
-    const cecs_component_registry **const registries,
+    const cecs_component_registry *const *const registries,
     const size_t registry_count,
     const cecs_entity_index entity
 ) {
@@ -161,7 +200,7 @@ bool cecs_query_match(
     }
     return true;
 }
-size_t cecs_query_count_min(const cecs_query query, const cecs_component_registry **const registries, const size_t registry_count) {
+size_t cecs_query_count_min(const cecs_query query, const cecs_component_registry *const *const registries, const size_t registry_count) {
     size_t min = SIZE_MAX;
     size_t term_storages_offset = 0;
     for (size_t i = 0; i < query.term_count; ++i) {
@@ -178,4 +217,80 @@ size_t cecs_query_count_min(const cecs_query query, const cecs_component_registr
         term_storages_offset += term.view_count;
     }
     return min;
+}
+size_t cecs_query_count_min_mut(const cecs_query query, const cecs_query_registry *const registries, const size_t registry_count) {
+    size_t min = SIZE_MAX;
+    size_t term_storages_offset = 0;
+    for (size_t i = 0; i < query.term_count; ++i) {
+        const cecs_query_term term = query.terms[i];
+        cecs_debugbreak_fail_unless(
+            term.view_count <= registry_count - term_storages_offset,
+            "invalid query: not enough registries provided to count min for all query terms"
+        );
+
+        const size_t count = cecs_query_term_count_min_mut(term, registries + term_storages_offset, term.view_count);
+        if (count < min) {
+            min = count;
+        }
+        term_storages_offset += term.view_count;
+    }
+    return min;
+}
+
+bool cecs_query_match_slices(
+    const cecs_query query,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count,
+    const cecs_entity_index entity,
+    const cecs_query_term_slice *const slices,
+    const size_t slice_count
+) {
+    size_t term_storages_offset = 0;
+    for (size_t i = 0; i < query.term_count; ++i) {
+        const cecs_query_term term = query.terms[i];
+        cecs_debugbreak_fail_unless(
+            term.view_count <= registry_count - term_storages_offset,
+            "invalid query: not enough registries provided to match all query terms"
+        );
+        if (i < slice_count) {
+            const cecs_query_term_slice slice = slices[i];
+            if (!cecs_query_term_match_slice(term.match, registries + term_storages_offset, term.view_count, entity, slice)) {
+                return false;
+            }
+        } else {
+            if (!cecs_query_term_match(term.match, registries + term_storages_offset, term.view_count, entity)) {
+                return false;
+            }
+        }
+        term_storages_offset += term.view_count;
+    }
+    return true;    
+}
+bool cecs_query_match_slices_explicit(
+    const cecs_query query,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count,
+    const cecs_entity_index entity,
+    const cecs_query_term_slice *const slices,
+    const size_t slice_count
+) {
+    cecs_debugbreak_fail_unless(
+        slice_count == query.term_count,
+        "invalid query: slice_count must be equal to query.term_count\n"
+        "note: use cecs_query_match_slices to allow slice_count to be less than query.term_count and match remaining terms without slices"
+    );
+    size_t term_storages_offset = 0;
+    for (size_t i = 0; i < query.term_count; ++i) {
+        const cecs_query_term term = query.terms[i];
+        cecs_debugbreak_fail_unless(
+            term.view_count <= registry_count - term_storages_offset,
+            "invalid query: not enough registries provided to match all query terms"
+        );
+        const cecs_query_term_slice slice = slices[i];
+        if (!cecs_query_term_match_slice(term.match, registries + term_storages_offset, term.view_count, entity, slice)) {
+            return false;
+        }
+        term_storages_offset += term.view_count;
+    }
+    return true;    
 }

@@ -11,7 +11,8 @@
 //     const cecs_view_mut *views_mut;
 //     const cecs_view_alloc *views_alloc;
 // } cecs_query_views;
-typedef cecs_view_unchecked *cecs_query_views;
+typedef cecs_view_unchecked cecs_query_view;
+typedef cecs_query_view cecs_query_views[];
 typedef union cecs_query_registry {
     const cecs_component_registry *registry;
     cecs_component_registry *registry_mut;
@@ -35,7 +36,7 @@ typedef uint8_t cecs_query_match_value;
 
 
 typedef struct cecs_query_term {
-    cecs_query_views views;
+    cecs_query_view *views;
     size_t view_count;
     cecs_query_access_value access;
     cecs_query_match_value match;
@@ -64,6 +65,23 @@ size_t cecs_query_term_count_min(
     const cecs_component_registry *const *const registries,
     const size_t registry_count
 );
+size_t cecs_query_term_count_min_mut(
+    const cecs_query_term term,
+    const cecs_query_registry *const registries,
+    const size_t registry_count
+);
+
+typedef struct cecs_query_term_slice {
+    size_t start_inclusive;
+    size_t end_exclusive;
+} cecs_query_term_slice;
+bool cecs_query_term_match_slice(
+    const cecs_query_match_value match,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count,
+    const cecs_entity_index entity,
+    const cecs_query_term_slice slice
+);
 
 
 typedef struct cecs_query {
@@ -84,14 +102,36 @@ size_t cecs_query_find_storages_mut(
 );
 bool cecs_query_match(
     const cecs_query query,
-    const cecs_component_registry **const registries,
+    const cecs_component_registry *const *const registries,
     const size_t registry_count,
     const cecs_entity_index entity
 );
 size_t cecs_query_count_min(
     const cecs_query query,
-    const cecs_component_registry **const registries,
+    const cecs_component_registry *const *const registries,
     const size_t registry_count
+);
+size_t cecs_query_count_min_mut(
+    const cecs_query query,
+    const cecs_query_registry *const registries,
+    const size_t registry_count
+);
+
+bool cecs_query_match_slices(
+    const cecs_query query,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count,
+    const cecs_entity_index entity,
+    const cecs_query_term_slice *const slices,
+    const size_t slice_count
+);
+bool cecs_query_match_slices_explicit(
+    const cecs_query query,
+    const cecs_component_registry *const *const registries,
+    const size_t registry_count,
+    const cecs_entity_index entity,
+    const cecs_query_term_slice *const slices,
+    const size_t slice_count
 );
 
 #endif // CECS_QUERY_H

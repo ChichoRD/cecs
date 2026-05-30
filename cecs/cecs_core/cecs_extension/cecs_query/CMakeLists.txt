@@ -32,6 +32,7 @@ project(
         ${PROJECT_NAME}
         INTERFACE
             src/cecs_query.c
+            src/cecs_iter.c
         PUBLIC
             FILE_SET ${PROJECT_NAME}_HEADERS
             TYPE HEADERS
@@ -39,4 +40,5 @@ project(
                 src
             FILES
                 src/cecs_query.h
+                src/cecs_iter.h
     )
