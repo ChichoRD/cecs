@@ -18,6 +18,7 @@ static_assert(
 
 #endif
 
+// TODO: given that we already enclose indices in `cecs_dense_index`, consider using just size_t, or making `cecs_sparse_set_usize` a size_t by default
 typedef CECS_SPARSE_SET_USIZE_TYPE cecs_sparse_set_usize;
 static_assert(
     ((cecs_sparse_set_usize)(-1) == CECS_SPARSE_SET_USIZE_TYPE_MAX),

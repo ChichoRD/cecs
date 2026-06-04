@@ -57,7 +57,9 @@ cecs_noreturn inline void cecs_debugbreak_unreachable_format(const char *const f
     va_list args;
     va_start(args, format);
     cecs_debugbreak_unreachable_vformat(format, args);
+#if CECS_COMPILER != CECS_COMPILER_MASK_MSVC
     va_end(args);
+#endif
 #else
     (void)format;
     assert(false && "[cecs] fatal error: unreachable code reached");
@@ -132,7 +134,9 @@ cecs_noreturn inline void cecs_debugbreak_fail_format(const char *const format, 
     va_list args;
     va_start(args, format);
     cecs_debugbreak_fail_vformat(format, args);
+#if CECS_COMPILER != CECS_COMPILER_MASK_MSVC
     va_end(args);
+#endif
 #else
     (void)format;
     cecs_debugbreak_fail();
@@ -159,7 +163,9 @@ inline void cecs_debugbreak_fail_if_format(const bool condition, const char *con
         va_list args;
         va_start(args, format);
         cecs_debugbreak_fail_vformat(format, args);
+#if CECS_COMPILER != CECS_COMPILER_MASK_MSVC
         va_end(args);
+#endif
 #endif
     }
     cecs_expect_never(condition);
@@ -170,7 +176,9 @@ inline void cecs_debugbreak_fail_unless_format(const bool condition, const char 
         va_list args;
         va_start(args, format);
         cecs_debugbreak_fail_vformat(format, args);
+#if CECS_COMPILER != CECS_COMPILER_MASK_MSVC
         va_end(args);
+#endif
 #endif
     }
     cecs_expect_always(condition);
@@ -198,7 +206,9 @@ cecs_noreturn inline void cecs_unimplemented_fail_format(const char *const forma
     va_list args;
     va_start(args, format);
     cecs_unimplemented_fail_vformat(format, args);
+#if CECS_COMPILER != CECS_COMPILER_MASK_MSVC
     va_end(args);
+#endif
 #else
     (void)format;
     cecs_debugbreak_fail();
