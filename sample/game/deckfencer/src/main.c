@@ -809,6 +809,9 @@ static void dckf_update_hand_action(cecs_world *const world, cecs_allocator *con
         const cecs_dense_index hand_index = cecs_dense_index_create_valid((cecs_sparse_set_usize)i);
         dckf_hand *const hand = cecs_sparse_set_get_value_by_index_mut(&hand_lead->set, hand_index, sizeof(dckf_hand));
         const dckf_hand_state hand_action = hand->state & dckf_hand_state_mask_action;
+        
+        (void)dckf_hand_state_mask_above;
+        (void)dckf_hand_state_mask_below;
         const dckf_hand_state hand_position = hand->state & dckf_hand_state_mask_position;
         hand->state &= ~dckf_hand_state_mask_action;
 
