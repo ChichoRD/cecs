@@ -31,4 +31,5 @@ project(
                 src/cecs_attribute.h
                 src/cecs_console_colorcode.h
                 src/cecs_type_traits.h
+                src/cecs_platform.h
     )
