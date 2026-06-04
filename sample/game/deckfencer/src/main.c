@@ -2,8 +2,10 @@
 #include <cecs_flatmap.h>
 #include <algebra/linear/cecs_vector.h>
 #include <relations/cecs_ordering.h>
-#include <dckf_input.h>
-#include <time.h>
+
+#include "dckf_input.h"
+#include "dckf_time.h"
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -118,8 +120,8 @@ int main(void) {
         dckf_render(&w, &alloc, cecs_allocator_bump_mut(&render_alloc));
 
         struct timespec remaining_frame_time = target_frame_time;
-        while (nanosleep(&remaining_frame_time, &remaining_frame_time) != 0) { }
-        nanosleep(&target_frame_time, NULL);
+        while (dckf_nanosleep(&remaining_frame_time, &remaining_frame_time) != 0) { }
+        // nanosleep(&target_frame_time, NULL);
 
         dckf_input(&w, &alloc, &running);
         dckf_update(&w, &alloc, &static_entity_from_position);

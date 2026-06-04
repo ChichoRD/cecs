@@ -26,12 +26,12 @@
 struct termios orig_termios;
 #endif
 
-void dckf_reset_terminal_mode() {
+void dckf_reset_terminal_mode(void) {
 #if CECS_OS_MASK & CECS_OS_MASK_POSIX
     tcsetattr(0, TCSANOW, &orig_termios);
 #endif
 }
-void dckf_set_conio_terminal_mode() {
+void dckf_set_conio_terminal_mode(void) {
 #if CECS_OS_MASK & CECS_OS_MASK_POSIX
     struct termios new_termios;
 
@@ -46,7 +46,7 @@ void dckf_set_conio_terminal_mode() {
 #endif
 }
 
-int dckf_kbhit() {
+int dckf_kbhit(void) {
 #if CECS_OS_MASK & CECS_OS_MASK_POSIX
     struct timeval tv = { 0L, 0L };
     fd_set fds;
@@ -57,7 +57,7 @@ int dckf_kbhit() {
     return _kbhit();
 #endif
 }
-int dckf_getch() {
+int dckf_getch(void) {
 #if CECS_OS_MASK & CECS_OS_MASK_POSIX
     int r;
     unsigned char c;

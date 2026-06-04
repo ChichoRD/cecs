@@ -26,6 +26,7 @@ project(
         PRIVATE
             src/main.c
             src/dckf_input.c
+            src/dckf_time.c
         
         PUBLIC
             FILE_SET ${PROJECT_NAME}_HEADERS
@@ -33,4 +34,5 @@ project(
             BASE_DIRS src
             FILES
                 src/dckf_input.h
+                src/dckf_time.h
     )
