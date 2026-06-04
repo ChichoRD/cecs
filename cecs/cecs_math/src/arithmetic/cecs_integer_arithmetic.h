@@ -6,6 +6,9 @@
 #include <stdbool.h>
 #include <intrin.h>
 
+#include <cecs_compiler.h>
+#include <cecs_platform.h>
+
 #if CECS_COMPILER == CECS_COMPILER_MASK_MSVC
 #include <intrin.h>
 #else
@@ -50,18 +53,32 @@ extern const uint8_t cecs_size_t_bits;
 
 // TODO: ifndef
 #if CECS_COMPILER & (CECS_COMPILER_MASK_CLANG | CECS_COMPILER_MASK_GCC)
+#if CECS_PLATFORM_WORD_BITS == CECS_PLATFORM_WORD_BITS_64
 #define CECS_LZCNT_U64 _lzcnt_u64
+#endif
 #define CECS_LZCNT_U32 _lzcnt_u32
 #define CECS_LZCNT_U16 __lzcnt16
 #else
+#if CECS_PLATFORM_WORD_BITS == CECS_PLATFORM_WORD_BITS_64
 #define CECS_LZCNT_U64 _lzcnt_u64
+#endif
 #define CECS_LZCNT_U32 _lzcnt_u32
 #define CECS_LZCNT_U16(n) (CECS_LZCNT_U32((uint32_t)(n)) - 16u)
 #endif
 
+static inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n);
 // FIXME: conditional definition of CECS_LZCNT_U8 based on whether __lzcnt8 is available
 static inline uint_fast8_t cecs_lzcnt_u64(const uint64_t n) {
+#if CECS_PLATFORM_WORD_BITS == CECS_PLATFORM_WORD_BITS_64
     return (uint_fast8_t)CECS_LZCNT_U64(n);
+#else
+    const uint_fast8_t lzcnt_high = cecs_lzcnt_u32((uint32_t)(n >> 32ull));
+    if (lzcnt_high != 32u) {
+        return lzcnt_high;
+    } else {
+        return (uint_fast8_t)(cecs_lzcnt_u32((uint32_t)n) + 32u);
+    }
+#endif
 }
 // FIXME: conditional definition of cecs_lzcnt_u32 based on whether _lzcnt_u32 is available
 static inline uint_fast8_t cecs_lzcnt_u32(const uint32_t n) {
@@ -90,16 +107,30 @@ static inline uint_fast8_t cecs_lzcnt(const size_t n) {
 
 // TODO: ifndef
 #if CECS_COMPILER & (CECS_COMPILER_MASK_CLANG | CECS_COMPILER_MASK_GCC)
+#if CECS_PLATFORM_WORD_BITS == CECS_PLATFORM_WORD_BITS_64
 #define CECS_TZCNT_U64 __tzcnt_u64
+#endif
 #define CECS_TZCNT_U32 __tzcnt_u32
 #define CECS_TZCNT_U16 __tzcnt_u16
 #else
+#if CECS_PLATFORM_WORD_BITS == CECS_PLATFORM_WORD_BITS_64
 #define CECS_TZCNT_U64 _tzcnt_u64
+#endif
 #define CECS_TZCNT_U32 _tzcnt_u32
 #define CECS_TZCNT_U16 _tzcnt_u16
 #endif
+static inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n);
 static inline uint_fast8_t cecs_tzcnt_u64(const uint64_t n) {
+#if CECS_PLATFORM_WORD_BITS == CECS_PLATFORM_WORD_BITS_64
     return (uint_fast8_t)CECS_TZCNT_U64(n);
+#else
+    const uint_fast8_t tzcnt_low = cecs_tzcnt_u32((uint32_t)n);
+    if (tzcnt_low != 32u) {
+        return tzcnt_low;
+    } else {
+        return (uint_fast8_t)(cecs_tzcnt_u32((uint32_t)(n >> 32ull)) + 32u);
+    }
+#endif
 }
 static inline uint_fast8_t cecs_tzcnt_u32(const uint32_t n) {
     return (uint_fast8_t)CECS_TZCNT_U32(n);
@@ -137,7 +168,7 @@ static inline uint_fast8_t cecs_log2_u16(const uint16_t n) {
 }
 static inline uint_fast8_t cecs_log2(const size_t n) {
 #if (SIZE_MAX == UINT16_MAX)
-    return cecs_log2_u16((uint32_t)n);
+    return cecs_log2_u16((uint16_t)n);
 
 #elif (SIZE_MAX == UINT32_MAX)
     return cecs_log2_u32((uint32_t)n);
