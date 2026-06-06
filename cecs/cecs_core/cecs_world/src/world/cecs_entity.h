@@ -39,8 +39,8 @@ static_assert(
 );
 
 
-typedef size_t cecs_entity_index;
-#define CECS_ENTITY_INDEX_TYPE_MAX SIZE_MAX
+typedef cecs_identifier_index cecs_entity_index;
+#define CECS_ENTITY_INDEX_TYPE_MAX CECS_IDENTIFIER_INDEX_TYPE_MAX
 static_assert(
     (cecs_entity_index)(~((cecs_entity_index)0u)) == CECS_ENTITY_INDEX_TYPE_MAX,
     "static error: CECS_ENTITY_INDEX_TYPE_MAX does not match the maximum value of cecs_entity_index type"
