@@ -6,12 +6,13 @@
 #include <stdatomic.h>
 #include <limits.h>
 
+#include <cecs_platform.h>
 
 #ifndef CECS_RWLOCK_VALUE_TYPE
 #define CECS_RWLOCK_VALUE_TYPE_DEFAULT size_t
 #define CECS_RWLOCK_VALUE_TYPE CECS_RWLOCK_VALUE_TYPE_DEFAULT
 
-#define CECS_RWLOCK_VALUE_TYPE_BITS_LOG2 6ull
+#define CECS_RWLOCK_VALUE_TYPE_BITS_LOG2 CECS_PLATFORM_WORD_BITS_LOG2
 #endif
 
 #ifndef CECS_RWLOCK_VALUE_TYPE_BITS_LOG2 
