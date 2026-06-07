@@ -1584,7 +1584,8 @@ void test_entity(cecs_allocator *allocator) {
     {
         const size_t idx = 0xABCDEFu & (size_t)max_index; // ensure within index field
         const cecs_entity_meta_flag flags = (cecs_entity_meta_flag)(cecs_entity_meta_type_none);
-        const uint_fast8_t gen = 0x5A;
+        const uint_fast8_t gen = 0x5A & (CECS_ENTITY_GENERATION_BITS_MASK >> CECS_ENTITY_GENERATION_BITS_OFFSET);
+
         cecs_entity e = cecs_entity_create(idx, flags, gen);
 
         // Manually construct the underlying value and compare
@@ -1623,6 +1624,9 @@ void test_entity(cecs_allocator *allocator) {
 
     // --- Test 6: SIMD batch generation increment via value arithmetic ---
     printf("\n--- Test 6: SIMD batch generation increment ---\n");
+#if CECS_PLATFORM_IS_32_BIT
+    printf("SIMD batch generation increment test skipped on 32-bit platform (not supported)\n");
+#else
     {
         // Prepare 8 entities with distinct indices and same generation
         cecs_entity entities[8];
@@ -1676,6 +1680,7 @@ void test_entity(cecs_allocator *allocator) {
                    (unsigned)cecs_entity_generation_of(entities[i]), cecs_entity_meta_flags(entities[i]));
         }
     }
+#endif
 
     // --- Test 7: Index mask integrity via bitwise stress ---
     printf("\n--- Test 7: Index mask integrity ---\n");
