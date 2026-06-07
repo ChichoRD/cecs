@@ -10,6 +10,9 @@
 #include <world/cecs_registry.h>
 #include <cecs_world.h>
 
+#include <cecs_platform.h>
+#include <cecs_warning.h>
+
 // NOTE: extension headers
 // #include <group/cecs_sparse_set_group.h> // moved to extension
 // #include <cecs_query.h> // moved to extension
@@ -1625,7 +1628,7 @@ void test_entity(cecs_allocator *allocator) {
     // --- Test 6: SIMD batch generation increment via value arithmetic ---
     printf("\n--- Test 6: SIMD batch generation increment ---\n");
 #if CECS_PLATFORM_IS_32_BIT
-    printf("SIMD batch generation increment test skipped on 32-bit platform (not supported)\n");
+    cecs_warning("// FIXME: SIMD batch generation increment test skipped on 32-bit platform (not supported)\n");
 #else
     {
         // Prepare 8 entities with distinct indices and same generation
@@ -2354,7 +2357,7 @@ void test_sparse_set_group(cecs_allocator *allocator) {
 
     printf("Sparse Set Group test executed in main().\n");
     (void)allocator;
-    printf("\t"CECS_COLORCODE_YELLOW"NOTE: This test is skipped due to groups being moved to extenion functionality, now unsupported."CECS_COLORCODE_RESET"\n");
+    cecs_warning("\n\tNOTE: This test is skipped due to groups being moved to extenion functionality, now unsupported.");
     printf("=== Sparse Set Group tests completed ===\n");
 }
 void test_component_group(cecs_allocator *allocator) {
