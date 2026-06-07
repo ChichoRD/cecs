@@ -141,7 +141,10 @@ inline cecs_entity_meta_flag cecs_entity_meta_flags(const cecs_entity entity) {
         CECS_ENTITY_GENERAL_META_BITS <= sizeof(cecs_entity_meta_flag) * CHAR_BIT,
         "static error: cecs_entity_meta_flags only supports up to 8 bits of index"
     );
-    return (cecs_entity_meta_flag)(entity.value >> (cecs_entity_value)(CECS_ENTITY_GENERAL_META_BITS_OFFSET));
+    return (cecs_entity_meta_flag)(
+        ((entity.value & (cecs_entity_value)(CECS_ENTITY_GENERAL_META_BITS_MASK))
+            >> (cecs_entity_value)(CECS_ENTITY_GENERAL_META_BITS_OFFSET))
+    );
 }
 inline bool cecs_entity_has_meta_flag(const cecs_entity entity, const cecs_entity_meta_flag flag) {
     return (entity.value & ((cecs_entity_value)flag << (cecs_entity_value)(CECS_ENTITY_GENERAL_META_BITS_OFFSET))) != 0;
